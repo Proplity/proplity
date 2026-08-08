@@ -1,0 +1,545 @@
+import { useState } from 'react';
+import {
+  Search,
+  MapPin,
+  Bed,
+  Bath,
+  Square,
+  Shield,
+  Zap,
+  Droplet,
+  TrendingUp,
+  CheckCircle,
+  Star,
+  Megaphone,
+  X,
+  AlertTriangle,
+  Calendar,
+} from 'lucide-react';
+
+interface PropertyDiscoveryProps {
+  onNavigate: (page: any) => void;
+}
+
+interface AdState {
+  active: boolean;
+  createdAt?: string;
+  budget?: string;
+  duration?: string;
+  impressions?: number;
+  clicks?: number;
+}
+
+export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [adStates, setAdStates] = useState<Record<number, AdState>>({});
+  const [adModal, setAdModal] = useState<{
+    type: 'create' | 'cancel';
+    propertyId: number;
+    propertyTitle: string;
+  } | null>(null);
+  const [adForm, setAdForm] = useState({
+    budget: '₦50,000',
+    duration: '30 days',
+  });
+  const [adSuccess, setAdSuccess] = useState<string | null>(null);
+
+  const handleCreateAd = (propertyId: number) => {
+    setAdStates((prev) => ({
+      ...prev,
+      [propertyId]: {
+        active: true,
+        createdAt: new Date().toLocaleDateString('en-NG', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+        budget: adForm.budget,
+        duration: adForm.duration,
+        impressions: 0,
+        clicks: 0,
+      },
+    }));
+    setAdSuccess(`Ad created successfully for ${adModal?.propertyTitle}!`);
+    setAdModal(null);
+    setTimeout(() => setAdSuccess(null), 3000);
+  };
+
+  const handleCancelAd = (propertyId: number) => {
+    setAdStates((prev) => ({ ...prev, [propertyId]: { active: false } }));
+    setAdSuccess(`Ad cancelled for ${adModal?.propertyTitle}.`);
+    setAdModal(null);
+    setTimeout(() => setAdSuccess(null), 3000);
+  };
+
+  const properties = [
+    {
+      id: 1,
+      title: '3 Bedroom Flat',
+      location: 'Lekki Phase 1, Lagos',
+      price: '₦1,200,000/year',
+      bedrooms: 3,
+      bathrooms: 2,
+      sqft: '1,200 sq ft',
+      status: 'available',
+      verified: true,
+      trustScore: 95,
+      features: ['24/7 Power', 'Borehole', 'Security', 'Parking'],
+      agent: 'Verified Landlord',
+      image: 'bg-gradient-to-br from-blue-100 to-blue-200',
+      neighborhood: {
+        safety: 9,
+        accessibility: 8,
+        powerReliability: 7,
+        waterSupply: 9,
+      },
+    },
+    {
+      id: 2,
+      title: '2 Bedroom Apartment',
+      location: 'Maitama, Abuja',
+      price: '₦900,000/year',
+      bedrooms: 2,
+      bathrooms: 2,
+      sqft: '950 sq ft',
+      status: 'available',
+      verified: true,
+      trustScore: 92,
+      features: ['Generator', 'Water Tank', 'Gated Estate'],
+      agent: 'Verified Agent',
+      image: 'bg-gradient-to-br from-green-100 to-green-200',
+      neighborhood: {
+        safety: 10,
+        accessibility: 9,
+        powerReliability: 6,
+        waterSupply: 8,
+      },
+    },
+    {
+      id: 3,
+      title: '4 Bedroom Duplex',
+      location: 'Ikeja GRA, Lagos',
+      price: '₦1,800,000/year',
+      bedrooms: 4,
+      bathrooms: 3,
+      sqft: '1,800 sq ft',
+      status: 'available',
+      verified: true,
+      trustScore: 98,
+      features: ['Inverter System', 'Borehole', 'CCTV', '2 Parking Spaces'],
+      agent: 'Proplity Verified',
+      image: 'bg-gradient-to-br from-purple-100 to-purple-200',
+      neighborhood: {
+        safety: 9,
+        accessibility: 10,
+        powerReliability: 8,
+        waterSupply: 9,
+      },
+    },
+  ];
+
+  const filters = [
+    { id: 'all', label: 'All Properties' },
+    { id: 'verified', label: 'AI Verified Only' },
+    { id: 'high-trust', label: 'High Trust Score' },
+    { id: 'new', label: 'New Listings' },
+  ];
+
+  return (
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="mb-1 text-2xl font-semibold">Discover Properties</h1>
+        <p className="text-gray-600">AI-powered property search with verified listings</p>
+      </div>
+
+      {/* AI Search Bar */}
+      <div className="rounded-lg bg-gradient-to-r from-blue-50 to-green-50 p-6">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+            <Star className="h-4 w-4 text-white" />
+          </div>
+          <h3 className="font-semibold">AI-Powered Search</h3>
+        </div>
+        <div className="relative">
+          <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+          <input
+            type="text"
+            placeholder='Try: "3-bedroom flat in Lekki, max ₦800k/year, ground floor, good security, near a school"'
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-12 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <p className="mt-2 text-xs text-gray-600">
+          Our AI understands natural language and finds the best matches for you
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 overflow-x-auto">
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            onClick={() => setSelectedFilter(filter.id)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+              selectedFilter === filter.id
+                ? 'bg-blue-600 text-white'
+                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Property Listings */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {properties.map((property) => (
+          <div
+            key={property.id}
+            className="overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
+          >
+            {/* Property Image Placeholder */}
+            <div className={`h-48 ${property.image} relative flex items-center justify-center`}>
+              {property.verified && (
+                <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
+                  <Shield className="h-3 w-3" />
+                  AI Verified
+                </div>
+              )}
+              <div className="text-sm text-gray-400">360° View Available</div>
+            </div>
+
+            <div className="p-5">
+              {/* Trust Score */}
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+                    <span className="text-sm font-semibold text-green-600">
+                      {property.trustScore}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Trust Score</p>
+                    <p className="text-xs font-medium text-green-600">Excellent</p>
+                  </div>
+                </div>
+                <span className="text-xl font-semibold text-blue-600">{property.price}</span>
+              </div>
+
+              <h3 className="mb-1 text-lg font-semibold">{property.title}</h3>
+              <div className="mb-4 flex items-center gap-1 text-gray-600">
+                <MapPin className="h-4 w-4" />
+                <span className="text-sm">{property.location}</span>
+              </div>
+
+              {/* Property Details */}
+              <div className="mb-4 flex gap-4 border-b border-gray-200 pb-4">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <Bed className="h-4 w-4" />
+                  <span>{property.bedrooms} Beds</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <Bath className="h-4 w-4" />
+                  <span>{property.bathrooms} Baths</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <Square className="h-4 w-4" />
+                  <span>{property.sqft}</span>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="mb-4 flex flex-wrap gap-2">
+                {property.features.map((feature, index) => (
+                  <span
+                    key={index}
+                    className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"
+                  >
+                    {feature}
+                  </span>
+                ))}
+              </div>
+
+              {/* Neighborhood Intelligence */}
+              <div className="mb-4 rounded-lg bg-gray-50 p-3">
+                <p className="mb-2 text-xs font-medium text-gray-700">Neighborhood Intelligence</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Safety</span>
+                    <div className="flex items-center gap-1">
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full bg-green-500"
+                          style={{
+                            width: `${property.neighborhood.safety * 10}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">{property.neighborhood.safety}/10</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Access</span>
+                    <div className="flex items-center gap-1">
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{
+                            width: `${property.neighborhood.accessibility * 10}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">
+                        {property.neighborhood.accessibility}/10
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Power</span>
+                    <div className="flex items-center gap-1">
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full bg-yellow-500"
+                          style={{
+                            width: `${property.neighborhood.powerReliability * 10}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">
+                        {property.neighborhood.powerReliability}/10
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Water</span>
+                    <div className="flex items-center gap-1">
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{
+                            width: `${property.neighborhood.waterSupply * 10}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">
+                        {property.neighborhood.waterSupply}/10
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ad Status Banner */}
+              {adStates[property.id]?.active && (
+                <div className="mb-3 flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-4 w-4 text-orange-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-orange-700">Ad Running</p>
+                      <p className="text-xs text-orange-600">
+                        {adStates[property.id].impressions ?? 0} impressions ·{' '}
+                        {adStates[property.id].clicks ?? 0} clicks ·{' '}
+                        {adStates[property.id].duration}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
+                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500"></span>
+                    Live
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => alert(`Scheduling tour for ${property.title}...`)}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Schedule Tour
+                </button>
+                <button
+                  onClick={() =>
+                    onNavigate({
+                      type: 'property-detail',
+                      propertyId: property.id,
+                    })
+                  }
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                >
+                  Details
+                </button>
+                {adStates[property.id]?.active ? (
+                  <button
+                    onClick={() =>
+                      setAdModal({
+                        type: 'cancel',
+                        propertyId: property.id,
+                        propertyTitle: property.title,
+                      })
+                    }
+                    className="flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel Ad
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      setAdModal({
+                        type: 'create',
+                        propertyId: property.id,
+                        propertyTitle: property.title,
+                      })
+                    }
+                    className="flex items-center gap-1 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+                  >
+                    <Megaphone className="h-3.5 w-3.5" />
+                    Create Ad
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Success Toast */}
+      {adSuccess && (
+        <div className="fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-xl bg-gray-900 px-5 py-3 text-white shadow-xl">
+          <CheckCircle className="h-5 w-5 shrink-0 text-green-400" />
+          <span className="text-sm">{adSuccess}</span>
+        </div>
+      )}
+
+      {/* Create Ad Modal */}
+      {adModal?.type === 'create' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setAdModal(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100">
+                  <Megaphone className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold">Create Rental Ad</h2>
+                  <p className="text-xs text-gray-500">{adModal.propertyTitle}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-gray-600">
+                Your ad will be shown to prospective tenants browsing properties on Proplity. Set
+                your budget and duration below.
+              </p>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Ad Budget</label>
+                <select
+                  value={adForm.budget}
+                  onChange={(e) => setAdForm((f) => ({ ...f, budget: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"
+                >
+                  <option>₦25,000</option>
+                  <option>₦50,000</option>
+                  <option>₦100,000</option>
+                  <option>₦200,000</option>
+                  <option>₦500,000</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Ad Duration</label>
+                <select
+                  value={adForm.duration}
+                  onChange={(e) => setAdForm((f) => ({ ...f, duration: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"
+                >
+                  <option>7 days</option>
+                  <option>14 days</option>
+                  <option>30 days</option>
+                  <option>60 days</option>
+                  <option>90 days</option>
+                </select>
+              </div>
+              <div className="flex items-start gap-2 rounded-lg border border-orange-100 bg-orange-50 p-3">
+                <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+                <p className="text-xs text-orange-700">
+                  Your ad will go live immediately and appear in search results and the featured
+                  listings on the landing page.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-gray-200 p-6">
+              <button
+                onClick={() => setAdModal(null)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleCreateAd(adModal.propertyId)}
+                className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+              >
+                Launch Ad
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Ad Modal */}
+      {adModal?.type === 'cancel' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setAdModal(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle className="h-6 w-6 text-red-500" />
+              </div>
+              <h2 className="mb-2 font-semibold">Cancel Ad?</h2>
+              <p className="mb-1 text-sm text-gray-600">
+                You are about to cancel the running ad for:
+              </p>
+              <p className="mb-4 text-sm font-medium text-gray-800">{adModal.propertyTitle}</p>
+              <p className="mb-6 text-xs text-gray-500">
+                The ad will stop immediately and will no longer appear to prospective tenants.
+                Unused budget will not be refunded.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAdModal(null)}
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                >
+                  Keep Ad
+                </button>
+                <button
+                  onClick={() => handleCancelAd(adModal.propertyId)}
+                  className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+                >
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
