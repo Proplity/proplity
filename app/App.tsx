@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Logo } from './components/Logo';
 import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Auth/Login';
 import { Register } from './components/Auth/Register';
 import { ForgotPassword } from './components/Auth/ForgotPassword';
+import { useAuth } from '@/context/AuthContext';
 import { Checkout } from './components/Checkout';
 import { Dashboard } from './components/Dashboard';
 import { PropertyDiscovery } from './components/PropertyDiscovery';
@@ -56,6 +57,7 @@ import {
   Plus,
   DollarSign,
   Receipt,
+  LogOut,
 } from 'lucide-react';
 
 type Page =
@@ -106,6 +108,7 @@ interface PricingPlan {
 }
 
 export default function App() {
+  const auth = useAuth();
   const [showLanding, setShowLanding] = useState(true);
   const [showPricing, setShowPricing] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -117,6 +120,16 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>({ type: 'dashboard' });
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('manager');
+
+  useEffect(() => {
+    if (auth.user) {
+      setIsAuthenticated(true);
+      setShowLanding(false);
+      if (auth.user.role) {
+        setCurrentRole(auth.user.role as UserRole);
+      }
+    }
+  }, [auth.user]);
 
   const resetPublicFlags = () => {
     setShowLanding(false);
@@ -664,7 +677,19 @@ export default function App() {
               >
                 <User className="h-4 w-4 text-white" />
               </div>
-              <span className="text-sm font-medium">{getRoleDisplayName()}</span>
+              <span className="text-sm font-medium">{auth.user ? auth.user.name : getRoleDisplayName()}</span>
+            </button>
+            <button
+              onClick={async () => {
+                await auth.logout();
+                setIsAuthenticated(false);
+                setShowLanding(true);
+                setAuthScreen(null);
+              }}
+              title="Sign Out"
+              className="flex items-center gap-1 rounded-lg p-2 text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>

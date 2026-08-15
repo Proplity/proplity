@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LogoIcon } from '../Logo';
+import { useAuth } from '@/context/AuthContext';
 import {
   Mail,
   Lock,
@@ -249,7 +250,9 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
     }, 900);
   };
 
-  const handleSubmit = () => {
+  const { register } = useAuth();
+
+  const handleSubmit = async () => {
     // basic validation
     const pwd =
       userType === 'manager'
@@ -284,8 +287,26 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
       alert('Please agree to the Terms of Service');
       return;
     }
-    onRegister(userType);
+
+    const activeForm =
+      userType === 'manager'
+        ? managerForm
+        : userType === 'landlord'
+          ? landlordForm
+          : userType === 'tenant'
+            ? tenantForm
+            : vendorForm;
+
+    const name = `${activeForm.firstName} ${activeForm.lastName}`.trim() || 'User';
+    const res = await register({ email: activeForm.email, password: pwd, name, role: userType });
+
+    if (res.success) {
+      onRegister(userType);
+    } else {
+      alert(res.error || 'Registration failed');
+    }
   };
+
 
   // ── shared input helpers ──────────────────────────────────────────────────
   const inputCls =

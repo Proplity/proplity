@@ -1,0 +1,5 @@
+allowBuilds:
+  '@prisma/engines': true
+  '@tailwindcss/oxide': true
+  prisma: true
+

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogoIcon } from '../Logo';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface LoginProps {
   onLogin: (role: string) => void;
@@ -9,16 +10,31 @@ interface LoginProps {
 }
 
 export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginProps) {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login - in real app, validate credentials
-    // Default to manager role for demo
-    onLogin('manager');
+    setErrorMessage(null);
+    setLoading(true);
+
+    const res = await login({ email, password });
+    setLoading(false);
+
+    if (res.success && res.user?.role) {
+      onLogin(res.user.role);
+    } else {
+      setErrorMessage(res.error || 'Invalid credentials');
+    }
+  };
+
+  const handleDemoLogin = (role: string) => {
+    onLogin(role);
   };
 
   return (
@@ -35,6 +51,13 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
 
         {/* Login Form */}
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
+          {errorMessage && (
+            <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div>
@@ -98,10 +121,20 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
             {/* Submit Button */}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
-              Sign In
-              <ArrowRight className="h-5 w-5" />
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="h-5 w-5" />
+                </>
+              )}
             </button>
           </form>
 
@@ -117,25 +150,25 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
             <p className="mb-3 text-xs text-gray-600">Quick demo access:</p>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => onLogin('manager')}
+                onClick={() => handleDemoLogin('manager')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
               >
                 Manager
               </button>
               <button
-                onClick={() => onLogin('landlord')}
+                onClick={() => handleDemoLogin('landlord')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
               >
                 Landlord
               </button>
               <button
-                onClick={() => onLogin('tenant')}
+                onClick={() => handleDemoLogin('tenant')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
               >
                 Tenant
               </button>
               <button
-                onClick={() => onLogin('vendor')}
+                onClick={() => handleDemoLogin('vendor')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
               >
                 Vendor
