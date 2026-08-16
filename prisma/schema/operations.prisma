@@ -1,0 +1,35 @@
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  EMERGENCY
+}
+
+enum MaintenanceStatus {
+  SUBMITTED
+  IN_PROGRESS
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model MaintenanceRequest {
+  id           String              @id @default(uuid())
+  unitId       String
+  unit         Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId     String
+  tenant       User                @relation("TenantMaintenance", fields: [tenantId], references: [id])
+  vendorId     String?
+  vendor       User?               @relation("VendorJobs", fields: [vendorId], references: [id])
+  title        String
+  description  String
+  priority     MaintenancePriority @default(MEDIUM)
+  status       MaintenanceStatus   @default(SUBMITTED)
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  costEstimate Float?
+  finalCost    Float?
+  invoices     Invoice[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}

@@ -1,0 +1,22 @@
+enum LeaseStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+model Lease {
+  id          String      @id @default(uuid())
+  unitId      String
+  unit        Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      User        @relation("TenantLeases", fields: [tenantId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  monthlyRent Float
+  deposit     Float
+  status      LeaseStatus @default(PENDING)
+  invoices    Invoice[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}

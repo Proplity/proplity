@@ -1,0 +1,51 @@
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  MIXED_USE
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+  RESERVED
+}
+
+model Property {
+  id          String       @id @default(uuid())
+  name        String
+  address     String
+  city        String
+  state       String?
+  zipCode     String?
+  type        PropertyType @default(RESIDENTIAL)
+  description String?
+  imageUrl    String?
+  managerId   String?
+  manager     User?        @relation("ManagedProperties", fields: [managerId], references: [id])
+  landlordId  String?
+  landlord    User?        @relation("OwnedProperties", fields: [landlordId], references: [id])
+  units       Unit[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Unit {
+  id                  String               @id @default(uuid())
+  propertyId          String
+  property            Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitNumber          String
+  bedrooms            Int                  @default(1)
+  bathrooms           Float                @default(1.0)
+  squareFeet          Int?
+  rentAmount          Float
+  depositAmount       Float?
+  status              UnitStatus           @default(VACANT)
+  leases              Lease[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([propertyId, unitNumber])
+}

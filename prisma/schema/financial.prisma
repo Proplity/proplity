@@ -1,0 +1,51 @@
+enum InvoiceType {
+  RENT
+  MAINTENANCE
+  SECURITY_DEPOSIT
+  UTILITY
+  LATE_FEE
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CASH
+  CHECK
+}
+
+model Invoice {
+  id                   String              @id @default(uuid())
+  leaseId              String?
+  lease                Lease?              @relation(fields: [leaseId], references: [id])
+  maintenanceRequestId String?
+  maintenanceRequest   MaintenanceRequest? @relation(fields: [maintenanceRequestId], references: [id])
+  type                 InvoiceType         @default(RENT)
+  amount               Float
+  dueDate              DateTime
+  status               InvoiceStatus       @default(UNPAID)
+  description          String?
+  payments             Payment[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Float
+  paymentMethod  PaymentMethod @default(BANK_TRANSFER)
+  paidAt         DateTime      @default(now())
+  transactionRef String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+}

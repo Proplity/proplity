@@ -1,0 +1,66 @@
+enum Role {
+  ADMIN
+  MANAGER
+  LANDLORD
+  TENANT
+  VENDOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  name                String
+  passwordHash        String
+  role                Role                 @default(TENANT)
+  status              UserStatus           @default(PENDING_VERIFICATION)
+  lastLoginAt         DateTime?
+  refreshTokens       RefreshToken[]
+  verificationToken   VerificationToken?
+  loginAttempts       LoginAttempt[]
+  managedProperties   Property[]           @relation("ManagedProperties")
+  ownedProperties     Property[]           @relation("OwnedProperties")
+  leases              Lease[]              @relation("TenantLeases")
+  maintenanceRequests MaintenanceRequest[] @relation("TenantMaintenance")
+  assignedJobs        MaintenanceRequest[] @relation("VendorJobs")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  familyId   String
+  revokedAt  DateTime?
+  replacedBy String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginAttempt {
+  id         String   @id @default(uuid())
+  identifier String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+}
