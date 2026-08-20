@@ -4,6 +4,8 @@ enum InvoiceType {
   SECURITY_DEPOSIT
   UTILITY
   LATE_FEE
+  ASSOCIATION_FEE
+  SUBSCRIPTION
 }
 
 enum InvoiceStatus {
@@ -22,30 +24,76 @@ enum PaymentMethod {
   CHECK
 }
 
+enum PaymentProvider {
+  PAYSTACK
+  FLUTTERWAVE
+  BANK_TRANSFER
+  CASH
+  CHECK
+}
+
+enum AutoPayStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+// PRD §5.1 / §5.2 "Auto-pay for tenants" — a standing authorization to charge
+// automatically each cycle. Stores only a provider-side payment method token,
+// never raw card/account data.
+model AutoPayMandate {
+  id                 String          @id @default(uuid())
+  leaseId            String
+  lease              Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  provider           PaymentProvider @default(PAYSTACK)
+  paymentMethodToken String
+  status             AutoPayStatus   @default(ACTIVE)
+  nextChargeDate     DateTime?
+  lastChargedAt      DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([leaseId, status])
+}
+
 model Invoice {
   id                   String              @id @default(uuid())
+  // Human-readable reference (e.g. "INV-7B49F12A") — distinct from the
+  // internal id, since the UI never shows a raw UUID to a tenant/vendor.
+  // Automatically generated with 'INV-' prefix and unique 8-character hex code.
+  invoiceNumber        String              @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
   leaseId              String?
   lease                Lease?              @relation(fields: [leaseId], references: [id])
   maintenanceRequestId String?
   maintenanceRequest   MaintenanceRequest? @relation(fields: [maintenanceRequestId], references: [id])
+  // Direct charge to a person, for invoices that aren't scoped to a lease or
+  // maintenance ticket — e.g. an ASSOCIATION_FEE billed estate-wide. At least
+  // one of leaseId / maintenanceRequestId / userId should be set; enforce
+  // that in application code, Prisma can't express an "at least one of" constraint.
+  userId               String?
+  user                 User?               @relation(fields: [userId], references: [id])
   type                 InvoiceType         @default(RENT)
   amount               Float
   dueDate              DateTime
   status               InvoiceStatus       @default(UNPAID)
   description          String?
   payments             Payment[]
+  notices              Notice[]
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 }
 
 model Payment {
-  id             String        @id @default(uuid())
-  invoiceId      String
-  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount         Float
-  paymentMethod  PaymentMethod @default(BANK_TRANSFER)
-  paidAt         DateTime      @default(now())
-  transactionRef String?
-  notes          String?
-  createdAt      DateTime      @default(now())
+  id                   String          @id @default(uuid())
+  invoiceId            String
+  invoice              Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount               Float
+  paymentMethod        PaymentMethod   @default(BANK_TRANSFER)
+  provider             PaymentProvider @default(PAYSTACK)
+  virtualAccountNumber String?
+  transactionRef       String?
+  rawProviderPayload   String?
+  paidAt               DateTime        @default(now())
+  notes                String?
+  createdAt            DateTime        @default(now())
 }

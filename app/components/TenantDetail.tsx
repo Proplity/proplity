@@ -12,6 +12,7 @@ import {
   Download,
   MessageSquare,
 } from 'lucide-react';
+import { mockTenantDetails } from '../store/tenantDetailData';
 
 interface TenantDetailProps {
   tenantId: number;
@@ -19,74 +20,7 @@ interface TenantDetailProps {
 }
 
 export function TenantDetail({ tenantId, onBack }: TenantDetailProps) {
-  const tenant = {
-    id: tenantId,
-    name: 'Adewale Johnson',
-    email: 'adewale.j@email.com',
-    phone: '+234 803 456 7890',
-    property: 'Lekki Phase 1, Apt 203',
-    rentAmount: 850000,
-    rentStatus: 'paid',
-    nextDue: 'Oct 15, 2026',
-    leaseStart: 'Apr 15, 2026',
-    leaseEnd: 'Apr 14, 2027',
-    paymentHistory: 'Excellent',
-    riskScore: 'low',
-    emergencyContact: {
-      name: 'Funmi Johnson',
-      relationship: 'Spouse',
-      phone: '+234 805 123 4567',
-    },
-    paymentRecords: [
-      {
-        date: 'Apr 15, 2026',
-        amount: 850000,
-        status: 'Paid',
-        method: 'Bank Transfer',
-      },
-      {
-        date: 'Apr 15, 2025',
-        amount: 750000,
-        status: 'Paid',
-        method: 'Online Payment',
-      },
-      {
-        date: 'Apr 15, 2024',
-        amount: 700000,
-        status: 'Paid',
-        method: 'Bank Transfer',
-      },
-    ],
-    maintenanceRequests: [
-      {
-        date: '2 weeks ago',
-        issue: 'AC Servicing',
-        status: 'Completed',
-        priority: 'Medium',
-      },
-      {
-        date: '1 month ago',
-        issue: 'Leaking Faucet',
-        status: 'Completed',
-        priority: 'Low',
-      },
-      {
-        date: '3 months ago',
-        issue: 'Door Lock',
-        status: 'Completed',
-        priority: 'High',
-      },
-    ],
-    documents: [
-      { name: 'Lease Agreement 2026', date: 'Apr 15, 2026', type: 'PDF' },
-      { name: 'ID Verification', date: 'Apr 10, 2026', type: 'PDF' },
-      { name: 'Proof of Employment', date: 'Apr 10, 2026', type: 'PDF' },
-    ],
-    notes: [
-      { date: 'Apr 20, 2026', note: 'Always pays on time, excellent tenant' },
-      { date: 'Jun 15, 2025', note: 'Requested early lease renewal' },
-    ],
-  };
+  const tenant = mockTenantDetails[tenantId] || mockTenantDetails[1];
 
   return (
     <div className="p-6">
@@ -225,7 +159,7 @@ export function TenantDetail({ tenantId, onBack }: TenantDetailProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {tenant.paymentRecords.map((payment, index) => (
+                  {tenant.paymentRecords.map((payment: any, index: number) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm">{payment.date}</td>
                       <td className="px-6 py-4 text-sm font-semibold">
@@ -257,7 +191,7 @@ export function TenantDetail({ tenantId, onBack }: TenantDetailProps) {
               <h2 className="font-semibold">Maintenance Requests</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {tenant.maintenanceRequests.map((request, index) => (
+              {tenant.maintenanceRequests.map((request: any, index: number) => (
                 <div key={index} className="p-4 hover:bg-gray-50">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="font-medium">{request.issue}</p>
@@ -294,7 +228,7 @@ export function TenantDetail({ tenantId, onBack }: TenantDetailProps) {
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 font-semibold">Manager Notes</h2>
             <div className="space-y-3">
-              {tenant.notes.map((note, index) => (
+              {tenant.notes.map((note: any, index: number) => (
                 <div key={index} className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                   <p className="text-sm text-gray-800">{note.note}</p>
                   <p className="mt-1 text-xs text-gray-500">{note.date}</p>
@@ -357,7 +291,7 @@ export function TenantDetail({ tenantId, onBack }: TenantDetailProps) {
               <h2 className="font-semibold">Documents</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {tenant.documents.map((doc, index) => (
+              {tenant.documents.map((doc: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50">
                   <div>
                     <p className="text-sm font-medium">{doc.name}</p>

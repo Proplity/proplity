@@ -17,66 +17,14 @@ import {
   FileText,
   Upload,
 } from 'lucide-react';
+import { mockAvailableProperties as availableProperties } from '../store/mockData';
+
+const STEPS = ['Tenant Info', 'Link Property', 'Lease Details', 'Review'];
 
 interface AddTenantFormProps {
   onBack: () => void;
   onComplete: () => void;
 }
-
-const availableProperties = [
-  {
-    id: 1,
-    title: '3 Bedroom Flat',
-    location: 'Lekki Phase 1, Lagos',
-    unit: 'Apt 203',
-    rent: '₦850,000/yr',
-    status: 'vacant',
-    bedrooms: 3,
-    bathrooms: 2,
-  },
-  {
-    id: 2,
-    title: '2 Bedroom Apartment',
-    location: 'Maitama, Abuja',
-    unit: 'Unit 5B',
-    rent: '₦1,200,000/yr',
-    status: 'vacant',
-    bedrooms: 2,
-    bathrooms: 2,
-  },
-  {
-    id: 3,
-    title: '4 Bedroom Duplex',
-    location: 'Ikeja GRA, Lagos',
-    unit: 'Flat 8',
-    rent: '₦900,000/yr',
-    status: 'vacant',
-    bedrooms: 4,
-    bathrooms: 3,
-  },
-  {
-    id: 4,
-    title: '1 Bedroom Studio',
-    location: 'Surulere, Lagos',
-    unit: 'Unit 3',
-    rent: '₦550,000/yr',
-    status: 'vacant',
-    bedrooms: 1,
-    bathrooms: 1,
-  },
-  {
-    id: 5,
-    title: '3 Bedroom Terrace',
-    location: 'Gwarinpa, Abuja',
-    unit: 'House 12',
-    rent: '₦750,000/yr',
-    status: 'vacant',
-    bedrooms: 3,
-    bathrooms: 2,
-  },
-];
-
-const STEPS = ['Tenant Info', 'Link Property', 'Lease Details', 'Review'];
 
 export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
   const [step, setStep] = useState(0);

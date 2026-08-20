@@ -31,41 +31,12 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-
-const monthlyRevenue = [
-  { month: 'Jan', revenue: 184000000, subscriptions: 12400000 },
-  { month: 'Feb', revenue: 201000000, subscriptions: 13800000 },
-  { month: 'Mar', revenue: 197000000, subscriptions: 14200000 },
-  { month: 'Apr', revenue: 228000000, subscriptions: 15600000 },
-  { month: 'May', revenue: 241000000, subscriptions: 16900000 },
-  { month: 'Jun', revenue: 267000000, subscriptions: 18200000 },
-];
-
-const userGrowth = [
-  { month: 'Jan', managers: 980, landlords: 710, tenants: 6800, vendors: 210 },
-  { month: 'Feb', managers: 1040, landlords: 760, tenants: 7200, vendors: 228 },
-  { month: 'Mar', managers: 1100, landlords: 800, tenants: 7650, vendors: 245 },
-  { month: 'Apr', managers: 1160, landlords: 840, tenants: 7980, vendors: 261 },
-  { month: 'May', managers: 1205, landlords: 870, tenants: 8210, vendors: 275 },
-  { month: 'Jun', managers: 1247, landlords: 892, tenants: 8421, vendors: 287 },
-];
-
-const propertyByState = [
-  { name: 'Lagos', value: 3241, color: '#3b82f6' },
-  { name: 'Abuja', value: 1182, color: '#8b5cf6' },
-  { name: 'Rivers', value: 421, color: '#10b981' },
-  { name: 'Oyo', value: 312, color: '#f59e0b' },
-  { name: 'Others', value: 265, color: '#6b7280' },
-];
-
-const maintenanceStats = [
-  { month: 'Jan', open: 142, resolved: 118, avgDays: 4.2 },
-  { month: 'Feb', open: 131, resolved: 124, avgDays: 3.9 },
-  { month: 'Mar', open: 158, resolved: 141, avgDays: 4.1 },
-  { month: 'Apr', open: 121, resolved: 130, avgDays: 3.6 },
-  { month: 'May', open: 114, resolved: 122, avgDays: 3.4 },
-  { month: 'Jun', open: 98, resolved: 119, avgDays: 3.1 },
-];
+import {
+  mockMonthlyRevenueAdmin as monthlyRevenue,
+  mockUserGrowthAdmin as userGrowth,
+  mockPropertyByStateAdmin as propertyByState,
+  mockMaintenanceStatsAdmin as maintenanceStats,
+} from '../store/mockData';
 
 type ReportTab = 'overview' | 'financial' | 'users' | 'properties' | 'maintenance';
 

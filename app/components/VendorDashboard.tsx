@@ -12,6 +12,7 @@ import {
   Phone,
   FileText,
 } from 'lucide-react';
+import { mockVendorDashboardJobs as jobs } from '../store/mockData';
 
 interface VendorDashboardProps {
   onNavigate: (page: any) => void;
@@ -19,65 +20,6 @@ interface VendorDashboardProps {
 
 export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   const [activeFilter, setActiveFilter] = useState('all');
-
-  const jobs = [
-    {
-      id: 1,
-      title: 'Broken Water Pipe',
-      property: 'Lekki Phase 1, Apt 203',
-      category: 'Plumbing',
-      priority: 'high',
-      status: 'assigned',
-      assignedDate: '2 hours ago',
-      estimatedPay: '₦20,000',
-      propertyManager: 'Proplity Management',
-      contactPhone: '+234 803 456 7890',
-      scheduledDate: 'Today, 2:00 PM',
-    },
-    {
-      id: 2,
-      title: 'AC Repair',
-      property: 'Maitama, Unit 5B',
-      category: 'HVAC',
-      priority: 'medium',
-      status: 'in_progress',
-      assignedDate: '1 day ago',
-      estimatedPay: '₦15,000',
-      propertyManager: 'Proplity Management',
-      contactPhone: '+234 805 123 4567',
-      scheduledDate: 'Tomorrow, 10:00 AM',
-    },
-    {
-      id: 3,
-      title: 'Door Lock Replacement',
-      property: 'Ikeja GRA, Flat 8',
-      category: 'General',
-      priority: 'low',
-      status: 'completed',
-      assignedDate: '3 days ago',
-      completedDate: '1 day ago',
-      estimatedPay: '₦8,000',
-      actualPay: '₦8,000',
-      propertyManager: 'Proplity Management',
-      contactPhone: '+234 809 876 5432',
-      invoiceStatus: 'pending',
-    },
-    {
-      id: 4,
-      title: 'Electrical Wiring',
-      property: 'Wuse 2, Apt 14',
-      category: 'Electrical',
-      priority: 'high',
-      status: 'completed',
-      assignedDate: '1 week ago',
-      completedDate: '5 days ago',
-      estimatedPay: '₦18,000',
-      actualPay: '₦18,000',
-      propertyManager: 'Proplity Management',
-      contactPhone: '+234 802 345 6789',
-      invoiceStatus: 'paid',
-    },
-  ];
 
   const stats = {
     activeJobs: jobs.filter((j) => j.status === 'assigned' || j.status === 'in_progress').length,

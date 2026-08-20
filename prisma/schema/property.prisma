@@ -5,6 +5,19 @@ enum PropertyType {
   MIXED_USE
 }
 
+// Outcome of the AI listing-verification pipeline (PRD §6.2.1), distinct from
+// `isPublished`: isPublished is the landlord's own visibility toggle, while
+// moderationStatus is what the AI/admin review pipeline decided about the
+// listing's media and metadata. A property can be unpublished AND approved
+// (landlord hasn't gone live yet), or published-intent but FLAGGED (blocked
+// pending manual review) — these are independent axes, not one field.
+enum ModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
 enum UnitStatus {
   VACANT
   OCCUPIED
@@ -12,23 +25,79 @@ enum UnitStatus {
   RESERVED
 }
 
+// Replaces the old single `isUsed: Boolean` — a boolean can't distinguish a code
+// that was revoked before use from one that's simply still valid, and PRD §5.3
+// requires a full audit trail, which a single flag doesn't support.
+enum AccessCodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum AccessLogAction {
+  GRANTED
+  DENIED
+  EXPIRED_ATTEMPT
+  REVOKED
+}
+
+enum WaterSupplyType {
+  BOREHOLE
+  PUBLIC_GRID
+  WATER_TANKER
+  COMBINED
+}
+
+enum ElectricalSetup {
+  PUBLIC_GRID
+  GENERATOR
+  INVERTER_SOLAR
+  COMBINED
+}
+
 model Property {
-  id          String       @id @default(uuid())
-  name        String
-  address     String
-  city        String
-  state       String?
-  zipCode     String?
-  type        PropertyType @default(RESIDENTIAL)
-  description String?
-  imageUrl    String?
-  managerId   String?
-  manager     User?        @relation("ManagedProperties", fields: [managerId], references: [id])
-  landlordId  String?
-  landlord    User?        @relation("OwnedProperties", fields: [landlordId], references: [id])
-  units       Unit[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                    String          @id @default(uuid())
+  name                  String
+  address               String
+  city                  String
+  state                 String?
+  zipCode               String?
+  type                  PropertyType    @default(RESIDENTIAL)
+  description           String?
+  imageUrl              String?
+  video360Url           String?
+  exteriorPhotoUrl      String?
+  isPublished           Boolean         @default(false)
+  moderationStatus      ModerationStatus @default(PENDING_REVIEW)
+  moderationNotes       String?
+  trustScore            Float?          @default(100.0)
+  powerReliabilityScore Float?
+  floodRiskScore        Float?
+  securityRating        Float?
+  roadConditionScore    Float?
+  waterSupplyType       WaterSupplyType @default(BOREHOLE)
+  electricalSetup       ElectricalSetup @default(COMBINED)
+  listingHash           String?
+  // Duplicate-listing resolution (PRD §6.2.4). Many-to-one, not one-to-one
+  // like Lease.renewedFromId: several duplicate submissions can all merge
+  // into the same canonical Property, so no @unique here.
+  mergedIntoId          String?
+  mergedInto            Property?       @relation("PropertyMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom            Property[]      @relation("PropertyMerge")
+  managerId             String?
+  manager               User?           @relation("ManagedProperties", fields: [managerId], references: [id])
+  landlordId            String?
+  landlord              User?           @relation("OwnedProperties", fields: [landlordId], references: [id])
+  units                 Unit[]
+  announcements         Announcement[]
+  conversations         Conversation[]
+  equipment             Equipment[]
+  neighbourhoodReports  NeighbourhoodReport[]
+  viewings              PropertyViewing[]
+  reviews               PropertyReview[]
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }
 
 model Unit {
@@ -40,12 +109,232 @@ model Unit {
   bathrooms           Float                @default(1.0)
   squareFeet          Int?
   rentAmount          Float
+  // The advertised rent's cycle for a still-vacant unit. Lease.paymentFrequency
+  // covers this once tenanted; a listing needs its own value before any Lease
+  // exists (e.g. showing "₦1,200,000/year" on a vacant listing).
+  listedPaymentFrequency PaymentFrequency  @default(ANNUAL)
   depositAmount       Float?
   status              UnitStatus           @default(VACANT)
+  mediaUrls           String[]
+  amenities           String[]
   leases              Lease[]
   maintenanceRequests MaintenanceRequest[]
+  accessCodes         AccessCode[]
+  violations          Violation[]
+  equipment           Equipment[]
+  conditionReports    ConditionReport[]
+  maintenanceSchedules MaintenanceSchedule[]
+  viewings            PropertyViewing[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
   @@unique([propertyId, unitNumber])
+}
+
+// PRD §6.2.2 Neighbourhood Intelligence Layer. Property already carries four
+// flat scalar scores (powerReliabilityScore, floodRiskScore, securityRating,
+// roadConditionScore) used for search/sort/filter — those stay as-is. This
+// model holds the much richer detail behind each score (feature lists,
+// historical data, notes, named amenities) as JSON per section, matching
+// what's actually rendered on a property's neighbourhood report page. One-to
+// -many with Property, not 1:1: reports get regenerated periodically, and
+// each generation is its own record rather than overwriting the last.
+model NeighbourhoodReport {
+  id           String   @id @default(uuid())
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  generatedAt  DateTime @default(now())
+
+  // Each JSON blob mirrors one section of the report exactly as displayed —
+  // e.g. security: { rating, status, features: [{name, available}], crimeRate,
+  // policePresence, emergencyResponse, recentIncidents, notes }. Kept as JSON
+  // rather than dozens of flat columns since none of these sub-fields are
+  // filtered/queried on individually — they're read-only display content.
+  security     Json?
+  electricity  Json?
+  water        Json?
+  roadNetwork  Json?
+  flooding     Json?
+  amenities    Json?
+  demographics Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([propertyId, generatedAt])
+}
+
+enum ViewingStatus {
+  REQUESTED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// A booked viewing appointment. Deliberately does NOT model "available slots"
+// as their own table — that's a business-hours-minus-existing-bookings
+// computation the application can do at query time; only the actual booked
+// appointment needs a durable row.
+model PropertyViewing {
+  id            String        @id @default(uuid())
+  propertyId    String
+  property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId        String?
+  unit          Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  requestedById String
+  requestedBy   User          @relation(fields: [requestedById], references: [id])
+  scheduledAt   DateTime
+  status        ViewingStatus @default(REQUESTED)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([propertyId, scheduledAt])
+}
+
+// Tenant/visitor-submitted rating, distinct from Property.trustScore (which
+// is the AI/verification-driven score from the listing-integrity pipeline,
+// §6.2.1) — this is opinion-based, that one is fact-based.
+model PropertyReview {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model Announcement {
+  id          String    @id @default(uuid())
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  title       String
+  body        String
+  isPinned    Boolean   @default(false)
+  publishedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([propertyId, publishedAt])
+}
+
+enum ViolationSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+enum ViolationStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// Community/estate violation tracking (PRD §5.3) — e.g. noise complaints,
+// unauthorized alterations, parking violations, lease/community-rule breaches.
+model Violation {
+  id             String            @id @default(uuid())
+  unitId         String
+  unit           Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  reportedById   String
+  reportedBy     User              @relation("ViolationReportedBy", fields: [reportedById], references: [id])
+  description    String
+  severity       ViolationSeverity @default(MINOR)
+  status         ViolationStatus   @default(OPEN)
+  evidenceUrls   String[]
+  resolutionNote String?
+  resolvedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([unitId, status])
+}
+
+enum EquipmentType {
+  HVAC
+  WATER_HEATER
+  GENERATOR
+  INVERTER
+  APPLIANCE
+  ELEVATOR
+  OTHER
+}
+
+// PRD §5.1 "Equipment & warranty tracking". Either unitId or propertyId
+// should be set (unit-scoped e.g. an AC unit, or property-wide e.g. a shared
+// generator) — Prisma can't express "at least one of" as a constraint, so
+// this is enforced in application code, same as Invoice's optional FK trio.
+model Equipment {
+  id                   String                @id @default(uuid())
+  unitId               String?
+  unit                 Unit?                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  propertyId           String?
+  property             Property?             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  type                 EquipmentType
+  serialNumber         String?
+  installedAt          DateTime?
+  warrantyExpiresAt    DateTime?
+  maintenanceSchedules MaintenanceSchedule[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+// PRD §6.2.6 Structured Condition Reports. One-to-many with Unit, not 1:1 —
+// a unit is realistically re-inspected at each listing cycle and at
+// move-in/move-out, so each inspection is its own record rather than a
+// single report being overwritten each time.
+model ConditionReport {
+  id                 String   @id @default(uuid())
+  unitId             String
+  unit               Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  // Room-by-room breakdown: dimensions, per-room condition, photo references.
+  rooms              Json
+  // AI-detected mismatches between claimed condition and photo/video evidence.
+  aiFlags            Json?
+  inconsistencyNotes String?
+  reportedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  @@index([unitId, reportedAt])
+}
+
+model AccessCode {
+  id          String           @id @default(uuid())
+  unitId      String
+  unit        Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  code        String
+  guestName   String?
+  validFrom   DateTime
+  // Nullable: some codes (e.g. a permanent main-gate code) never expire.
+  // A null validUntil means "no expiry" rather than being an unset value.
+  validUntil  DateTime?
+  status      AccessCodeStatus @default(ACTIVE)
+  revokedAt   DateTime?
+  logs        AccessLog[]
+  createdAt   DateTime         @default(now())
+}
+
+// Records every attempt to use an access code, not just its final state —
+// this is what "full audit trail of access activity" (PRD §5.3) actually
+// requires: who tried, when, and whether it was granted or denied, including
+// repeated or failed attempts against the same code.
+model AccessLog {
+  id           String          @id @default(uuid())
+  accessCodeId String
+  accessCode   AccessCode      @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+  action       AccessLogAction
+  occurredAt   DateTime        @default(now())
+  ipAddress    String?
+  deviceInfo   String?
+
+  @@index([accessCodeId, occurredAt])
 }

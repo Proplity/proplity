@@ -8,76 +8,15 @@ import {
   User,
   MapPin,
   Calendar,
+  Wind,
 } from 'lucide-react';
+import { mockMaintenanceBoardRequests as requests } from '../store/maintenanceData';
 
 interface MaintenanceBoardProps {
   onNavigate: (page: any) => void;
 }
 
 export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
-  const requests = {
-    new: [
-      {
-        id: 1,
-        title: 'Broken Water Pipe',
-        description: 'Main water pipe leaking in kitchen',
-        tenant: 'Adewale Johnson',
-        property: 'Lekki Phase 1, Apt 203',
-        priority: 'high',
-        category: 'Plumbing',
-        submittedAt: '2 hours ago',
-        icon: Droplet,
-        aiCategory: 'Plumbing - Urgent',
-        estimatedCost: '₦15,000 - ₦25,000',
-      },
-      {
-        id: 2,
-        title: 'AC Not Cooling',
-        description: 'Air conditioner running but not cooling',
-        tenant: 'Chidinma Okafor',
-        property: 'Maitama, Unit 5B',
-        priority: 'medium',
-        category: 'HVAC',
-        submittedAt: '5 hours ago',
-        icon: Wrench,
-        aiCategory: 'HVAC - Moderate',
-        estimatedCost: '₦8,000 - ₦20,000',
-      },
-    ],
-    inProgress: [
-      {
-        id: 3,
-        title: 'Electrical Fault',
-        description: 'Power outage in master bedroom',
-        tenant: 'Ibrahim Musa',
-        property: 'Wuse 2, Apt 14',
-        priority: 'high',
-        category: 'Electrical',
-        submittedAt: '1 day ago',
-        assignedTo: 'John Electricals',
-        icon: Zap,
-        aiCategory: 'Electrical - Urgent',
-        estimatedCost: '₦10,000 - ₦18,000',
-      },
-    ],
-    completed: [
-      {
-        id: 4,
-        title: 'Leaking Faucet',
-        description: 'Bathroom sink faucet dripping',
-        tenant: 'Blessing Eze',
-        property: 'Ikeja GRA, Flat 8',
-        priority: 'low',
-        category: 'Plumbing',
-        submittedAt: '3 days ago',
-        completedAt: '1 day ago',
-        assignedTo: 'AquaFix Plumbers',
-        icon: Droplet,
-        aiCategory: 'Plumbing - Minor',
-        actualCost: '₦5,000',
-      },
-    ],
-  };
 
   const priorityColors = {
     high: 'bg-red-100 text-red-700 border-red-200',
@@ -99,7 +38,14 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
 
       <div className="space-y-3">
         {requests.map((request: any) => {
-          const RequestIcon = request.icon;
+          const RequestIcon =
+            request.category === 'Plumbing'
+              ? Droplet
+              : request.category === 'Electrical'
+                ? Zap
+                : request.category === 'HVAC'
+                  ? Wind
+                  : Wrench;
           return (
             <div
               key={request.id}

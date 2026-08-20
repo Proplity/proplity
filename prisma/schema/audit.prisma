@@ -1,0 +1,21 @@
+// PRD §7 Non-Functional Requirements — "Audit logs", as a standalone
+// requirement separate from the access-code-specific AccessLog in
+// property.prisma. Covers sensitive application-level actions: role changes,
+// property transfers, invoice edits, admin overrides, etc.
+//
+// Deliberately its own file rather than living in base.prisma — base.prisma
+// holds only the generator/datasource config, and every other domain here
+// gets its own file, so a business model belongs alongside them, not there.
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   FileText,
 } from 'lucide-react';
+import { mockTenantManagementTenants as tenants } from '../store/mockData';
 
 interface TenantManagementProps {
   onNavigate: (page: any) => void;
@@ -20,79 +21,6 @@ interface TenantManagementProps {
 export function TenantManagement({ onNavigate }: TenantManagementProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-
-  const tenants = [
-    {
-      id: 1,
-      name: 'Adewale Johnson',
-      email: 'adewale.j@email.com',
-      phone: '+234 803 456 7890',
-      property: 'Lekki Phase 1, Apt 203',
-      rentAmount: '₦850,000',
-      rentStatus: 'paid',
-      nextDue: 'Oct 15, 2026',
-      leaseEnd: 'Apr 15, 2027',
-      paymentHistory: 'Excellent',
-      riskScore: 'low',
-      avatar: 'bg-blue-500',
-    },
-    {
-      id: 2,
-      name: 'Chidinma Okafor',
-      email: 'chidinma.o@email.com',
-      phone: '+234 805 123 4567',
-      property: 'Maitama, Unit 5B',
-      rentAmount: '₦1,200,000',
-      rentStatus: 'paid',
-      nextDue: 'Sep 22, 2026',
-      leaseEnd: 'Mar 22, 2027',
-      paymentHistory: 'Excellent',
-      riskScore: 'low',
-      avatar: 'bg-green-500',
-    },
-    {
-      id: 3,
-      name: 'Ibrahim Musa',
-      email: 'ibrahim.m@email.com',
-      phone: '+234 809 876 5432',
-      property: 'Wuse 2, Apt 14',
-      rentAmount: '₦650,000',
-      rentStatus: 'due',
-      nextDue: 'Apr 25, 2026',
-      leaseEnd: 'Oct 25, 2026',
-      paymentHistory: 'Good',
-      riskScore: 'medium',
-      avatar: 'bg-orange-500',
-    },
-    {
-      id: 4,
-      name: 'Blessing Eze',
-      email: 'blessing.e@email.com',
-      phone: '+234 802 345 6789',
-      property: 'Ikeja GRA, Flat 8',
-      rentAmount: '₦900,000',
-      rentStatus: 'paid',
-      nextDue: 'Nov 10, 2026',
-      leaseEnd: 'May 10, 2027',
-      paymentHistory: 'Excellent',
-      riskScore: 'low',
-      avatar: 'bg-purple-500',
-    },
-    {
-      id: 5,
-      name: 'Tunde Bakare',
-      email: 'tunde.b@email.com',
-      phone: '+234 807 654 3210',
-      property: 'Ajah, Flat 3C',
-      rentAmount: '₦550,000',
-      rentStatus: 'overdue',
-      nextDue: 'Apr 10, 2026',
-      leaseEnd: 'Oct 10, 2026',
-      paymentHistory: 'Fair',
-      riskScore: 'high',
-      avatar: 'bg-red-500',
-    },
-  ];
 
   const statusFilters = [
     { id: 'all', label: 'All Tenants', count: tenants.length },

@@ -1,0 +1,78 @@
+// Covers PRD §5.1 "Unified messaging (tenant ↔ landlord ↔ manager ↔ vendor)",
+// §5.2 "Messaging with management", §5.4 "Messaging with stakeholders",
+// §5.3 discussion boards, and the WhatsApp AI assistant's hand-off to a human
+// (§6.1) — the assistant posts as senderType=AI_ASSISTANT into the same
+// Conversation a human would use, so escalation has somewhere to land.
+
+enum ConversationType {
+  DIRECT               // 1:1, e.g. tenant <-> manager
+  MAINTENANCE_THREAD   // tied to a MaintenanceRequest
+  LEASE_THREAD         // tied to a Lease (renewal discussion, notices, etc.)
+  COMMUNITY_DISCUSSION // §5.3 discussion boards — multi-participant, no context link required
+  SUPPORT
+}
+
+enum MessageChannel {
+  IN_APP
+  WHATSAPP
+  EMAIL
+  SMS
+}
+
+enum MessageSenderType {
+  USER
+  AI_ASSISTANT
+  SYSTEM
+}
+
+model Conversation {
+  id                   String                     @id @default(uuid())
+  type                 ConversationType           @default(DIRECT)
+  title                String?
+  // PRD §9 KPI "AI assistant resolution rate" — null until the thread
+  // reaches an outcome; true = the AI handled it without a human reply,
+  // false = it was escalated (see §6.1 "smart escalation to humans").
+  resolvedByAi         Boolean?
+  escalatedAt          DateTime?
+  propertyId           String?
+  property             Property?                  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  maintenanceRequestId String?                     @unique
+  maintenanceRequest   MaintenanceRequest?         @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
+  leaseId              String?
+  lease                Lease?                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  participants         ConversationParticipant[]
+  messages             Message[]
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String            @id @default(uuid())
+  conversationId String
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // Nullable: AI-assistant and system messages (senderType != USER) have no User row.
+  senderId       String?
+  sender         User?             @relation(fields: [senderId], references: [id])
+  senderType     MessageSenderType @default(USER)
+  channel        MessageChannel    @default(IN_APP)
+  body           String
+  attachmentUrls String[]
+  // Provider-side message ID (e.g. WhatsApp message ID) — used for delivery-status
+  // callbacks and to avoid double-inserting a message the provider redelivers.
+  externalRef    String?
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+}

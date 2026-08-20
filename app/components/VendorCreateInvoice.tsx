@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, DollarSign, Plus, Trash2, FileText, Send } from 'lucide-react';
+import {
+  mockInvoiceJobDetails,
+  mockInvoiceVendorInfo as vendorInfo,
+} from '../store/mockData';
 
 interface VendorCreateInvoiceProps {
   jobId: number;
@@ -32,23 +36,8 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
   ]);
 
   const jobDetails = {
-    jobId: jobId,
-    jobTitle: 'Broken Water Pipe',
-    property: 'Lekki Phase 1, Apt 203',
-    completedDate: 'May 4, 2026',
-    propertyManager: 'Proplity Management',
-    estimatedCost: 20000,
-  };
-
-  const vendorInfo = {
-    name: 'AquaFix Plumbers',
-    businessId: 'RC123456',
-    phone: '+234 901 234 5678',
-    email: 'contact@aquafixplumbers.com',
-    address: 'Shop 12, Lekki Plaza, Lagos',
-    accountNumber: '0123456789',
-    accountName: 'AquaFix Plumbers Ltd',
-    bankName: 'GTBank',
+    ...mockInvoiceJobDetails,
+    jobId,
   };
 
   const addLineItem = () => {

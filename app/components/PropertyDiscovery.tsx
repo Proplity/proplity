@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { mockProperties } from '../store/mockData';
 import {
   Search,
   MapPin,
@@ -73,71 +74,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
     setTimeout(() => setAdSuccess(null), 3000);
   };
 
-  const properties = [
-    {
-      id: 1,
-      title: '3 Bedroom Flat',
-      location: 'Lekki Phase 1, Lagos',
-      price: '₦1,200,000/year',
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: '1,200 sq ft',
-      status: 'available',
-      verified: true,
-      trustScore: 95,
-      features: ['24/7 Power', 'Borehole', 'Security', 'Parking'],
-      agent: 'Verified Landlord',
-      image: 'bg-gradient-to-br from-blue-100 to-blue-200',
-      neighborhood: {
-        safety: 9,
-        accessibility: 8,
-        powerReliability: 7,
-        waterSupply: 9,
-      },
-    },
-    {
-      id: 2,
-      title: '2 Bedroom Apartment',
-      location: 'Maitama, Abuja',
-      price: '₦900,000/year',
-      bedrooms: 2,
-      bathrooms: 2,
-      sqft: '950 sq ft',
-      status: 'available',
-      verified: true,
-      trustScore: 92,
-      features: ['Generator', 'Water Tank', 'Gated Estate'],
-      agent: 'Verified Agent',
-      image: 'bg-gradient-to-br from-green-100 to-green-200',
-      neighborhood: {
-        safety: 10,
-        accessibility: 9,
-        powerReliability: 6,
-        waterSupply: 8,
-      },
-    },
-    {
-      id: 3,
-      title: '4 Bedroom Duplex',
-      location: 'Ikeja GRA, Lagos',
-      price: '₦1,800,000/year',
-      bedrooms: 4,
-      bathrooms: 3,
-      sqft: '1,800 sq ft',
-      status: 'available',
-      verified: true,
-      trustScore: 98,
-      features: ['Inverter System', 'Borehole', 'CCTV', '2 Parking Spaces'],
-      agent: 'Proplity Verified',
-      image: 'bg-gradient-to-br from-purple-100 to-purple-200',
-      neighborhood: {
-        safety: 9,
-        accessibility: 10,
-        powerReliability: 8,
-        waterSupply: 9,
-      },
-    },
-  ];
+  const properties = mockProperties;
 
   const filters = [
     { id: 'all', label: 'All Properties' },

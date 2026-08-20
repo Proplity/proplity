@@ -12,6 +12,13 @@ enum UserStatus {
   PENDING_VERIFICATION
 }
 
+enum KycStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id                  String               @id @default(uuid())
   email               String               @unique
@@ -19,6 +26,19 @@ model User {
   passwordHash        String
   role                Role                 @default(TENANT)
   status              UserStatus           @default(PENDING_VERIFICATION)
+  phoneNumber         String?
+  avatarUrl           String?
+  bio                 String?
+  kycStatus           KycStatus            @default(UNVERIFIED)
+  moveReason          String?
+  occupantCount       Int?
+  targetMoveInDate    DateTime?
+  // Single contact, matching how it's used in practice (one named contact per
+  // tenant) — not a separate model, since nothing in the product needs more
+  // than one per user.
+  emergencyContactName         String?
+  emergencyContactRelationship String?
+  emergencyContactPhone        String?
   lastLoginAt         DateTime?
   refreshTokens       RefreshToken[]
   verificationToken   VerificationToken?
@@ -28,8 +48,122 @@ model User {
   leases              Lease[]              @relation("TenantLeases")
   maintenanceRequests MaintenanceRequest[] @relation("TenantMaintenance")
   assignedJobs        MaintenanceRequest[] @relation("VendorJobs")
+  bankAccounts        BankAccount[]
+  issuedAccessCodes   AccessCode[]
+  announcements         Announcement[]            @relation("AnnouncementAuthor")
+  reportedViolations    Violation[]               @relation("ViolationReportedBy")
+  conversations         ConversationParticipant[]
+  messagesSent          Message[]
+  invoices              Invoice[]
+  vendorProfile         VendorProfile?
+  kycVerifications      KycVerification[]
+  vendorRatingsReceived VendorRating[]            @relation("VendorRatingsReceived")
+  vendorRatingsGiven    VendorRating[]            @relation("VendorRatingsGiven")
+  auditLogs             AuditLog[]
+  propertyReviews       PropertyReview[]
+  propertyViewings      PropertyViewing[]
+  subscription          Subscription?
+  notesAuthored         Note[]                    @relation("NoteAuthor")
+  notesAboutMe           Note[]                   @relation("NoteAboutUser")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+}
+
+// PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
+model VendorProfile {
+  id                String                 @id @default(uuid())
+  userId            String                 @unique
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName      String
+  licenseNumber     String?
+  // Many-to-many with the MaintenanceCategory table (operations.prisma) —
+  // updated from an enum array now that categories are admin-editable rows.
+  serviceCategories MaintenanceCategory[]
+  coverageArea      String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+}
+
+// PRD Appendix "ID Verification - API Integration" — records the verification
+// attempt itself (provider, document type, session reference), not just the
+// outcome that User.kycStatus already stores.
+model KycVerification {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  documentType      String
+  providerReference String?
+  status            KycStatus @default(PENDING)
+  submittedAt       DateTime  @default(now())
+  resolvedAt        DateTime?
+
+  @@index([userId, submittedAt])
+}
+
+// Internal staff-only annotation about a person or lease — distinct from
+// Message/Conversation, which is tenant-facing communication. A note is
+// never visible to the person it's about.
+model Note {
+  id          String   @id @default(uuid())
+  authorId    String
+  author      User     @relation("NoteAuthor", fields: [authorId], references: [id])
+  aboutUserId String?
+  aboutUser   User?    @relation("NoteAboutUser", fields: [aboutUserId], references: [id])
+  leaseId     String?
+  lease       Lease?   @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  body        String
+  createdAt   DateTime @default(now())
+
+  @@index([aboutUserId, createdAt])
+}
+
+enum PlanTier {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+// Not in the PRD's written scope — added from evidence in the admin UI
+// mock data (per-user plan tiers, "Platform Subscription" transactions).
+// Confirm this is an intended product feature before building the billing
+// logic behind it, since it wasn't part of the original requirements doc.
+// providerSubscriptionId defers the actual recurring-billing mechanics to
+// the payment provider's own subscription API (e.g. Paystack subscriptions)
+// rather than reimplementing a mandate system here.
+model Subscription {
+  id                    String             @id @default(uuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier                  PlanTier           @default(FREE)
+  status                SubscriptionStatus @default(ACTIVE)
+  providerSubscriptionId String?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountNumber String
+  bankCode      String
+  bankName      String
+  accountName   String
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model RefreshToken {
@@ -59,7 +193,7 @@ model LoginAttempt {
   id         String   @id @default(uuid())
   identifier String
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt  DateTime @default(now())
 
   @@index([identifier, createdAt])

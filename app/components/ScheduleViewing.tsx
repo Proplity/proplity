@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Calendar, Clock, MapPin, User, Phone, Mail, CheckCircle } from 'lucide-react';
+import { mockViewingAvailableDates as availableDates } from '../store/mockData';
 
 interface ScheduleViewingProps {
   propertyId: number;
@@ -27,34 +28,6 @@ export function ScheduleViewing({
     specialRequirements: '',
     agreeToTerms: false,
   });
-
-  const availableDates = [
-    {
-      date: '2026-05-14',
-      day: 'Wednesday',
-      slots: ['10:00 AM', '2:00 PM', '4:00 PM'],
-    },
-    {
-      date: '2026-05-15',
-      day: 'Thursday',
-      slots: ['10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM'],
-    },
-    {
-      date: '2026-05-16',
-      day: 'Friday',
-      slots: ['10:00 AM', '2:00 PM', '4:00 PM', '6:00 PM'],
-    },
-    {
-      date: '2026-05-17',
-      day: 'Saturday',
-      slots: ['9:00 AM', '11:00 AM', '1:00 PM', '3:00 PM'],
-    },
-    {
-      date: '2026-05-18',
-      day: 'Sunday',
-      slots: ['10:00 AM', '12:00 PM', '2:00 PM'],
-    },
-  ];
 
   const selectedDate = availableDates.find((d) => d.date === formData.date);
 

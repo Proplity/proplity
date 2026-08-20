@@ -16,6 +16,7 @@ import {
   XCircle,
   Info,
 } from 'lucide-react';
+import { mockReportData as reportData } from '../store/mockData';
 
 interface NeighbourhoodReportProps {
   onBack: () => void;
@@ -24,92 +25,6 @@ interface NeighbourhoodReportProps {
 export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-
-  // Mock data for the neighbourhood report
-  const reportData = {
-    location: 'Lekki Phase 1, Lagos',
-    generatedDate: new Date().toLocaleDateString('en-NG', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }),
-    security: {
-      rating: 8.5,
-      status: 'Excellent',
-      features: [
-        { name: '24/7 Security Personnel', available: true },
-        { name: 'CCTV Surveillance', available: true },
-        { name: 'Gated Community', available: true },
-        { name: 'Security Patrol', available: true },
-        { name: 'Access Control System', available: true },
-      ],
-      crimeRate: 'Low',
-      policePresence: 'High',
-      emergencyResponse: '5-10 minutes average',
-      recentIncidents: 2,
-      notes:
-        "Lekki Phase 1 is one of Lagos's most secure residential areas with multiple layers of security including estate gates, street gates, and private security patrols.",
-    },
-    electricity: {
-      rating: 7.5,
-      status: 'Good',
-      reliability: '85%',
-      averageHoursPerDay: 20,
-      powerOutages: '2-3 times per week',
-      alternativePower: true,
-      generatorBackup: 'Yes - Estate-wide',
-      prepaidMeter: true,
-      averageMonthlyCost: '₦25,000 - ₦35,000',
-      notes:
-        'Power supply is generally stable with estate generators providing backup during PHCN outages. Most properties have individual prepaid meters.',
-    },
-    roadNetwork: {
-      rating: 8.0,
-      status: 'Very Good',
-      mainRoadCondition: 'Excellent',
-      internalRoadsCondition: 'Good',
-      trafficLevel: 'Moderate',
-      peakHourTraffic: 'Heavy (7-9 AM, 5-8 PM)',
-      drainage: 'Adequate',
-      streetLighting: 'Excellent',
-      parking: 'Available',
-      publicTransport: 'Limited - Mostly private cars and ride-hailing',
-      notes:
-        'Well-maintained tarred roads throughout. Main roads can experience heavy traffic during rush hours. Internal roads are well-lit and have proper drainage systems.',
-    },
-    flooding: {
-      rating: 6.5,
-      status: 'Moderate Risk',
-      floodProne: 'Low to Moderate',
-      rainySeasonRisk: 'Moderate',
-      drainageSystem: 'Good',
-      historicalFlooding: [
-        { year: '2024', severity: 'Minor', duration: '2-3 hours' },
-        { year: '2023', severity: 'Minor', duration: '1-2 hours' },
-      ],
-      mitigationMeasures: [
-        'Regular drainage cleaning',
-        'Sand bags available during rainy season',
-        'Elevated building foundations',
-      ],
-      notes:
-        'Some low-lying areas may experience minor flooding during heavy rainfall, but this typically drains within a few hours. The estate has good drainage infrastructure.',
-    },
-    amenities: {
-      schools: ['Corona School', 'Greensprings School', 'Lekki British School'],
-      hospitals: ['Reddington Hospital', 'Lagoon Hospital', 'Chevron Clinic'],
-      shopping: ['Circle Mall', 'Palms Shopping Mall', 'Shoprite Lekki'],
-      restaurants: ['Numerous options along Admiralty Way'],
-      recreation: ['Lekki Conservation Centre', 'Elegushi Beach', 'La Campagne Tropicana'],
-    },
-    demographics: {
-      population: 'High density',
-      averageAge: '30-45 years',
-      familyFriendly: 'Very High',
-      expatCommunity: 'Significant',
-      noiseLevel: 'Low to Moderate',
-    },
-  };
 
   const handleGenerateReport = () => {
     if (!isPremiumUser) {

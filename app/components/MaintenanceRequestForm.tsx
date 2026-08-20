@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Wrench, Upload, AlertCircle, Droplet, Zap, Wind, Home } from 'lucide-react';
+import { mockUserPropertyAddress } from '../store/mockData';
 
 interface MaintenanceRequestFormProps {
   onBack: () => void;
@@ -69,7 +70,7 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
             <h2 className="mb-4 text-lg font-semibold">Property Information</h2>
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm font-medium">Your Property</p>
-              <p className="text-sm text-gray-600">Lekki Phase 1, Apt 203</p>
+              <p className="text-sm text-gray-600">{mockUserPropertyAddress}</p>
             </div>
           </div>
 

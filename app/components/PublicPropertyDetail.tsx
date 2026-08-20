@@ -23,6 +23,7 @@ import {
   Maximize2,
   BarChart3,
 } from 'lucide-react';
+import { mockSimilarProperties as SIMILAR, mockPublicPropertyDetails as PROPERTIES } from '../store/mockData';
 
 interface PublicPropertyDetailProps {
   propertyId: number;
@@ -35,130 +36,6 @@ interface PublicPropertyDetailProps {
   onViewTenantPage: () => void;
   onViewVendorPage: () => void;
 }
-
-/* ── Shared property data (keyed by id) ── */
-const PROPERTIES: Record<number, any> = {
-  1: {
-    title: '3 Bedroom Luxury Apartment',
-    location: 'Block 15, Lekki Phase 1, Lagos State',
-    price: '₦1,200,000',
-    freq: 'year',
-    beds: 3,
-    baths: 2,
-    sqft: '1,200 sq ft',
-    trustScore: 95,
-    verified: true,
-    rating: 4.8,
-    reviews: 14,
-    badge: 'Available',
-    images: [
-      'bg-gradient-to-br from-slate-300 to-slate-500',
-      'bg-gradient-to-br from-stone-300 to-stone-500',
-      'bg-gradient-to-br from-zinc-300 to-zinc-500',
-      'bg-gradient-to-br from-neutral-300 to-neutral-500',
-    ],
-    description:
-      'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security. Close to schools, shopping centres, and major roads. The apartment boasts floor-to-ceiling windows, Italian tiles, and a fully fitted kitchen.',
-    amenities: [
-      { icon: Zap, label: '360° Virtual Tours' },
-      { icon: Droplets, label: 'Swimming Pool' },
-      { icon: Lock, label: 'Security/CCTV' },
-      { icon: Car, label: 'Parking Space' },
-      { icon: Wind, label: 'Air Conditioning' },
-      { icon: Wifi, label: 'High-Speed WiFi' },
-    ],
-  },
-  2: {
-    title: '2 Bedroom Modern Flat',
-    location: 'Plot 43, Maitama District, Abuja',
-    price: '₦900,000',
-    freq: 'year',
-    beds: 2,
-    baths: 2,
-    sqft: '950 sq ft',
-    trustScore: 92,
-    verified: true,
-    rating: 4.5,
-    reviews: 9,
-    badge: 'Available',
-    images: [
-      'bg-gradient-to-br from-green-300 to-green-600',
-      'bg-gradient-to-br from-emerald-300 to-emerald-500',
-      'bg-gradient-to-br from-teal-300 to-teal-500',
-      'bg-gradient-to-br from-cyan-300 to-cyan-500',
-    ],
-    description:
-      'Modern 2-bedroom flat in the prestigious Maitama district. Features a well-fitted kitchen, spacious living area, and a serene environment perfect for professionals.',
-    amenities: [
-      { icon: Zap, label: 'Generator' },
-      { icon: Droplets, label: 'Water Tank' },
-      { icon: Lock, label: 'Gated Estate' },
-      { icon: Car, label: 'Parking Space' },
-      { icon: Wifi, label: 'High-Speed WiFi' },
-      { icon: Maximize2, label: 'Spacious Rooms' },
-    ],
-  },
-  3: {
-    title: '4 Bedroom Duplex',
-    location: 'Ikeja GRA, Lagos',
-    price: '₦1,800,000',
-    freq: 'year',
-    beds: 4,
-    baths: 3,
-    sqft: '1,800 sq ft',
-    trustScore: 97,
-    verified: true,
-    rating: 4.9,
-    reviews: 22,
-    badge: 'Available',
-    images: [
-      'bg-gradient-to-br from-purple-300 to-purple-600',
-      'bg-gradient-to-br from-violet-300 to-violet-500',
-      'bg-gradient-to-br from-fuchsia-300 to-fuchsia-500',
-      'bg-gradient-to-br from-pink-300 to-pink-500',
-    ],
-    description:
-      'Stunning 4-bedroom duplex in the quiet and secure Ikeja GRA neighbourhood. Features a private swimming pool, landscaped garden, and top-of-the-range finishes throughout.',
-    amenities: [
-      { icon: Droplets, label: 'Swimming Pool' },
-      { icon: Zap, label: '24/7 Power Supply' },
-      { icon: Home, label: 'Garden' },
-      { icon: Lock, label: 'Security/CCTV' },
-      { icon: Car, label: 'Parking Space' },
-      { icon: Wind, label: 'Air Conditioning' },
-    ],
-  },
-};
-
-const SIMILAR = [
-  {
-    id: 2,
-    title: '2 Bedroom Luxury Apartment',
-    price: '₦1,200,000/year',
-    beds: 2,
-    baths: 2,
-    sqft: '950 sq ft',
-    bg: 'from-green-500 to-green-700',
-  },
-  {
-    id: 3,
-    title: '3 Bedroom Modern Flat',
-    price: '₦900,000/year',
-    beds: 3,
-    baths: 2,
-    sqft: '1,200 sq ft',
-    bg: 'from-blue-500 to-blue-700',
-  },
-  {
-    id: 1,
-    title: '4 Bedroom Duplex',
-    price: '₦1,500,000/year',
-    beds: 4,
-    baths: 3,
-    sqft: '1,800 sq ft',
-    bg: 'from-purple-500 to-purple-700',
-  },
-];
 
 /* ── Premium upgrade modal ── */
 function NeighbourhoodModal({

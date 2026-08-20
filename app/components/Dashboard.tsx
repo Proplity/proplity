@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
+import { mockRecentPayments, mockUpcomingRenewals } from '../store/mockData';
 
 interface DashboardProps {
   onNavigate: (page: any) => void;
@@ -49,57 +50,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     },
   ];
 
-  const recentPayments = [
-    {
-      tenant: 'Adewale Johnson',
-      property: 'Lekki Phase 1, Apt 203',
-      amount: '₦850,000',
-      status: 'completed',
-      date: '2 hours ago',
-    },
-    {
-      tenant: 'Chidinma Okafor',
-      property: 'Maitama, Unit 5B',
-      amount: '₦1,200,000',
-      status: 'completed',
-      date: '5 hours ago',
-    },
-    {
-      tenant: 'Ibrahim Musa',
-      property: 'Wuse 2, Apt 14',
-      amount: '₦650,000',
-      status: 'pending',
-      date: '1 day ago',
-    },
-    {
-      tenant: 'Blessing Eze',
-      property: 'Ikeja GRA, Flat 8',
-      amount: '₦900,000',
-      status: 'completed',
-      date: '2 days ago',
-    },
-  ];
+  const recentPayments = mockRecentPayments;
 
-  const upcomingRenewals = [
-    {
-      tenant: 'Funmi Adeyemi',
-      property: 'VI, Apt 12A',
-      dueDate: 'May 15, 2026',
-      status: 'contacted',
-    },
-    {
-      tenant: 'Yemi Oladipo',
-      property: 'Surulere, Unit 7',
-      dueDate: 'May 28, 2026',
-      status: 'pending',
-    },
-    {
-      tenant: 'Tunde Bakare',
-      property: 'Ajah, Flat 3C',
-      dueDate: 'June 5, 2026',
-      status: 'pending',
-    },
-  ];
+  const upcomingRenewals = mockUpcomingRenewals;
 
   return (
     <div className="space-y-6 p-6">
@@ -212,7 +165,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   </span>
                 </div>
                 <p className="mb-1 text-sm text-gray-600">{renewal.property}</p>
-                <p className="text-sm font-medium text-orange-600">Due: {renewal.dueDate}</p>
+                <p className="text-sm font-medium text-orange-600">Due: {renewal.expiryDate}</p>
               </div>
             ))}
           </div>

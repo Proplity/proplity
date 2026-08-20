@@ -12,6 +12,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { mockTenantFeaturePaymentHistory as paymentHistory } from '../store/mockData';
 
 interface TenantFeaturePageProps {
   onGetStarted: () => void;
@@ -89,12 +90,6 @@ export function TenantFeaturePage({
       title: 'Manage Your Tenancy',
       desc: 'Pay rent, track maintenance, communicate with your manager, and build a strong payment history — all from one dashboard.',
     },
-  ];
-
-  const paymentHistory = [
-    { month: 'May 2026', amount: '₦70,833', status: 'Paid' },
-    { month: 'April 2026', amount: '₦70,833', status: 'Paid' },
-    { month: 'March 2026', amount: '₦70,833', status: 'Paid' },
   ];
 
   return (

@@ -12,6 +12,7 @@ import {
   Camera,
   MessageSquare,
 } from 'lucide-react';
+import { mockVendorJobs } from '../store/vendorJobDetailData';
 
 interface VendorJobDetailProps {
   jobId: number;
@@ -20,54 +21,7 @@ interface VendorJobDetailProps {
 }
 
 export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailProps) {
-  const job = {
-    id: jobId,
-    title: 'Broken Water Pipe',
-    description:
-      'Main water pipe leaking in kitchen. Water is dripping from under the sink and needs urgent attention.',
-    category: 'Plumbing',
-    priority: 'high',
-    status: 'in_progress',
-    property: 'Lekki Phase 1, Apt 203',
-    fullAddress: 'Block 15, Flat 203, Lekki Phase 1, Lagos',
-    assignedDate: '2 hours ago',
-    acceptedDate: '1.5 hours ago',
-    estimatedPay: '₦20,000',
-    propertyManager: {
-      name: 'Proplity Management',
-      phone: '+234 803 456 7890',
-      email: 'manager@proplity.com',
-    },
-    tenant: {
-      name: 'Adewale Johnson',
-      phone: '+234 803 456 7890',
-    },
-    scheduledDate: 'Today, 2:00 PM',
-    timeline: [
-      {
-        time: '2 hours ago',
-        event: 'Job assigned to you',
-        status: 'completed',
-      },
-      {
-        time: '1.5 hours ago',
-        event: 'You accepted the job',
-        status: 'completed',
-      },
-      {
-        time: '1 hour ago',
-        event: 'En route to property',
-        status: 'completed',
-      },
-      { time: 'Current', event: 'Work in progress', status: 'current' },
-      { time: 'Pending', event: 'Mark as completed', status: 'pending' },
-    ],
-    materials: [
-      { item: 'PVC Pipe (2m)', cost: 3000 },
-      { item: 'Pipe Fittings', cost: 1500 },
-      { item: 'Plumber Tape', cost: 500 },
-    ],
-  };
+  const job = mockVendorJobs[jobId] || mockVendorJobs[1];
 
   return (
     <div className="p-6">
@@ -218,7 +172,7 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 font-semibold">Materials Used</h2>
             <div className="mb-4 space-y-3">
-              {job.materials.map((material, index) => (
+              {job.materials.map((material: any, index: number) => (
                 <div
                   key={index}
                   className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
@@ -235,7 +189,7 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
               <div className="flex items-center justify-between">
                 <span className="font-semibold">Total Materials Cost</span>
                 <span className="font-semibold text-green-600">
-                  ₦{job.materials.reduce((sum, m) => sum + m.cost, 0).toLocaleString()}
+                  ₦{job.materials.reduce((sum: number, m: any) => sum + m.cost, 0).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -294,7 +248,7 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 font-semibold">Job Timeline</h2>
             <div className="space-y-4">
-              {job.timeline.map((item, index) => (
+              {job.timeline.map((item: any, index: number) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="flex flex-col items-center">
                     {item.status === 'completed' ? (

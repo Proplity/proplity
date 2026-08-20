@@ -13,6 +13,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { mockLandlordFeatureProperties as properties } from '../store/mockData';
 
 interface LandlordFeaturePageProps {
   onGetStarted: () => void;
@@ -92,36 +93,7 @@ export function LandlordFeaturePage({
     },
   ];
 
-  const properties = [
-    {
-      name: 'Lekki Phase 1 Complex',
-      location: 'Lekki, Lagos',
-      units: 12,
-      revenue: '₦1,440,000',
-      status: 'Fully Occupied',
-    },
-    {
-      name: 'Maitama Residences',
-      location: 'Maitama, Abuja',
-      units: 8,
-      revenue: '₦960,000',
-      status: 'Fully Occupied',
-    },
-    {
-      name: 'GRA Ikeja Flats',
-      location: 'Ikeja GRA, Lagos',
-      units: 6,
-      revenue: '₦900,000',
-      status: '1 Vacant',
-    },
-    {
-      name: 'Victoria Island Studio',
-      location: 'VI, Lagos',
-      units: 4,
-      revenue: '₦520,000',
-      status: 'Fully Occupied',
-    },
-  ];
+
 
   return (
     <div className="min-h-screen bg-white">

@@ -13,23 +13,97 @@ enum MaintenanceStatus {
   CANCELLED
 }
 
+enum ScheduleFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+// Converted from an enum to a table: unlike a fixed set like Role or
+// UserStatus, maintenance categories are the kind of thing an operator
+// plausibly wants to add to (e.g. "Pest Control", "Landscaping") without a
+// migration. Seed with the original six defaults on first deploy — see the
+// seed snippet delivered alongside this schema.
+model MaintenanceCategory {
+  id        String                 @id @default(uuid())
+  name      String                 @unique
+  isActive  Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  requests  MaintenanceRequest[]
+  schedules MaintenanceSchedule[]
+  vendors   VendorProfile[]
+}
+
 model MaintenanceRequest {
-  id           String              @id @default(uuid())
-  unitId       String
-  unit         Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId     String
-  tenant       User                @relation("TenantMaintenance", fields: [tenantId], references: [id])
-  vendorId     String?
-  vendor       User?               @relation("VendorJobs", fields: [vendorId], references: [id])
-  title        String
-  description  String
-  priority     MaintenancePriority @default(MEDIUM)
-  status       MaintenanceStatus   @default(SUBMITTED)
-  scheduledFor DateTime?
-  completedAt  DateTime?
-  costEstimate Float?
-  finalCost    Float?
-  invoices     Invoice[]
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id                 String               @id @default(uuid())
+  unitId             String
+  unit               Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId           String
+  tenant             User                 @relation("TenantMaintenance", fields: [tenantId], references: [id])
+  vendorId           String?
+  vendor             User?                @relation("VendorJobs", fields: [vendorId], references: [id])
+  title              String
+  description        String
+  // Nullable, unlike MaintenanceSchedule.category below: a tenant's request
+  // often isn't categorized until the AI-triage step classifies it after
+  // submission (PRD §5.1 "AI-triaged issue categorization"), so it shouldn't
+  // be forced to a value at creation time.
+  categoryId         String?
+  category           MaintenanceCategory? @relation(fields: [categoryId], references: [id])
+  priority           MaintenancePriority  @default(MEDIUM)
+  status             MaintenanceStatus    @default(SUBMITTED)
+  mediaUrls          String[]
+  vendorNotes        String?
+  completionProofUrl String?
+  scheduledFor       DateTime?
+  completedAt        DateTime?
+  costEstimate       Float?
+  finalCost          Float?
+  invoices           Invoice[]
+  conversation       Conversation?
+  vendorRating       VendorRating?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+}
+
+model MaintenanceSchedule {
+  id              String              @id @default(uuid())
+  unitId          String
+  unit            Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  // Optional: a schedule can target a specific piece of Equipment (e.g. service
+  // this AC unit every 6 months) or just the unit generally (e.g. routine
+  // cleaning) — not every recurring task is equipment-specific.
+  equipmentId     String?
+  equipment       Equipment?          @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  // Required, unlike MaintenanceRequest.category above: a schedule is
+  // deliberately created by staff for a known category, never AI-triaged
+  // after the fact.
+  categoryId      String
+  category        MaintenanceCategory @relation(fields: [categoryId], references: [id])
+  frequency       ScheduleFrequency
+  nextDueDate     DateTime
+  lastGeneratedAt DateTime?
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([unitId, nextDueDate])
+}
+
+// One rating per completed job (PRD §5.4 "Work history & reputation signals").
+model VendorRating {
+  id                    String             @id @default(uuid())
+  maintenanceRequestId  String             @unique
+  maintenanceRequest    MaintenanceRequest @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
+  vendorId              String
+  vendor                User               @relation("VendorRatingsReceived", fields: [vendorId], references: [id])
+  ratedById             String
+  ratedBy               User               @relation("VendorRatingsGiven", fields: [ratedById], references: [id])
+  rating                Int
+  comment               String?
+  createdAt             DateTime           @default(now())
+
+  @@index([vendorId])
 }

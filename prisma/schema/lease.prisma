@@ -5,18 +5,112 @@ enum LeaseStatus {
   TERMINATED
 }
 
+enum PaymentFrequency {
+  ANNUAL
+  BI_ANNUAL
+  QUARTERLY
+  MONTHLY
+}
+
+// Covers PRD §5.1 "AI-generated renewal and rent increase notices" and §6.1
+// Lease & Document Intelligence ("AI-drafted: Renewal offers, Rent increase
+// notices, Default notices" + "Expiration alerts"). Also doubles as the
+// escalation-state record for overdue-rent reminders (§6.1 Smart Rent
+// Intelligence's reminder -> call -> notice ladder) via PAYMENT_REMINDER,
+// rather than adding a separate model just for that.
+enum NoticeType {
+  RENEWAL_OFFER
+  RENT_INCREASE
+  DEFAULT_NOTICE
+  EXPIRATION_ALERT
+  PAYMENT_REMINDER
+}
+
+enum NoticeStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  COUNTERED
+  EXPIRED
+}
+
+model Notice {
+  id            String       @id @default(uuid())
+  leaseId       String
+  lease         Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  // Optional precise link for PAYMENT_REMINDER notices about one specific
+  // overdue invoice, rather than the lease's rent in general.
+  invoiceId     String?
+  invoice       Invoice?     @relation(fields: [invoiceId], references: [id])
+  type          NoticeType
+  status        NoticeStatus @default(DRAFT)
+  content       String?
+  documentUrl   String?
+  proposedTerms Json?
+  sentAt        DateTime?
+  respondedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([leaseId, type])
+}
+
+enum PaymentReliability {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Lease {
-  id          String      @id @default(uuid())
-  unitId      String
-  unit        Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId    String
-  tenant      User        @relation("TenantLeases", fields: [tenantId], references: [id])
-  startDate   DateTime
-  endDate     DateTime
-  monthlyRent Float
-  deposit     Float
-  status      LeaseStatus @default(PENDING)
-  invoices    Invoice[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 String           @id @default(uuid())
+  unitId             String
+  unit               Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId           String
+  tenant             User             @relation("TenantLeases", fields: [tenantId], references: [id])
+  startDate          DateTime
+  endDate            DateTime
+  /// Amount due per payment CYCLE, not necessarily per calendar month —
+  /// the actual period is set by `paymentFrequency` (e.g. an ANNUAL lease's
+  /// rentAmount is the full year's rent due at once, not a monthly figure).
+  /// Renamed from `monthlyRent`, which was ambiguous once frequencies beyond
+  /// MONTHLY were added — see prior schema review.
+  rentAmount         Float
+  paymentFrequency   PaymentFrequency @default(ANNUAL)
+  deposit            Float
+  gracePeriodDays    Int              @default(7)
+  lateFeePercentage  Float            @default(5.0)
+  signedAgreementUrl String?
+  agreementSignedAt  DateTime?
+  status             LeaseStatus      @default(PENDING)
+  // PRD §6.1 "Smart Rent Intelligence" — late-payment prediction and risk
+  // flagging. Nullable and timestamped: these are computed periodically by a
+  // scoring job, not always populated (e.g. a brand-new lease has no payment
+  // history yet to score), and the timestamp lets the UI show how stale the
+  // score is rather than presenting a silently-outdated number as current.
+  paymentReliability   PaymentReliability?
+  riskScore            RiskLevel?
+  riskScoreUpdatedAt   DateTime?
+  invoices           Invoice[]
+  notices            Notice[]
+  conversations      Conversation[]
+  autoPayMandates    AutoPayMandate[]
+  notes              Note[]
+  // Self-relation: renewedFromId is unique because a given prior lease can be
+  // renewed into at most one new lease, and a new lease renews at most one
+  // prior lease. Lets renewals be traced instead of looking like an unrelated
+  // new Lease row on the same unit.
+  renewedFromId      String?          @unique
+  renewedFrom        Lease?           @relation("LeaseRenewal", fields: [renewedFromId], references: [id])
+  renewedInto        Lease?           @relation("LeaseRenewal")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }

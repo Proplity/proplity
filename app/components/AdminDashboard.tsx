@@ -10,6 +10,13 @@ import {
   Settings,
   BarChart3,
 } from 'lucide-react';
+import {
+  mockAdminPlatformStats,
+  mockAdminSystemHealth,
+  mockAdminUserActivity,
+  mockAdminAiPerformance,
+  mockAdminRecentIssues,
+} from '../store/adminDashboardData';
 
 interface AdminDashboardProps {
   onNavigate?: (page: any) => void;
@@ -25,44 +32,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
 
       {/* Platform Stats */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            icon: Users,
-            bg: 'bg-blue-50',
-            color: 'text-blue-600',
-            value: '12,847',
-            label: 'Total Users',
-            trend: '+18% this month',
-            breakdown: 'users' as const,
-          },
-          {
-            icon: Building2,
-            bg: 'bg-purple-50',
-            color: 'text-purple-600',
-            value: '5,421',
-            label: 'Properties Listed',
-            trend: '+12% this month',
-            breakdown: 'properties' as const,
-          },
-          {
-            icon: DollarSign,
-            bg: 'bg-green-50',
-            color: 'text-green-600',
-            value: '₦2.4B',
-            label: 'Total Transactions',
-            trend: '+24% this month',
-            breakdown: 'transactions' as const,
-          },
-          {
-            icon: Activity,
-            bg: 'bg-orange-50',
-            color: 'text-orange-600',
-            value: '99.7%',
-            label: 'System Uptime',
-            trend: 'Above SLA',
-            breakdown: 'uptime' as const,
-          },
-        ].map((stat) => {
+        {mockAdminPlatformStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <button
@@ -101,32 +71,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                label: 'API Response Time',
-                value: '124ms',
-                status: 'good',
-                color: 'green',
-              },
-              {
-                label: 'Database Load',
-                value: '47%',
-                status: 'good',
-                color: 'green',
-              },
-              {
-                label: 'Active Sessions',
-                value: '3,421',
-                status: 'good',
-                color: 'green',
-              },
-              {
-                label: 'Error Rate',
-                value: '0.02%',
-                status: 'good',
-                color: 'green',
-              },
-            ].map((metric, index) => (
+            {mockAdminSystemHealth.map((metric, index) => (
               <div key={index} className="rounded-lg bg-gray-50 p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-gray-600">{metric.label}</span>
@@ -147,27 +92,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {[
-                {
-                  type: 'Property Manager',
-                  count: 1247,
-                  percentage: 45,
-                  color: 'blue',
-                },
-                {
-                  type: 'Landlord',
-                  count: 892,
-                  percentage: 32,
-                  color: 'purple',
-                },
-                { type: 'Tenant', count: 8421, percentage: 68, color: 'green' },
-                {
-                  type: 'Service Provider',
-                  count: 287,
-                  percentage: 15,
-                  color: 'orange',
-                },
-              ].map((userType, index) => (
+              {mockAdminUserActivity.map((userType, index) => (
                 <div key={index}>
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -195,32 +120,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {[
-                {
-                  feature: 'AI Assistant Queries',
-                  resolved: '94%',
-                  total: '18.4K',
-                  color: 'blue',
-                },
-                {
-                  feature: 'Property Verification',
-                  accuracy: '98%',
-                  total: '1.2K',
-                  color: 'green',
-                },
-                {
-                  feature: 'Payment Prediction',
-                  accuracy: '91%',
-                  total: '3.8K',
-                  color: 'purple',
-                },
-                {
-                  feature: 'Maintenance Triage',
-                  accuracy: '96%',
-                  total: '2.1K',
-                  color: 'orange',
-                },
-              ].map((ai, index) => (
+              {mockAdminAiPerformance.map((ai, index) => (
                 <div key={index} className="rounded-lg bg-gray-50 p-3">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-sm font-medium">{ai.feature}</span>
@@ -248,26 +148,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           </button>
         </div>
         <div className="divide-y divide-gray-200">
-          {[
-            {
-              severity: 'low',
-              title: 'Slow API response in Lagos region',
-              status: 'Resolved',
-              time: '2h ago',
-            },
-            {
-              severity: 'medium',
-              title: 'Payment gateway timeout spike',
-              status: 'Investigating',
-              time: '5h ago',
-            },
-            {
-              severity: 'low',
-              title: 'Email delivery delay',
-              status: 'Resolved',
-              time: '1d ago',
-            },
-          ].map((issue, index) => (
+          {mockAdminRecentIssues.map((issue, index) => (
             <div key={index} className="p-4 hover:bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

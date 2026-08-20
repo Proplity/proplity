@@ -13,6 +13,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { mockServiceProviderFeatureJobs as jobs } from '../store/mockData';
 
 interface ServiceProviderFeaturePageProps {
   onGetStarted: () => void;
@@ -35,81 +36,105 @@ export function ServiceProviderFeaturePage({
   onViewTenantPage,
   onViewVendorPage,
 }: ServiceProviderFeaturePageProps) {
+  // const features = [
+  //   {
+  //     icon: Wrench,
+  //     title: 'Job Matching',
+  //     description:
+  //       'Get matched to maintenance and repair jobs in your area based on your skills, availability, and past performance.',
+  //   },
+  //   {
+  //     icon: FileText,
+  //     title: 'In-App Invoicing',
+  //     description:
+  //       'Create and send professional invoices directly in Proplity. Get paid faster with automated payment reminders.',
+  //   },
+  //   {
+  //     icon: DollarSign,
+  //     title: 'Payment Tracking',
+  //     description:
+  //       'Track all pending and completed payments in one place. View your monthly earnings history and generate income reports.',
+  //   },
+  //   {
+  //     icon: Star,
+  //     title: 'Rating & Reviews',
+  //     description:
+  //       'Build a strong reputation with verified reviews from property managers and landlords. Top-rated vendors get priority job matches.',
+  //   },
+  //   {
+  //     icon: BarChart3,
+  //     title: 'Job History',
+  //     description:
+  //       'Access a full record of every completed job — with photos, timelines, and client feedback — to showcase your work.',
+  //   },
+  //   {
+  //     icon: MessageSquare,
+  //     title: 'Direct Client Chat',
+  //     description:
+  //       'Communicate with property managers and tenants via secure in-app messaging. No need to share personal phone numbers.',
+  //   },
+  // ];
+
+  // const steps = [
+  //   {
+  //     step: '1',
+  //     title: 'Register & Get Verified',
+  //     desc: 'Sign up as a service provider, upload your qualifications, and get verified by Proplity. Verification boosts your job match score.',
+  //   },
+  //   {
+  //     step: '2',
+  //     title: 'Receive & Accept Jobs',
+  //     desc: 'Browse available maintenance jobs near you or get matched automatically. Accept jobs, communicate with clients, and get to work.',
+  //   },
+  //   {
+  //     step: '3',
+  //     title: 'Complete, Invoice & Get Paid',
+  //     desc: 'Mark jobs as complete, upload proof photos, send your invoice, and receive payment directly into your bank account.',
+  //   },
+  // ];
+
   const features = [
     {
       icon: Wrench,
-      title: 'Job Matching',
+      title: 'Smart Dispatch & Jobs Board',
       description:
-        'Get matched to maintenance and repair jobs in your area based on your skills, availability, and past performance.',
-    },
-    {
-      icon: FileText,
-      title: 'In-App Invoicing',
-      description:
-        'Create and send professional invoices directly in Proplity. Get paid faster with automated payment reminders.',
+        'Get matched with relevant maintenance requests from landlords and managers near you. View descriptions, photos, and estimated budgets.',
     },
     {
       icon: DollarSign,
-      title: 'Payment Tracking',
+      title: 'Transparent Pricing & Fast Payouts',
       description:
-        'Track all pending and completed payments in one place. View your monthly earnings history and generate income reports.',
+        'Provide clear estimates and invoices. Payments are deposited directly to your bank account upon client verification of work.',
     },
     {
       icon: Star,
-      title: 'Rating & Reviews',
+      title: 'Work History & Reputation Signals',
       description:
-        'Build a strong reputation with verified reviews from property managers and landlords. Top-rated vendors get priority job matches.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Job History',
-      description:
-        'Access a full record of every completed job — with photos, timelines, and client feedback — to showcase your work.',
+        'Build your profile with ratings and reviews from completed jobs to attract more premium clients and property managers.',
     },
     {
       icon: MessageSquare,
-      title: 'Direct Client Chat',
+      title: 'Direct Chat with Tenants & Managers',
       description:
-        'Communicate with property managers and tenants via secure in-app messaging. No need to share personal phone numbers.',
+        'Communicate details, ask questions, and update stakeholders on arrival times through the unified messaging portal.',
     },
   ];
 
   const steps = [
     {
       step: '1',
-      title: 'Register & Get Verified',
-      desc: 'Sign up as a service provider, upload your qualifications, and get verified by Proplity. Verification boosts your job match score.',
+      title: 'Verify Your Profile',
+      desc: 'Sign up, provide your credentials/trade certifications, and setup your bank account details for payouts.',
     },
     {
       step: '2',
-      title: 'Receive & Accept Jobs',
-      desc: 'Browse available maintenance jobs near you or get matched automatically. Accept jobs, communicate with clients, and get to work.',
+      title: 'Find & Bid on Jobs',
+      desc: 'Browse matching maintenance requests or receive direct requests from managers. Submit your estimate and timeline.',
     },
     {
       step: '3',
       title: 'Complete, Invoice & Get Paid',
       desc: 'Mark jobs as complete, upload proof photos, send your invoice, and receive payment directly into your bank account.',
-    },
-  ];
-
-  const jobs = [
-    {
-      title: 'AC Repair & Servicing',
-      property: 'Lekki Phase 1 Complex',
-      priority: 'High',
-      status: 'In Progress',
-    },
-    {
-      title: 'Plumbing — Burst Pipe',
-      property: 'GRA Ikeja Flat 4A',
-      priority: 'Urgent',
-      status: 'Assigned',
-    },
-    {
-      title: 'Electrical — Power Fault',
-      property: 'Maitama Residences',
-      priority: 'Medium',
-      status: 'Completed',
     },
   ];
 

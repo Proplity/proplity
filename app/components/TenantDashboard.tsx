@@ -13,6 +13,12 @@ import {
   MessageSquare,
   Calendar as CalendarIcon,
 } from 'lucide-react';
+import {
+  mockTenantPaymentHistory,
+  mockTenantMaintenanceRequests,
+  mockTenantAccessCodes,
+  mockTenantDocuments,
+} from '../store/tenantDashboardData';
 
 interface TenantDashboardProps {
   onNavigate?: (page: any) => void;
@@ -178,10 +184,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
             <div className="border-t border-gray-200 pt-4">
               <p className="mb-3 text-sm font-medium">Payment History</p>
               <div className="space-y-2">
-                {[
-                  { date: 'Apr 15, 2026', amount: '₦850,000', status: 'Paid' },
-                  { date: 'Apr 15, 2025', amount: '₦750,000', status: 'Paid' },
-                ].map((payment, index) => (
+                {mockTenantPaymentHistory.map((payment, index) => (
                   <div key={index} className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{payment.date}</span>
                     <span className="font-medium">{payment.amount}</span>
@@ -217,20 +220,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Recent Requests</p>
-              {[
-                {
-                  title: 'AC Maintenance',
-                  status: 'Completed',
-                  date: '3 days ago',
-                  color: 'green',
-                },
-                {
-                  title: 'Bathroom Faucet Leak',
-                  status: 'In Progress',
-                  date: '1 week ago',
-                  color: 'blue',
-                },
-              ].map((request, index) => (
+              {mockTenantMaintenanceRequests.map((request, index) => (
                 <button
                   key={index}
                   onClick={() => onNavigate?.({ type: 'tenant-maintenance' })}
@@ -259,15 +249,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {[
-              { name: 'Main Gate', code: '#1234', expires: 'No expiry' },
-              { name: 'Parking Garage', code: '#5678', expires: 'No expiry' },
-              {
-                name: 'Gym Access',
-                code: '#9012',
-                expires: 'Active until lease end',
-              },
-            ].map((access, index) => (
+            {mockTenantAccessCodes.map((access, index) => (
               <div key={index} className="rounded-lg border border-gray-200 p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <Key className="h-4 w-4 text-blue-600" />
@@ -288,11 +270,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         </div>
         <div className="p-6">
           <div className="space-y-3">
-            {[
-              { name: 'Lease Agreement', date: 'Apr 15, 2026' },
-              { name: 'Receipt - Apr 2026', date: 'Apr 15, 2026' },
-              { name: 'Move-in Checklist', date: 'Apr 14, 2026' },
-            ].map((doc, index) => (
+            {mockTenantDocuments.map((doc, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"

@@ -17,6 +17,7 @@ import {
   Clock,
   Shield,
 } from 'lucide-react';
+import { mockLandlordDashboardProperties as properties } from '../store/mockData';
 
 interface ManagerCode {
   id: string;
@@ -98,33 +99,6 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   };
-
-  const properties = [
-    {
-      id: 1,
-      name: 'Lekki Phase 1 Complex',
-      units: 8,
-      occupied: 7,
-      revenue: '₦6.8M',
-      performance: 95,
-    },
-    {
-      id: 2,
-      name: 'Maitama Apartments',
-      units: 4,
-      occupied: 4,
-      revenue: '₦4.8M',
-      performance: 100,
-    },
-    {
-      id: 3,
-      name: 'Ikeja GRA Estate',
-      units: 6,
-      occupied: 5,
-      revenue: '₦5.4M',
-      performance: 88,
-    },
-  ];
 
   return (
     <div className="space-y-6 p-6">

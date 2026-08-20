@@ -17,6 +17,7 @@ import {
   Shield,
   TrendingUp,
 } from 'lucide-react';
+import { mockPropertyDetails } from '../store/propertyDetailData';
 
 interface PropertyDetailProps {
   propertyId: number;
@@ -26,67 +27,7 @@ interface PropertyDetailProps {
 
 export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetailProps) {
   // Mock property data - in real app, fetch based on propertyId
-  const property = {
-    id: propertyId,
-    title: '3 Bedroom Luxury Apartment',
-    address: 'Block 15, Flat 203, Lekki Phase 1',
-    city: 'Lagos',
-    state: 'Lagos',
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1200,
-    rentAmount: 850000,
-    rentFrequency: 'yearly',
-    status: propertyId === 1 ? 'Available' : 'Occupied', // Property 1 is available for demo
-    trustScore: 95,
-    verified: true,
-    currentTenant: {
-      name: 'Adewale Johnson',
-      email: 'adewale.j@email.com',
-      phone: '+234 803 456 7890',
-      moveInDate: 'Apr 15, 2026',
-      leaseEnd: 'Apr 14, 2027',
-      rentStatus: 'Paid',
-      paymentHistory: 'Excellent',
-    },
-    amenities: ['24/7 Power Supply', 'Borehole', 'Security/CCTV', 'Parking Space', 'Generator'],
-    utilities: ['Water Included'],
-    description:
-      'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security. Close to schools, shopping centers, and major roads.',
-    neighborhood: {
-      safety: 9,
-      accessibility: 8,
-      powerReliability: 7,
-      waterSupply: 9,
-    },
-    maintenanceHistory: [
-      {
-        date: '2 weeks ago',
-        issue: 'AC Servicing',
-        cost: '₦15,000',
-        status: 'Completed',
-      },
-      {
-        date: '1 month ago',
-        issue: 'Plumbing Repair',
-        cost: '₦8,000',
-        status: 'Completed',
-      },
-      {
-        date: '3 months ago',
-        issue: 'Painting Touch-up',
-        cost: '₦12,000',
-        status: 'Completed',
-      },
-    ],
-    financials: {
-      yearlyRent: 850000,
-      collected: 850000,
-      pending: 0,
-      maintenanceCosts: 35000,
-      netIncome: 815000,
-    },
-  };
+  const property = mockPropertyDetails[propertyId] || mockPropertyDetails[1];
 
   return (
     <div className="p-6">
@@ -283,7 +224,7 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-3 font-semibold">Amenities & Features</h2>
             <div className="grid grid-cols-2 gap-3">
-              {property.amenities.map((amenity, index) => (
+              {property.amenities.map((amenity: string, index: number) => (
                 <div key={index} className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm">{amenity}</span>
@@ -420,7 +361,7 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
               <h2 className="font-semibold">Recent Maintenance</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {property.maintenanceHistory.map((item, index) => (
+              {property.maintenanceHistory.map((item: any, index: number) => (
                 <div key={index} className="p-4">
                   <div className="mb-1 flex items-center justify-between">
                     <p className="text-sm font-medium">{item.issue}</p>
