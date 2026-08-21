@@ -1,0 +1,49 @@
+erDiagram
+    %% CORE AUTH & USERS
+    USER ||--o| VENDOR-PROFILE : has
+    USER ||--o| SUBSCRIPTION : has
+    USER ||--o{ BANK-ACCOUNT : owns
+    USER ||--o{ KYC-VERIFICATION : undergoes
+    USER ||--o{ AUDIT-LOG : performs
+
+    %% PROPERTY & UNITS
+    USER ||--o{ PROPERTY : "owns/manages"
+    PROPERTY ||--o{ UNIT : contains
+    PROPERTY ||--o{ NEIGHBOURHOOD-REPORT : generates
+    PROPERTY ||--o{ PROPERTY-REVIEW : receives
+    PROPERTY ||--o{ EQUIPMENT : "contains (shared)"
+    
+    %% LEASING & TENANCY
+    UNIT ||--o{ LEASE : houses
+    USER ||--o{ LEASE : "signs (Tenant)"
+    LEASE ||--o| LEASE : "renews from"
+    LEASE ||--o{ NOTICE : receives
+    LEASE ||--o{ AUTO-PAY-MANDATE : authorizes
+    LEASE ||--o{ PROPERTY-REVIEW : "verifies (optional)"
+
+    %% MAINTENANCE 
+    UNIT ||--o{ MAINTENANCE-REQUEST : requires
+    USER ||--o{ MAINTENANCE-REQUEST : "submits/assigned"
+    MAINTENANCE-REQUEST ||--o| VENDOR-RATING : yields
+    MAINTENANCE-CATEGORY ||--o{ MAINTENANCE-REQUEST : classifies
+    UNIT ||--o{ MAINTENANCE-SCHEDULE : requires
+    EQUIPMENT ||--o{ MAINTENANCE-SCHEDULE : "requires (optional)"
+
+    %% FINANCE & BILLING
+    LEASE ||--o{ INVOICE : generates
+    MAINTENANCE-REQUEST ||--o{ INVOICE : generates
+    USER ||--o{ INVOICE : "generates (direct charge)"
+    INVOICE ||--o{ PAYMENT : receives
+
+    %% OPERATIONS & ACCESS
+    UNIT ||--o{ ACCESS-CODE : secures
+    ACCESS-CODE ||--o{ ACCESS-LOG : tracks
+    UNIT ||--o{ VIOLATION : incurs
+    UNIT ||--o{ CONDITION-REPORT : receives
+
+    %% COMMUNICATION
+    CONVERSATION ||--o{ CONVERSATION-PARTICIPANT : includes
+    USER ||--o{ CONVERSATION-PARTICIPANT : joins
+    CONVERSATION ||--o{ MESSAGE : contains
+    LEASE ||--o| CONVERSATION : "has thread (optional)"
+    MAINTENANCE-REQUEST ||--o| CONVERSATION : "has thread (optional)"

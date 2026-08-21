@@ -201,11 +201,24 @@ model PropertyReview {
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   reviewerId String
   reviewer   User     @relation(fields: [reviewerId], references: [id])
+  // Set once, at creation time, to the Lease that qualified this review as
+  // "verified" (reviewer actually had a tenancy on this property). Null =
+  // unverified/general review. Deliberately NOT re-checked at read time:
+  // a review shouldn't lose its verified badge just because the underlying
+  // lease later expires or terminates, and resolving that here avoids an
+  // extra join on every review-list read — a straight index scan on
+  // leaseId IS NULL / IS NOT NULL is all a "verified only" filter needs.
+  // onDelete: SetNull rather than Cascade — deleting the Lease later (should
+  // that ever happen) shouldn't take the review down with it, just drop its
+  // verified status back to unverified.
+  leaseId    String?
+  lease      Lease?   @relation(fields: [leaseId], references: [id], onDelete: SetNull)
   rating     Int
   comment    String?
   createdAt  DateTime @default(now())
 
   @@index([propertyId])
+  @@index([leaseId])
 }
 
 model Announcement {

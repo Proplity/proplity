@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {
   PrismaClient,
   Role,
@@ -50,6 +51,24 @@ async function seedMaintenanceCategories() {
 
 async function main() {
   console.log('🌱 Starting Proplity seed...');
+
+  // 0. Clear existing data to allow safe, repeatable re-runs
+  console.log('🧹 Cleaning old table data...');
+  await prisma.payment.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.vendorRating.deleteMany();
+  await prisma.maintenanceRequest.deleteMany();
+  await prisma.maintenanceSchedule.deleteMany();
+  await prisma.propertyReview.deleteMany();
+  await prisma.neighbourhoodReport.deleteMany();
+  await prisma.accessLog.deleteMany();
+  await prisma.accessCode.deleteMany();
+  await prisma.lease.deleteMany();
+  await prisma.unit.deleteMany();
+  await prisma.property.deleteMany();
+  await prisma.bankAccount.deleteMany();
+  await prisma.vendorProfile.deleteMany();
+  await prisma.user.deleteMany();
 
   // 0. Seed Maintenance Categories lookup table
   await seedMaintenanceCategories();

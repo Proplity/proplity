@@ -24,6 +24,7 @@ enum NoticeType {
   DEFAULT_NOTICE
   EXPIRATION_ALERT
   PAYMENT_REMINDER
+  TERMINATION_NOTICE
 }
 
 enum NoticeStatus {
@@ -50,6 +51,7 @@ model Notice {
   documentUrl   String?
   proposedTerms Json?
   sentAt        DateTime?
+  viewedAt      DateTime?
   respondedAt   DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -104,6 +106,7 @@ model Lease {
   conversations      Conversation[]
   autoPayMandates    AutoPayMandate[]
   notes              Note[]
+  propertyReviews    PropertyReview[]
   // Self-relation: renewedFromId is unique because a given prior lease can be
   // renewed into at most one new lease, and a new lease renews at most one
   // prior lease. Lets renewals be traced instead of looking like an unrelated

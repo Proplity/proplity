@@ -58,9 +58,13 @@ model AutoPayMandate {
 
 model Invoice {
   id                   String              @id @default(uuid())
-  // Human-readable reference (e.g. "INV-7B49F12A") — distinct from the
-  // internal id, since the UI never shows a raw UUID to a tenant/vendor.
-  // Automatically generated with 'INV-' prefix and unique 8-character hex code.
+  // DB-generated at insert time — no application code or counter table
+  // needed, and no race condition possible since gen_random_uuid() can't
+  // produce a predictable collision. Trade-off vs. a period-scoped sequence:
+  // this isn't chronologically sortable by eye and doesn't reset per month,
+  // but it's simpler and needs zero extra infrastructure. gen_random_uuid()
+  // is native to Postgres 13+; confirm your DB version supports it, or
+  // enable pgcrypto if targeting an older version.
   invoiceNumber        String              @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
   leaseId              String?
   lease                Lease?              @relation(fields: [leaseId], references: [id])
