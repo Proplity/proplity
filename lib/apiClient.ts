@@ -11,6 +11,7 @@ import type {
   Invoice,
   Lease,
   MaintenanceCategory,
+  MaintenanceRequest,
   Paginated,
   Property,
   Unit,
@@ -100,6 +101,8 @@ export const api = {
   },
   maintenance: {
     categories: () => apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
+    list: (params?: { status?: string }) =>
+      apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
     createRequest: (body: CreateMaintenanceRequestInput) =>
       apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
   },
@@ -108,6 +111,8 @@ export const api = {
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
   },
   invoices: {
+    list: (params?: { type?: string; status?: string }) =>
+      apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) => apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
   },
   accessCodes: {

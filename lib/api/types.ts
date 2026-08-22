@@ -49,12 +49,14 @@ export type PropertyDetail = Property & {
   reviews: PropertyReview[];
   reviewStats: { count: number; averageRating: number | null };
   neighbourhoodReports: {
+    generatedAt: string;
     security: Record<string, unknown> | null;
     electricity: Record<string, unknown> | null;
     water: Record<string, unknown> | null;
     roadNetwork: Record<string, unknown> | null;
     flooding: Record<string, unknown> | null;
     amenities: Record<string, unknown> | null;
+    demographics: Record<string, unknown> | null;
   }[];
 };
 
@@ -92,7 +94,44 @@ export type CreateMaintenanceRequestInput = {
   mediaUrls?: string[];
 };
 
-export type Lease = { id: string; unitId: string; tenantId: string; status: string; tenantInvited?: boolean };
+export type MaintenanceRequest = {
+  id: string;
+  unitId: string;
+  unit?: Unit;
+  tenantId: string;
+  vendorId: string | null;
+  vendor?: { id: string; name: string } | null;
+  title: string;
+  description: string;
+  categoryId: string | null;
+  category: MaintenanceCategory | null;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'EMERGENCY';
+  status: 'SUBMITTED' | 'IN_PROGRESS' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  mediaUrls: string[];
+  vendorNotes: string | null;
+  completionProofUrl: string | null;
+  scheduledFor: string | null;
+  completedAt: string | null;
+  costEstimate: number | null;
+  finalCost: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Lease = {
+  id: string;
+  unitId: string;
+  unit?: Unit & { property?: Property };
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  paymentFrequency: string;
+  deposit: number;
+  status: string;
+  signedAgreementUrl?: string | null;
+  tenantInvited?: boolean;
+};
 
 export type CreateLeaseInput = {
   unitId: string;
@@ -107,7 +146,31 @@ export type CreateLeaseInput = {
   deposit: number;
 };
 
-export type Invoice = { id: string; invoiceNumber: string; amount: number; status: string };
+export type Payment = {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  paymentMethod: 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
+  provider: 'PAYSTACK' | 'FLUTTERWAVE' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
+  transactionRef: string | null;
+  paidAt: string;
+  notes: string | null;
+};
+
+export type Invoice = {
+  id: string;
+  invoiceNumber: string;
+  leaseId: string | null;
+  maintenanceRequestId: string | null;
+  userId: string | null;
+  type: 'RENT' | 'MAINTENANCE' | 'SECURITY_DEPOSIT' | 'UTILITY' | 'LATE_FEE' | 'ASSOCIATION_FEE' | 'SUBSCRIPTION';
+  amount: number;
+  dueDate: string;
+  status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  description: string | null;
+  payments: Payment[];
+  createdAt: string;
+};
 
 export type CreateInvoiceInput = {
   maintenanceRequestId?: string;

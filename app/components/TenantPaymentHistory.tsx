@@ -1,56 +1,87 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Download,
   Search,
-  Filter,
   TrendingUp,
   DollarSign,
   Calendar,
-  FileText,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { mockAllPaymentsDetailed as allPayments } from '../store/mockData';
+import { useInvoices } from '@/hooks/useInvoices';
+import type { Invoice } from '@/lib/api/types';
 
 const statusConfig = {
-  completed: {
-    label: 'Paid',
-    color: 'bg-green-100 text-green-700',
-    icon: CheckCircle,
-  },
-  late: {
-    label: 'Paid Late',
-    color: 'bg-yellow-100 text-yellow-700',
-    icon: AlertCircle,
-  },
-  pending: {
-    label: 'Pending',
-    color: 'bg-orange-100 text-orange-700',
-    icon: Clock,
-  },
-  upcoming: {
-    label: 'Upcoming',
-    color: 'bg-gray-100 text-gray-600',
-    icon: Calendar,
-  },
+  completed: { label: 'Paid', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  late: { label: 'Paid Late', color: 'bg-yellow-100 text-yellow-700', icon: AlertCircle },
+  pending: { label: 'Pending', color: 'bg-orange-100 text-orange-700', icon: Clock },
+  upcoming: { label: 'Upcoming', color: 'bg-gray-100 text-gray-600', icon: Calendar },
 };
 
+type PaymentRecord = {
+  id: string;
+  period: string;
+  date: string;
+  amount: number;
+  method: string;
+  ref: string;
+  status: keyof typeof statusConfig;
+};
+
+// Invoice.payments now carries real payment rows (route extended this
+// sub-phase). An invoice with a payment renders as one paid record; an
+// invoice still owing money renders as one pending/upcoming record instead
+// -- there's no separate "scheduled payment" model to source that from.
+function toRecords(invoices: Invoice[]): PaymentRecord[] {
+  const records: PaymentRecord[] = [];
+  for (const invoice of invoices) {
+    if (invoice.status === 'CANCELLED') continue;
+    const period = invoice.description ?? `${invoice.type} — ${new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    if (invoice.payments.length > 0) {
+      for (const payment of invoice.payments) {
+        records.push({
+          id: invoice.invoiceNumber,
+          period,
+          date: new Date(payment.paidAt).toLocaleDateString(),
+          amount: payment.amount,
+          method: payment.paymentMethod.replace('_', ' '),
+          ref: payment.transactionRef ?? '—',
+          status: new Date(payment.paidAt) <= new Date(invoice.dueDate) ? 'completed' : 'late',
+        });
+      }
+    } else {
+      records.push({
+        id: invoice.invoiceNumber,
+        period,
+        date: new Date(invoice.dueDate).toLocaleDateString(),
+        amount: invoice.amount,
+        method: '—',
+        ref: '—',
+        status: new Date(invoice.dueDate) < new Date() ? 'pending' : 'upcoming',
+      });
+    }
+  }
+  return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
 export function TenantPaymentHistory() {
+  const { data: invoices, loading, error } = useInvoices();
+  const allPayments = useMemo(() => toRecords(invoices), [invoices]);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [yearFilter, setYearFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const totalPaid = allPayments.filter(
-    (p) => p.status === 'completed' || p.status === 'late',
-  ).length;
+  const totalPaid = allPayments.filter((p) => p.status === 'completed' || p.status === 'late').length;
   const onTime = allPayments.filter((p) => p.status === 'completed').length;
   const late = allPayments.filter((p) => p.status === 'late').length;
-  const onTimeRate = Math.round((onTime / totalPaid) * 100);
+  const onTimeRate = totalPaid > 0 ? Math.round((onTime / totalPaid) * 100) : 0;
+  const totalAmount = allPayments
+    .filter((p) => p.status === 'completed' || p.status === 'late')
+    .reduce((sum, p) => sum + p.amount, 0);
 
   const filtered = allPayments.filter((p) => {
     const matchSearch =
@@ -58,16 +89,13 @@ export function TenantPaymentHistory() {
       p.period.toLowerCase().includes(search.toLowerCase()) ||
       p.ref.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
-    const matchYear = yearFilter === 'all' || p.date.includes(yearFilter);
-    return matchSearch && matchStatus && matchYear;
+    return matchSearch && matchStatus;
   });
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, yearFilter, pageSize]);
+  }, [search, statusFilter, pageSize]);
 
-  // Pagination calculations
   const totalPages = Math.ceil(filtered.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -80,23 +108,16 @@ export function TenantPaymentHistory() {
     setCurrentPage(1);
   };
 
-  const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-  };
-
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="mb-1 text-2xl font-semibold">Payment History</h1>
-        <p className="text-sm text-gray-500">
-          A full record of your rent payments for Lekki Phase 1, Apt 203
-        </p>
+        <p className="text-sm text-gray-500">A full record of your rent and other invoice payments</p>
       </div>
+
+      {loading && <p className="text-sm text-gray-500">Loading payment history…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -139,8 +160,8 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">Total Amount</span>
           </div>
-          <p className="text-2xl font-semibold">₦{(totalPaid * 850000).toLocaleString()}</p>
-          <p className="mt-0.5 text-xs text-gray-400">total rent paid</p>
+          <p className="text-2xl font-semibold">₦{totalAmount.toLocaleString()}</p>
+          <p className="mt-0.5 text-xs text-gray-400">total paid</p>
         </div>
       </div>
 
@@ -166,20 +187,6 @@ export function TenantPaymentHistory() {
           <option value="pending">Pending</option>
           <option value="upcoming">Upcoming</option>
         </select>
-        <select
-          value={yearFilter}
-          onChange={(e) => setYearFilter(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          <option value="all">All Years</option>
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-        </select>
-        <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-          <Download className="h-4 w-4" />
-          Export
-        </button>
       </div>
 
       {/* Table */}
@@ -189,13 +196,13 @@ export function TenantPaymentHistory() {
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  Payment ID
+                  Invoice
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                   Period
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  Date Paid
+                  Date
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                   Amount
@@ -209,23 +216,20 @@ export function TenantPaymentHistory() {
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                   Status
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  Receipt
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {currentData.map((payment) => {
-                const cfg = statusConfig[payment.status as keyof typeof statusConfig];
+              {currentData.map((payment, i) => {
+                const cfg = statusConfig[payment.status];
                 const Icon = cfg.icon;
                 return (
-                  <tr key={payment.id} className="transition-colors hover:bg-gray-50">
-                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700">
-                      {payment.id}
-                    </td>
+                  <tr key={`${payment.id}-${i}`} className="transition-colors hover:bg-gray-50">
+                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700">{payment.id}</td>
                     <td className="px-5 py-4 font-medium text-gray-800">{payment.period}</td>
                     <td className="px-5 py-4 text-gray-600">{payment.date}</td>
-                    <td className="px-5 py-4 font-semibold text-gray-900">{payment.amount}</td>
+                    <td className="px-5 py-4 font-semibold text-gray-900">
+                      ₦{payment.amount.toLocaleString()}
+                    </td>
                     <td className="px-5 py-4 text-gray-600">{payment.method}</td>
                     <td className="px-5 py-4 font-mono text-xs text-gray-500">{payment.ref}</td>
                     <td className="px-5 py-4">
@@ -236,22 +240,12 @@ export function TenantPaymentHistory() {
                         {cfg.label}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
-                      {payment.receipt ? (
-                        <button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">
-                          <FileText className="h-3.5 w-3.5" />
-                          Download
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
               {currentData.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">
                     No payments found.
                   </td>
                 </tr>
@@ -284,7 +278,7 @@ export function TenantPaymentHistory() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePreviousPage}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 currentPage === 1
@@ -304,7 +298,7 @@ export function TenantPaymentHistory() {
             </div>
 
             <button
-              onClick={handleNextPage}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
               className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 currentPage === totalPages || totalPages === 0

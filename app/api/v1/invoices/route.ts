@@ -44,7 +44,13 @@ export const GET = withAuth(async (req, { session }) => {
     const where: Prisma.InvoiceWhereInput = filters.length ? { AND: filters } : {};
 
     const [invoices, total] = await Promise.all([
-      prisma.invoice.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
+      prisma.invoice.findMany({
+        where,
+        skip,
+        take,
+        include: { payments: { orderBy: { paidAt: 'desc' } } },
+        orderBy: { createdAt: 'desc' },
+      }),
       prisma.invoice.count({ where }),
     ]);
 
