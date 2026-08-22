@@ -1,6 +1,10 @@
 import { cookies } from 'next/headers';
 
-export async function setAuthCookies(accessToken: string, refreshToken: string) {
+export async function setAuthCookies(
+  accessToken: string,
+  refreshToken: string,
+  refreshMaxAgeSeconds: number = 7 * 24 * 60 * 60,
+) {
   const cookieStore = await cookies();
 
   cookieStore.set('access_token', accessToken, {
@@ -16,7 +20,7 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/api/v1/auth/refresh', // attached exclusively to this endpoint
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: refreshMaxAgeSeconds,
   });
 }
 

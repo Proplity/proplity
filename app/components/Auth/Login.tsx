@@ -9,6 +9,14 @@ interface LoginProps {
   onForgotPassword: () => void;
 }
 
+const DEMO_ACCOUNTS: Record<string, { email: string; password: string }> = {
+  admin: { email: 'admin@proplity.com', password: 'Password123!' },
+  manager: { email: 'manager@proplity.com', password: 'Password123!' },
+  landlord: { email: 'landlord@proplity.com', password: 'Password123!' },
+  tenant: { email: 'tenant@proplity.com', password: 'Password123!' },
+  vendor: { email: 'vendor@proplity.com', password: 'Password123!' },
+};
+
 export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -23,18 +31,31 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
     setErrorMessage(null);
     setLoading(true);
 
-    const res = await login({ email, password });
+    const res = await login({ email, password, rememberMe });
     setLoading(false);
 
     if (res.success && res.user?.role) {
-      onLogin(res.user.role);
+      onLogin(res.user.role.toLowerCase());
     } else {
       setErrorMessage(res.error || 'Invalid credentials');
     }
   };
 
-  const handleDemoLogin = (role: string) => {
-    onLogin(role);
+  const handleDemoLogin = async (role: string) => {
+    const creds = DEMO_ACCOUNTS[role.toLowerCase()];
+    if (creds) {
+      setErrorMessage(null);
+      setLoading(true);
+      const res = await login({ ...creds, rememberMe: true });
+      setLoading(false);
+      if (res.success && res.user?.role) {
+        onLogin(res.user.role.toLowerCase());
+      } else {
+        setErrorMessage(res.error || 'Demo login failed');
+      }
+    } else {
+      onLogin(role.toLowerCase());
+    }
   };
 
   return (
@@ -68,7 +89,7 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="Enter your email"
                   required
                   className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
@@ -100,14 +121,14 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">Remember me</span>
+                <span className="text-sm text-gray-600">Remember me</span>
               </label>
               <button
                 type="button"
@@ -127,54 +148,61 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
               {loading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Signing In...
+                  <span>Signing in...</span>
                 </>
               ) : (
                 <>
-                  Sign In
+                  <span>Sign In</span>
                   <ArrowRight className="h-5 w-5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-sm text-gray-500">or</span>
-            <div className="flex-1 border-t border-gray-300"></div>
-          </div>
+          {/* Quick Demo Login (Dev Only) */}
+          {process.env.NODE_ENV !== 'production' && (
+            <>
+              <div className="my-6 flex items-center">
+                <div className="flex-1 border-t border-gray-300"></div>
+                <span className="px-4 text-sm text-gray-500">or</span>
+                <div className="flex-1 border-t border-gray-300"></div>
+              </div>
 
-          {/* Quick Demo Login */}
-          <div className="space-y-2">
-            <p className="mb-3 text-xs text-gray-600">Quick demo access:</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleDemoLogin('manager')}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Manager
-              </button>
-              <button
-                onClick={() => handleDemoLogin('landlord')}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Landlord
-              </button>
-              <button
-                onClick={() => handleDemoLogin('tenant')}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Tenant
-              </button>
-              <button
-                onClick={() => handleDemoLogin('vendor')}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-              >
-                Vendor
-              </button>
-            </div>
-          </div>
+              <div className="space-y-2">
+                <p className="mb-3 text-xs text-gray-600">Quick demo access (Dev):</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDemoLogin('manager')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Manager
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDemoLogin('landlord')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Landlord
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDemoLogin('tenant')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Tenant
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDemoLogin('vendor')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Vendor
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">

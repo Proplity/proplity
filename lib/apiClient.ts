@@ -38,7 +38,7 @@ apiClient.interceptors.response.use(
       if (refreshed) {
         return apiClient(originalRequest);
       } else if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     }
 
@@ -52,12 +52,12 @@ apiClient.interceptors.response.use(
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const response = await fetch(url, options);
 
-  if (response.status === 401) {
+  if (response.status === 401 && !url.includes('/api/v1/auth/refresh')) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return fetch(url, options);
     } else if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   }
 

@@ -19,7 +19,7 @@ export function useAuthRefresh(isAuthenticated: boolean) {
         const check = await fetch('/api/v1/auth/me');
         if (!check.ok) {
           if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            window.location.href = '/';
           }
         }
       } catch {

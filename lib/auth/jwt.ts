@@ -1,7 +1,12 @@
 import { SignJWT, jwtVerify } from 'jose';
 
+const secretKey = process.env.JWT_SECRET;
+if (!secretKey && process.env.NODE_ENV === 'production') {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not defined in production!');
+}
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'super_secret_proplity_jwt_token_key_2026_safe_and_long',
+  secretKey || 'dev_proplity_jwt_secret_key_2026_only_for_local_testing_environment',
 );
 
 export interface JWTPayload {

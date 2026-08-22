@@ -126,7 +126,7 @@ export default function App() {
       setIsAuthenticated(true);
       setShowLanding(false);
       if (auth.user.role) {
-        setCurrentRole(auth.user.role as UserRole);
+        setCurrentRole((auth.user.role || 'manager').toLowerCase() as UserRole);
       }
     }
   }, [auth.user]);
@@ -326,7 +326,7 @@ export default function App() {
       return (
         <Login
           onLogin={(role) => {
-            setCurrentRole(role as UserRole);
+            setCurrentRole((role || 'manager').toLowerCase() as UserRole);
             setIsAuthenticated(true);
             setAuthScreen(null);
             setShowLanding(false);
@@ -341,9 +341,10 @@ export default function App() {
       return (
         <Register
           onRegister={(role) => {
-            setCurrentRole(role as UserRole);
+            const normalizedRole = (role || 'tenant').toLowerCase() as UserRole;
+            setCurrentRole(normalizedRole);
             // Only managers and landlords need to go through checkout
-            if ((role === 'manager' || role === 'landlord') && selectedPlan) {
+            if ((normalizedRole === 'manager' || normalizedRole === 'landlord') && selectedPlan) {
               setAuthScreen(null);
               // Checkout will be shown next
             } else {

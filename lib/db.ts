@@ -3,7 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
 const connectionString =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/proplity?schema=public';
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/proplity_db?schema=public';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

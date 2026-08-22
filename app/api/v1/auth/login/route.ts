@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 });
   }
 
-  const { email, password } = await req.json();
+  const { email, password, rememberMe = true } = await req.json();
   const identifier = `${getClientIp(req)}:${email}`;
 
   if (!(await checkRateLimit(identifier))) {
@@ -41,17 +41,20 @@ export async function POST(req: NextRequest) {
   const rawRefreshToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
 
+  const refreshDays = rememberMe ? 30 : 1;
+  const refreshMaxAgeSeconds = refreshDays * 24 * 60 * 60;
+
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
       tokenHash,
       familyId,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + refreshMaxAgeSeconds * 1000),
     },
   });
 
   const accessToken = await signAccessToken({ sub: user.id, role: user.role });
-  await setAuthCookies(accessToken, rawRefreshToken);
+  await setAuthCookies(accessToken, rawRefreshToken, refreshMaxAgeSeconds);
 
   return NextResponse.json({
     success: true,

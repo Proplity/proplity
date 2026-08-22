@@ -18,13 +18,21 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (credentials: { email: string; password: string; rememberMe?: boolean }) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (data: { email: string; password: string; name: string; role?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function normalizeUser(rawUser: any): User | null {
+  if (!rawUser) return null;
+  return {
+    ...rawUser,
+    role: (rawUser.role || 'tenant').toLowerCase() as UserRole,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -35,10 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('/api/v1/auth/me');
+      let res = await fetch('/api/v1/auth/me');
+
+      if (res.status === 401) {
+        // Attempt silent token refresh before discarding session
+        const refreshRes = await fetch('/api/v1/auth/refresh', { method: 'POST' });
+        if (refreshRes.ok) {
+          res = await fetch('/api/v1/auth/me');
+        }
+      }
+
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        setUser(normalizeUser(data.user));
       } else {
         setUser(null);
       }
@@ -67,8 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Login failed' };
       }
 
-      setUser(data.user);
-      return { success: true, user: data.user };
+      const normalized = normalizeUser(data.user);
+      setUser(normalized);
+      return { success: true, user: normalized || undefined };
     } catch (err) {
       return { success: false, error: 'Network error during login' };
     }
@@ -88,7 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: resData.error || 'Registration failed' };
       }
 
-      setUser(resData.user);
+      const normalized = normalizeUser(resData.user);
+      setUser(normalized);
       return { success: true };
     } catch (err) {
       return { success: false, error: 'Network error during registration' };
