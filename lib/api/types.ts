@@ -14,6 +14,7 @@ export type Unit = {
   rentAmount: number;
   listedPaymentFrequency: string;
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
+  amenities: string[];
 };
 
 export type Property = {
@@ -22,7 +23,39 @@ export type Property = {
   address: string;
   city: string;
   state?: string | null;
-  units?: Unit[];
+  description?: string | null;
+  imageUrl?: string | null;
+  trustScore: number | null;
+  powerReliabilityScore: number | null;
+  floodRiskScore: number | null;
+  securityRating: number | null;
+  roadConditionScore: number | null;
+  moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
+  waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
+  electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
+  units: Unit[];
+};
+
+export type PropertyReview = {
+  id: string;
+  reviewerId: string;
+  rating: number;
+  comment: string | null;
+  verified: boolean;
+  createdAt: string;
+};
+
+export type PropertyDetail = Property & {
+  reviews: PropertyReview[];
+  reviewStats: { count: number; averageRating: number | null };
+  neighbourhoodReports: {
+    security: Record<string, unknown> | null;
+    electricity: Record<string, unknown> | null;
+    water: Record<string, unknown> | null;
+    roadNetwork: Record<string, unknown> | null;
+    flooding: Record<string, unknown> | null;
+    amenities: Record<string, unknown> | null;
+  }[];
 };
 
 export type CreatePropertyInput = {

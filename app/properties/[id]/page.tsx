@@ -9,7 +9,7 @@ export default function Page() {
 
   return (
     <PublicPropertyDetail
-      propertyId={Number(id)}
+      propertyId={id}
       onGetStarted={() => router.push('/login')}
       onGoHome={() => router.push('/')}
       onViewPricing={() => router.push('/pricing')}

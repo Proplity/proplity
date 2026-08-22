@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { CreatePropertyInput, CreateUnitInput, CreateViewingInput, Property, Unit } from '@/lib/api/types';
+import type {
+  CreatePropertyInput,
+  CreateUnitInput,
+  CreateViewingInput,
+  Property,
+  PropertyDetail,
+  Unit,
+} from '@/lib/api/types';
 
 export function useProperties(filters?: { city?: string; state?: string; minBedrooms?: number }) {
   const [data, setData] = useState<Property[]>([]);
@@ -23,6 +30,38 @@ export function useProperties(filters?: { city?: string; state?: string; minBedr
     // an effect loop from a new object reference every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(filters)]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
+// Full detail for one property -- units, reviews/reviewStats, latest
+// neighbourhood report. Used by any property detail view, public or internal.
+export function useProperty(propertyId: string | null) {
+  const [data, setData] = useState<PropertyDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    if (!propertyId) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.properties.get(propertyId);
+      setData(res.data.data as PropertyDetail);
+    } catch {
+      setError('Failed to load property');
+    } finally {
+      setLoading(false);
+    }
+  }, [propertyId]);
 
   useEffect(() => {
     refetch();

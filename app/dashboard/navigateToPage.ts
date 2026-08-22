@@ -4,12 +4,12 @@ export type Page =
   | { type: 'tenants' }
   | { type: 'maintenance' }
   | { type: 'list-property' }
-  | { type: 'property-detail'; propertyId: number }
+  | { type: 'property-detail'; propertyId: string }
   | { type: 'tenant-detail'; tenantId: number }
   | { type: 'maintenance-detail'; requestId: number }
   | { type: 'maintenance-request-form' }
-  | { type: 'property-application'; propertyId: number; propertyTitle: string; propertyPrice: string }
-  | { type: 'schedule-viewing'; propertyId: number; propertyTitle: string; propertyAddress: string }
+  | { type: 'property-application'; propertyId: string; propertyTitle: string; propertyPrice: string }
+  | { type: 'schedule-viewing'; propertyId: string; propertyTitle: string; propertyAddress: string }
   | { type: 'messages' }
   | { type: 'vendor-jobs' }
   | { type: 'vendor-invoices' }

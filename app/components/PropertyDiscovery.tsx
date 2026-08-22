@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { mockProperties } from '../store/mockData';
+import { useProperties } from '@/hooks/useProperties';
+import type { Property } from '@/lib/api/types';
 import {
   Search,
   MapPin,
@@ -31,13 +32,41 @@ interface AdState {
   clicks?: number;
 }
 
+// Real Property/Unit fields mapped into what the card actually displays --
+// a property can have multiple units at different price points, so the
+// card shows the cheapest one. No scalar 0-10 water rating exists on
+// Property (only a waterSupplyType enum), so that bar is replaced with a
+// text label rather than an invented number.
+function cardFields(property: Property) {
+  const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
+  const anyVacant = property.units.some((u) => u.status === 'VACANT');
+  const freq = cheapestUnit?.listedPaymentFrequency.toLowerCase() ?? 'year';
+
+  return {
+    price: cheapestUnit ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${freq}` : 'Price on request',
+    bedrooms: cheapestUnit?.bedrooms ?? 0,
+    bathrooms: cheapestUnit?.bathrooms ?? 0,
+    sqft: cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : 'N/A',
+    status: anyVacant ? 'available' : 'occupied',
+    verified: property.moderationStatus === 'APPROVED',
+    features: cheapestUnit?.amenities ?? [],
+    imageClass: 'bg-gradient-to-br from-blue-100 to-blue-200',
+    neighborhood: {
+      safety: property.securityRating ? Math.round(property.securityRating / 10) : null,
+      accessibility: property.roadConditionScore ? Math.round(property.roadConditionScore / 10) : null,
+      powerReliability: property.powerReliabilityScore ? Math.round(property.powerReliabilityScore / 10) : null,
+    },
+  };
+}
+
 export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
+  const { data: properties, loading, error } = useProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [adStates, setAdStates] = useState<Record<number, AdState>>({});
+  const [adStates, setAdStates] = useState<Record<string, AdState>>({});
   const [adModal, setAdModal] = useState<{
     type: 'create' | 'cancel';
-    propertyId: number;
+    propertyId: string;
     propertyTitle: string;
   } | null>(null);
   const [adForm, setAdForm] = useState({
@@ -46,7 +75,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
   });
   const [adSuccess, setAdSuccess] = useState<string | null>(null);
 
-  const handleCreateAd = (propertyId: number) => {
+  const handleCreateAd = (propertyId: string) => {
     setAdStates((prev) => ({
       ...prev,
       [propertyId]: {
@@ -67,14 +96,12 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
     setTimeout(() => setAdSuccess(null), 3000);
   };
 
-  const handleCancelAd = (propertyId: number) => {
+  const handleCancelAd = (propertyId: string) => {
     setAdStates((prev) => ({ ...prev, [propertyId]: { active: false } }));
     setAdSuccess(`Ad cancelled for ${adModal?.propertyTitle}.`);
     setAdModal(null);
     setTimeout(() => setAdSuccess(null), 3000);
   };
-
-  const properties = mockProperties;
 
   const filters = [
     { id: 'all', label: 'All Properties' },
@@ -131,215 +158,181 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
       </div>
 
       {/* Property Listings */}
+      {loading && <p className="text-sm text-gray-500">Loading properties…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {properties.map((property) => (
-          <div
-            key={property.id}
-            className="overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
-          >
-            {/* Property Image Placeholder */}
-            <div className={`h-48 ${property.image} relative flex items-center justify-center`}>
-              {property.verified && (
-                <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
-                  <Shield className="h-3 w-3" />
-                  AI Verified
-                </div>
-              )}
-              <div className="text-sm text-gray-400">360° View Available</div>
-            </div>
+        {properties.map((property) => {
+          const card = cardFields(property);
+          return (
+            <div
+              key={property.id}
+              className="overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
+            >
+              {/* Property Image Placeholder */}
+              <div className={`h-48 ${card.imageClass} relative flex items-center justify-center`}>
+                {card.verified && (
+                  <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
+                    <Shield className="h-3 w-3" />
+                    AI Verified
+                  </div>
+                )}
+                <div className="text-sm text-gray-400">360° View Available</div>
+              </div>
 
-            <div className="p-5">
-              {/* Trust Score */}
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-                    <span className="text-sm font-semibold text-green-600">
-                      {property.trustScore}
+              <div className="p-5">
+                {/* Trust Score */}
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+                      <span className="text-sm font-semibold text-green-600">
+                        {property.trustScore ?? '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Trust Score</p>
+                      <p className="text-xs font-medium text-green-600">Excellent</p>
+                    </div>
+                  </div>
+                  <span className="text-xl font-semibold text-blue-600">{card.price}</span>
+                </div>
+
+                <h3 className="mb-1 text-lg font-semibold">{property.name}</h3>
+                <div className="mb-4 flex items-center gap-1 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm">
+                    {property.address}, {property.city}
+                  </span>
+                </div>
+
+                {/* Property Details */}
+                <div className="mb-4 flex gap-4 border-b border-gray-200 pb-4">
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <Bed className="h-4 w-4" />
+                    <span>{card.bedrooms} Beds</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <Bath className="h-4 w-4" />
+                    <span>{card.bathrooms} Baths</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <Square className="h-4 w-4" />
+                    <span>{card.sqft}</span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                {card.features.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {card.features.map((feature, index) => (
+                      <span
+                        key={index}
+                        className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"
+                      >
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Neighborhood Intelligence */}
+                <div className="mb-4 rounded-lg bg-gray-50 p-3">
+                  <p className="mb-2 text-xs font-medium text-gray-700">Neighborhood Intelligence</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['Safety', card.neighborhood.safety, 'bg-green-500'],
+                      ['Access', card.neighborhood.accessibility, 'bg-blue-500'],
+                      ['Power', card.neighborhood.powerReliability, 'bg-yellow-500'],
+                    ] as const).map(([label, value, color]) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">{label}</span>
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                            <div className={`h-full ${color}`} style={{ width: `${(value ?? 0) * 10}%` }}></div>
+                          </div>
+                          <span className="text-xs font-medium">{value ?? '—'}/10</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Water</span>
+                      <span className="text-xs font-medium">{property.waterSupplyType.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ad Status Banner */}
+                {adStates[property.id]?.active && (
+                  <div className="mb-3 flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Megaphone className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <p className="text-xs font-semibold text-orange-700">Ad Running</p>
+                        <p className="text-xs text-orange-600">
+                          {adStates[property.id].impressions ?? 0} impressions ·{' '}
+                          {adStates[property.id].clicks ?? 0} clicks ·{' '}
+                          {adStates[property.id].duration}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
+                      <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500"></span>
+                      Live
                     </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Trust Score</p>
-                    <p className="text-xs font-medium text-green-600">Excellent</p>
-                  </div>
-                </div>
-                <span className="text-xl font-semibold text-blue-600">{property.price}</span>
-              </div>
-
-              <h3 className="mb-1 text-lg font-semibold">{property.title}</h3>
-              <div className="mb-4 flex items-center gap-1 text-gray-600">
-                <MapPin className="h-4 w-4" />
-                <span className="text-sm">{property.location}</span>
-              </div>
-
-              {/* Property Details */}
-              <div className="mb-4 flex gap-4 border-b border-gray-200 pb-4">
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Bed className="h-4 w-4" />
-                  <span>{property.bedrooms} Beds</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Bath className="h-4 w-4" />
-                  <span>{property.bathrooms} Baths</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
-                  <Square className="h-4 w-4" />
-                  <span>{property.sqft}</span>
-                </div>
-              </div>
-
-              {/* Features */}
-              <div className="mb-4 flex flex-wrap gap-2">
-                {property.features.map((feature, index) => (
-                  <span
-                    key={index}
-                    className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"
-                  >
-                    {feature}
-                  </span>
-                ))}
-              </div>
-
-              {/* Neighborhood Intelligence */}
-              <div className="mb-4 rounded-lg bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-medium text-gray-700">Neighborhood Intelligence</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Safety</span>
-                    <div className="flex items-center gap-1">
-                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-green-500"
-                          style={{
-                            width: `${property.neighborhood.safety * 10}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">{property.neighborhood.safety}/10</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Access</span>
-                    <div className="flex items-center gap-1">
-                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-blue-500"
-                          style={{
-                            width: `${property.neighborhood.accessibility * 10}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">
-                        {property.neighborhood.accessibility}/10
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Power</span>
-                    <div className="flex items-center gap-1">
-                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-yellow-500"
-                          style={{
-                            width: `${property.neighborhood.powerReliability * 10}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">
-                        {property.neighborhood.powerReliability}/10
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Water</span>
-                    <div className="flex items-center gap-1">
-                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-blue-500"
-                          style={{
-                            width: `${property.neighborhood.waterSupply * 10}%`,
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">
-                        {property.neighborhood.waterSupply}/10
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ad Status Banner */}
-              {adStates[property.id]?.active && (
-                <div className="mb-3 flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="h-4 w-4 text-orange-500" />
-                    <div>
-                      <p className="text-xs font-semibold text-orange-700">Ad Running</p>
-                      <p className="text-xs text-orange-600">
-                        {adStates[property.id].impressions ?? 0} impressions ·{' '}
-                        {adStates[property.id].clicks ?? 0} clicks ·{' '}
-                        {adStates[property.id].duration}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
-                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500"></span>
-                    Live
-                  </span>
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => alert(`Scheduling tour for ${property.title}...`)}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Schedule Tour
-                </button>
-                <button
-                  onClick={() =>
-                    onNavigate({
-                      type: 'property-detail',
-                      propertyId: property.id,
-                    })
-                  }
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
-                >
-                  Details
-                </button>
-                {adStates[property.id]?.active ? (
-                  <button
-                    onClick={() =>
-                      setAdModal({
-                        type: 'cancel',
-                        propertyId: property.id,
-                        propertyTitle: property.title,
-                      })
-                    }
-                    className="flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Cancel Ad
-                  </button>
-                ) : (
-                  <button
-                    onClick={() =>
-                      setAdModal({
-                        type: 'create',
-                        propertyId: property.id,
-                        propertyTitle: property.title,
-                      })
-                    }
-                    className="flex items-center gap-1 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
-                  >
-                    <Megaphone className="h-3.5 w-3.5" />
-                    Create Ad
-                  </button>
                 )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => alert(`Scheduling tour for ${property.name}...`)}
+                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Schedule Tour
+                  </button>
+                  <button
+                    onClick={() =>
+                      onNavigate({
+                        type: 'property-detail',
+                        propertyId: property.id,
+                      })
+                    }
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Details
+                  </button>
+                  {adStates[property.id]?.active ? (
+                    <button
+                      onClick={() =>
+                        setAdModal({
+                          type: 'cancel',
+                          propertyId: property.id,
+                          propertyTitle: property.name,
+                        })
+                      }
+                      className="flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Cancel Ad
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        setAdModal({
+                          type: 'create',
+                          propertyId: property.id,
+                          propertyTitle: property.name,
+                        })
+                      }
+                      className="flex items-center gap-1 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+                    >
+                      <Megaphone className="h-3.5 w-3.5" />
+                      Create Ad
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Success Toast */}
