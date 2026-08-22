@@ -23,6 +23,7 @@ export type Property = {
   address: string;
   city: string;
   state?: string | null;
+  type: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
   description?: string | null;
   imageUrl?: string | null;
   managerId?: string | null;
@@ -37,6 +38,7 @@ export type Property = {
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
+  createdAt: string;
   units: Unit[];
 };
 
@@ -319,4 +321,15 @@ export type CreateMessageInput = {
   body: string;
   channel?: 'IN_APP' | 'WHATSAPP' | 'EMAIL' | 'SMS';
   attachmentUrls?: string[];
+};
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'MANAGER' | 'LANDLORD' | 'TENANT' | 'VENDOR';
+  status: string;
+  phoneNumber: string | null;
+  createdAt: string;
+  propertiesCount: number;
 };

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
   AccessCode,
+  AdminUser,
   Conversation,
   CreateAccessCodeInput,
   CreateConversationInput,
@@ -150,6 +151,12 @@ export const api = {
         ),
       create: (conversationId: string, body: CreateMessageInput) =>
         apiClient.post<{ data: Message }>(`/api/v1/conversations/${conversationId}/messages`, body),
+    },
+  },
+  admin: {
+    users: {
+      list: (params?: { role?: string; limit?: number }) =>
+        apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
   },
 };
