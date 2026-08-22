@@ -10,7 +10,7 @@ export default function Page() {
 
   return (
     <PropertyDetail
-      propertyId={Number(id)}
+      propertyId={id}
       onBack={() => router.push('/dashboard')}
       onNavigate={(page) => navigateToPage(router, page)}
     />

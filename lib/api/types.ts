@@ -25,6 +25,9 @@ export type Property = {
   state?: string | null;
   description?: string | null;
   imageUrl?: string | null;
+  managerId?: string | null;
+  landlordId?: string | null;
+  isPublished: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
   floodRiskScore: number | null;

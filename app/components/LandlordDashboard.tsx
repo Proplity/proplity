@@ -17,7 +17,10 @@ import {
   Clock,
   Shield,
 } from 'lucide-react';
-import { mockLandlordDashboardProperties as properties } from '../store/mockData';
+import { useMyProperties } from '@/hooks/useProperties';
+import { useLeases } from '@/hooks/useLeases';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 
 interface ManagerCode {
   id: string;
@@ -32,7 +35,20 @@ interface LandlordDashboardProps {
   onNavigate?: (page: any) => void;
 }
 
+function timeAgo(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
+  const { data: properties, loading: propertiesLoading } = useMyProperties();
+  const { data: leases } = useLeases({ status: 'ACTIVE' });
+  const { data: invoices } = useInvoices();
+  const { data: maintenanceRequests } = useMaintenanceRequests();
+
   const [managerCodes, setManagerCodes] = useState<ManagerCode[]>([
     {
       id: '1',
@@ -63,22 +79,12 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
 
   const generateCode = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const part1 = Array.from(
-      { length: 4 },
-      () => chars[Math.floor(Math.random() * chars.length)],
-    ).join('');
-    const part2 = Array.from(
-      { length: 2 },
-      () => chars[Math.floor(Math.random() * chars.length)],
-    ).join('');
+    const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const part2 = Array.from({ length: 2 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const newCode: ManagerCode = {
       id: Date.now().toString(),
       code: `LLD-${part1}-${part2}`,
-      createdAt: new Date().toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
+      createdAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
       status: 'Active',
       linkedManager: null,
       linkedAt: null,
@@ -87,11 +93,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   };
 
   const toggleCode = (id: string) => {
-    setManagerCodes((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, status: c.status === 'Active' ? 'Deactivated' : 'Active' } : c,
-      ),
-    );
+    setManagerCodes((prev) => prev.map((c) => (c.id === id ? { ...c, status: c.status === 'Active' ? 'Deactivated' : 'Active' } : c)));
   };
 
   const copyCode = (code: string) => {
@@ -100,12 +102,82 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  // Portfolio stats -- all real, derived from the landlord's own
+  // properties/units (GET /leases, /invoices, /maintenance/requests are
+  // already server-scoped to properties this landlord owns).
+  const units = properties.flatMap((p) => p.units);
+  const occupiedUnits = units.filter((u) => u.status === 'OCCUPIED').length;
+  const occupancyRate = units.length > 0 ? Math.round((occupiedUnits / units.length) * 100) : 0;
+  const totalListedRent = units.reduce((sum, u) => sum + u.rentAmount, 0);
+
+  const collected = invoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
+  const pending = invoices
+    .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
+    .reduce((sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)), 0);
+  const maintenanceCosts = maintenanceRequests
+    .filter((r) => r.status === 'COMPLETED')
+    .reduce((sum, r) => sum + (r.finalCost ?? 0), 0);
+  const collectionRate = collected + pending > 0 ? Math.round((collected / (collected + pending)) * 100) : 0;
+  const netRevenue = collected - maintenanceCosts;
+  const cashTotal = collected + pending + maintenanceCosts;
+
+  // Per-property occupancy, used as the "Performance" bar -- the mock's
+  // arbitrary 0-100 performance score has no real analogue, so this is
+  // relabeled to what it actually measures.
+  const propertyRows = properties.map((property) => {
+    const propertyUnits = property.units;
+    const occupied = propertyUnits.filter((u) => u.status === 'OCCUPIED').length;
+    const revenue = propertyUnits.reduce((sum, u) => sum + u.rentAmount, 0);
+    return {
+      property,
+      unitCount: propertyUnits.length,
+      occupied,
+      revenue,
+      occupancy: propertyUnits.length > 0 ? Math.round((occupied / propertyUnits.length) * 100) : 0,
+    };
+  });
+
+  // Recent Activity: a real feed merged from payments, completed
+  // maintenance, and newly-active leases -- replacing the mock's 4
+  // hardcoded fabricated events.
+  const activity = [
+    ...invoices.flatMap((invoice) =>
+      invoice.payments.map((payment) => ({
+        event: 'Rent payment received',
+        tenant: invoice.lease?.tenant.name,
+        property: invoice.lease?.unit.property.name,
+        amount: `₦${payment.amount.toLocaleString()}`,
+        time: payment.paidAt,
+      })),
+    ),
+    ...maintenanceRequests
+      .filter((r) => r.status === 'COMPLETED' && r.completedAt)
+      .map((r) => ({
+        event: 'Maintenance completed',
+        tenant: undefined,
+        property: r.unit?.property?.name,
+        amount: r.finalCost != null ? `₦${r.finalCost.toLocaleString()}` : undefined,
+        time: r.completedAt!,
+      })),
+    ...leases.map((l) => ({
+      event: 'Lease active',
+      tenant: l.tenant?.name,
+      property: l.unit?.property?.name,
+      amount: undefined,
+      time: l.startDate,
+    })),
+  ]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 5);
+
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="mb-1 text-2xl font-semibold">Landlord Portfolio</h1>
         <p className="text-gray-600">Overview of your property investments</p>
       </div>
+
+      {propertiesLoading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -115,7 +187,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">18</p>
+          <p className="mb-1 text-2xl font-semibold">{units.length}</p>
           <p className="text-sm text-gray-600">Total Units</p>
         </div>
 
@@ -125,9 +197,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <Users className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">16</p>
+          <p className="mb-1 text-2xl font-semibold">{occupiedUnits}</p>
           <p className="text-sm text-gray-600">Occupied Units</p>
-          <p className="mt-1 text-xs text-green-600">89% Occupancy</p>
+          <p className="mt-1 text-xs text-green-600">{occupancyRate}% Occupancy</p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -136,9 +208,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">₦17M</p>
-          <p className="text-sm text-gray-600">Annual Revenue</p>
-          <p className="mt-1 text-xs text-green-600">+12% vs last year</p>
+          <p className="mb-1 text-2xl font-semibold">₦{totalListedRent.toLocaleString()}</p>
+          <p className="text-sm text-gray-600">Total Listed Rent</p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -147,9 +218,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <TrendingUp className="h-6 w-6 text-orange-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">94%</p>
+          <p className="mb-1 text-2xl font-semibold">{collectionRate}%</p>
           <p className="text-sm text-gray-600">Collection Rate</p>
-          <p className="mt-1 text-xs text-green-600">+8% improvement</p>
         </div>
       </div>
 
@@ -157,48 +227,34 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
       <div className="rounded-lg border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 p-6">
           <h2 className="font-semibold">Property Performance</h2>
-          <button
-            onClick={() => onNavigate?.({ type: 'dashboard' })}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            View All
-          </button>
         </div>
         <div className="divide-y divide-gray-200">
-          {properties.map((property) => (
+          {propertyRows.map(({ property, unitCount, occupied, revenue, occupancy }) => (
             <div key={property.id} className="p-6 hover:bg-gray-50">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="text-lg font-semibold">{property.name}</p>
                   <p className="text-sm text-gray-600">
-                    {property.units} units • {property.occupied} occupied
+                    {unitCount} unit{unitCount === 1 ? '' : 's'} • {occupied} occupied
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-semibold text-green-600">{property.revenue}</p>
-                  <p className="text-xs text-gray-500">Annual Revenue</p>
+                  <p className="text-xl font-semibold text-green-600">₦{revenue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Total Listed Rent</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Performance</span>
-                    <span className="text-xs font-medium">{property.performance}%</span>
+                    <span className="text-xs text-gray-600">Occupancy</span>
+                    <span className="text-xs font-medium">{occupancy}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="h-full rounded-full bg-green-500"
-                      style={{ width: `${property.performance}%` }}
-                    ></div>
+                    <div className="h-full rounded-full bg-green-500" style={{ width: `${occupancy}%` }}></div>
                   </div>
                 </div>
                 <button
-                  onClick={() =>
-                    onNavigate?.({
-                      type: 'property-detail',
-                      propertyId: property.id,
-                    })
-                  }
+                  onClick={() => onNavigate?.({ type: 'property-detail', propertyId: property.id })}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
                 >
                   View Details
@@ -206,6 +262,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               </div>
             </div>
           ))}
+          {propertyRows.length === 0 && !propertiesLoading && (
+            <p className="p-6 text-sm text-gray-400">No properties yet.</p>
+          )}
         </div>
       </div>
 
@@ -213,46 +272,23 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         {/* Revenue Breakdown */}
         <div className="rounded-lg border border-gray-200 bg-white">
           <div className="border-b border-gray-200 p-6">
-            <h2 className="font-semibold">Revenue Breakdown (2026)</h2>
+            <h2 className="font-semibold">Revenue Breakdown</h2>
           </div>
           <div className="p-6">
             <div className="space-y-4">
               {[
-                {
-                  label: 'Rent Collected',
-                  amount: '₦15.8M',
-                  percentage: 93,
-                  color: 'green',
-                },
-                {
-                  label: 'Pending Payments',
-                  amount: '₦1.2M',
-                  percentage: 7,
-                  color: 'yellow',
-                },
-                {
-                  label: 'Maintenance Costs',
-                  amount: '₦945K',
-                  percentage: 5.5,
-                  color: 'red',
-                },
-                {
-                  label: 'Net Revenue',
-                  amount: '₦14.9M',
-                  percentage: 87.5,
-                  color: 'blue',
-                },
-              ].map((item, index) => (
-                <div key={index}>
+                { label: 'Rent Collected', amount: collected, pct: cashTotal > 0 ? (collected / cashTotal) * 100 : 0, color: 'green' },
+                { label: 'Pending Payments', amount: pending, pct: cashTotal > 0 ? (pending / cashTotal) * 100 : 0, color: 'yellow' },
+                { label: 'Maintenance Costs', amount: maintenanceCosts, pct: cashTotal > 0 ? (maintenanceCosts / cashTotal) * 100 : 0, color: 'red' },
+                { label: 'Net Revenue', amount: netRevenue, pct: collected > 0 ? Math.max(0, (netRevenue / collected) * 100) : 0, color: 'blue' },
+              ].map((item) => (
+                <div key={item.label}>
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm text-gray-600">{item.label}</span>
-                    <span className="text-sm font-semibold">{item.amount}</span>
+                    <span className="text-sm font-semibold">₦{item.amount.toLocaleString()}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className={`h-full bg-${item.color}-500 rounded-full`}
-                      style={{ width: `${item.percentage}%` }}
-                    ></div>
+                    <div className={`h-full bg-${item.color}-500 rounded-full`} style={{ width: `${Math.min(100, item.pct)}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -266,48 +302,22 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <h2 className="font-semibold">Recent Activity</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {[
-              {
-                event: 'Rent payment received',
-                tenant: 'Adewale Johnson',
-                amount: '₦850K',
-                time: '2h ago',
-              },
-              {
-                event: 'Maintenance completed',
-                property: 'Lekki Phase 1, Apt 203',
-                amount: '₦15K',
-                time: '5h ago',
-              },
-              {
-                event: 'New tenant onboarded',
-                tenant: 'Chidinma Okafor',
-                property: 'Maitama, Unit 5B',
-                time: '1d ago',
-              },
-              {
-                event: 'Lease renewal signed',
-                tenant: 'Ibrahim Musa',
-                property: 'Wuse 2, Apt 14',
-                time: '2d ago',
-              },
-            ].map((activity, index) => (
+            {activity.map((item, index) => (
               <div key={index} className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium">{activity.event}</p>
+                    <p className="text-sm font-medium">{item.event}</p>
                     <p className="mt-1 text-xs text-gray-600">
-                      {activity.tenant && `${activity.tenant} • `}
-                      {activity.property}
+                      {item.tenant && `${item.tenant} • `}
+                      {item.property}
                     </p>
-                    {activity.amount && (
-                      <p className="mt-1 text-xs font-medium text-green-600">{activity.amount}</p>
-                    )}
+                    {item.amount && <p className="mt-1 text-xs font-medium text-green-600">{item.amount}</p>}
                   </div>
-                  <span className="text-xs text-gray-500">{activity.time}</span>
+                  <span className="text-xs text-gray-500">{timeAgo(item.time)}</span>
                 </div>
               </div>
             ))}
+            {activity.length === 0 && <p className="p-4 text-sm text-gray-400">No recent activity yet.</p>}
           </div>
         </div>
       </div>
@@ -351,7 +361,10 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         </div>
       </div>
 
-      {/* Manager Access — Code Management */}
+      {/* Manager Access — Code Management. No AccessCode-style model exists
+          for landlord-manager linking anywhere in the schema (this is a
+          different concept from the gate AccessCode model) -- stays local
+          demo state, same as it was pre-hydration. */}
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 p-6">
           <div className="flex items-center gap-3">
@@ -361,8 +374,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <div>
               <h2 className="font-semibold text-gray-900">Manager Access Codes</h2>
               <p className="mt-0.5 text-xs text-gray-500">
-                Share a code with your Property Manager during their registration to link them to
-                your portfolio.
+                Share a code with your Property Manager during their registration to link them to your portfolio.
               </p>
             </div>
           </div>
@@ -378,38 +390,28 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <div className="flex items-start gap-3 border-b border-amber-100 bg-amber-50 p-4">
           <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
           <p className="text-xs text-amber-800">
-            <span className="font-semibold">How it works:</span> Generate a code and share it with
-            the person you want to appoint as your Property Manager. They'll enter it during
-            registration. You can deactivate a code at any time to immediately revoke access — even
-            after they've registered.
+            <span className="font-semibold">How it works:</span> Generate a code and share it with the person you
+            want to appoint as your Property Manager. They'll enter it during registration. You can deactivate a
+            code at any time to immediately revoke access — even after they've registered.
           </p>
         </div>
 
         <div className="divide-y divide-gray-100">
           {managerCodes.map((item) => (
-            <div
-              key={item.id}
-              className={`flex items-center gap-4 p-4 ${item.status === 'Deactivated' ? 'opacity-60' : ''}`}
-            >
-              {/* Code pill */}
+            <div key={item.id} className={`flex items-center gap-4 p-4 ${item.status === 'Deactivated' ? 'opacity-60' : ''}`}>
               <div
                 className={`flex-shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
-                  item.status === 'Active'
-                    ? 'border-blue-200 bg-blue-50 text-blue-800'
-                    : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
+                  item.status === 'Active' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
                 }`}
               >
                 {item.code}
               </div>
 
-              {/* Details */}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      item.status === 'Active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
+                      item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}
                   >
                     {item.status}
@@ -417,8 +419,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                   {item.linkedManager ? (
                     <span className="flex items-center gap-1 text-xs text-gray-600">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                      Linked to <span className="font-medium">{item.linkedManager}</span> · since{' '}
-                      {item.linkedAt}
+                      Linked to <span className="font-medium">{item.linkedManager}</span> · since {item.linkedAt}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -430,7 +431,6 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 <p className="mt-1 text-xs text-gray-400">Created {item.createdAt}</p>
               </div>
 
-              {/* Actions */}
               <div className="flex flex-shrink-0 items-center gap-2">
                 {item.status === 'Active' && (
                   <button
@@ -451,9 +451,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 <button
                   onClick={() => toggleCode(item.id)}
                   className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    item.status === 'Active'
-                      ? 'border-red-200 text-red-600 hover:bg-red-50'
-                      : 'border-green-200 text-green-700 hover:bg-green-50'
+                    item.status === 'Active' ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-700 hover:bg-green-50'
                   }`}
                 >
                   {item.status === 'Active' ? (
@@ -473,34 +471,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           {managerCodes.length === 0 && (
             <div className="p-8 text-center text-gray-400">
               <KeyRound className="mx-auto mb-2 h-10 w-10 opacity-40" />
-              <p className="text-sm">
-                No codes generated yet. Click "Generate New Code" to get started.
-              </p>
+              <p className="text-sm">No codes generated yet. Click "Generate New Code" to get started.</p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Investment Summary */}
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 p-6">
-          <h2 className="font-semibold">Investment Summary</h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div>
-              <p className="mb-1 text-sm text-gray-600">Total Investment Value</p>
-              <p className="text-2xl font-semibold">₦450M</p>
-            </div>
-            <div>
-              <p className="mb-1 text-sm text-gray-600">Average ROI</p>
-              <p className="text-2xl font-semibold text-green-600">8.5%</p>
-            </div>
-            <div>
-              <p className="mb-1 text-sm text-gray-600">Properties Managed</p>
-              <p className="text-2xl font-semibold">3</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

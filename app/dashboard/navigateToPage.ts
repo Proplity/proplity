@@ -8,8 +8,8 @@ export type Page =
   | { type: 'tenant-detail'; leaseId: string }
   | { type: 'maintenance-detail'; requestId: string }
   | { type: 'maintenance-request-form' }
-  | { type: 'property-application'; propertyId: string; propertyTitle: string; propertyPrice: string }
-  | { type: 'schedule-viewing'; propertyId: string; propertyTitle: string; propertyAddress: string }
+  | { type: 'property-application'; propertyId: string }
+  | { type: 'schedule-viewing'; propertyId: string }
   | { type: 'messages' }
   | { type: 'vendor-jobs' }
   | { type: 'vendor-invoices' }
