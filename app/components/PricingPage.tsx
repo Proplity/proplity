@@ -13,7 +13,7 @@ interface PricingPageProps {
   onViewVendorPage: () => void;
 }
 
-const PLANS = [
+export const PLANS = [
   {
     id: 'starter',
     name: 'Starter',

@@ -2,8 +2,13 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
+const envConnectionString = process.env.DATABASE_URL;
+if (!envConnectionString && process.env.NODE_ENV === 'production') {
+  throw new Error('CRITICAL: DATABASE_URL environment variable is not defined in production!');
+}
+
 const connectionString =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/proplity_db?schema=public';
+  envConnectionString || 'postgresql://postgres:postgres@localhost:5432/proplity_db?schema=public';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
