@@ -2,7 +2,7 @@
 
 > **Proplity** is a modern, enterprise-grade AI-powered Property Management & Tenant Experience Platform built on **Next.js 16.3.2 (App Router)**, **TypeScript**, **PostgreSQL 18**, and **Prisma ORM v7**.
 >
-> **Last updated:** 2026-08-22, after the full domain-API roadmap (Phase 0-pre through Phase 8). The app is real routes end to end — there is no client-side router component; every screen is a real Next.js route backed by a real API route.
+> **Last updated:** 2026-08-23, after the full domain-API roadmap (Phase 0-pre through Phase 8) plus Phase 9 frontend read-path hydration. The app is real routes end to end — there is no client-side router component; every screen is a real Next.js route backed by a real API route.
 
 ---
 
@@ -11,10 +11,10 @@
 ```mermaid
 graph TD
     Client["💻 Client / Browser (React UI)"]
-    Store["📦 app/store/* mock data — display only, ~24 components"]
-    Hooks["🪝 Domain hooks (hooks/use*.ts) — 5 built, wired to 5 forms"]
+    Store["📦 app/store/* mock data — 4 illustrative-only components left (AIAssistant, 3 marketing FeaturePages)"]
+    Hooks["🪝 Domain hooks (hooks/use*.ts) — 10 files, wired to 20 hydrated views + 6 write-forms"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh + typed api.* client"]
-    NextApi["🛡️ Next.js App Router API Routes (/api/v1/*, 34 routes)"]
+    NextApi["🛡️ Next.js App Router API Routes (/api/v1/*, 36 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*"]
     PrismaClient["💎 Prisma ORM Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL Database (proplity_db)")]
@@ -64,7 +64,7 @@ proplity/
 │   │   ├── 📁 reports/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # Backend REST API — 34 route.ts files
+│   ├── 📁 api/v1/                           # Backend REST API — 36 route.ts files
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, change-password (7)
 │   │   ├── 📁 properties/                   # +[id], .../units, .../units/[unitId], .../reviews, .../viewings, .../neighbourhood-report (7)
 │   │   ├── 📁 maintenance/                  # categories, requests, requests/[id], requests/[id]/rating, schedules (5)
@@ -73,6 +73,8 @@ proplity/
 │   │   ├── 📁 payments/                     # initialize, webhook, autopay (3)
 │   │   ├── 📁 access-codes/                 # +[id], .../verify (3)
 │   │   ├── 📁 conversations/                # +[id]/messages (2)
+│   │   ├── 📁 vendors/                      # vendor reputation listing, ADMIN/MANAGER/LANDLORD (1, Phase 9.3a)
+│   │   ├── 📁 admin/users/                  # platform-wide user listing, ADMIN only (1, Phase 9.6)
 │   │   └── 📁 cron/[job]/                   # dispatches to the 5 lib/workers/* functions (1)
 │   │
 │   ├── 📁 components/                       # UI Views & Feature Components (37 top-level + Auth/, figma/, ui/)
@@ -80,23 +82,27 @@ proplity/
 │   │   ├── 📁 figma/                        # ImageWithFallback.tsx
 │   │   ├── 📁 ui/                           # ~45 Radix UI + Tailwind design-system primitives (unchanged since project start)
 │   │   ├── 📄 AboutPage.tsx, ContactPage.tsx, PricingPage.tsx, LandingPage.tsx
-│   │   ├── 📄 AdminDashboard.tsx, AdminBreakdownPage.tsx, AdminReports.tsx           # mock data — Phase 9 candidate
-│   │   ├── 📄 Dashboard.tsx, DashboardBreakdownPage.tsx                              # mock data — Phase 9 candidate
-│   │   ├── 📄 LandlordDashboard.tsx, LandlordFeaturePage.tsx                          # mock data — Phase 9 candidate
-│   │   ├── 📄 TenantDashboard.tsx, TenantDetail.tsx, TenantFeaturePage.tsx,
-│   │   │      TenantManagement.tsx, TenantMaintenanceRequests.tsx, TenantPaymentHistory.tsx  # mock data — Phase 9 candidate
-│   │   ├── 📄 VendorDashboard.tsx, VendorJobDetail.tsx, ServiceProviderFeaturePage.tsx        # mock data — Phase 9 candidate
-│   │   ├── 📄 MaintenanceBoard.tsx, MaintenanceDetail.tsx                            # mock data — Phase 9 candidate
-│   │   ├── 📄 MessagingPortal.tsx, NeighbourhoodReport.tsx, AIAssistant.tsx           # mock data — Phase 9 candidate
-│   │   ├── 📄 PropertyDetail.tsx, PropertyDiscovery.tsx, PublicPropertyDetail.tsx     # mock data — Phase 9 candidate
+│   │   ├── 📄 AdminDashboard.tsx, AdminBreakdownPage.tsx, AdminReports.tsx           # ✅ real data (Phase 9.6)
+│   │   ├── 📄 Dashboard.tsx, DashboardBreakdownPage.tsx                              # ✅ real data (Phase 9.3a/3b)
+│   │   ├── 📄 LandlordDashboard.tsx                                                  # ✅ real data (Phase 9.3b)
+│   │   ├── 📄 LandlordFeaturePage.tsx                                                # mock — marketing page, out of Phase 9 scope
+│   │   ├── 📄 TenantDashboard.tsx, TenantDetail.tsx,
+│   │   │      TenantManagement.tsx, TenantMaintenanceRequests.tsx, TenantPaymentHistory.tsx  # ✅ real data (Phase 9.2/3a)
+│   │   ├── 📄 TenantFeaturePage.tsx                                                  # mock — marketing page, out of Phase 9 scope
+│   │   ├── 📄 VendorDashboard.tsx, VendorJobDetail.tsx                               # ✅ real data (Phase 9.4)
+│   │   ├── 📄 ServiceProviderFeaturePage.tsx                                         # mock — marketing page, out of Phase 9 scope
+│   │   ├── 📄 MaintenanceBoard.tsx, MaintenanceDetail.tsx                            # ✅ real data (Phase 9.3a)
+│   │   ├── 📄 MessagingPortal.tsx, NeighbourhoodReport.tsx                           # ✅ real data (Phase 9.5/9.2)
+│   │   ├── 📄 AIAssistant.tsx                                                        # mock — no real AI capability to back it
+│   │   ├── 📄 PropertyDetail.tsx, PropertyDiscovery.tsx, PublicPropertyDetail.tsx     # ✅ real data (Phase 9.1/3b)
 │   │   ├── 📄 PropertyApplicationForm.tsx, Checkout.tsx, RoleSwitcher.tsx, Logo.tsx
 │   │   ├── 📄 MaintenanceRequestForm.tsx    # ✅ wired to POST /maintenance/requests (Phase 7)
 │   │   ├── 📄 ScheduleViewing.tsx           # ✅ wired to POST /properties/[id]/viewings (Phase 7)
 │   │   ├── 📄 ListProperty.tsx              # ✅ wired to POST /properties + /units (Phase 7)
-│   │   ├── 📄 VendorCreateInvoice.tsx       # ✅ wired to POST /invoices (Phase 7)
+│   │   ├── 📄 VendorCreateInvoice.tsx       # ✅ wired to POST /invoices (Phase 7) — flagged: never PATCHes the job to COMPLETED
 │   │   └── 📄 AddTenantForm.tsx             # ✅ wired to POST /leases, incl. tenant-invite flow (Phase 7)
 │   │
-│   └── 📁 store/                            # Mock datasets still backing the ~24 unwired components above
+│   └── 📁 store/                            # Mock datasets — now backing only 4 out-of-scope illustrative components
 │       ├── 📄 mockData.ts                   # Core mock properties, leases, payments, and stats
 │       ├── 📄 adminBreakdownData.ts, adminDashboardData.ts, aiAssistantData.ts
 │       ├── 📄 dashboardBreakdownData.tsx, maintenanceData.ts, messagingData.ts
@@ -112,12 +118,15 @@ proplity/
 │
 ├── 📁 hooks/
 │   ├── 📄 useAuthRefresh.ts                 # Proactive 13-min token refresh, multi-tab safe
-│   ├── 📄 useApiSubmit.ts                   # Shared { submit, submitting, error } used by the 5 domain hooks below
-│   ├── 📄 useProperties.ts                  # useProperties, useUnits, useCreateProperty, useCreateUnit, useCreateViewing
-│   ├── 📄 useMaintenanceRequests.ts         # useMaintenanceCategories, useCreateMaintenanceRequest
-│   ├── 📄 useLeases.ts                      # useCreateLease, useActiveLease
-│   ├── 📄 useInvoices.ts                    # useCreateInvoice
-│   └── 📄 useAccessCodes.ts                 # useAccessCodes, useCreateAccessCode — built, not wired to any UI yet
+│   ├── 📄 useApiSubmit.ts                   # Shared { submit, submitting, error } used by the write-hooks below
+│   ├── 📄 useProperties.ts                  # useProperties, useMyProperties, useUnits, useCreateProperty, useCreateUnit, useCreateViewing
+│   ├── 📄 useMaintenanceRequests.ts         # useMaintenanceRequests, useMaintenanceRequest, useUpdateMaintenanceRequest, useMaintenanceCategories, useCreateMaintenanceRequest
+│   ├── 📄 useLeases.ts                      # useLeases, useLease, useLeaseNotes, useCreateLeaseNote, useCreateLease, useActiveLease
+│   ├── 📄 useInvoices.ts                    # useInvoices, useCreateInvoice
+│   ├── 📄 useAccessCodes.ts                 # useAccessCodes, useCreateAccessCode
+│   ├── 📄 useVendors.ts                     # useVendors (Phase 9.3a)
+│   ├── 📄 useAdminUsers.ts                  # useAdminUsers (Phase 9.6)
+│   └── 📄 useConversations.ts               # useConversations, useMessages (polls every 5s), useSendMessage, useCreateConversation (Phase 9.5)
 │
 ├── 📁 lib/
 │   ├── 📄 apiClient.ts                      # Axios instance + refresh interceptor + domain-grouped typed api.* client
@@ -141,9 +150,9 @@ proplity/
 │
 ├── 📁 out/                                  # Planning docs & phase history (gitignored)
 │   ├── 📄 domain-api-implementation-plan.md # Original full 6-phase spec — now complete
-│   ├── 📄 next-phase-analysis.md            # Current prioritized proposal for what's next
-│   ├── 📄 phase-7-frontend-integration-plan.md, phase-8-background-workers-plan.md
-│   └── 📁 phases/                           # One detailed writeup per completed phase
+│   ├── 📄 next-phase-analysis.md            # Proposal that spawned Phase 9 (now complete); Findings 3/4 still open
+│   ├── 📄 phase-7-frontend-integration-plan.md, phase-8-background-workers-plan.md, phase-9-frontend-hydration-plan.md
+│   └── 📁 phases/                           # One detailed writeup per completed phase, incl. 6 Phase 9 sub-phase docs
 │
 ├── 📁 prisma/
 │   ├── 📄 mermaid.mermaid                   # Entity-relationship diagram
@@ -171,10 +180,10 @@ proplity/
 | Directory | Purpose | Key Technologies |
 |---|---|---|
 | **`app/`** | Real routes end to end — public pages, `dashboard/`, `admin/`, `api/v1/` | Next.js 16 App Router, React, Tailwind CSS |
-| **`app/api/v1/`** | 34 backend REST routes across 6 domains + auth + cron | Route Handlers, `withAuth`, Zod, Prisma |
-| **`app/components/`** | Feature views — 5 wired to real APIs, ~24 still on mock data | Lucide Icons, Recharts, Embla Carousel |
-| **`app/store/`** | Mock data still backing the unwired components | Decoupled TypeScript fixtures |
-| **`hooks/`** | Auth refresh + 5 domain hooks (Phase 7) | Plain `useState`/`useEffect`, no data-fetching library |
+| **`app/api/v1/`** | 36 backend REST routes across 6 domains + auth + cron + vendors/admin-users | Route Handlers, `withAuth`, Zod, Prisma |
+| **`app/components/`** | Feature views — 6 wired to real write APIs, 20 hydrated for real-data display (Phase 9), 4 still on mock data (out of scope: AI assistant, marketing pages) | Lucide Icons, Recharts, Embla Carousel |
+| **`app/store/`** | Mock data now backing only the 4 out-of-scope components above | Decoupled TypeScript fixtures |
+| **`hooks/`** | Auth refresh + 10 domain hook files (Phase 7 + 9) | Plain `useState`/`useEffect`, no data-fetching library |
 | **`lib/`** | Auth, shared API infra, background workers, email, DB singleton | `jose`, `bcryptjs`, `@prisma/adapter-pg` |
 | **`lib/workers/` + `scripts/workers/`** | 5 background jobs, HTTP + CLI trigger surfaces | Plain async functions, no job-queue library |
 | **`prisma/`** | Schema, migrations, seeders | Prisma ORM v7 (multi-file schema), PostgreSQL 18 |

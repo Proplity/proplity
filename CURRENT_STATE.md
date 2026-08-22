@@ -1,7 +1,7 @@
 # 📊 Proplity — Current Project & Codebase State
 
-> **Last Updated:** 2026-08-22
-> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8) | Next: frontend read-path hydration and/or an automated test suite — see `out/next-phase-analysis.md`
+> **Last Updated:** 2026-08-23
+> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration | Next: an automated test suite, or the Finding-4 punch list — see `out/next-phase-analysis.md`
 
 ---
 
@@ -11,9 +11,9 @@
 |---|:---:|---|
 | **Database & Schema** | **100%** | 33 Prisma models across 8 modular schema files; 2 migrations applied; local PostgreSQL (`proplity_db`) fully configured and seeded. |
 | **Authentication & Security** | **100%** | 7 REST endpoints `/api/v1/auth/*`, Edge JWT + opaque refresh tokens, CSRF, rate limiting, Axios interceptor, `AuthContext`. All known bugs from the pre-Phase-0 audit fixed. Self-registration email verification remains deliberately deferred (see below). |
-| **Domain REST APIs** | **100%** | All 6 phases built and live-tested: `/api/v1/properties`, `/maintenance`, `/leases`, `/invoices` + `/payments`, `/access-codes`, `/conversations`. 34 API routes total. |
+| **Domain REST APIs** | **100%** | All 6 phases built and live-tested: `/api/v1/properties`, `/maintenance`, `/leases`, `/invoices` + `/payments`, `/access-codes`, `/conversations`, plus `/vendors` and `/admin/users` (added during Phase 9 hydration). 36 API routes total. |
 | **Background Workers** | **100% built, 0% scheduled** | 5 idempotent workers (rent invoicer, overdue flagger, maintenance dispatcher, access-code janitor, payment-reliability scorer), triggered via `POST /api/v1/cron/[job]` or `scripts/workers/*.ts`. Nothing calls them on a timer yet — no deployment target decided. |
-| **Frontend UI Views** | **~15% wired, 85% mocked** | Complete, polished UI views for all 5 roles exist. 5 write-forms wired to real APIs (Phase 7: `MaintenanceRequestForm`, `ScheduleViewing`, `ListProperty`, `VendorCreateInvoice`, `AddTenantForm`). ~24 of 37 top-level components still read from `app/store/*` mock data for display. |
+| **Frontend UI Views** | **100% wired** | All 20 originally-catalogued mock-data dashboard/detail components (Phase 9, 6 sub-phases) now read real data through 10 hook files and a typed `api.*` client, plus the 5 Phase 7 write-forms and `AddTenantForm`'s tenant-invite flow. Only 3 marketing/illustrative pages (`LandlordFeaturePage`, `TenantFeaturePage`, `ServiceProviderFeaturePage`) and `AIAssistant.tsx` still read `app/store/*` — deliberately out of scope, no real backing exists for either. |
 | **Paystack Integration** | **Built, partially verified** | Checkout initialization, HMAC-SHA512 webhook, autopay mandates all built. Webhook fully live-tested (self-signed test key). `/payments/initialize`'s actual call to Paystack's live API has never run — no real test-mode account provided yet. |
 | **Email** | **Console-transport only** | `lib/email.ts` logs instead of delivering. Real, tested, and in production use for the Phase 7 tenant-invite flow. Self-registration (`register`) still has no verification step at all — separate, older, still-deferred gap. |
 | **Automated Tests** | **0%** | No Jest/Vitest/Playwright/Cypress, no CI config. Every phase verified manually via `curl` against the live dev server and seeded database. |
@@ -64,6 +64,7 @@ All 34 routes below were built phase-by-phase, each verified against the real de
 | 6 — Communications | `conversations`, `conversations/[id]/messages` (2) | `domain-api-phase-6-communications.md` |
 | 7 — Frontend Integration | 5 forms wired + tenant-invite flow (no new API routes beyond the `leases`/`verify-email` extensions above) | `domain-api-phase-7-frontend-integration.md` |
 | 8 — Background Workers | `cron/[job]` (1) | `domain-api-phase-8-background-workers.md` |
+| 9 — Frontend Read-Path Hydration | `vendors` (1), `admin/users` (1) — plus additive `include`/`select` extensions to several Phase 1–6 routes; no other new routes | `domain-api-phase-9-*.md` (6 sub-phase docs) |
 
 Plus `auth/*` (7 routes, pre-existing).
 
@@ -83,11 +84,15 @@ Five idempotent workers, each with real logic against the schema (not stubs), in
 
 ---
 
-### 5. 🎨 Frontend Views (`app/components/`, `app/store/`) — **~15% WIRED**
+### 5. 🎨 Frontend Views (`app/components/`, `app/store/`) — **100% WIRED**
 
-- **Wired to real APIs (Phase 7)**: `MaintenanceRequestForm.tsx`, `ScheduleViewing.tsx`, `ListProperty.tsx`, `VendorCreateInvoice.tsx`, `AddTenantForm.tsx` — all 5 write to real backend routes, verified via `tsc`/`build`/SSR checks and full backend-logic live testing. **Not verified**: interactive browser click-through (no browser-automation tool available in this environment).
-- **Still on mock data for display** (~24 of 37 top-level components): every dashboard (`AdminDashboard`, `Dashboard`, `LandlordDashboard`, `TenantDashboard`, `VendorDashboard`), every breakdown/report page, `PropertyDiscovery`/`PublicPropertyDetail`/`PropertyDetail`, `MaintenanceBoard`/`MaintenanceDetail`/`TenantMaintenanceRequests`, `TenantManagement`/`TenantDetail`/`TenantPaymentHistory`, `MessagingPortal`, `NeighbourhoodReport`, `VendorDashboard`/`VendorJobDetail`, `AIAssistant`, and the 4 marketing feature pages. Real `GET` routes exist for all of this data already — see `out/next-phase-analysis.md` for the proposed hydration phase.
-- **New this phase**: `lib/apiClient.ts`'s domain-grouped `api.*` client, `lib/api/types.ts`, 5 hooks (`hooks/useProperties.ts`, `useMaintenanceRequests.ts`, `useLeases.ts`, `useInvoices.ts`, `useAccessCodes.ts`) built on a shared `useApiSubmit.ts` helper.
+- **Wired to real APIs (Phase 7)**: `MaintenanceRequestForm.tsx`, `ScheduleViewing.tsx`, `ListProperty.tsx`, `VendorCreateInvoice.tsx`, `AddTenantForm.tsx` — all 5 write to real backend routes, verified via `tsc`/`build`/SSR checks and full backend-logic live testing.
+- **Hydrated for display (Phase 9, 6 sub-phases, `out/phases/domain-api-phase-9-*.md`)**: all 20 originally-catalogued mock-data components now read real data — every dashboard (`AdminDashboard`, `Dashboard`, `LandlordDashboard`, `TenantDashboard`, `VendorDashboard`), every breakdown/report page (`AdminBreakdownPage`, `AdminReports`, `DashboardBreakdownPage`), `PropertyDiscovery`/`PublicPropertyDetail`/`PropertyDetail`, `MaintenanceBoard`/`MaintenanceDetail`/`TenantMaintenanceRequests`, `TenantManagement`/`TenantDetail`/`TenantPaymentHistory`, `MessagingPortal`, `NeighbourhoodReport`, `VendorJobDetail`. Two new backend routes were needed (`GET /vendors`, `GET /admin/users`); everything else reused existing routes, sometimes with additive `include`/`select` extensions. One real bug was found and fixed along the way: `GET /maintenance/requests` was silently missing `unit.property`/`tenant` even though two Phase-9.3a components already read those fields (rendered fallback text, no crash — caught only by checking raw API JSON, not just SSR-200 checks). One documented gap was fixed: `GET /conversations`'s `unreadCount` now actually decreases (`ConversationParticipant.lastReadAt` is updated on message fetch).
+- **Central judgment call, applied consistently across all 6 sub-phases**: where mock data was fabricated at a scale or with concepts the real seeded database can't back (12,847 users, 99.7% uptime, AI performance metrics, ₦450M property valuations), the real view shows real small numbers honestly and drops the unbackable section entirely, rather than inventing figures. Full reasoning per component is in each sub-phase's phase doc.
+- **Still on mock data, deliberately out of scope**: `AIAssistant.tsx` and the 3 marketing `*FeaturePage.tsx` components (`LandlordFeaturePage`, `TenantFeaturePage`, `ServiceProviderFeaturePage`) — no AI capability or marketing-analytics backing exists anywhere in the schema to hydrate either with.
+- **Flagged, not fixed**: `VendorCreateInvoice.tsx`'s submit only creates an invoice, never PATCHes the maintenance request to `COMPLETED` — a real gap affecting stat correctness, left alone since it was outside Phase 9.4's declared 2-component scope. See `CLAUDE.md`'s "Known gaps."
+- **Not verified in any phase**: interactive browser click-through (no browser-automation tool available in this environment) — every phase relied on `tsc`/`build`/SSR-200 checks plus direct `curl` inspection of raw API JSON responses.
+- **Supporting infrastructure**: `lib/apiClient.ts`'s domain-grouped `api.*` client, `lib/api/types.ts` (hand-written, expanded every sub-phase as new fields were needed), 10 hook files (`hooks/useProperties.ts`, `useMaintenanceRequests.ts`, `useLeases.ts`, `useInvoices.ts`, `useAccessCodes.ts`, `useVendors.ts`, `useAdminUsers.ts`, `useConversations.ts` — the last including the codebase's first polling hook, `useMessages`, 5s interval) built on a shared `useApiSubmit.ts` helper.
 
 ---
 
@@ -149,6 +154,6 @@ pnpm exec tsx scripts/workers/rentInvoicer.ts
 ## 📄 Where to look next
 
 - `out/domain-api-implementation-plan.md` — the original full 6-phase domain-API spec (now complete).
-- `out/phases/*.md` — one detailed writeup per completed phase (what/why/verification).
-- `out/next-phase-analysis.md` — current prioritized proposal for what comes after Phase 8.
+- `out/phases/*.md` — one detailed writeup per completed phase (what/why/verification), including the 6 Phase 9 sub-phase docs.
+- `out/next-phase-analysis.md` — the analysis that proposed Phase 9 (now complete); Finding 3 (automated tests) and Finding 4 (punch list) are what's left open from it.
 - `CLAUDE.md` — the authoritative, always-current project reference; read it before making changes.

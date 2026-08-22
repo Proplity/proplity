@@ -8,17 +8,17 @@ Proplity is an AI-native rental/property management platform for the Nigerian ma
 
 ## Current state
 
-All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`) are **complete** — 34 API routes, 35 page routes, 5 background workers, all live-tested against the real dev server and seeded database. Full history in `out/phases/*.md`, one doc per phase.
+All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`) plus Phase 9 (frontend read-path hydration, `out/next-phase-analysis.md` Finding 2) are **complete** — 36 API routes, 35 page routes, 5 background workers, all live-tested against the real dev server and seeded database. Full history in `out/phases/*.md`, one doc per phase.
 
 | Subsystem | Status |
 |---|---|
 | Prisma schema (33 models, 8 modular files, 2 migrations) | Done, migrated, seeded |
 | Auth API (`/api/v1/auth/*`, 7 routes) | Done — all known bugs from the pre-Phase-0 audit fixed |
-| Domain APIs (properties, maintenance, leases, invoices/payments, access-codes, conversations) | Done — Phases 1–6 |
+| Domain APIs (properties, maintenance, leases, invoices/payments, access-codes, conversations, +vendors, +admin/users) | Done — Phases 1–6, extended in Phase 9 |
 | Background workers (rent invoicer, overdue flagger, maintenance dispatcher, access-code janitor, payment-reliability scorer) | Done — Phase 8. Built and tested, but **not scheduled anywhere** (no deployment target decided — see `out/phases/domain-api-phase-8-background-workers.md`) |
 | Paystack (checkout init, webhook, autopay) | Done, but `/payments/initialize`'s actual call to Paystack's API has never run against a real test-mode account — everything else is fully tested |
 | Email | Console-transport only (`lib/email.ts` logs instead of delivering) — real for the tenant-invite flow (Phase 7), not yet swapped for a real provider. Self-registration (`register`) still has no verification flow at all (separate, older gap, see "Deliberately deferred") |
-| Frontend UI (all 5 roles) | Built. 5 forms wired to real APIs (Phase 7); ~24 of 37 top-level components still read from `app/store/*` mock data for display — biggest remaining gap, see `out/next-phase-analysis.md` |
+| Frontend UI (all 5 roles) | Done — Phase 9. All 20 originally-catalogued mock-data dashboard/detail components now read real data via 10 hook files and a typed `api.*` client; 6 forms wired to real APIs (5 from Phase 7, `AddTenantForm`'s invite flow) plus the 20 hydrated for display. Only marketing/illustrative pages (`*FeaturePage.tsx`) and `AIAssistant.tsx` still touch `app/store/*` — deliberately out of scope, no real backing exists for either. |
 | Automated tests | **None exist.** Every phase was verified manually against the live dev server; nothing persists as regression protection |
 
 Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
@@ -144,8 +144,8 @@ Each of these was flagged during the phase that found it rather than silently gu
 
 - **`Unit.status` doesn't update when a lease is created or activated** (Phase 3) — a newly-tenanted unit stays `VACANT` in the data model. The exact state-transition rules (when to move to `OCCUPIED`, what happens on `TERMINATED`/`EXPIRED`) were never defined.
 - **`AccessCode` never auto-transitions to `USED`** (Phase 5) — the schema has a `USED` status but no flag distinguishing a single-use guest code from a deliberately reusable permanent one. Guessing either default risks breaking the other use case.
-- **`GET /conversations`'s `unreadCount` only grows** (Phase 6) — no route updates `ConversationParticipant.lastReadAt`; nothing marks messages read.
 - **Maintenance request image upload is display-only** (Phase 7) — no file-storage endpoint exists anywhere; `mediaUrls` is always submitted empty.
+- **`VendorCreateInvoice`'s submit never PATCHes the maintenance request to `COMPLETED`** (Phase 9.4) — it only creates the invoice, so a completed job can keep showing as open in stat counts until someone separately updates its status. Flagged during vendor-view hydration, left alone as outside that sub-phase's declared scope.
 - **Background workers (Phase 8) are built and tested but not scheduled anywhere** — `POST /api/v1/cron/[job]` (guarded by `CRON_SECRET`) and `scripts/workers/*.ts` both exist and work; nothing calls them on a timer. Needs a deployment-target decision first (Vercel Cron vs. crontab vs. CI).
 - **Rent Invoicer advances one billing cycle per run**, not all overdue cycles at once — a lease several cycles behind catches up gradually across multiple runs. Deliberate, not a bug — see `out/phases/domain-api-phase-8-background-workers.md`.
 - **`paymentReliabilityScorer.ts`'s scoring is a documented heuristic, not ML** — the PRD describes "late payment prediction" as an AI capability with no formula specified anywhere in the repo. The heuristic (on-time/late/missed ratio) is explicitly commented as a stand-in, not a finished feature.
@@ -210,7 +210,7 @@ Built in Phase 0, used by every domain route since:
 
 ## What's next
 
-All 6 domain-API phases plus background workers are done. See `out/next-phase-analysis.md` for the current prioritized proposal — the two live candidates are (1) hydrating the ~24 frontend components still reading from `app/store/*` mock data with the real APIs that already exist, and (2) introducing an automated test suite, since every phase so far has only been verified manually.
+All 6 domain-API phases, background workers, and frontend hydration (Phase 9) are done. See `out/next-phase-analysis.md` for the original prioritized proposal — Finding 2 (frontend hydration) is now complete; Finding 3 (an automated test suite, since every phase so far has only been verified manually) and Finding 4 (a punch list: real Paystack test-mode key, real email provider, cron scheduling, the `Unit.status`/`AccessCode.USED` gaps) remain open.
 
 ---
 
