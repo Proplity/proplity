@@ -2,19 +2,24 @@
 
 Project context for Claude Code. Read this before making changes.
 
-Proplity is an AI-native rental/property management platform for the Nigerian market. Next.js 15 (App Router), TypeScript, PostgreSQL 18, Prisma ORM.
+Proplity is an AI-native rental/property management platform for the Nigerian market. Next.js 16.3.2 (App Router), TypeScript, PostgreSQL 18, Prisma ORM.
 
 ---
 
 ## Current state
 
+All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`) are **complete** — 34 API routes, 35 page routes, 5 background workers, all live-tested against the real dev server and seeded database. Full history in `out/phases/*.md`, one doc per phase.
+
 | Subsystem | Status |
 |---|---|
-| Prisma schema (33 models, 8 modular files) | Done, migrated, seeded |
-| Auth API (`/api/v1/auth/*`, 7 routes) | ~85% — see "Known bugs" below |
-| Frontend UI (all 5 roles) | Built, reading from `app/store/*` mock data |
-| Domain APIs (`/api/v1/properties`, `/leases`, etc.) | Not started — Phase 0 next |
-| Email/transactional, background workers, Paystack | Not started |
+| Prisma schema (33 models, 8 modular files, 2 migrations) | Done, migrated, seeded |
+| Auth API (`/api/v1/auth/*`, 7 routes) | Done — all known bugs from the pre-Phase-0 audit fixed |
+| Domain APIs (properties, maintenance, leases, invoices/payments, access-codes, conversations) | Done — Phases 1–6 |
+| Background workers (rent invoicer, overdue flagger, maintenance dispatcher, access-code janitor, payment-reliability scorer) | Done — Phase 8. Built and tested, but **not scheduled anywhere** (no deployment target decided — see `out/phases/domain-api-phase-8-background-workers.md`) |
+| Paystack (checkout init, webhook, autopay) | Done, but `/payments/initialize`'s actual call to Paystack's API has never run against a real test-mode account — everything else is fully tested |
+| Email | Console-transport only (`lib/email.ts` logs instead of delivering) — real for the tenant-invite flow (Phase 7), not yet swapped for a real provider. Self-registration (`register`) still has no verification flow at all (separate, older gap, see "Deliberately deferred") |
+| Frontend UI (all 5 roles) | Built. 5 forms wired to real APIs (Phase 7); ~24 of 37 top-level components still read from `app/store/*` mock data for display — biggest remaining gap, see `out/next-phase-analysis.md` |
+| Automated tests | **None exist.** Every phase was verified manually against the live dev server; nothing persists as regression protection |
 
 Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
 
@@ -127,35 +132,36 @@ Cookie deletion **must match path exactly** or the browser ignores it.
 
 ---
 
-## Known bugs — fix before Phase 1
+## Resolved (was "Known bugs — fix before Phase 1")
 
-### Session dies on reload despite valid refresh token (highest impact)
-`AuthContext.fetchUser()` uses raw `fetch` and gives up on 401. After 15 min, a page reload logs the user out even though their refresh token is good for 7 more days — and `useAuthRefresh(!!user)` never fires because `user` is null. The whole rotation system is bypassed on every page load.
+All fixed during the pages-separation phase — kept as a record, not a to-do: session-dies-on-reload (`AuthContext` now attempts `/api/v1/auth/refresh` before clearing `user`), `/login` 404 (all redirects go to `/`, which is a real route — auth screens are real pages now, not client state inside a deleted `App.tsx`), hardcoded `JWT_SECRET`/DB connection string (both throw if unset in production), demo login creds (gated behind `NODE_ENV !== 'production'`), `RoleSwitcher` (same gate, lives in `app/dashboard/DashboardChrome.tsx` now).
 
-Fix: attempt `/api/v1/auth/refresh` before `setUser(null)`, then retry `/me`. Or route `AuthContext` through `apiFetch`, which already has this logic.
+---
 
-### `/login` route doesn't exist
-`useAuthRefresh.ts` and `apiClient.ts` (×2) redirect to `window.location.href = '/login'`, but `app/` has only `page.tsx`. Auth screens are client state inside `App.tsx`. All three redirects 404. Redirect to `/` instead.
+## Known gaps — deliberate, not bugs
 
-### Hardcoded `JWT_SECRET` fallback
-`lib/auth/jwt.ts` falls back to a literal string committed to the repo. If the env var is ever unset in production, anyone reading the repo can forge an admin token. Throw on missing instead. Same pattern in `db.ts` with the Postgres connection string.
+Each of these was flagged during the phase that found it rather than silently guessed at, because building the wrong default would have been worse than leaving the gap open:
 
-### Demo login ships seeded credentials in the client bundle
-`Login.tsx` `handleDemoLogin` now authenticates properly (good), but hardcodes `Password123!` and five emails into public JS. Gate with `process.env.NODE_ENV !== 'production'` before deploying.
-
-### `RoleSwitcher` lets users reassign their own role
-`App.tsx` — `onRoleChange={setCurrentRole}`. Server-side RBAC still holds, so it renders an admin UI that 403s on every request. Dev-only or remove.
+- **`Unit.status` doesn't update when a lease is created or activated** (Phase 3) — a newly-tenanted unit stays `VACANT` in the data model. The exact state-transition rules (when to move to `OCCUPIED`, what happens on `TERMINATED`/`EXPIRED`) were never defined.
+- **`AccessCode` never auto-transitions to `USED`** (Phase 5) — the schema has a `USED` status but no flag distinguishing a single-use guest code from a deliberately reusable permanent one. Guessing either default risks breaking the other use case.
+- **`GET /conversations`'s `unreadCount` only grows** (Phase 6) — no route updates `ConversationParticipant.lastReadAt`; nothing marks messages read.
+- **Maintenance request image upload is display-only** (Phase 7) — no file-storage endpoint exists anywhere; `mediaUrls` is always submitted empty.
+- **Background workers (Phase 8) are built and tested but not scheduled anywhere** — `POST /api/v1/cron/[job]` (guarded by `CRON_SECRET`) and `scripts/workers/*.ts` both exist and work; nothing calls them on a timer. Needs a deployment-target decision first (Vercel Cron vs. crontab vs. CI).
+- **Rent Invoicer advances one billing cycle per run**, not all overdue cycles at once — a lease several cycles behind catches up gradually across multiple runs. Deliberate, not a bug — see `out/phases/domain-api-phase-8-background-workers.md`.
+- **`paymentReliabilityScorer.ts`'s scoring is a documented heuristic, not ML** — the PRD describes "late payment prediction" as an AI capability with no formula specified anywhere in the repo. The heuristic (on-time/late/missed ratio) is explicitly commented as a stand-in, not a finished feature.
 
 ---
 
 ## Deliberately deferred
 
-- **Email** (`lib/email.ts`, forgot-password, reset-password, verification sends) — Phase 4. `ForgotPassword.tsx` is a UI shell that claims an email was sent; nothing is. `register` currently sets `status: ACTIVE` directly and creates no `VerificationToken`, so `/verify-email` can't succeed for real users. **When wiring email: flip `register` to `PENDING_VERIFICATION` and relax the `login` 403 in the same commit**, or every new signup is locked out.
+- **Real email delivery** — `lib/email.ts` exists and works (console-transport: logs instead of sending), used by the Phase 7 tenant-invite flow. Swapping in a real provider (Resend/Postmark/SES) is a one-function change now that the interface exists. Separately, **self-registration still has no verification flow**: `register` sets `status: ACTIVE` directly and creates no `VerificationToken`. **When wiring real self-registration email: flip `register` to `PENDING_VERIFICATION` and relax the `login` 403 in the same commit**, or every new signup is locked out. (`app/api/v1/auth/verify-email/route.ts` already accepts an optional `password` alongside `token`, and `app/verify-email/page.tsx` already exists — both were built for the tenant-invite flow and are reusable here.)
 - **Redis blocklist** for instant session revocation — 15-min TTL bounds exposure; revisit only if instant kill becomes a product requirement.
 - **Real-time messaging** — v1 uses polling. WebSocket/SSE deferred.
 - **`SERVICE_CHARGE` invoice type** — removed; only `ASSOCIATION_FEE` is in PRD scope. Additive to re-add later if a real requirement appears.
 - **OAuth / social login / Clerk / Kinde** — designed (see `auth-implementation-plan.md` §9–10) but not built. Design principle if built: OAuth only authenticates; our own `RefreshToken` + `setAuthCookies` still issues the session. Never auto-link accounts by unverified email (account-takeover vector). PKCE + `state` are mandatory.
 - **`Subscription` model** — exists in schema but is **not in the PRD**. Built from admin-UI mock evidence only. Confirm with product before building billing on it.
+- **Actually scheduling the Phase 8 background workers** — see "Known gaps" above.
+- **Automated test suite** — no Jest/Vitest/Playwright/Cypress anywhere, no CI. Every phase was verified manually via `curl` against the live dev server.
 
 ---
 
@@ -191,17 +197,20 @@ Check the schema file before using an enum value — don't infer it from a plan 
 
 ---
 
-## Next: Phase 0 — shared API infrastructure
+## Shared API infrastructure (`lib/api/`)
 
-Build before any domain route:
+Built in Phase 0, used by every domain route since:
 - `lib/api/withAuth.ts` — HOF wrapping handlers with `getServerSession()` + role check → 401/403
-- `lib/api/pagination.ts` — parse `?page`/`?limit` or `?cursor`, return `{ data, meta }`
-- `lib/api/errors.ts` — map Prisma `P2002`/`P2025` etc. to HTTP status
+- `lib/api/pagination.ts` — `parsePagination`/`buildMeta` (page/limit) and `parseCursorPagination`/`buildCursorMeta` (cursor mode, added in Phase 6 for message history)
+- `lib/api/errors.ts` — maps Prisma `P2002`/`P2025`/`P2003` to HTTP status
 - `lib/api/validate.ts` — Zod wrapper, 400 with field errors
+- `lib/api/propertyAccess.ts` — `canManageProperty()` (ADMIN or the property's own manager/landlord) and `serializeUnit()` (`squareFeet` → `sqft`), reused across properties, leases, maintenance, and invoices
 
-Then Phase 1 (Properties) → 2 (Maintenance) → 3 (Leases) → 4 (Financial) → 5 (Access) → 6 (Communications).
+---
 
-Phase 3 before 4: leases and maintenance both create invoices.
+## What's next
+
+All 6 domain-API phases plus background workers are done. See `out/next-phase-analysis.md` for the current prioritized proposal — the two live candidates are (1) hydrating the ~24 frontend components still reading from `app/store/*` mock data with the real APIs that already exist, and (2) introducing an automated test suite, since every phase so far has only been verified manually.
 
 ---
 

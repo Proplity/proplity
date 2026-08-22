@@ -1,6 +1,8 @@
 # 🏛️ Proplity — Full Project & File Structure Reference
 
-> **Proplity** is a modern, enterprise-grade AI-powered Property Management & Tenant Experience Platform built on **Next.js 14 (App Router)**, **TypeScript**, **PostgreSQL**, and **Prisma ORM**.
+> **Proplity** is a modern, enterprise-grade AI-powered Property Management & Tenant Experience Platform built on **Next.js 16.3.2 (App Router)**, **TypeScript**, **PostgreSQL 18**, and **Prisma ORM v7**.
+>
+> **Last updated:** 2026-08-22, after the full domain-API roadmap (Phase 0-pre through Phase 8). The app is real routes end to end — there is no client-side router component; every screen is a real Next.js route backed by a real API route.
 
 ---
 
@@ -9,20 +11,22 @@
 ```mermaid
 graph TD
     Client["💻 Client / Browser (React UI)"]
-    Store["📦 Local Store (app/store/*)"]
-    Context["⚡ React Context & Custom Hooks (context/*, hooks/*)"]
-    ApiClient["🌐 API Client with Silent JWT Refresh (lib/apiClient.ts)"]
-    NextApi["🛡️ Next.js App Router API Routes (/api/v1/*)"]
-    LibCore["🔑 Core Security & Middleware (lib/auth/*, lib/api/*)"]
+    Store["📦 app/store/* mock data — display only, ~24 components"]
+    Hooks["🪝 Domain hooks (hooks/use*.ts) — 5 built, wired to 5 forms"]
+    ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh + typed api.* client"]
+    NextApi["🛡️ Next.js App Router API Routes (/api/v1/*, 34 routes)"]
+    LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*"]
     PrismaClient["💎 Prisma ORM Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL Database (proplity_db)")]
+    Cron["⏱️ /api/v1/cron/[job] + scripts/workers/*.ts — built, not scheduled"]
 
     Client --> Store
-    Client --> Context
-    Context --> ApiClient
+    Client --> Hooks
+    Hooks --> ApiClient
     ApiClient --> NextApi
     NextApi --> LibCore
     LibCore --> PrismaClient
+    Cron --> LibCore
     PrismaClient --> Postgres
 ```
 
@@ -32,192 +36,132 @@ graph TD
 
 ```
 proplity/
-├── 📁 app/                                   # Next.js App Router root & UI views
-│   ├── 📄 App.tsx                           # Main client-side router & role-based dashboard renderer
-│   ├── 📄 globals.css                       # Global Tailwind CSS tokens, animations & base styles
+├── 📁 app/                                   # Next.js App Router root — every screen is a real route
 │   ├── 📄 layout.tsx                        # Root HTML/Body layout with theme providers
-│   ├── 📄 page.tsx                          # App root entry page (renders <App />)
-│   ├── 📁 api/                              # Backend REST API Route Handlers
-│   │   └── 📁 v1/                           # API Version 1 endpoints
-│   │       └── 📁 auth/                     # Authentication & session routes
-│   │           ├── 📁 change-password/      # POST /api/v1/auth/change-password
-│   │           │   └── 📄 route.ts          # Updates password & invalidates active sessions
-│   │           ├── 📁 login/                # POST /api/v1/auth/login
-│   │           │   └── 📄 route.ts          # Validates credentials, issues JWT & refresh cookies
-│   │           ├── 📁 logout/               # POST /api/v1/auth/logout
-│   │           │   └── 📄 route.ts          # Revokes refresh tokens & clears auth cookies
-│   │           ├── 📁 me/                   # GET /api/v1/auth/me
-│   │           │   └── 📄 route.ts          # Returns active authenticated user session profile
-│   │           ├── 📁 refresh/              # POST /api/v1/auth/refresh
-│   │           │   └── 📄 route.ts          # Opaque refresh token rotation with reuse detection
-│   │           ├── 📁 register/             # POST /api/v1/auth/register
-│   │           │   └── 📄 route.ts          # User onboarding, bcrypt hashing, verification issuance
-│   │           └── 📁 verify-email/         # POST /api/v1/auth/verify-email
-│   │               └── 📄 route.ts          # Token validation and account activation
-│   ├── 📁 components/                       # User Interface Views & Feature Components
-│   │   ├── 📁 Auth/                         # Authentication & Onboarding Views
-│   │   │   ├── 📄 ForgotPassword.tsx        # Password reset initiation interface
-│   │   │   ├── 📄 Login.tsx                 # User authentication form with role routing
-│   │   │   └── 📄 Register.tsx              # User registration with multi-role support
-│   │   ├── 📁 figma/                        # UI assets & Design System helpers
-│   │   │   └── 📄 ImageWithFallback.tsx     # Smart image loader with graceful fallback support
-│   │   ├── 📁 ui/                           # Radix UI + Tailwind Design System Primitives
-│   │   │   ├── 📄 accordion.tsx             # Collapsible content containers
-│   │   │   ├── 📄 alert.tsx                 # Status alerts and banner notices
-│   │   │   ├── 📄 alert-dialog.tsx          # Modal confirmation dialogs
-│   │   │   ├── 📄 aspect-ratio.tsx          # Fixed ratio media containers
-│   │   │   ├── 📄 avatar.tsx                # User profile avatars with fallbacks
-│   │   │   ├── 📄 badge.tsx                 # Status badges & tag indicators
-│   │   │   ├── 📄 breadcrumb.tsx            # Navigation breadcrumbs
-│   │   │   ├── 📄 button.tsx                # Styled button component with variants
-│   │   │   ├── 📄 calendar.tsx              # Date picker calendar component
-│   │   │   ├── 📄 card.tsx                  # Standard card surfaces and containers
-│   │   │   ├── 📄 carousel.tsx              # Embla-powered property image carousel
-│   │   │   ├── 📄 chart.tsx                 # Recharts data visualization primitives
-│   │   │   ├── 📄 checkbox.tsx              # Accessible toggle checkboxes
-│   │   │   ├── 📄 collapsible.tsx           # Simple collapsible panels
-│   │   │   ├── 📄 command.tsx               # Command palette / searchable select
-│   │   │   ├── 📄 context-menu.tsx          # Right-click contextual action menus
-│   │   │   ├── 📄 dialog.tsx                # Accessible modal overlays
-│   │   │   ├── 📄 drawer.tsx                # Vaul-powered bottom sliding drawers
-│   │   │   ├── 📄 dropdown-menu.tsx         # Popover action dropdowns
-│   │   │   ├── 📄 form.tsx                  # React Hook Form validation wrappers
-│   │   │   ├── 📄 hover-card.tsx            # Context preview cards on hover
-│   │   │   ├── 📄 input.tsx                 # Standard text and number inputs
-│   │   │   ├── 📄 input-otp.tsx             # Pin & OTP verification input boxes
-│   │   │   ├── 📄 label.tsx                 # Accessible form field labels
-│   │   │   ├── 📄 menubar.tsx               # Desktop application-style menu bars
-│   │   │   ├── 📄 navigation-menu.tsx       # Top navbar navigation elements
-│   │   │   ├── 📄 pagination.tsx            # Page numbering and cursor controllers
-│   │   │   ├── 📄 popover.tsx               # Floating trigger-anchored overlays
-│   │   │   ├── 📄 progress.tsx              # Linear progress bars
-│   │   │   ├── 📄 radio-group.tsx           # Radio button selection groups
-│   │   │   ├── 📄 resizable.tsx             # Split resizable panel views
-│   │   │   ├── 📄 scroll-area.tsx           # Custom styled scroll containers
-│   │   │   ├── 📄 select.tsx                # Native-like dropdown select lists
-│   │   │   ├── 📄 separator.tsx             # Visual divider lines
-│   │   │   ├── 📄 sheet.tsx                 # Side-sliding overlay drawers
-│   │   │   ├── 📄 sidebar.tsx               # Collapsible navigation sidebars
-│   │   │   ├── 📄 skeleton.tsx              # Content loading placeholder states
-│   │   │   ├── 📄 slider.tsx                # Range sliders (price/filters)
-│   │   │   ├── 📄 sonner.tsx                # Toast notification toaster
-│   │   │   ├── 📄 switch.tsx                # Toggle switches
-│   │   │   ├── 📄 table.tsx                 # Accessible data tables
-│   │   │   ├── 📄 tabs.tsx                  # Tabbed view switchers
-│   │   │   ├── 📄 textarea.tsx              # Multiline text input fields
-│   │   │   ├── 📄 toggle.tsx                # Single toggle buttons
-│   │   │   ├── 📄 toggle-group.tsx          # Grouped toggle switches
-│   │   │   ├── 📄 tooltip.tsx               # Hover micro-tooltips
-│   │   │   ├── 📄 use-mobile.ts             # Screen-size responsive hook
-│   │   │   └── 📄 utils.ts                  # Classnames merger (`clsx` + `twMerge`)
-│   │   ├── 📄 AboutPage.tsx                 # Public company & platform about page
-│   │   ├── 📄 AddTenantForm.tsx             # Staff wizard to onboard tenants and issue leases
-│   │   ├── 📄 AdminBreakdownPage.tsx        # Platform-wide metrics drilldown analytics
-│   │   ├── 📄 AdminDashboard.tsx            # System administrator oversight panel
-│   │   ├── 📄 AdminReports.tsx              # Platform operational and financial reports
-│   │   ├── 📄 AIAssistant.tsx               # Conversational AI property copilot interface
-│   │   ├── 📄 Checkout.tsx                  # Paystack billing checkout & summary modal
-│   │   ├── 📄 ContactPage.tsx               # Public inquiry and support contact form
-│   │   ├── 📄 Dashboard.tsx                 # Property manager operations hub
-│   │   ├── 📄 DashboardBreakdownPage.tsx    # Manager-level detailed metric explorer
-│   │   ├── 📄 LandingPage.tsx               # Public landing page with search & value props
-│   │   ├── 📄 LandlordDashboard.tsx         # Landlord financial & portfolio performance
-│   │   ├── 📄 LandlordFeaturePage.tsx       # Landlord-specific marketing feature breakdown
-│   │   ├── 📄 ListProperty.tsx              # Multi-step property & unit listing wizard
-│   │   ├── 📄 Logo.tsx                      # Vector brand logo component
-│   │   ├── 📄 MaintenanceBoard.tsx          # Kanban-style maintenance triage & dispatch board
-│   │   ├── 📄 MaintenanceDetail.tsx         # Comprehensive maintenance ticket audit & chat
-│   │   ├── 📄 MaintenanceRequestForm.tsx    # Tenant issue submission wizard with media upload
-│   │   ├── 📄 MessagingPortal.tsx           # In-app chat messaging between tenants & staff
-│   │   ├── 📄 NeighbourhoodReport.tsx       # Deep-dive intelligence report (power, flood, security)
-│   │   ├── 📄 PricingPage.tsx               # Tiered subscription pricing plans
-│   │   ├── 📄 PropertyApplicationForm.tsx   # Prospective tenant unit rental application
-│   │   ├── 📄 PropertyDetail.tsx            # Manager/Landlord internal property overview
-│   │   ├── 📄 PropertyDiscovery.tsx         # Public property search, filter & map explorer
-│   │   ├── 📄 PublicPropertyDetail.tsx      # Public listing view with viewing scheduler
-│   │   ├── 📄 RoleSwitcher.tsx              # Dev tool to switch perspectives (Admin, Manager, Tenant, etc.)
-│   │   ├── 📄 ScheduleViewing.tsx           # Appointment booking interface with time slots
-│   │   ├── 📄 ServiceProviderFeaturePage.tsx# Vendor marketing feature overview
-│   │   ├── 📄 TenantDashboard.tsx           # Tenant resident portal (rent, requests, access codes)
-│   │   ├── 📄 TenantDetail.tsx              # Detailed tenant profile, lease history & ledger
-│   │   ├── 📄 TenantFeaturePage.tsx         # Tenant value proposition showcase
-│   │   ├── 📄 TenantMaintenanceRequests.tsx # Tenant's submitted maintenance ticket status board
-│   │   ├── 📄 TenantManagement.tsx          # Property manager tenant roster & compliance view
-│   │   ├── 📄 TenantPaymentHistory.tsx      # Complete rent ledger, receipts & invoice tracker
-│   │   ├── 📄 VendorCreateInvoice.tsx       # Vendor job completion invoicing form
-│   │   ├── 📄 VendorDashboard.tsx           # Service provider job pipeline & earnings
-│   │   └── 📄 VendorJobDetail.tsx           # Vendor work order details, parts cost & status updater
-│   └── 📁 store/                            # Centralized Mock Datasets & State Assets
-│       ├── 📄 adminBreakdownData.ts         # Mock data for admin system breakdown metrics
-│       ├── 📄 adminDashboardData.ts         # Mock data for admin dashboard KPIs and health
-│       ├── 📄 aiAssistantData.ts            # AI quick actions, suggestions, and responses
-│       ├── 📄 dashboardBreakdownData.tsx    # Financial and occupancy chart data
-│       ├── 📄 maintenanceData.ts            # Mock vendor profiles and maintenance timelines
-│       ├── 📄 messagingData.ts              # Mock chat conversations and message history
+│   ├── 📄 page.tsx                          # "/" — public landing (redirects authenticated users to /dashboard or /admin)
+│   ├── 📄 HomeLanding.tsx                   # Client wrapper giving LandingPage router-based nav callbacks
+│   ├── 📄 globals.css                       # Global Tailwind CSS tokens, animations & base styles
+│   │
+│   ├── 📁 login/, register/, forgot-password/, verify-email/   # Public auth screens (real routes)
+│   ├── 📁 about/, contact/, pricing/, checkout/                # Public marketing/checkout pages
+│   ├── 📁 for-landlords/, for-tenants/, for-vendors/            # Marketing feature pages
+│   ├── 📁 properties/[id]/                  # Public property detail
+│   │
+│   ├── 📁 dashboard/                        # Authenticated shell for MANAGER/LANDLORD/TENANT/VENDOR
+│   │   ├── 📄 layout.tsx                    # getServerSession() guard + <DashboardChrome>
+│   │   ├── 📄 DashboardChrome.tsx           # Header/sidebar shell, role-based tabs, dev-only RoleSwitcher
+│   │   ├── 📄 navigateToPage.ts             # Legacy Page-union → real route mapping, shared by ~10 leaf components
+│   │   ├── 📁 discover/, messages/, payment-history/, neighbourhood-report/
+│   │   ├── 📁 maintenance/, maintenance/[id]/, maintenance-request/new/, tenant-maintenance/
+│   │   ├── 📁 tenants/, tenants/add/, tenants/[id]/
+│   │   ├── 📁 properties/new/, properties/[id]/, properties/[id]/apply/, properties/[id]/schedule-viewing/
+│   │   ├── 📁 vendor/jobs/[id]/, vendor/jobs/[id]/invoice/
+│   │   └── 📁 breakdown/[type]/
+│   │
+│   ├── 📁 admin/                            # Authenticated shell for ADMIN only
+│   │   ├── 📄 layout.tsx                    # getServerSession() + role==='ADMIN' guard
+│   │   ├── 📄 AdminChrome.tsx
+│   │   ├── 📁 reports/
+│   │   └── 📁 breakdown/[type]/
+│   │
+│   ├── 📁 api/v1/                           # Backend REST API — 34 route.ts files
+│   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, change-password (7)
+│   │   ├── 📁 properties/                   # +[id], .../units, .../units/[unitId], .../reviews, .../viewings, .../neighbourhood-report (7)
+│   │   ├── 📁 maintenance/                  # categories, requests, requests/[id], requests/[id]/rating, schedules (5)
+│   │   ├── 📁 leases/                       # +[id], .../notices, .../notes (4)
+│   │   ├── 📁 invoices/                     # +[id] (2)
+│   │   ├── 📁 payments/                     # initialize, webhook, autopay (3)
+│   │   ├── 📁 access-codes/                 # +[id], .../verify (3)
+│   │   ├── 📁 conversations/                # +[id]/messages (2)
+│   │   └── 📁 cron/[job]/                   # dispatches to the 5 lib/workers/* functions (1)
+│   │
+│   ├── 📁 components/                       # UI Views & Feature Components (37 top-level + Auth/, figma/, ui/)
+│   │   ├── 📁 Auth/                         # Login.tsx, Register.tsx, ForgotPassword.tsx
+│   │   ├── 📁 figma/                        # ImageWithFallback.tsx
+│   │   ├── 📁 ui/                           # ~45 Radix UI + Tailwind design-system primitives (unchanged since project start)
+│   │   ├── 📄 AboutPage.tsx, ContactPage.tsx, PricingPage.tsx, LandingPage.tsx
+│   │   ├── 📄 AdminDashboard.tsx, AdminBreakdownPage.tsx, AdminReports.tsx           # mock data — Phase 9 candidate
+│   │   ├── 📄 Dashboard.tsx, DashboardBreakdownPage.tsx                              # mock data — Phase 9 candidate
+│   │   ├── 📄 LandlordDashboard.tsx, LandlordFeaturePage.tsx                          # mock data — Phase 9 candidate
+│   │   ├── 📄 TenantDashboard.tsx, TenantDetail.tsx, TenantFeaturePage.tsx,
+│   │   │      TenantManagement.tsx, TenantMaintenanceRequests.tsx, TenantPaymentHistory.tsx  # mock data — Phase 9 candidate
+│   │   ├── 📄 VendorDashboard.tsx, VendorJobDetail.tsx, ServiceProviderFeaturePage.tsx        # mock data — Phase 9 candidate
+│   │   ├── 📄 MaintenanceBoard.tsx, MaintenanceDetail.tsx                            # mock data — Phase 9 candidate
+│   │   ├── 📄 MessagingPortal.tsx, NeighbourhoodReport.tsx, AIAssistant.tsx           # mock data — Phase 9 candidate
+│   │   ├── 📄 PropertyDetail.tsx, PropertyDiscovery.tsx, PublicPropertyDetail.tsx     # mock data — Phase 9 candidate
+│   │   ├── 📄 PropertyApplicationForm.tsx, Checkout.tsx, RoleSwitcher.tsx, Logo.tsx
+│   │   ├── 📄 MaintenanceRequestForm.tsx    # ✅ wired to POST /maintenance/requests (Phase 7)
+│   │   ├── 📄 ScheduleViewing.tsx           # ✅ wired to POST /properties/[id]/viewings (Phase 7)
+│   │   ├── 📄 ListProperty.tsx              # ✅ wired to POST /properties + /units (Phase 7)
+│   │   ├── 📄 VendorCreateInvoice.tsx       # ✅ wired to POST /invoices (Phase 7)
+│   │   └── 📄 AddTenantForm.tsx             # ✅ wired to POST /leases, incl. tenant-invite flow (Phase 7)
+│   │
+│   └── 📁 store/                            # Mock datasets still backing the ~24 unwired components above
 │       ├── 📄 mockData.ts                   # Core mock properties, leases, payments, and stats
-│       ├── 📄 propertyDetailData.ts         # Detailed mock records for demo properties
-│       ├── 📄 tenantDashboardData.ts        # Mock tenant payment history and access codes
-│       ├── 📄 tenantDetailData.ts           # Mock profile, lease documents, and notes
-│       └── 📄 vendorJobDetailData.ts        # Mock vendor work orders, parts lists, and timelines
+│       ├── 📄 adminBreakdownData.ts, adminDashboardData.ts, aiAssistantData.ts
+│       ├── 📄 dashboardBreakdownData.tsx, maintenanceData.ts, messagingData.ts
+│       └── 📄 propertyDetailData.ts, tenantDashboardData.ts, tenantDetailData.ts, vendorJobDetailData.ts
 │
-├── 📁 context/                              # Global React Context State Providers
-│   └── 📄 AuthContext.tsx                   # Authentication session context & action hooks
+├── 📁 context/
+│   └── 📄 AuthContext.tsx                   # Auth session context; routes through apiFetch to survive a page reload with a valid refresh token
 │
-├── 📁 docs/                                 # Platform Specifications & Documentation
-│   ├── 📄 auth-implementation-plan.md       # Architectural specification for authentication
-│   ├── 📄 auth-walkthrough.md               # Auth testing, security analysis & walkthrough
-│   └── 📄 PRD.md                            # Comprehensive Product Requirements Document
+├── 📁 docs/
+│   ├── 📄 PRD.md                            # Product Requirements Document
+│   ├── 📄 auth-implementation-plan.md(.pdf)
+│   └── 📄 auth-walkthrough.md               # Stale — predates the /api/v1/ prefix and proxy.ts rename
 │
-├── 📁 hooks/                                # Custom React Hooks
-│   └── 📄 useAuthRefresh.ts                 # Background multi-tab safe silent token refresh hook
+├── 📁 hooks/
+│   ├── 📄 useAuthRefresh.ts                 # Proactive 13-min token refresh, multi-tab safe
+│   ├── 📄 useApiSubmit.ts                   # Shared { submit, submitting, error } used by the 5 domain hooks below
+│   ├── 📄 useProperties.ts                  # useProperties, useUnits, useCreateProperty, useCreateUnit, useCreateViewing
+│   ├── 📄 useMaintenanceRequests.ts         # useMaintenanceCategories, useCreateMaintenanceRequest
+│   ├── 📄 useLeases.ts                      # useCreateLease, useActiveLease
+│   ├── 📄 useInvoices.ts                    # useCreateInvoice
+│   └── 📄 useAccessCodes.ts                 # useAccessCodes, useCreateAccessCode — built, not wired to any UI yet
 │
-├── 📁 lib/                                  # Shared Libraries, Security & Backend Services
-│   ├── 📄 apiClient.ts                      # Axios instance with auto-refresh response interceptor
-│   ├── 📄 db.ts                             # Global Prisma client instance with connection pooling
-│   ├── 📄 utils.ts                          # Tailwind classnames merger utility
-│   └── 📁 auth/                             # Authentication & Security Helpers
-│       ├── 📄 cookies.ts                    # Path-scoped HttpOnly cookie setters and clearers
-│       ├── 📄 csrf.ts                       # Origin and referer CSRF header verification
-│       ├── 📄 jwt.ts                        # Edge-compatible JWT signing and verification (`jose`)
-│       ├── 📄 rateLimit.ts                  # Database-backed IP/Account rate limiter
-│       └── 📄 session.ts                    # Server component session extraction helper
+├── 📁 lib/
+│   ├── 📄 apiClient.ts                      # Axios instance + refresh interceptor + domain-grouped typed api.* client
+│   ├── 📄 db.ts                             # Global Prisma client singleton (@prisma/adapter-pg), throws if DATABASE_URL unset in production
+│   ├── 📄 email.ts                          # Console-transport sendEmail() — logs instead of delivering
+│   ├── 📄 utils.ts                          # Tailwind classnames merger + fmtNaira()
+│   ├── 📁 api/                              # Shared route infrastructure (Phase 0)
+│   │   ├── 📄 withAuth.ts, pagination.ts, errors.ts, validate.ts
+│   │   ├── 📄 propertyAccess.ts             # canManageProperty(), serializeUnit()
+│   │   └── 📄 types.ts                      # Hand-written types matching each route's Zod/response shape
+│   ├── 📁 auth/
+│   │   ├── 📄 cookies.ts, csrf.ts, jwt.ts, rateLimit.ts, session.ts
+│   └── 📁 workers/                          # Phase 8 — the 5 background workers' real logic
+│       ├── 📄 auth.ts                       # CRON_SECRET guard, mirrors jwt.ts's throw-in-production pattern
+│       ├── 📄 rentInvoicer.ts, overdueFlagger.ts, maintenanceScheduleDispatcher.ts
+│       └── 📄 accessCodeExpiryJanitor.ts, paymentReliabilityScorer.ts
 │
-├── 📁 out/                                  # Build artifacts & project workspaces
-│   ├── 📄 proplity.code-workspace           # VSCode / Antigravity workspace configuration
-│   └── 📄 proplity_progress.md              # Historical engineering progress tracker
+├── 📁 scripts/workers/                      # CLI wrappers around lib/workers/*.ts, for cron/systemd or manual runs
+│   ├── 📄 rentInvoicer.ts, overdueFlagger.ts, maintenanceScheduleDispatcher.ts
+│   └── 📄 accessCodeExpiryJanitor.ts, paymentReliabilityScorer.ts
 │
-├── 📁 prisma/                               # Database Schemas, Migrations & Seeders
-│   ├── 📄 mermaid.mermaid                   # Complete Entity-Relationship Diagram (ERD)
-│   ├── 📄 seed.ts                           # Standard clean database seed script
-│   ├── 📄 seed2.ts                          # Enriched multi-property comprehensive seed script
-│   ├── 📁 migrations/                       # SQL Migration History
-│   │   ├── 📄 migration_lock.toml           # Prisma migration lockfile
-│   │   └── 📁 20260821115725_init_domain_schema/
-│   │       └── 📄 migration.sql             # Complete initial PostgreSQL schema DDL
-│   └── 📁 schema/                           # Modular Multi-File Prisma Schemas
-│       ├── 📄 audit.prisma                  # System-wide AuditLog model
-│       ├── 📄 auth.prisma                   # User, VendorProfile, Note, Subscription, KYC
-│       ├── 📄 base.prisma                   # Datasource & Prisma Client generator configs
-│       ├── 📄 communication.prisma          # Conversation, Message, Participant models
-│       ├── 📄 financial.prisma              # Invoice, Payment, AutoPayMandate models
-│       ├── 📄 lease.prisma                  # Lease, Notice (renewals, increases, terminations)
-│       ├── 📄 operations.prisma             # MaintenanceRequest, Category, Schedule, Rating
-│       └── 📄 property.prisma               # Property, Unit, NeighbourhoodReport, AccessCode, Review
+├── 📁 out/                                  # Planning docs & phase history (gitignored)
+│   ├── 📄 domain-api-implementation-plan.md # Original full 6-phase spec — now complete
+│   ├── 📄 next-phase-analysis.md            # Current prioritized proposal for what's next
+│   ├── 📄 phase-7-frontend-integration-plan.md, phase-8-background-workers-plan.md
+│   └── 📁 phases/                           # One detailed writeup per completed phase
 │
-├── 📄 .env                                  # Environment variables (DATABASE_URL, JWT_SECRET)
-├── 📄 .env.example                          # Template environment variable documentation
-├── 📄 .gitignore                            # Git file ignore list
-├── 📄 .prettierrc                           # Code formatting rules
-├── 📄 next.config.mjs                       # Next.js framework configuration
-├── 📄 next-env.d.ts                         # Next.js TypeScript declarations
-├── 📄 package.json                          # Dependencies and project scripts
-├── 📄 pnpm-lock.yaml                        # Pnpm dependency lockfile
-├── 📄 pnpm-workspace.yaml                   # Pnpm workspace configuration
-├── 📄 postcss.config.mjs                    # PostCSS / TailwindCSS v4 plugin config
-├── 📄 prisma.config.ts                      # Prisma CLI configuration (schema path, URL)
-├── 📄 proxy.ts                              # Dev proxy script
-├── 📄 README.md                             # Project overview and getting started guide
-└── 📄 tsconfig.json                         # TypeScript compiler configuration
+├── 📁 prisma/
+│   ├── 📄 mermaid.mermaid                   # Entity-relationship diagram
+│   ├── 📄 seed.ts, seed2.ts                 # Seed scripts (see CURRENT_STATE.md for row counts)
+│   ├── 📁 migrations/
+│   │   ├── 📁 20260821115725_init_domain_schema/
+│   │   └── 📁 20260822172214_sync_schema_drift/    # Found + fixed during Phase 3 live testing
+│   └── 📁 schema/                           # 8 modular files, 33 models total — see CLAUDE.md for the full layout table
+│
+├── 📄 .env                                  # DATABASE_URL, JWT_SECRET, CRON_SECRET (gitignored)
+├── 📄 .env.example
+├── 📄 CLAUDE.md                             # Authoritative, always-current project reference — read first
+├── 📄 CURRENT_STATE.md                      # This file's companion — subsystem-by-subsystem status
+├── 📄 next.config.mjs                       # serverExternalPackages workaround for Turbopack+pnpm+Prisma
+├── 📄 package.json
+├── 📄 prisma.config.ts
+├── 📄 proxy.ts                              # Next 16's middleware.ts replacement — live edge auth guard for /dashboard, /admin
+└── 📄 tsconfig.json
 ```
 
 ---
@@ -226,16 +170,16 @@ proplity/
 
 | Directory | Purpose | Key Technologies |
 |---|---|---|
-| **`app/`** | Application UI & API Routes | Next.js 14 App Router, React 18, Tailwind CSS |
-| **`app/api/v1/`** | Backend REST API Endpoints | Route Handlers, JWT Verification, Prisma Client |
-| **`app/components/`** | Domain Feature Views & Portals | Lucide Icons, Recharts, Embla Carousel, Framer Motion |
-| **`app/components/ui/`** | Design System Primitives | Radix UI, Class Variance Authority (`cva`), Sonner |
-| **`app/store/`** | Centralized Mock Data Stores | Decoupled TypeScript data fixtures |
-| **`context/`** | Global Client Contexts | React Context API, Axios Interceptors |
-| **`hooks/`** | Custom React Hooks | Client-side reactive lifecycle utilities |
-| **`lib/`** | Core Helpers & Database Services | `jose` (JWT), `pg` / `@prisma/adapter-pg`, `bcryptjs` |
-| **`prisma/`** | Database Schema & Seeders | Prisma ORM v7 (Multi-File Schemas), PostgreSQL |
-| **`docs/`** | Specifications & Product Docs | Product Requirements Document (PRD), Architecture Guides |
+| **`app/`** | Real routes end to end — public pages, `dashboard/`, `admin/`, `api/v1/` | Next.js 16 App Router, React, Tailwind CSS |
+| **`app/api/v1/`** | 34 backend REST routes across 6 domains + auth + cron | Route Handlers, `withAuth`, Zod, Prisma |
+| **`app/components/`** | Feature views — 5 wired to real APIs, ~24 still on mock data | Lucide Icons, Recharts, Embla Carousel |
+| **`app/store/`** | Mock data still backing the unwired components | Decoupled TypeScript fixtures |
+| **`hooks/`** | Auth refresh + 5 domain hooks (Phase 7) | Plain `useState`/`useEffect`, no data-fetching library |
+| **`lib/`** | Auth, shared API infra, background workers, email, DB singleton | `jose`, `bcryptjs`, `@prisma/adapter-pg` |
+| **`lib/workers/` + `scripts/workers/`** | 5 background jobs, HTTP + CLI trigger surfaces | Plain async functions, no job-queue library |
+| **`prisma/`** | Schema, migrations, seeders | Prisma ORM v7 (multi-file schema), PostgreSQL 18 |
+| **`out/`** | Planning docs and per-phase history (gitignored) | Markdown |
+| **`docs/`** | PRD and architecture specs | Markdown |
 
 ---
 
@@ -246,13 +190,16 @@ proplity/
 pnpm dev                       # Start Next.js local development server (localhost:3000)
 
 # Database Management
-pnpm exec prisma db push       # Synchronize schema directly to PostgreSQL
+pnpm exec prisma migrate dev   # Apply schema changes (interactive; use migrate deploy in scripts/CI)
 pnpm exec prisma generate      # Compile and generate Prisma Client types
-pnpm exec tsx prisma/seed.ts   # Execute standard database seeder
 pnpm exec tsx prisma/seed2.ts  # Execute enriched multi-property database seeder
 
 # Quality Assurance
 pnpm exec tsc --noEmit         # Type check the entire codebase
 pnpm build                     # Production bundle build & validation
 pnpm format                    # Auto-format all files with Prettier
+
+# Background workers (manual trigger; not yet on a schedule)
+pnpm exec tsx scripts/workers/rentInvoicer.ts
+curl -X POST localhost:3000/api/v1/cron/rent-invoicer -H "x-cron-secret: $CRON_SECRET"
 ```
