@@ -1,10 +1,13 @@
 import axios from 'axios';
 import type {
   AccessCode,
+  Conversation,
   CreateAccessCodeInput,
+  CreateConversationInput,
   CreateInvoiceInput,
   CreateLeaseInput,
   CreateMaintenanceRequestInput,
+  CreateMessageInput,
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
@@ -12,6 +15,7 @@ import type {
   Lease,
   MaintenanceCategory,
   MaintenanceRequest,
+  Message,
   Note,
   Paginated,
   Property,
@@ -134,5 +138,18 @@ export const api = {
   accessCodes: {
     list: (unitId: string) => apiClient.get<{ data: AccessCode[] }>('/api/v1/access-codes', { params: { unitId } }),
     create: (body: CreateAccessCodeInput) => apiClient.post<{ data: AccessCode }>('/api/v1/access-codes', body),
+  },
+  conversations: {
+    list: () => apiClient.get<{ data: Conversation[] }>('/api/v1/conversations'),
+    create: (body: CreateConversationInput) => apiClient.post<{ data: Conversation }>('/api/v1/conversations', body),
+    messages: {
+      list: (conversationId: string, cursor?: string) =>
+        apiClient.get<{ data: Message[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
+          `/api/v1/conversations/${conversationId}/messages`,
+          { params: cursor ? { cursor } : undefined },
+        ),
+      create: (conversationId: string, body: CreateMessageInput) =>
+        apiClient.post<{ data: Message }>(`/api/v1/conversations/${conversationId}/messages`, body),
+    },
   },
 };

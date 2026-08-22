@@ -270,3 +270,53 @@ export type CreateAccessCodeInput = {
   validFrom: string;
   validUntil?: string | null;
 };
+
+export type Message = {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  senderType: 'USER' | 'AI_ASSISTANT' | 'SYSTEM';
+  channel: 'IN_APP' | 'WHATSAPP' | 'EMAIL' | 'SMS';
+  body: string;
+  attachmentUrls: string[];
+  createdAt: string;
+};
+
+export type ConversationParticipant = {
+  userId: string;
+  lastReadAt: string | null;
+  user: { id: string; name: string; avatarUrl: string | null; role: string };
+};
+
+export type Conversation = {
+  id: string;
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  title: string | null;
+  maintenanceRequestId: string | null;
+  leaseId: string | null;
+  propertyId: string | null;
+  property?: { id: string; name: string } | null;
+  lease?: { unit: { unitNumber: string; property: { id: string; name: string } } } | null;
+  maintenanceRequest?: { title: string } | null;
+  participants: ConversationParticipant[];
+  lastMessage: Message | null;
+  lastReadAt: string | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateConversationInput = {
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  title?: string;
+  participantIds?: string[];
+  maintenanceRequestId?: string;
+  leaseId?: string;
+  propertyId?: string;
+};
+
+export type CreateMessageInput = {
+  body: string;
+  channel?: 'IN_APP' | 'WHATSAPP' | 'EMAIL' | 'SMS';
+  attachmentUrls?: string[];
+};

@@ -32,6 +32,20 @@ export const GET = withAuth(async (req, { session }, ctx: RouteCtx) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Viewing a conversation's messages marks it read -- resolves the known
+    // gap (CLAUDE.md: "unreadCount only grows") the simplest way a v1
+    // polling-based client actually reads messages: opening the thread.
+    // Awaited so the read-marker is durable before the response returns,
+    // but failing to mark read shouldn't fail the message fetch itself.
+    try {
+      await prisma.conversationParticipant.update({
+        where: { conversationId_userId: { conversationId: id, userId: session.sub } },
+        data: { lastReadAt: new Date() },
+      });
+    } catch {
+      // ignore -- unread count staying stale is not worth failing the request over
+    }
+
     const { page, meta } = buildCursorMeta(rows, take);
     return NextResponse.json({ data: page, meta });
   } catch (err) {

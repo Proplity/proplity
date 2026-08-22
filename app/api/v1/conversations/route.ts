@@ -15,6 +15,9 @@ export const GET = withAuth(async (_req, { session }) => {
         conversation: {
           include: {
             participants: { include: { user: { select: { id: true, name: true, avatarUrl: true, role: true } } } },
+            property: { select: { id: true, name: true } },
+            lease: { select: { unit: { select: { unitNumber: true, property: { select: { id: true, name: true } } } } } },
+            maintenanceRequest: { select: { title: true } },
           },
         },
       },
