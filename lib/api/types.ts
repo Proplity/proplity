@@ -97,10 +97,11 @@ export type CreateMaintenanceRequestInput = {
 export type MaintenanceRequest = {
   id: string;
   unitId: string;
-  unit?: Unit;
+  unit?: Unit & { property?: Property };
   tenantId: string;
+  tenant?: { id: string; name: string; email: string; phoneNumber: string | null };
   vendorId: string | null;
-  vendor?: { id: string; name: string } | null;
+  vendor?: { id: string; name: string; phoneNumber?: string | null } | null;
   title: string;
   description: string;
   categoryId: string | null;
@@ -114,8 +115,54 @@ export type MaintenanceRequest = {
   completedAt: string | null;
   costEstimate: number | null;
   finalCost: number | null;
+  vendorRating?: { rating: number; comment: string | null } | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type UpdateMaintenanceRequestInput = {
+  categoryId?: string | null;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'EMERGENCY';
+  vendorId?: string | null;
+  scheduledFor?: string | null;
+  status?: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  completionProofUrl?: string;
+  finalCost?: number;
+};
+
+export type Vendor = {
+  id: string;
+  name: string;
+  phoneNumber: string | null;
+  businessName: string;
+  categories: string[];
+  coverageArea: string | null;
+  jobsDone: number;
+  totalJobs: number;
+  completionRate: number | null;
+  rating: number | null;
+};
+
+export type Notice = {
+  id: string;
+  leaseId: string;
+  invoiceId: string | null;
+  type: 'RENEWAL_OFFER' | 'RENT_INCREASE' | 'DEFAULT_NOTICE' | 'EXPIRATION_ALERT' | 'PAYMENT_REMINDER' | 'TERMINATION_NOTICE';
+  status: 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'COUNTERED' | 'EXPIRED';
+  content: string | null;
+  documentUrl: string | null;
+  sentAt: string | null;
+  viewedAt: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+};
+
+export type Note = {
+  id: string;
+  leaseId: string | null;
+  authorId: string;
+  body: string;
+  createdAt: string;
 };
 
 export type Lease = {
@@ -123,13 +170,27 @@ export type Lease = {
   unitId: string;
   unit?: Unit & { property?: Property };
   tenantId: string;
+  tenant?: {
+    id: string;
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    avatarUrl: string | null;
+    emergencyContactName?: string | null;
+    emergencyContactRelationship?: string | null;
+    emergencyContactPhone?: string | null;
+  };
   startDate: string;
   endDate: string;
   rentAmount: number;
   paymentFrequency: string;
   deposit: number;
   status: string;
+  riskScore?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  paymentReliability?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | null;
   signedAgreementUrl?: string | null;
+  notices?: Notice[];
+  invoices?: Invoice[];
   tenantInvited?: boolean;
 };
 
@@ -161,6 +222,11 @@ export type Invoice = {
   id: string;
   invoiceNumber: string;
   leaseId: string | null;
+  lease?: {
+    id: string;
+    tenant: { id: string; name: string };
+    unit: { unitNumber: string; property: { id: string; name: string } };
+  } | null;
   maintenanceRequestId: string | null;
   userId: string | null;
   type: 'RENT' | 'MAINTENANCE' | 'SECURITY_DEPOSIT' | 'UTILITY' | 'LATE_FEE' | 'ASSOCIATION_FEE' | 'SUBSCRIPTION';

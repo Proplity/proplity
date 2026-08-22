@@ -38,7 +38,10 @@ export const GET = withAuth(
           where,
           skip,
           take,
-          include: { unit: { include: { property: true } } },
+          include: {
+            unit: { include: { property: true } },
+            tenant: { select: { id: true, name: true, email: true, phoneNumber: true, avatarUrl: true } },
+          },
           orderBy: { createdAt: 'desc' },
         }),
         prisma.lease.count({ where }),

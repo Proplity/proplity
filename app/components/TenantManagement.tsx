@@ -1,51 +1,47 @@
 import { useState } from 'react';
-import {
-  Search,
-  Filter,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  TrendingUp,
-  FileText,
-} from 'lucide-react';
-import { mockTenantManagementTenants as tenants } from '../store/mockData';
+import { Search, Phone, Mail, MapPin, Calendar, DollarSign, AlertCircle, CheckCircle, FileText } from 'lucide-react';
+import { useLeases } from '@/hooks/useLeases';
+import { useInvoices } from '@/hooks/useInvoices';
+import type { Invoice, Lease } from '@/lib/api/types';
 
 interface TenantManagementProps {
   onNavigate: (page: any) => void;
 }
 
+const AVATAR_COLORS = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500'];
+
+// No stored "rent status" field exists on Lease -- derived from its RENT
+// invoices the same way TenantPaymentHistory derives payment status
+// (Phase 9.2): the earliest still-unpaid invoice decides due/overdue/paid.
+function rentInfo(leaseId: string, invoices: Invoice[]) {
+  const unpaid = invoices
+    .filter((i) => i.leaseId === leaseId && i.status !== 'PAID' && i.status !== 'CANCELLED')
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  if (unpaid.length === 0) return { status: 'paid' as const, nextDue: null as string | null };
+  const overdue = new Date(unpaid[0].dueDate) < new Date();
+  return { status: (overdue ? 'overdue' : 'due') as 'overdue' | 'due', nextDue: unpaid[0].dueDate };
+}
+
 export function TenantManagement({ onNavigate }: TenantManagementProps) {
+  const { data: leases, loading, error } = useLeases();
+  const { data: invoices } = useInvoices({ type: 'RENT' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
+  const rows = leases.map((lease) => ({ lease, rent: rentInfo(lease.id, invoices) }));
+
   const statusFilters = [
-    { id: 'all', label: 'All Tenants', count: tenants.length },
-    {
-      id: 'paid',
-      label: 'Paid',
-      count: tenants.filter((t) => t.rentStatus === 'paid').length,
-    },
-    {
-      id: 'due',
-      label: 'Due Soon',
-      count: tenants.filter((t) => t.rentStatus === 'due').length,
-    },
-    {
-      id: 'overdue',
-      label: 'Overdue',
-      count: tenants.filter((t) => t.rentStatus === 'overdue').length,
-    },
+    { id: 'all', label: 'All Tenants', count: rows.length },
+    { id: 'paid', label: 'Paid', count: rows.filter((r) => r.rent.status === 'paid').length },
+    { id: 'due', label: 'Due Soon', count: rows.filter((r) => r.rent.status === 'due').length },
+    { id: 'overdue', label: 'Overdue', count: rows.filter((r) => r.rent.status === 'overdue').length },
   ];
 
-  const filteredTenants = tenants.filter((tenant) => {
+  const filteredRows = rows.filter(({ lease, rent }) => {
     const matchesSearch =
-      tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tenant.property.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || tenant.rentStatus === selectedStatus;
+      (lease.tenant?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
+      (lease.unit?.property?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || rent.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -64,7 +60,7 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
         </button>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search */}
       <div className="flex gap-4">
         <div className="relative flex-1">
           <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
@@ -76,13 +72,6 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
             className="w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
-        <button
-          onClick={() => alert('Opening filter options...')}
-          className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
-        >
-          <Filter className="h-5 w-5" />
-          Filter
-        </button>
       </div>
 
       {/* Status Tabs */}
@@ -102,21 +91,8 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
         ))}
       </div>
 
-      {/* AI Insights */}
-      <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-red-50 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-orange-500">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="mb-1 font-semibold">AI Payment Prediction</h3>
-            <p className="text-sm text-gray-700">
-              Based on historical data, Tunde Bakare and Ibrahim Musa are likely to pay late.
-              Consider sending personalized reminders.
-            </p>
-          </div>
-        </div>
-      </div>
+      {loading && <p className="text-sm text-gray-500">Loading tenants…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Tenant List */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -148,24 +124,24 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredTenants.map((tenant) => (
+              {filteredRows.map(({ lease, rent }, index) => (
                 <tr
-                  key={tenant.id}
-                  onClick={() => onNavigate({ type: 'tenant-detail', tenantId: tenant.id })}
+                  key={lease.id}
+                  onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
                   className="cursor-pointer transition-colors hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`h-10 w-10 ${tenant.avatar} flex items-center justify-center rounded-full font-semibold text-white`}
+                        className={`h-10 w-10 ${AVATAR_COLORS[index % AVATAR_COLORS.length]} flex items-center justify-center rounded-full font-semibold text-white`}
                       >
-                        {tenant.name.charAt(0)}
+                        {(lease.tenant?.name ?? '?').charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium">{tenant.name}</p>
+                        <p className="font-medium">{lease.tenant?.name ?? 'Unknown tenant'}</p>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                           <Mail className="h-3 w-3" />
-                          {tenant.email}
+                          {lease.tenant?.email ?? '—'}
                         </div>
                       </div>
                     </div>
@@ -173,76 +149,73 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm text-gray-600">
                       <MapPin className="h-4 w-4" />
-                      {tenant.property}
+                      {lease.unit?.property?.name ?? '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4 text-gray-400" />
-                      <span className="font-semibold">{tenant.rentAmount}</span>
+                      <span className="font-semibold">₦{lease.rentAmount.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-gray-500">/year</p>
+                    <p className="text-xs text-gray-500">/{lease.paymentFrequency.toLowerCase()}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        tenant.rentStatus === 'paid'
+                        rent.status === 'paid'
                           ? 'bg-green-100 text-green-700'
-                          : tenant.rentStatus === 'due'
+                          : rent.status === 'due'
                             ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-red-100 text-red-700'
                       }`}
                     >
-                      {tenant.rentStatus === 'paid' ? (
+                      {rent.status === 'paid' ? (
                         <CheckCircle className="mr-1 inline h-3 w-3" />
                       ) : (
                         <AlertCircle className="mr-1 inline h-3 w-3" />
                       )}
-                      {tenant.rentStatus.toUpperCase()}
+                      {rent.status.toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm">
                       <Calendar className="h-4 w-4 text-gray-400" />
-                      {tenant.nextDue}
+                      {rent.nextDue ? new Date(rent.nextDue).toLocaleDateString() : '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        tenant.riskScore === 'low'
+                        lease.riskScore === 'LOW'
                           ? 'bg-green-100 text-green-700'
-                          : tenant.riskScore === 'medium'
+                          : lease.riskScore === 'MEDIUM'
                             ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'
+                            : lease.riskScore === 'HIGH'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {tenant.riskScore.toUpperCase()}
+                      {lease.riskScore ?? 'UNSCORED'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => alert(`Calling ${tenant.name}...`)}
+                        onClick={() => alert(`Calling ${lease.tenant?.name ?? 'tenant'}...`)}
                         className="rounded p-1 hover:bg-gray-100"
                         title="Call tenant"
                       >
                         <Phone className="h-4 w-4 text-gray-600" />
                       </button>
                       <button
-                        onClick={() => alert(`Emailing ${tenant.name}...`)}
+                        onClick={() => alert(`Emailing ${lease.tenant?.name ?? 'tenant'}...`)}
                         className="rounded p-1 hover:bg-gray-100"
                         title="Email tenant"
                       >
                         <Mail className="h-4 w-4 text-gray-600" />
                       </button>
                       <button
-                        onClick={() =>
-                          onNavigate({
-                            type: 'tenant-detail',
-                            tenantId: tenant.id,
-                          })
-                        }
+                        onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
                         className="rounded p-1 hover:bg-gray-100"
                         title="View details"
                       >
@@ -252,6 +225,13 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                   </td>
                 </tr>
               ))}
+              {filteredRows.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-400">
+                    No tenants found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

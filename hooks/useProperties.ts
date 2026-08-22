@@ -70,6 +70,34 @@ export function useProperty(propertyId: string | null) {
   return { data, loading, error, refetch };
 }
 
+// The logged-in MANAGER/LANDLORD/ADMIN's own properties (published or not --
+// their own dashboard needs to see a pending-review listing too, unlike
+// useProperties() above which only ever sees published ones).
+export function useMyProperties() {
+  const [data, setData] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.properties.mine();
+      setData(res.data.data);
+    } catch {
+      setError('Failed to load your properties');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
 // A property's real units -- needed anywhere a form must pick a specific
 // unit, not just a property (Lease.unitId requires one).
 export function useUnits(propertyId: string | null, status?: string) {

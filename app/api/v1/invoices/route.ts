@@ -48,7 +48,16 @@ export const GET = withAuth(async (req, { session }) => {
         where,
         skip,
         take,
-        include: { payments: { orderBy: { paidAt: 'desc' } } },
+        include: {
+          payments: { orderBy: { paidAt: 'desc' } },
+          lease: {
+            select: {
+              id: true,
+              tenant: { select: { id: true, name: true } },
+              unit: { select: { unitNumber: true, property: { select: { id: true, name: true } } } },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.invoice.count({ where }),

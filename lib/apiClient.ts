@@ -12,9 +12,12 @@ import type {
   Lease,
   MaintenanceCategory,
   MaintenanceRequest,
+  Note,
   Paginated,
   Property,
   Unit,
+  UpdateMaintenanceRequestInput,
+  Vendor,
 } from './api/types';
 
 export const apiClient = axios.create({
@@ -88,6 +91,7 @@ export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
       apiClient.get<Paginated<Property>>('/api/v1/properties', { params }),
+    mine: () => apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
     get: (propertyId: string) => apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
     create: (body: CreatePropertyInput) => apiClient.post<{ data: Property }>('/api/v1/properties', body),
     listUnits: (propertyId: string, status?: string) =>
@@ -103,12 +107,24 @@ export const api = {
     categories: () => apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
     list: (params?: { status?: string }) =>
       apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
+    get: (id: string) => apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
+    update: (id: string, body: UpdateMaintenanceRequestInput) =>
+      apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
       apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
   },
+  vendors: {
+    list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
+  },
   leases: {
     list: (params?: { status?: string }) => apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
+    get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
+    notes: {
+      list: (leaseId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/leases/${leaseId}/notes`),
+      create: (leaseId: string, body: string) =>
+        apiClient.post<{ data: Note }>(`/api/v1/leases/${leaseId}/notes`, { body }),
+    },
   },
   invoices: {
     list: (params?: { type?: string; status?: string }) =>

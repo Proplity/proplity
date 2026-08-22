@@ -5,8 +5,8 @@ export type Page =
   | { type: 'maintenance' }
   | { type: 'list-property' }
   | { type: 'property-detail'; propertyId: string }
-  | { type: 'tenant-detail'; tenantId: number }
-  | { type: 'maintenance-detail'; requestId: number }
+  | { type: 'tenant-detail'; leaseId: string }
+  | { type: 'maintenance-detail'; requestId: string }
   | { type: 'maintenance-request-form' }
   | { type: 'property-application'; propertyId: string; propertyTitle: string; propertyPrice: string }
   | { type: 'schedule-viewing'; propertyId: string; propertyTitle: string; propertyAddress: string }
@@ -57,7 +57,7 @@ export function navigateToPage(router: RouterLike, page: Page) {
       router.push(`/dashboard/properties/${page.propertyId}`);
       return;
     case 'tenant-detail':
-      router.push(`/dashboard/tenants/${page.tenantId}`);
+      router.push(`/dashboard/tenants/${page.leaseId}`);
       return;
     case 'maintenance-detail':
       router.push(`/dashboard/maintenance/${page.requestId}`);

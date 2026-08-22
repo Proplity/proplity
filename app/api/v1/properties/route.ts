@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { PropertyType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
+import { getServerSession } from '@/lib/auth/session';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
@@ -12,6 +13,31 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const { skip, take, page, limit } = parsePagination(searchParams);
+
+    // scope=mine: an authenticated MANAGER/LANDLORD/ADMIN's own properties
+    // (published or not -- their own dashboard needs to see a pending-review
+    // listing too). Default (no scope param) stays exactly as before: public,
+    // unauthenticated, published-only browsing -- PropertyDiscovery and
+    // PublicPropertyDetail depend on that remaining unauthenticated.
+    if (searchParams.get('scope') === 'mine') {
+      const jwtSession = await getServerSession();
+      if (!jwtSession) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
+      if (!['ADMIN', 'MANAGER', 'LANDLORD'].includes(jwtSession.role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      const where: Record<string, unknown> =
+        jwtSession.role === 'ADMIN'
+          ? {}
+          : { OR: [{ managerId: jwtSession.sub }, { landlordId: jwtSession.sub }] };
+
+      const [properties, total] = await Promise.all([
+        prisma.property.findMany({ where, skip, take, include: { units: true }, orderBy: { createdAt: 'desc' } }),
+        prisma.property.count({ where }),
+      ]);
+      const data = properties.map((p) => ({ ...p, units: p.units.map(serializeUnit) }));
+      return NextResponse.json({ data, meta: buildMeta(total, page, limit) });
+    }
 
     const city = searchParams.get('city');
     const state = searchParams.get('state');

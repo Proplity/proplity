@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { CreateMaintenanceRequestInput, MaintenanceCategory, MaintenanceRequest } from '@/lib/api/types';
+import type {
+  CreateMaintenanceRequestInput,
+  MaintenanceCategory,
+  MaintenanceRequest,
+  UpdateMaintenanceRequestInput,
+} from '@/lib/api/types';
 
 export function useMaintenanceCategories() {
   const [data, setData] = useState<MaintenanceCategory[]>([]);
@@ -60,4 +65,42 @@ export function useMaintenanceRequests(params?: { status?: string }) {
   }, [refetch]);
 
   return { data, loading, error, refetch };
+}
+
+// Full detail for one maintenance request -- unit+property, category,
+// vendor, tenant, and any vendorRating. Used by MaintenanceDetail.
+export function useMaintenanceRequest(id: string | null) {
+  const [data, setData] = useState<MaintenanceRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    if (!id) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.maintenance.get(id);
+      setData(res.data.data);
+    } catch {
+      setError('Failed to load maintenance request');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
+export function useUpdateMaintenanceRequest(id: string) {
+  return useApiSubmit((body: UpdateMaintenanceRequestInput) =>
+    api.maintenance.update(id, body).then((res) => res.data.data),
+  );
 }

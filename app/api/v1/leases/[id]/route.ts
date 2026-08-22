@@ -30,7 +30,10 @@ function loadLease(id: string) {
       unit: { include: { property: true } },
       tenant: { select: tenantSelect },
       notices: { orderBy: { createdAt: 'desc' } },
-      invoices: { orderBy: { createdAt: 'desc' } },
+      invoices: {
+        include: { payments: { orderBy: { paidAt: 'desc' } } },
+        orderBy: { createdAt: 'desc' },
+      },
       renewedFrom: true,
       renewedInto: true,
     },
