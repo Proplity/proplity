@@ -10,7 +10,7 @@ export default function Page() {
 
   return (
     <VendorJobDetail
-      jobId={Number(id)}
+      jobId={id}
       onBack={() => router.push('/dashboard')}
       onNavigate={(page) => navigateToPage(router, page)}
     />

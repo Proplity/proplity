@@ -27,6 +27,7 @@ export type Property = {
   imageUrl?: string | null;
   managerId?: string | null;
   landlordId?: string | null;
+  manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
   isPublished: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
@@ -131,6 +132,7 @@ export type UpdateMaintenanceRequestInput = {
   status?: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   completionProofUrl?: string;
   finalCost?: number;
+  vendorNotes?: string;
 };
 
 export type Vendor = {

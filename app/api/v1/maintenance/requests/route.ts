@@ -37,7 +37,12 @@ export const GET = withAuth(async (req, { session }) => {
         where,
         skip,
         take,
-        include: { unit: true, category: true, vendor: { select: { id: true, name: true } } },
+        include: {
+          unit: { include: { property: true } },
+          category: true,
+          vendor: { select: { id: true, name: true } },
+          tenant: { select: { id: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.maintenanceRequest.count({ where }),

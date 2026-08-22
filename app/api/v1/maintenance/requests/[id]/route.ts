@@ -13,7 +13,13 @@ function loadRequest(id: string) {
   return prisma.maintenanceRequest.findUnique({
     where: { id },
     include: {
-      unit: { include: { property: true } },
+      unit: {
+        include: {
+          property: {
+            include: { manager: { select: { id: true, name: true, phoneNumber: true, email: true } } },
+          },
+        },
+      },
       category: true,
       vendor: true,
       tenant: true,
@@ -52,6 +58,7 @@ const patchSchema = z.object({
   status: z.nativeEnum(MaintenanceStatus).optional(),
   completionProofUrl: z.string().optional(),
   finalCost: z.number().optional(),
+  vendorNotes: z.string().optional(),
 });
 
 export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -63,7 +70,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const validated = await validateBody(req, patchSchema);
     if (!validated.success) return validated.response;
-    const { categoryId, priority, vendorId, scheduledFor, status, completionProofUrl, finalCost } =
+    const { categoryId, priority, vendorId, scheduledFor, status, completionProofUrl, finalCost, vendorNotes } =
       validated.data;
 
     const canManage = canManageProperty(session, request.unit.property);
@@ -125,7 +132,20 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         return NextResponse.json({ data: updated });
       }
 
-      const updated = await prisma.maintenanceRequest.update({ where: { id }, data: { status: 'IN_PROGRESS' } });
+      const updated = await prisma.maintenanceRequest.update({
+        where: { id },
+        data: { status: 'IN_PROGRESS', ...(vendorNotes !== undefined ? { vendorNotes } : {}) },
+      });
+      return NextResponse.json({ data: updated });
+    }
+
+    // Notes-only update: the assigned vendor leaving a progress note without
+    // changing status (e.g. a request already IN_PROGRESS).
+    if (vendorNotes !== undefined) {
+      const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
+      if (!isAssignedVendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+      const updated = await prisma.maintenanceRequest.update({ where: { id }, data: { vendorNotes } });
       return NextResponse.json({ data: updated });
     }
 

@@ -13,8 +13,8 @@ export type Page =
   | { type: 'messages' }
   | { type: 'vendor-jobs' }
   | { type: 'vendor-invoices' }
-  | { type: 'vendor-job-detail'; jobId: number }
-  | { type: 'vendor-create-invoice'; jobId: number }
+  | { type: 'vendor-job-detail'; jobId: string }
+  | { type: 'vendor-create-invoice'; jobId: string }
   | { type: 'add-tenant' }
   | { type: 'payment-history' }
   | { type: 'landlord-features' }
