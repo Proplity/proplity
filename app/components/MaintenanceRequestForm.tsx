@@ -1,13 +1,32 @@
 import { useState } from 'react';
 import { ArrowLeft, Wrench, Upload, AlertCircle, Droplet, Zap, Wind, Home } from 'lucide-react';
-import { mockUserPropertyAddress } from '../store/mockData';
+import { useMaintenanceCategories, useCreateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
+import { useActiveLease } from '@/hooks/useLeases';
 
 interface MaintenanceRequestFormProps {
   onBack: () => void;
   onSubmit: () => void;
 }
 
+// Maps the form's fixed category buttons to a real MaintenanceCategory by
+// name -- MaintenanceCategory is a DB table (admin-editable), not an enum,
+// so the buttons stay fixed but resolve to whatever category id currently
+// matches that name among the 7 seeded defaults.
+const CATEGORY_BUTTONS = [
+  { name: 'Plumbing', label: 'Plumbing', icon: Droplet, color: 'blue' },
+  { name: 'Electrical', label: 'Electrical', icon: Zap, color: 'yellow' },
+  { name: 'HVAC', label: 'HVAC/AC', icon: Wind, color: 'purple' },
+  { name: 'Structural', label: 'Structural', icon: Home, color: 'orange' },
+  { name: 'Other', label: 'Other', icon: Wrench, color: 'gray' },
+];
+
+const PRIORITY_MAP: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH' };
+
 export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestFormProps) {
+  const { data: categories } = useMaintenanceCategories();
+  const { data: activeLease } = useActiveLease();
+  const { submit, submitting, error } = useCreateMaintenanceRequest();
+
   const [formData, setFormData] = useState({
     category: '',
     priority: 'medium',
@@ -18,25 +37,41 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
     preferredTime: '',
     images: [] as File[],
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const categories = [
-    { id: 'plumbing', label: 'Plumbing', icon: Droplet, color: 'blue' },
-    { id: 'electrical', label: 'Electrical', icon: Zap, color: 'yellow' },
-    { id: 'hvac', label: 'HVAC/AC', icon: Wind, color: 'purple' },
-    { id: 'structural', label: 'Structural', icon: Home, color: 'orange' },
-    { id: 'other', label: 'Other', icon: Wrench, color: 'gray' },
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!formData.category || !formData.title || !formData.description) {
-      alert('Please fill in all required fields');
+      setFormError('Please fill in all required fields');
       return;
     }
-    // Simulate submission
-    setTimeout(() => {
+    if (!activeLease) {
+      setFormError('No active lease found on your account -- unable to submit a request.');
+      return;
+    }
+
+    const category = categories.find((c) => c.name === formData.category);
+    const description = formData.location
+      ? `${formData.description}\n\nLocation: ${formData.location}`
+      : formData.description;
+
+    try {
+      await submit({
+        unitId: activeLease.unitId,
+        title: formData.title,
+        description,
+        categoryId: category?.id,
+        priority: PRIORITY_MAP[formData.priority],
+        // No file-storage endpoint exists in any phase yet -- images stay a
+        // local display list only, not actually uploaded.
+        mediaUrls: [],
+      });
       onSubmit();
-    }, 1000);
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,8 +104,10 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 text-lg font-semibold">Property Information</h2>
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm font-medium">Your Property</p>
-              <p className="text-sm text-gray-600">{mockUserPropertyAddress}</p>
+              <p className="text-sm font-medium">Your Unit</p>
+              <p className="text-sm text-gray-600">
+                {activeLease ? `Unit ${activeLease.unitId.slice(0, 8)}` : 'Loading your active lease…'}
+              </p>
             </div>
           </div>
 
@@ -78,15 +115,15 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 text-lg font-semibold">What type of issue is this? *</h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {categories.map((category) => {
+              {CATEGORY_BUTTONS.map((category) => {
                 const Icon = category.icon;
                 return (
                   <button
-                    key={category.id}
+                    key={category.name}
                     type="button"
-                    onClick={() => setFormData({ ...formData, category: category.id })}
+                    onClick={() => setFormData({ ...formData, category: category.name })}
                     className={`rounded-lg border-2 p-4 transition-all ${
-                      formData.category === category.id
+                      formData.category === category.name
                         ? 'border-blue-600 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -292,6 +329,13 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
             </div>
           </div>
 
+          {(formError || error) && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              {formError || error}
+            </div>
+          )}
+
           {/* Submit Buttons */}
           <div className="flex gap-4">
             <button
@@ -303,9 +347,10 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-lg bg-orange-600 py-3 font-semibold text-white transition-colors hover:bg-orange-700"
+              disabled={submitting}
+              className="flex-1 rounded-lg bg-orange-600 py-3 font-semibold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Submit Request
+              {submitting ? 'Submitting…' : 'Submit Request'}
             </button>
           </div>
         </form>

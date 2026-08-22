@@ -1,13 +1,26 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, Clock, MapPin, User, Phone, Mail, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, User, Phone, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { mockViewingAvailableDates as availableDates } from '../store/mockData';
+import { useCreateViewing } from '@/hooks/useProperties';
 
 interface ScheduleViewingProps {
-  propertyId: number;
+  propertyId: string;
   propertyTitle: string;
   propertyAddress: string;
   onBack: () => void;
   onSubmit: () => void;
+}
+
+// Parses a "10:00 AM" / "2:00 PM" slot label into a 24h hour -- the API
+// takes one scheduledAt timestamp, not a separate date + label.
+function slotToHour(slot: string): number {
+  const match = slot.match(/^(\d{1,2}):00\s*(AM|PM)$/i);
+  if (!match) return 9;
+  let hour = parseInt(match[1], 10);
+  const meridiem = match[2].toUpperCase();
+  if (meridiem === 'PM' && hour !== 12) hour += 12;
+  if (meridiem === 'AM' && hour === 12) hour = 0;
+  return hour;
 }
 
 export function ScheduleViewing({
@@ -17,6 +30,7 @@ export function ScheduleViewing({
   onBack,
   onSubmit,
 }: ScheduleViewingProps) {
+  const { submit, submitting, error } = useCreateViewing(propertyId);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     date: '',
@@ -28,19 +42,36 @@ export function ScheduleViewing({
     specialRequirements: '',
     agreeToTerms: false,
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedDate = availableDates.find((d) => d.date === formData.date);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!formData.agreeToTerms) {
-      alert('Please agree to the terms and conditions');
+      setFormError('Please agree to the terms and conditions');
       return;
     }
-    // Simulate booking
-    setTimeout(() => {
+
+    const hour = slotToHour(formData.timeSlot);
+    const scheduledAt = new Date(formData.date);
+    scheduledAt.setHours(hour, 0, 0, 0);
+
+    try {
+      await submit({
+        scheduledAt: scheduledAt.toISOString(),
+        notes: formData.specialRequirements || undefined,
+      });
+      // Matches the pre-existing behavior: the step===3 confirmation JSX
+      // below was already unreachable dead code (nothing ever set step to
+      // 3) -- preserved as-is rather than newly wiring it up, since that
+      // would change this form's navigation contract beyond this phase's
+      // scope of "make the submission real."
       onSubmit();
-    }, 1000);
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
   };
 
   if (step === 3) {
@@ -324,6 +355,13 @@ export function ScheduleViewing({
             </div>
           )}
 
+          {(formError || error) && (
+            <div className="mt-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              {formError || error}
+            </div>
+          )}
+
           {/* Navigation Buttons */}
           <div className="mt-6 flex gap-4">
             {step === 2 && (
@@ -347,9 +385,10 @@ export function ScheduleViewing({
                 type="button"
                 onClick={() => {
                   if (!formData.date || !formData.timeSlot) {
-                    alert('Please select both a date and time');
+                    setFormError('Please select both a date and time');
                     return;
                   }
+                  setFormError(null);
                   setStep(2);
                 }}
                 className="flex-1 rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
@@ -359,9 +398,10 @@ export function ScheduleViewing({
             ) : (
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-green-600 py-3 font-semibold text-white hover:bg-green-700"
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-green-600 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Confirm Viewing
+                {submitting ? 'Confirming…' : 'Confirm Viewing'}
               </button>
             )}
           </div>

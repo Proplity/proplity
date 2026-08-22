@@ -9,7 +9,7 @@ export default function Page() {
     <MaintenanceRequestForm
       onBack={() => router.push('/dashboard')}
       onSubmit={() => {
-        alert('Maintenance request submitted successfully! You will receive updates via SMS and email.');
+        alert('Maintenance request submitted successfully!');
         router.push('/dashboard');
       }}
     />

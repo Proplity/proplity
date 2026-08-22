@@ -12,7 +12,10 @@ import {
   Loader,
   Camera,
   Video,
+  AlertCircle,
 } from 'lucide-react';
+import { useCreateProperty } from '@/hooks/useProperties';
+import { api } from '@/lib/apiClient';
 
 interface ListPropertyProps {
   onBack: () => void;
@@ -20,6 +23,11 @@ interface ListPropertyProps {
 }
 
 export function ListProperty({ onBack, userRole }: ListPropertyProps) {
+  const { submit: createProperty, submitting: creatingProperty, error: propertyError } = useCreateProperty();
+  const [submittingUnit, setSubmittingUnit] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitting = creatingProperty || submittingUnit;
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     propertyType: '',
@@ -103,9 +111,40 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    alert('Property listing submitted for AI verification! You will be notified once approved.');
-    onBack();
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    try {
+      // Property has no subtype field beyond the 4-value PropertyType enum
+      // -- the mock form's granular types (Duplex, Bungalow, ...) have no
+      // schema home; folded into a descriptive name instead of a lost field.
+      const property = await createProperty({
+        name: `${formData.propertyType || 'Property'} at ${formData.address}`,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        type: 'RESIDENTIAL',
+        description: formData.description || undefined,
+      });
+
+      setSubmittingUnit(true);
+      try {
+        await api.properties.createUnit(property.id, {
+          unitNumber: '1',
+          bedrooms: parseInt(formData.bedrooms, 10) || 0,
+          bathrooms: parseFloat(formData.bathrooms) || 0,
+          rentAmount: parseFloat(formData.rentAmount) || 0,
+          listedPaymentFrequency: formData.rentFrequency === 'monthly' ? 'MONTHLY' : 'ANNUAL',
+          sqft: formData.sqft ? parseInt(formData.sqft, 10) : undefined,
+        });
+      } finally {
+        setSubmittingUnit(false);
+      }
+
+      alert('Property listing submitted for AI verification! You will be notified once approved.');
+      onBack();
+    } catch {
+      setSubmitError(propertyError ?? 'Failed to create the unit for this listing.');
+    }
   };
 
   const toggleArrayItem = (array: string[], item: string, setter: (val: any) => void) => {
@@ -576,13 +615,21 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
           ) : (
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-700"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload className="h-5 w-5" />
-              Submit for Verification
+              {submitting ? 'Submitting…' : 'Submit for Verification'}
             </button>
           )}
         </div>
+
+        {submitError && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            {submitError}
+          </div>
+        )}
       </div>
     </div>
   );

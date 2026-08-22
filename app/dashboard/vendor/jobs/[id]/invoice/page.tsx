@@ -7,5 +7,5 @@ export default function Page() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
 
-  return <VendorCreateInvoice jobId={Number(id)} onBack={() => router.push('/dashboard')} />;
+  return <VendorCreateInvoice jobId={id} onBack={() => router.push('/dashboard')} />;
 }

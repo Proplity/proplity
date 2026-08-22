@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { ArrowLeft, DollarSign, Plus, Trash2, FileText, Send } from 'lucide-react';
+import { ArrowLeft, DollarSign, Plus, Trash2, FileText, Send, AlertCircle } from 'lucide-react';
 import {
   mockInvoiceJobDetails,
   mockInvoiceVendorInfo as vendorInfo,
 } from '../store/mockData';
+import { useCreateInvoice } from '@/hooks/useInvoices';
 
 interface VendorCreateInvoiceProps {
-  jobId: number;
+  jobId: string;
   onBack: () => void;
 }
 
 export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps) {
+  const { submit, submitting, error } = useCreateInvoice();
   const [lineItems, setLineItems] = useState([
     {
       id: 1,
@@ -70,9 +72,28 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
   const tax = subtotal * 0.075; // 7.5% VAT
   const total = subtotal + tax;
 
-  const handleSubmit = () => {
-    alert('Invoice submitted successfully! Payment will be processed within 48 hours.');
-    onBack();
+  const handleSubmit = async () => {
+    // Invoice has a single amount + one description string, no line-item
+    // breakdown in the schema -- the itemized rows are summed into amount
+    // and rendered as text into description instead of being lost.
+    const description = lineItems
+      .filter((item) => item.description)
+      .map((item) => `${item.description} — ${item.quantity} x ₦${item.rate.toLocaleString()} = ₦${item.amount.toLocaleString()}`)
+      .join('\n');
+
+    try {
+      await submit({
+        maintenanceRequestId: jobId,
+        type: 'MAINTENANCE',
+        amount: total,
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        description,
+      });
+      alert('Invoice submitted successfully! Payment will be processed within 48 hours.');
+      onBack();
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
   };
 
   return (
@@ -92,7 +113,7 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
             <div>
               <h1 className="mb-2 text-3xl font-bold">INVOICE</h1>
               <p className="text-sm text-gray-600">
-                Invoice #INV-{jobId.toString().padStart(6, '0')}
+                For job #{jobId.slice(0, 8)}
               </p>
               <p className="text-sm text-gray-600">
                 Date:{' '}
@@ -276,14 +297,22 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
           />
         </div>
 
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700"
+            disabled={submitting}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-5 w-5" />
-            Submit Invoice
+            {submitting ? 'Submitting…' : 'Submit Invoice'}
           </button>
           <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50">
             <FileText className="h-5 w-5" />

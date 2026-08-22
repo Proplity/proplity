@@ -8,10 +8,7 @@ export default function Page() {
   return (
     <AddTenantForm
       onBack={() => router.push('/dashboard/tenants')}
-      onComplete={() => {
-        alert('Tenancy created successfully! An invitation has been sent to the tenant.');
-        router.push('/dashboard/tenants');
-      }}
+      onComplete={() => router.push('/dashboard/tenants')}
     />
   );
 }

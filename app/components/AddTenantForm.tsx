@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,10 +16,19 @@ import {
   Link2,
   FileText,
   Upload,
+  AlertCircle,
 } from 'lucide-react';
-import { mockAvailableProperties as availableProperties } from '../store/mockData';
+import { useProperties, useUnits } from '@/hooks/useProperties';
+import { useCreateLease } from '@/hooks/useLeases';
 
 const STEPS = ['Tenant Info', 'Link Property', 'Lease Details', 'Review'];
+
+const RENT_FREQUENCY_MAP: Record<string, string> = {
+  monthly: 'MONTHLY',
+  quarterly: 'QUARTERLY',
+  biannually: 'BI_ANNUAL',
+  yearly: 'ANNUAL',
+};
 
 interface AddTenantFormProps {
   onBack: () => void;
@@ -27,9 +36,26 @@ interface AddTenantFormProps {
 }
 
 export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
+  const { data: properties } = useProperties();
+  const { submit: createLease, submitting, error } = useCreateLease();
+
   const [step, setStep] = useState(0);
   const [propertySearch, setPropertySearch] = useState('');
-  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { data: vacantUnits } = useUnits(selectedPropertyId, 'VACANT');
+
+  // Auto-select the only vacant unit -- most properties in the seeded data
+  // have exactly one, and forcing a second click there would be friction
+  // for no reason.
+  useEffect(() => {
+    if (vacantUnits.length === 1) {
+      setSelectedUnitId(vacantUnits[0].id);
+      setLeaseDetails((s) => ({ ...s, rentAmount: String(vacantUnits[0].rentAmount) }));
+    }
+  }, [vacantUnits]);
 
   const [tenantInfo, setTenantInfo] = useState({
     firstName: '',
@@ -51,25 +77,58 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
     paymentDueDay: '1',
   });
 
-  const selectedProperty = availableProperties.find((p) => p.id === selectedPropertyId);
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
+  const selectedUnit = vacantUnits.find((u) => u.id === selectedUnitId);
 
-  const filteredProperties = availableProperties.filter(
+  const filteredProperties = properties.filter(
     (p) =>
-      p.title.toLowerCase().includes(propertySearch.toLowerCase()) ||
-      p.location.toLowerCase().includes(propertySearch.toLowerCase()),
+      p.name.toLowerCase().includes(propertySearch.toLowerCase()) ||
+      p.address.toLowerCase().includes(propertySearch.toLowerCase()),
   );
+
+  const selectProperty = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    setSelectedUnitId(null);
+  };
 
   const canProceed = () => {
     if (step === 0)
       return tenantInfo.firstName && tenantInfo.lastName && tenantInfo.email && tenantInfo.phone;
-    if (step === 1) return selectedPropertyId !== null;
+    if (step === 1) return selectedUnitId !== null;
     if (step === 2)
       return leaseDetails.startDate && leaseDetails.endDate && leaseDetails.rentAmount;
     return true;
   };
 
-  const handleSubmit = () => {
-    onComplete();
+  const handleSubmit = async () => {
+    setFormError(null);
+    if (!selectedUnitId) {
+      setFormError('Please select a unit before creating the tenancy.');
+      return;
+    }
+
+    try {
+      const lease = await createLease({
+        unitId: selectedUnitId,
+        tenantEmail: tenantInfo.email,
+        tenantName: `${tenantInfo.firstName} ${tenantInfo.lastName}`.trim(),
+        tenantPhone: tenantInfo.phone || undefined,
+        startDate: leaseDetails.startDate,
+        endDate: leaseDetails.endDate,
+        rentAmount: parseFloat(leaseDetails.rentAmount) || 0,
+        deposit: parseFloat(leaseDetails.securityDeposit) || 0,
+        paymentFrequency: RENT_FREQUENCY_MAP[leaseDetails.rentFrequency] ?? 'ANNUAL',
+      });
+
+      alert(
+        lease.tenantInvited
+          ? `Tenancy created! An invitation has been sent to ${tenantInfo.email} to set up their account.`
+          : `Tenancy created and linked to the existing account for ${tenantInfo.email}.`,
+      );
+      onComplete();
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
   };
 
   return (
@@ -261,62 +320,81 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
               {filteredProperties.map((prop) => (
                 <button
                   key={prop.id}
-                  onClick={() => {
-                    setSelectedPropertyId(prop.id);
-                    setLeaseDetails((s) => ({
-                      ...s,
-                      rentAmount: prop.rent.replace('/yr', '').replace('₦', '').replace(',', ''),
-                    }));
-                  }}
+                  onClick={() => selectProperty(prop.id)}
                   className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
                     selectedPropertyId === prop.id
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                        <Home className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{prop.title}</p>
-                        <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          {prop.location} · {prop.unit}
-                        </div>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Bed className="h-3 w-3" />
-                            {prop.bedrooms} bed
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Bath className="h-3 w-3" />
-                            {prop.bathrooms} bath
-                          </span>
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                      <Home className="h-5 w-5 text-blue-600" />
                     </div>
-                    <div className="ml-4 shrink-0 text-right">
-                      <p className="text-sm font-semibold text-blue-600">{prop.rent}</p>
-                      <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                        Vacant
-                      </span>
+                    <div>
+                      <p className="font-medium text-gray-900">{prop.name}</p>
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                        <MapPin className="h-3 w-3" />
+                        {prop.address}
+                      </div>
                     </div>
                   </div>
-                  {selectedPropertyId === prop.id && (
-                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-blue-600">
-                      <CheckCircle className="h-3.5 w-3.5" /> Selected
-                    </div>
-                  )}
                 </button>
               ))}
               {filteredProperties.length === 0 && (
-                <div className="py-8 text-center text-sm text-gray-400">
-                  No vacant properties found.
-                </div>
+                <div className="py-8 text-center text-sm text-gray-400">No properties found.</div>
               )}
             </div>
+
+            {selectedPropertyId && (
+              <div className="rounded-xl border border-gray-200 p-4">
+                <p className="mb-3 text-sm font-medium text-gray-700">Select a vacant unit</p>
+                {vacantUnits.length === 0 ? (
+                  <p className="text-sm text-gray-400">No vacant units on this property.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {vacantUnits.map((unit) => (
+                      <button
+                        key={unit.id}
+                        onClick={() => {
+                          setSelectedUnitId(unit.id);
+                          setLeaseDetails((s) => ({ ...s, rentAmount: String(unit.rentAmount) }));
+                        }}
+                        className={`w-full rounded-lg border-2 p-3 text-left transition-all ${
+                          selectedUnitId === unit.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Unit {unit.unitNumber}</p>
+                            <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Bed className="h-3 w-3" />
+                                {unit.bedrooms} bed
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Bath className="h-3 w-3" />
+                                {unit.bathrooms} bath
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold text-blue-600">
+                            ₦{unit.rentAmount.toLocaleString()}/{unit.listedPaymentFrequency.toLowerCase()}
+                          </p>
+                        </div>
+                        {selectedUnitId === unit.id && (
+                          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600">
+                            <CheckCircle className="h-3.5 w-3.5" /> Selected
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -328,14 +406,14 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
               <h2 className="font-semibold text-gray-800">Lease Details</h2>
             </div>
 
-            {selectedProperty && (
+            {selectedProperty && selectedUnit && (
               <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <Home className="h-5 w-5 shrink-0 text-blue-500" />
                 <div>
                   <p className="text-sm font-medium text-blue-800">
-                    {selectedProperty.title} — {selectedProperty.unit}
+                    {selectedProperty.name} — Unit {selectedUnit.unitNumber}
                   </p>
-                  <p className="text-xs text-blue-600">{selectedProperty.location}</p>
+                  <p className="text-xs text-blue-600">{selectedProperty.address}</p>
                 </div>
               </div>
             )}
@@ -520,11 +598,11 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-y-2 px-4 py-3 text-sm">
                 <span className="text-gray-500">Property</span>
-                <span className="font-medium">{selectedProperty?.title}</span>
+                <span className="font-medium">{selectedProperty?.name}</span>
                 <span className="text-gray-500">Unit</span>
-                <span className="font-medium">{selectedProperty?.unit}</span>
+                <span className="font-medium">{selectedUnit?.unitNumber}</span>
                 <span className="text-gray-500">Location</span>
-                <span className="font-medium">{selectedProperty?.location}</span>
+                <span className="font-medium">{selectedProperty?.address}</span>
               </div>
 
               <div className="bg-gray-50 px-4 py-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
@@ -569,6 +647,13 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
         )}
       </div>
 
+      {(formError || error) && (
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          {formError || error}
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
         <button
@@ -591,10 +676,11 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
         ) : (
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700"
+            disabled={submitting}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCircle className="h-4 w-4" />
-            Create Tenancy
+            {submitting ? 'Creating…' : 'Create Tenancy'}
           </button>
         )}
       </div>

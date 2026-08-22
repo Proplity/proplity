@@ -1,0 +1,77 @@
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '@/lib/apiClient';
+import { useApiSubmit } from './useApiSubmit';
+import type { CreatePropertyInput, CreateUnitInput, CreateViewingInput, Property, Unit } from '@/lib/api/types';
+
+export function useProperties(filters?: { city?: string; state?: string; minBedrooms?: number }) {
+  const [data, setData] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.properties.list(filters);
+      setData(res.data.data);
+    } catch {
+      setError('Failed to load properties');
+    } finally {
+      setLoading(false);
+    }
+    // filters is a plain object literal at call sites -- stringify to avoid
+    // an effect loop from a new object reference every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters)]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
+// A property's real units -- needed anywhere a form must pick a specific
+// unit, not just a property (Lease.unitId requires one).
+export function useUnits(propertyId: string | null, status?: string) {
+  const [data, setData] = useState<Unit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    if (!propertyId) {
+      setData([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.properties.listUnits(propertyId, status);
+      setData(res.data.data);
+    } catch {
+      setError('Failed to load units');
+    } finally {
+      setLoading(false);
+    }
+  }, [propertyId, status]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
+}
+
+export function useCreateProperty() {
+  return useApiSubmit((body: CreatePropertyInput) => api.properties.create(body).then((res) => res.data.data));
+}
+
+export function useCreateUnit(propertyId: string) {
+  return useApiSubmit((body: CreateUnitInput) =>
+    api.properties.createUnit(propertyId, body).then((res) => res.data.data),
+  );
+}
+
+export function useCreateViewing(propertyId: string) {
+  return useApiSubmit((body: CreateViewingInput) => api.properties.createViewing(propertyId, body));
+}
