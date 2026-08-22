@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    // The app was imported from a Figma/Vite export; don't block dev/build on lint.
-    ignoreDuringBuilds: true,
-  },
+  // pg/@prisma/client are on Next's own default server-external-packages list,
+  // but Turbopack (default bundler since Next 16) doesn't yet reliably honor
+  // that default when the packages sit in pnpm's nested .pnpm store — declaring
+  // them explicitly works around it. See vercel/next.js#68805.
+  serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
   typescript: {
     // Don't block the build on pre-existing type quirks from the export.
     ignoreBuildErrors: true,

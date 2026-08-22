@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth/jwt';
 
 const PROTECTED_ROUTES = ['/dashboard', '/admin'];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (!PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
@@ -15,7 +15,7 @@ export async function middleware(req: NextRequest) {
   const payload = token ? await verifyToken(token) : null;
 
   if (!payload) {
-    const loginUrl = new URL('/login', req.url);
+    const loginUrl = new URL('/', req.url);
     loginUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(loginUrl);
   }
