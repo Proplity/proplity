@@ -68,8 +68,12 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [showAIAssistant, setShowAIAssistant] = useState(false);
 
-  const role = (auth.user?.role as Role) || 'manager';
-  const tabs = getTabsForRole(role);
+  // Falling back to 'manager' here while the async /me fetch is still in
+  // flight (auth.loading) made every other role's sidebar flash manager's
+  // tabs on every reload. Only resolve a role -- and therefore tabs -- once
+  // the real one is known.
+  const role = auth.user?.role as Role | undefined;
+  const tabs = role ? getTabsForRole(role) : [];
 
   return (
     <div className="flex size-full flex-col bg-gray-50">
@@ -80,7 +84,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="flex items-center gap-4">
-            {process.env.NODE_ENV !== 'production' && (
+            {process.env.NODE_ENV !== 'production' && role && (
               <RoleSwitcher
                 currentRole={role}
                 onRoleChange={(newRole) => router.push(newRole === 'admin' ? '/admin' : '/dashboard')}
@@ -95,7 +99,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
             </button>
             <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full ${AVATAR_COLOR[role]}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
               >
                 <User className="h-4 w-4 text-white" />
               </div>
