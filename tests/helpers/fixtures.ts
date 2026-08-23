@@ -1,6 +1,14 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { Role, UserStatus, PaymentFrequency, LeaseStatus } from '@prisma/client';
+import {
+  Role,
+  UserStatus,
+  PaymentFrequency,
+  LeaseStatus,
+  MaintenancePriority,
+  MaintenanceStatus,
+  ScheduleFrequency,
+} from '@prisma/client';
 import { testPrisma } from './db';
 
 let counter = 0;
@@ -127,6 +135,58 @@ export async function createLease(
       paymentFrequency: overrides.paymentFrequency ?? PaymentFrequency.ANNUAL,
       deposit: overrides.deposit ?? 200_000,
       status: overrides.status ?? LeaseStatus.ACTIVE,
+    },
+  });
+}
+
+export async function createMaintenanceCategory(
+  overrides: Partial<{ name: string; isActive: boolean }> = {},
+) {
+  return testPrisma.maintenanceCategory.create({
+    data: {
+      name: overrides.name ?? unique('Category'),
+      isActive: overrides.isActive ?? true,
+    },
+  });
+}
+
+export async function createMaintenanceRequest(
+  unitId: string,
+  tenantId: string,
+  overrides: Partial<{
+    title: string;
+    description: string;
+    categoryId: string | null;
+    vendorId: string | null;
+    priority: MaintenancePriority;
+    status: MaintenanceStatus;
+  }> = {},
+) {
+  return testPrisma.maintenanceRequest.create({
+    data: {
+      unitId,
+      tenantId,
+      title: overrides.title ?? 'Leaky faucet',
+      description: overrides.description ?? 'The kitchen faucet is leaking.',
+      categoryId: overrides.categoryId ?? null,
+      vendorId: overrides.vendorId ?? null,
+      priority: overrides.priority ?? MaintenancePriority.MEDIUM,
+      status: overrides.status ?? MaintenanceStatus.SUBMITTED,
+    },
+  });
+}
+
+export async function createMaintenanceSchedule(
+  unitId: string,
+  categoryId: string,
+  overrides: Partial<{ frequency: ScheduleFrequency; nextDueDate: Date }> = {},
+) {
+  return testPrisma.maintenanceSchedule.create({
+    data: {
+      unitId,
+      categoryId,
+      frequency: overrides.frequency ?? ScheduleFrequency.MONTHLY,
+      nextDueDate: overrides.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
 }
