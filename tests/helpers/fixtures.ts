@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus, PaymentFrequency, LeaseStatus } from '@prisma/client';
 import { testPrisma } from './db';
 
 let counter = 0;
@@ -59,5 +59,74 @@ export async function createVerificationToken(
 export async function fillRateLimit(identifier: string, count = 5) {
   await testPrisma.loginAttempt.createMany({
     data: Array.from({ length: count }, () => ({ identifier })),
+  });
+}
+
+export async function createProperty(
+  overrides: Partial<{
+    name: string;
+    city: string;
+    state: string;
+    managerId: string | null;
+    landlordId: string | null;
+    isPublished: boolean;
+  }> = {},
+) {
+  return testPrisma.property.create({
+    data: {
+      name: overrides.name ?? unique('Property'),
+      address: '1 Test Street',
+      city: overrides.city ?? 'Lagos',
+      state: overrides.state ?? 'Lagos',
+      managerId: overrides.managerId ?? null,
+      landlordId: overrides.landlordId ?? null,
+      isPublished: overrides.isPublished ?? false,
+    },
+  });
+}
+
+export async function createUnit(
+  propertyId: string,
+  overrides: Partial<{
+    unitNumber: string;
+    bedrooms: number;
+    rentAmount: number;
+    squareFeet: number | null;
+  }> = {},
+) {
+  return testPrisma.unit.create({
+    data: {
+      propertyId,
+      unitNumber: overrides.unitNumber ?? unique('Unit'),
+      bedrooms: overrides.bedrooms ?? 2,
+      rentAmount: overrides.rentAmount ?? 1_000_000,
+      squareFeet: overrides.squareFeet ?? null,
+    },
+  });
+}
+
+export async function createLease(
+  unitId: string,
+  tenantId: string,
+  overrides: Partial<{
+    startDate: Date;
+    endDate: Date;
+    rentAmount: number;
+    paymentFrequency: PaymentFrequency;
+    deposit: number;
+    status: LeaseStatus;
+  }> = {},
+) {
+  return testPrisma.lease.create({
+    data: {
+      unitId,
+      tenantId,
+      startDate: overrides.startDate ?? new Date(),
+      endDate: overrides.endDate ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      rentAmount: overrides.rentAmount ?? 1_000_000,
+      paymentFrequency: overrides.paymentFrequency ?? PaymentFrequency.ANNUAL,
+      deposit: overrides.deposit ?? 200_000,
+      status: overrides.status ?? LeaseStatus.ACTIVE,
+    },
   });
 }
