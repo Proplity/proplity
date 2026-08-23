@@ -10,6 +10,8 @@ import {
   ScheduleFrequency,
   InvoiceType,
   InvoiceStatus,
+  AccessCodeStatus,
+  ConversationType,
 } from '@prisma/client';
 import { testPrisma } from './db';
 
@@ -215,6 +217,52 @@ export async function createInvoice(
       dueDate: overrides.dueDate ?? new Date(),
       status: overrides.status ?? InvoiceStatus.UNPAID,
       description: overrides.description,
+    },
+  });
+}
+
+export async function createAccessCode(
+  unitId: string,
+  createdById: string,
+  overrides: Partial<{
+    code: string;
+    guestName: string;
+    validFrom: Date;
+    validUntil: Date | null;
+    status: AccessCodeStatus;
+  }> = {},
+) {
+  return testPrisma.accessCode.create({
+    data: {
+      unitId,
+      createdById,
+      code: overrides.code ?? unique('CODE'),
+      guestName: overrides.guestName,
+      validFrom: overrides.validFrom ?? new Date(Date.now() - 60_000),
+      validUntil: overrides.validUntil ?? null,
+      status: overrides.status ?? AccessCodeStatus.ACTIVE,
+    },
+  });
+}
+
+export async function createConversation(
+  type: ConversationType,
+  participantIds: string[],
+  overrides: Partial<{
+    title: string;
+    propertyId: string;
+    leaseId: string;
+    maintenanceRequestId: string;
+  }> = {},
+) {
+  return testPrisma.conversation.create({
+    data: {
+      type,
+      title: overrides.title,
+      propertyId: overrides.propertyId,
+      leaseId: overrides.leaseId,
+      maintenanceRequestId: overrides.maintenanceRequestId,
+      participants: { create: participantIds.map((userId) => ({ userId })) },
     },
   });
 }
