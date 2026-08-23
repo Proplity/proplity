@@ -1,9 +1,11 @@
 /node_modules
 /.next
+/.next-test
 /out
 /build
 next-env.d.ts
 .env
+.env.test
 .env*.local
 npm-debug.log*
 .DS_Store
