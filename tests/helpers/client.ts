@@ -3,6 +3,10 @@ import { TEST_BASE_URL } from '../setup/constants';
 type ApiFetchOptions = {
   method?: string;
   body?: unknown;
+  /** Send this exact string as the body instead of JSON.stringify(body) -- for
+   * callers (e.g. the payments webhook) that need to sign or otherwise depend
+   * on the precise raw bytes sent. Takes precedence over `body` if both are set. */
+  rawBody?: string;
   cookie?: string;
   headers?: Record<string, string>;
 };
@@ -23,7 +27,7 @@ export async function apiFetch<T = any>(
   pathAndQuery: string,
   opts: ApiFetchOptions = {},
 ): Promise<ApiResponse<T>> {
-  const { method = 'GET', body, cookie, headers = {} } = opts;
+  const { method = 'GET', body, rawBody, cookie, headers = {} } = opts;
 
   const res = await fetch(`${TEST_BASE_URL}${pathAndQuery}`, {
     method,
@@ -33,7 +37,7 @@ export async function apiFetch<T = any>(
       ...(cookie ? { Cookie: cookie } : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: rawBody !== undefined ? rawBody : body !== undefined ? JSON.stringify(body) : undefined,
     redirect: 'manual',
   });
 

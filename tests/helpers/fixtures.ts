@@ -8,6 +8,8 @@ import {
   MaintenancePriority,
   MaintenanceStatus,
   ScheduleFrequency,
+  InvoiceType,
+  InvoiceStatus,
 } from '@prisma/client';
 import { testPrisma } from './db';
 
@@ -187,6 +189,32 @@ export async function createMaintenanceSchedule(
       categoryId,
       frequency: overrides.frequency ?? ScheduleFrequency.MONTHLY,
       nextDueDate: overrides.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+}
+
+export async function createInvoice(
+  overrides: Partial<{
+    leaseId: string | null;
+    maintenanceRequestId: string | null;
+    userId: string | null;
+    type: InvoiceType;
+    amount: number;
+    dueDate: Date;
+    status: InvoiceStatus;
+    description: string;
+  }> = {},
+) {
+  return testPrisma.invoice.create({
+    data: {
+      leaseId: overrides.leaseId ?? null,
+      maintenanceRequestId: overrides.maintenanceRequestId ?? null,
+      userId: overrides.userId ?? null,
+      type: overrides.type ?? InvoiceType.RENT,
+      amount: overrides.amount ?? 100_000,
+      dueDate: overrides.dueDate ?? new Date(),
+      status: overrides.status ?? InvoiceStatus.UNPAID,
+      description: overrides.description,
     },
   });
 }
