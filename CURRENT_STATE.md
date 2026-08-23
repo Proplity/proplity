@@ -1,7 +1,7 @@
 # 📊 Proplity — Current Project & Codebase State
 
 > **Last Updated:** 2026-08-23
-> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration | Next: an automated test suite, or the Finding-4 punch list — see `out/next-phase-analysis.md`
+> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration and Phase 10's automated test suite | Next: the Finding-4 punch list — see `out/next-phase-analysis.md`
 
 ---
 
@@ -16,7 +16,7 @@
 | **Frontend UI Views** | **100% wired** | All 20 originally-catalogued mock-data dashboard/detail components (Phase 9, 6 sub-phases) now read real data through 10 hook files and a typed `api.*` client, plus the 5 Phase 7 write-forms and `AddTenantForm`'s tenant-invite flow. Only 3 marketing/illustrative pages (`LandlordFeaturePage`, `TenantFeaturePage`, `ServiceProviderFeaturePage`) and `AIAssistant.tsx` still read `app/store/*` — deliberately out of scope, no real backing exists for either. |
 | **Paystack Integration** | **Built, partially verified** | Checkout initialization, HMAC-SHA512 webhook, autopay mandates all built. Webhook fully live-tested (self-signed test key). `/payments/initialize`'s actual call to Paystack's live API has never run — no real test-mode account provided yet. |
 | **Email** | **Console-transport only** | `lib/email.ts` logs instead of delivering. Real, tested, and in production use for the Phase 7 tenant-invite flow. Self-registration (`register`) still has no verification step at all — separate, older, still-deferred gap. |
-| **Automated Tests** | **0%** | No Jest/Vitest/Playwright/Cypress, no CI config. Every phase verified manually via `curl` against the live dev server and seeded database. |
+| **Automated Tests** | **100%** | Vitest, `tests/`, 126 tests across 8 files, `pnpm test`. Real HTTP against a real spawned `next dev` server + a dedicated `proplity_test_db` (dropped/recreated per run) — see §6 below. Still no CI config (running the suite is manual, but the suite itself is now real and repeatable). |
 
 ---
 
@@ -51,7 +51,7 @@
 
 ### 3. ⚙️ Domain REST APIs (`app/api/v1/`) — **100% COMPLETE, LIVE-TESTED**
 
-All 34 routes below were built phase-by-phase, each verified against the real dev server and seeded database (RBAC boundaries, business-rule enforcement, and cleanup of test data), with a full writeup per phase in `out/phases/`:
+All 36 routes below were built phase-by-phase, each verified against the real dev server and seeded database (RBAC boundaries, business-rule enforcement, and cleanup of test data), with a full writeup per phase in `out/phases/`. As of Phase 10, all 36 also have automated HTTP-level regression tests (§6 below):
 
 | Phase | Routes | Doc |
 |---|---|---|
@@ -65,6 +65,7 @@ All 34 routes below were built phase-by-phase, each verified against the real de
 | 7 — Frontend Integration | 5 forms wired + tenant-invite flow (no new API routes beyond the `leases`/`verify-email` extensions above) | `domain-api-phase-7-frontend-integration.md` |
 | 8 — Background Workers | `cron/[job]` (1) | `domain-api-phase-8-background-workers.md` |
 | 9 — Frontend Read-Path Hydration | `vendors` (1), `admin/users` (1) — plus additive `include`/`select` extensions to several Phase 1–6 routes; no other new routes | `domain-api-phase-9-*.md` (6 sub-phase docs) |
+| 10 — Automated Test Suite | No new routes — 126 tests added covering all 36 above | `domain-api-phase-10-*.md` (8 sub-phase docs) |
 
 Plus `auth/*` (7 routes, pre-existing).
 
@@ -93,6 +94,18 @@ Five idempotent workers, each with real logic against the schema (not stubs), in
 - **Flagged, not fixed**: `VendorCreateInvoice.tsx`'s submit only creates an invoice, never PATCHes the maintenance request to `COMPLETED` — a real gap affecting stat correctness, left alone since it was outside Phase 9.4's declared 2-component scope. See `CLAUDE.md`'s "Known gaps."
 - **Not verified in any phase**: interactive browser click-through (no browser-automation tool available in this environment) — every phase relied on `tsc`/`build`/SSR-200 checks plus direct `curl` inspection of raw API JSON responses.
 - **Supporting infrastructure**: `lib/apiClient.ts`'s domain-grouped `api.*` client, `lib/api/types.ts` (hand-written, expanded every sub-phase as new fields were needed), 10 hook files (`hooks/useProperties.ts`, `useMaintenanceRequests.ts`, `useLeases.ts`, `useInvoices.ts`, `useAccessCodes.ts`, `useVendors.ts`, `useAdminUsers.ts`, `useConversations.ts` — the last including the codebase's first polling hook, `useMessages`, 5s interval) built on a shared `useApiSubmit.ts` helper.
+
+---
+
+### 6. 🧪 Automated Tests (`tests/`) — **100% COMPLETE**
+
+- **126 tests across 8 files** (`tests/api/`, one per domain: `auth`, `properties`, `maintenance`, `leases`, `financial`, `access-control`, `communications`, `vendors-and-admin`), built across 8 sub-phases (Phase 10, `out/phases/domain-api-phase-10-*.md`) closing Finding 3 of `out/next-phase-analysis.md`. Run with `pnpm test`.
+- **Architecture**: real HTTP (`fetch`) against a real spawned `next dev` server, not direct handler imports — `getServerSession()` needs a real Next.js request context that a bare function call doesn't have. `tests/setup/globalSetup.ts` drops and recreates a dedicated `proplity_test_db` and runs `prisma migrate deploy` before spawning the server, once per `pnpm test` run. Configure via `.env.test` (gitignored; template at `.env.test.example`) — never the same database as `.env`.
+- **A real Next 16 constraint worked around**: a single `next dev` process is allowed per `distDir` (an OS-level lockfile) — the test server sets `NEXT_TEST_DIST_DIR=.next-test` (wired into `next.config.mjs`) so it runs alongside a developer's own `pnpm dev` without conflict.
+- **Fixtures** (`tests/helpers/fixtures.ts`) write directly via a test-only Prisma client (`tests/helpers/db.ts`), never through the API. `resetDb()` truncates every table per test file, discovered dynamically rather than hardcoded.
+- **Auth in tests**: `authCookie(userId, role)` mints a real JWT directly, bypassing login for every domain except `auth.test.ts` itself — keeps other suites fast and independent of the login rate limiter.
+- **Deliberately not covered**: `/payments/initialize`'s real Paystack call (would be a live external network call; matches the Paystack row above) and interactive browser behavior (no browser-automation tool in this environment).
+- **Verified zero risk to the dev database**: re-checked after every sub-phase — `proplity_db`'s seeded row counts are unchanged by a full test run, since the suite only ever touches `proplity_test_db`.
 
 ---
 
@@ -147,6 +160,9 @@ pnpm build
 # 5. Run a background worker manually (needs CRON_SECRET in .env)
 pnpm exec tsx scripts/workers/rentInvoicer.ts
 # or: curl -X POST localhost:3000/api/v1/cron/rent-invoicer -H "x-cron-secret: $CRON_SECRET"
+
+# 6. Run the automated test suite (needs .env.test -- copy .env.test.example first)
+pnpm test
 ```
 
 ---
@@ -154,6 +170,7 @@ pnpm exec tsx scripts/workers/rentInvoicer.ts
 ## 📄 Where to look next
 
 - `out/domain-api-implementation-plan.md` — the original full 6-phase domain-API spec (now complete).
-- `out/phases/*.md` — one detailed writeup per completed phase (what/why/verification), including the 6 Phase 9 sub-phase docs.
-- `out/next-phase-analysis.md` — the analysis that proposed Phase 9 (now complete); Finding 3 (automated tests) and Finding 4 (punch list) are what's left open from it.
+- `out/phases/*.md` — one detailed writeup per completed phase (what/why/verification), including the 6 Phase 9 and 8 Phase 10 sub-phase docs.
+- `out/phase-10-test-suite-plan.md` — the test suite's architecture and sub-phase breakdown.
+- `out/next-phase-analysis.md` — the analysis that proposed Phase 9 and Phase 10 (both now complete); Finding 4 (punch list) is what's left open from it.
 - `CLAUDE.md` — the authoritative, always-current project reference; read it before making changes.

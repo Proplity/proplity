@@ -8,7 +8,7 @@ Proplity is an AI-native rental/property management platform for the Nigerian ma
 
 ## Current state
 
-All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`) plus Phase 9 (frontend read-path hydration, `out/next-phase-analysis.md` Finding 2) are **complete** — 36 API routes, 35 page routes, 5 background workers, all live-tested against the real dev server and seeded database. Full history in `out/phases/*.md`, one doc per phase.
+All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`) plus Phase 9 (frontend read-path hydration, `out/next-phase-analysis.md` Finding 2) and Phase 10 (automated test suite, Finding 3) are **complete** — 36 API routes, 35 page routes, 5 background workers, 126 automated tests, all live-tested against the real dev server and seeded database. Full history in `out/phases/*.md`, one doc per phase.
 
 | Subsystem | Status |
 |---|---|
@@ -19,7 +19,7 @@ All 8 phases of the domain-API roadmap (`out/domain-api-implementation-plan.md`)
 | Paystack (checkout init, webhook, autopay) | Done, but `/payments/initialize`'s actual call to Paystack's API has never run against a real test-mode account — everything else is fully tested |
 | Email | Console-transport only (`lib/email.ts` logs instead of delivering) — real for the tenant-invite flow (Phase 7), not yet swapped for a real provider. Self-registration (`register`) still has no verification flow at all (separate, older gap, see "Deliberately deferred") |
 | Frontend UI (all 5 roles) | Done — Phase 9. All 20 originally-catalogued mock-data dashboard/detail components now read real data via 10 hook files and a typed `api.*` client; 6 forms wired to real APIs (5 from Phase 7, `AddTenantForm`'s invite flow) plus the 20 hydrated for display. Only marketing/illustrative pages (`*FeaturePage.tsx`) and `AIAssistant.tsx` still touch `app/store/*` — deliberately out of scope, no real backing exists for either. |
-| Automated tests | **None exist.** Every phase was verified manually against the live dev server; nothing persists as regression protection |
+| Automated tests | Done — Phase 10. Vitest, 126 tests across 8 files, `pnpm test`. Real HTTP against a real spawned `next dev` server + a dedicated `proplity_test_db` (dropped/recreated per run) — see "Testing" below |
 
 Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
 
@@ -34,6 +34,7 @@ pnpm build                        # production build
 pnpm exec tsx prisma/seed2.ts     # re-seed (enriched dataset)
 pnpm exec prisma migrate dev      # apply schema changes
 pnpm exec prisma generate         # regenerate client after schema edits
+pnpm test                         # run the automated test suite (see "Testing" below)
 ```
 
 Seeded dev accounts all use password `Password123!` — `admin@`, `manager@`, `landlord@`, `tenant@`, `vendor@proplity.com`.
@@ -208,9 +209,27 @@ Built in Phase 0, used by every domain route since:
 
 ---
 
+## Testing
+
+`pnpm test` (Vitest, `tests/`) — 126 tests across 8 files (one per domain: auth, properties, maintenance, leases, financial, access-control, communications, vendors-and-admin), all passing. Full plan and rationale in `out/phase-10-test-suite-plan.md`; per-sub-phase writeups in `out/phases/domain-api-phase-10-*.md`.
+
+**Real HTTP against a real spawned server, not direct handler imports.** `getServerSession()` needs the Next.js request-scoped `AsyncLocalStorage` context, which doesn't exist if a route handler is imported and called directly — so `tests/setup/globalSetup.ts` spawns a real `next dev` process and every test hits it over `fetch` (`tests/helpers/client.ts`'s `apiFetch()`), the same way every phase's manual `curl` verification always has.
+
+**A dedicated `proplity_test_db`**, not the seeded dev database — dropped and recreated on every `pnpm test` run (`tests/setup/globalSetup.ts`), migrated via `prisma migrate deploy`. Configure via `.env.test` (gitignored; copy `.env.test.example`). Never points at the same database as `.env`.
+
+**Next 16 quirk worth knowing**: a single `next dev` process is allowed per `distDir` (an OS-level lockfile). The test server sets `NEXT_TEST_DIST_DIR=.next-test` (wired into `next.config.mjs`'s `distDir`) so it can run alongside a developer's own `pnpm dev` without conflict.
+
+**Fixtures** (`tests/helpers/fixtures.ts`) write directly via a test-side Prisma client (`tests/helpers/db.ts`'s `testPrisma`, separate from the app's `lib/db.ts` singleton), never through the API — keeps each test's assertions about the route actually under test. `resetDb()` truncates every table (discovered dynamically from `information_schema`, not a hardcoded list) once per test file's `beforeAll`.
+
+**Auth in tests**: `tests/helpers/auth.ts`'s `authCookie(userId, role)` mints a real JWT directly via the app's own `signAccessToken()`, bypassing login for every test file except `auth.test.ts` itself (where login is literally what's under test) — keeps other domains' tests fast and independent of the DB-backed login rate limiter.
+
+**Known, deliberate gaps in coverage**: `/payments/initialize`'s actual call to Paystack's API (would be a live network call to an external service — matches the documented gap above) and any interactive browser behavior (no browser-automation tool available in this environment).
+
+---
+
 ## What's next
 
-All 6 domain-API phases, background workers, and frontend hydration (Phase 9) are done. See `out/next-phase-analysis.md` for the original prioritized proposal — Finding 2 (frontend hydration) is now complete; Finding 3 (an automated test suite, since every phase so far has only been verified manually) and Finding 4 (a punch list: real Paystack test-mode key, real email provider, cron scheduling, the `Unit.status`/`AccessCode.USED` gaps) remain open.
+All 6 domain-API phases, background workers, frontend hydration (Phase 9), and the automated test suite (Phase 10) are done. See `out/next-phase-analysis.md` for the original prioritized proposal — only Finding 4 remains: a punch list of real Paystack test-mode key, real email provider, cron scheduling, and the `Unit.status`/`AccessCode.USED` gaps.
 
 ---
 

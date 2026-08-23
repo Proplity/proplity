@@ -2,7 +2,7 @@
 
 > **Proplity** is a modern, enterprise-grade AI-powered Property Management & Tenant Experience Platform built on **Next.js 16.3.2 (App Router)**, **TypeScript**, **PostgreSQL 18**, and **Prisma ORM v7**.
 >
-> **Last updated:** 2026-08-23, after the full domain-API roadmap (Phase 0-pre through Phase 8) plus Phase 9 frontend read-path hydration. The app is real routes end to end — there is no client-side router component; every screen is a real Next.js route backed by a real API route.
+> **Last updated:** 2026-08-23, after the full domain-API roadmap (Phase 0-pre through Phase 8), Phase 9 frontend read-path hydration, and Phase 10's automated test suite. The app is real routes end to end — there is no client-side router component; every screen is a real Next.js route backed by a real API route.
 
 ---
 
@@ -19,6 +19,7 @@ graph TD
     PrismaClient["💎 Prisma ORM Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL Database (proplity_db)")]
     Cron["⏱️ /api/v1/cron/[job] + scripts/workers/*.ts — built, not scheduled"]
+    Tests["🧪 tests/ (Vitest) — 126 tests, real HTTP against a spawned server + proplity_test_db"]
 
     Client --> Store
     Client --> Hooks
@@ -28,6 +29,7 @@ graph TD
     LibCore --> PrismaClient
     Cron --> LibCore
     PrismaClient --> Postgres
+    Tests -.-> NextApi
 ```
 
 ---
@@ -148,11 +150,26 @@ proplity/
 │   ├── 📄 rentInvoicer.ts, overdueFlagger.ts, maintenanceScheduleDispatcher.ts
 │   └── 📄 accessCodeExpiryJanitor.ts, paymentReliabilityScorer.ts
 │
+├── 📁 tests/                                # Phase 10 — automated test suite (Vitest), 126 tests, `pnpm test`
+│   ├── 📁 setup/
+│   │   ├── 📄 globalSetup.ts                # Drops/recreates proplity_test_db, migrates, spawns a real next dev server
+│   │   ├── 📄 loadEnv.ts                    # Loads .env.test into each Vitest worker process
+│   │   └── 📄 constants.ts                  # TEST_PORT/TEST_BASE_URL shared across the globalSetup/worker process boundary
+│   ├── 📁 helpers/
+│   │   ├── 📄 db.ts                         # testPrisma client (separate from lib/db.ts) + resetDb()
+│   │   ├── 📄 fixtures.ts                   # createUser/createProperty/createLease/... factories, direct DB writes
+│   │   ├── 📄 auth.ts                       # authCookie() -- mints a real JWT directly, bypasses login
+│   │   └── 📄 client.ts                     # apiFetch() -- real HTTP against the spawned server, sets Origin for CSRF
+│   └── 📁 api/                              # One file per domain: auth, properties, maintenance, leases, financial,
+│       │                                    # access-control, communications, vendors-and-admin
+│       └── 📄 *.test.ts
+│
 ├── 📁 out/                                  # Planning docs & phase history (gitignored)
 │   ├── 📄 domain-api-implementation-plan.md # Original full 6-phase spec — now complete
-│   ├── 📄 next-phase-analysis.md            # Proposal that spawned Phase 9 (now complete); Findings 3/4 still open
-│   ├── 📄 phase-7-frontend-integration-plan.md, phase-8-background-workers-plan.md, phase-9-frontend-hydration-plan.md
-│   └── 📁 phases/                           # One detailed writeup per completed phase, incl. 6 Phase 9 sub-phase docs
+│   ├── 📄 next-phase-analysis.md            # Proposal that spawned Phases 9 & 10 (both now complete); Finding 4 still open
+│   ├── 📄 phase-7-frontend-integration-plan.md, phase-8-background-workers-plan.md,
+│   │      phase-9-frontend-hydration-plan.md, phase-10-test-suite-plan.md
+│   └── 📁 phases/                           # One detailed writeup per completed phase, incl. 6 Phase 9 + 8 Phase 10 sub-phase docs
 │
 ├── 📁 prisma/
 │   ├── 📄 mermaid.mermaid                   # Entity-relationship diagram
@@ -164,13 +181,16 @@ proplity/
 │
 ├── 📄 .env                                  # DATABASE_URL, JWT_SECRET, CRON_SECRET (gitignored)
 ├── 📄 .env.example
+├── 📄 .env.test                             # Test suite's own env, points at proplity_test_db (gitignored)
+├── 📄 .env.test.example
 ├── 📄 CLAUDE.md                             # Authoritative, always-current project reference — read first
 ├── 📄 CURRENT_STATE.md                      # This file's companion — subsystem-by-subsystem status
-├── 📄 next.config.mjs                       # serverExternalPackages workaround for Turbopack+pnpm+Prisma
+├── 📄 next.config.mjs                       # serverExternalPackages workaround + conditional distDir for the test server
 ├── 📄 package.json
 ├── 📄 prisma.config.ts
 ├── 📄 proxy.ts                              # Next 16's middleware.ts replacement — live edge auth guard for /dashboard, /admin
-└── 📄 tsconfig.json
+├── 📄 tsconfig.json
+└── 📄 vitest.config.mts                     # Phase 10 test suite config (globalSetup, setupFiles, fileParallelism: false)
 ```
 
 ---
@@ -187,6 +207,7 @@ proplity/
 | **`lib/`** | Auth, shared API infra, background workers, email, DB singleton | `jose`, `bcryptjs`, `@prisma/adapter-pg` |
 | **`lib/workers/` + `scripts/workers/`** | 5 background jobs, HTTP + CLI trigger surfaces | Plain async functions, no job-queue library |
 | **`prisma/`** | Schema, migrations, seeders | Prisma ORM v7 (multi-file schema), PostgreSQL 18 |
+| **`tests/`** | 126 automated tests, 8 files (one per domain) + setup/helpers | Vitest, real HTTP against a spawned `next dev` server + `proplity_test_db` |
 | **`out/`** | Planning docs and per-phase history (gitignored) | Markdown |
 | **`docs/`** | PRD and architecture specs | Markdown |
 
@@ -211,4 +232,7 @@ pnpm format                    # Auto-format all files with Prettier
 # Background workers (manual trigger; not yet on a schedule)
 pnpm exec tsx scripts/workers/rentInvoicer.ts
 curl -X POST localhost:3000/api/v1/cron/rent-invoicer -H "x-cron-secret: $CRON_SECRET"
+
+# Automated test suite (copy .env.test.example to .env.test first)
+pnpm test
 ```
