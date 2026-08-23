@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { Role, UserStatus } from '@prisma/client';
 import { testPrisma } from './db';
@@ -34,5 +35,29 @@ export async function createUser(
       status: overrides.status ?? UserStatus.ACTIVE,
       phoneNumber: overrides.phoneNumber ?? null,
     },
+  });
+}
+
+/** Mirrors verify-email's own token hashing so the route can find what we create here. */
+export async function createVerificationToken(
+  userId: string,
+  overrides: Partial<{ expiresAt: Date }> = {},
+) {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const record = await testPrisma.verificationToken.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+  return { rawToken, record };
+}
+
+/** Seeds LoginAttempt rows directly to simulate an identifier whose rate limit is already exhausted. */
+export async function fillRateLimit(identifier: string, count = 5) {
+  await testPrisma.loginAttempt.createMany({
+    data: Array.from({ length: count }, () => ({ identifier })),
   });
 }
