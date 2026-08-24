@@ -145,7 +145,7 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
         setSubmittingUnit(false);
       }
 
-      alert('Property listing submitted for AI verification! You will be notified once approved.');
+      alert('Property listing submitted for review! You will be notified by email once it is approved.');
       onBack();
     } catch {
       setSubmitError(propertyError ?? 'Failed to create the unit for this listing.');
@@ -431,14 +431,14 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
           </div>
         )}
 
-        {/* Step 3: Media Upload (AI Verification) */}
+        {/* Step 3: Media Upload (Manual Review) */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <h3 className="mb-2 font-semibold text-blue-900">🤖 AI Verification Required</h3>
+              <h3 className="mb-2 font-semibold text-blue-900">Admin Review Required</h3>
               <p className="text-sm text-blue-800">
-                All properties must pass AI verification to ensure trust and eliminate fraud. Upload
-                the required media below.
+                Every new listing is reviewed by our team before it can go live, to keep the
+                platform trustworthy. Upload the required media below.
               </p>
             </div>
 
@@ -448,7 +448,7 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
             <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Video className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">360° Walkthrough Video *</h3>
-              <p className="mb-4 text-sm text-gray-600">Required for AI verification</p>
+              <p className="mb-4 text-sm text-gray-600">Required for review</p>
               <button
                 onClick={() => alert('Media upload is not available yet.')}
                 className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
@@ -502,8 +502,8 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
 
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> Our AI will validate media authenticity, detect duplicates,
-                and check for stock images. Listings failing verification will be rejected.
+                <strong>Note:</strong> Our team reviews every submission for authenticity before it
+                can be published. Listings that don't pass review will be rejected.
               </p>
             </div>
 
@@ -586,7 +586,7 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" />
                   <div>
-                    <h3 className="mb-1 font-semibold text-green-900">Media Verification Status</h3>
+                    <h3 className="mb-1 font-semibold text-green-900">Media Status</h3>
                     <ul className="space-y-1 text-sm text-green-800">
                       <li>✓ 360° walkthrough video uploaded</li>
                       <li>✓ {uploadedMedia.photos.length} room photos uploaded</li>
@@ -599,10 +599,9 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <h3 className="mb-2 font-semibold text-blue-900">What Happens Next?</h3>
                 <ol className="list-inside list-decimal space-y-1 text-sm text-blue-800">
-                  <li>AI validates media authenticity and property details</li>
-                  <li>System checks for duplicate listings</li>
-                  <li>Neighborhood intelligence data is generated</li>
-                  <li>You'll be notified once listing is approved (usually within 24 hours)</li>
+                  <li>Our team reviews the listing details and media</li>
+                  <li>You'll get an email once it's approved or if changes are needed</li>
+                  <li>Once approved, you can publish it from the property's page</li>
                 </ol>
               </div>
             </div>

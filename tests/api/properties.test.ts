@@ -221,6 +221,77 @@ describe('properties: canManageProperty gating (PATCH /properties/[id])', () => 
   });
 });
 
+describe('properties: moderation (ADMIN review queue) + publish gating', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('PATCH /moderation is ADMIN-only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const res = await apiFetch(`/api/v1/properties/${property.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(manager.id, manager.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('a manager cannot publish a PENDING_REVIEW listing, only an approved one', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const blocked = await apiFetch(`/api/v1/properties/${property.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { isPublished: true },
+    });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.code).toBe('NOT_APPROVED');
+
+    const admin = await createUser(Role.ADMIN);
+    const approve = await apiFetch(`/api/v1/properties/${property.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(approve.status).toBe(200);
+    expect(approve.body.data.moderationStatus).toBe('APPROVED');
+
+    const allowed = await apiFetch(`/api/v1/properties/${property.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { isPublished: true },
+    });
+    expect(allowed.status).toBe(200);
+    expect(allowed.body.data.isPublished).toBe(true);
+
+    // Now real end-to-end: it must actually show up in public browsing.
+    const publicList = await apiFetch('/api/v1/properties');
+    expect(publicList.body.data.map((p: any) => p.id)).toContain(property.id);
+  });
+
+  it('rejecting a previously-approved-and-published listing unpublishes it too', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
+    await testPrisma.property.update({ where: { id: property.id }, data: { moderationStatus: 'APPROVED' } });
+
+    const admin = await createUser(Role.ADMIN);
+    const res = await apiFetch(`/api/v1/properties/${property.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'REJECTED', moderationNotes: 'Photos do not match the address' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.moderationStatus).toBe('REJECTED');
+    expect(res.body.data.isPublished).toBe(false);
+
+    const publicList = await apiFetch('/api/v1/properties');
+    expect(publicList.body.data.map((p: any) => p.id)).not.toContain(property.id);
+  });
+});
+
 describe('properties: verified reviews (leaseId provenance)', () => {
   beforeAll(async () => {
     await resetDb();

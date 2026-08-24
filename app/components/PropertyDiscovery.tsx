@@ -153,10 +153,18 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
 
   const filters = [
     { id: 'all', label: 'All Properties' },
-    { id: 'verified', label: 'AI Verified Only' },
+    { id: 'verified', label: 'Verified Only' },
     { id: 'high-trust', label: 'High Trust Score' },
     { id: 'new', label: 'New Listings' },
   ];
+
+  const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const filteredProperties = properties.filter((property) => {
+    if (selectedFilter === 'verified') return property.moderationStatus === 'APPROVED';
+    if (selectedFilter === 'high-trust') return (property.trustScore ?? 0) >= 80;
+    if (selectedFilter === 'new') return Date.now() - new Date(property.createdAt).getTime() < NEW_LISTING_WINDOW_MS;
+    return true;
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -209,7 +217,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
       {loading && <p className="text-sm text-gray-500">Loading properties…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {properties.map((property) => {
+        {filteredProperties.map((property) => {
           const card = cardFields(property);
           return (
             <div
@@ -221,7 +229,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                 {card.verified && (
                   <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
                     <Shield className="h-3 w-3" />
-                    AI Verified
+                    Verified
                   </div>
                 )}
                 <div className="text-sm text-gray-400">360° View Available</div>
@@ -339,6 +347,11 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
             </div>
           );
         })}
+        {filteredProperties.length === 0 && !loading && (
+          <p className="col-span-full py-8 text-center text-sm text-gray-400">
+            No properties match this filter.
+          </p>
+        )}
       </div>
 
       {/* Success Toast */}

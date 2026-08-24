@@ -112,10 +112,11 @@ export const POST = withAuth(
     const validated = await validateBody(req, createPropertySchema);
     if (!validated.success) return validated.response;
     // isPublished intentionally dropped here: moderationStatus defaults to
-    // PENDING_REVIEW (PRD §6.2.1's AI moderation pipeline isn't built yet),
-    // so a new listing always starts unpublished regardless of what the
-    // caller sends -- only flipping moderationStatus to APPROVED (not built
-    // in this phase) should ever allow isPublished: true.
+    // PENDING_REVIEW (PRD §6.2.1's AI moderation pipeline still isn't built
+    // -- real ADMIN review stands in for it, see /moderation), so a new
+    // listing always starts unpublished regardless of what the caller
+    // sends. Publishing is a separate, later PATCH /properties/[id] call,
+    // itself gated on moderationStatus === 'APPROVED'.
     const { isPublished: _isPublished, ...data } = validated.data;
 
     try {

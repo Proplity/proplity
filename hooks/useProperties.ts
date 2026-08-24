@@ -142,3 +142,15 @@ export function useCreateUnit(propertyId: string) {
 export function useCreateViewing(propertyId: string) {
   return useApiSubmit((body: CreateViewingInput) => api.properties.createViewing(propertyId, body));
 }
+
+export function useSetPropertyPublished(propertyId: string) {
+  return useApiSubmit((isPublished: boolean) =>
+    api.properties.setPublished(propertyId, isPublished).then((res) => res.data.data),
+  );
+}
+
+export function useModerateProperty(propertyId: string) {
+  return useApiSubmit((body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
+    api.properties.moderate(propertyId, body).then((res) => res.data.data),
+  );
+}

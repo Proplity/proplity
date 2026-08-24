@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Users, Building2, DollarSign, AlertCircle, Search, Clock } from 'lucide-react';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
-import { useMyProperties } from '@/hooks/useProperties';
+import { useMyProperties, useModerateProperty } from '@/hooks/useProperties';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 
@@ -20,11 +20,43 @@ const ICON_STYLES: Record<AdminBreakdownType, { bg: string; color: string }> = {
   maintenance: { bg: 'bg-orange-50', color: 'text-orange-600' },
 };
 
+function ModerationActions({ propertyId, onDecided }: { propertyId: string; onDecided: () => void }) {
+  const { submit: moderate, submitting } = useModerateProperty(propertyId);
+
+  const decide = async (status: 'APPROVED' | 'REJECTED') => {
+    try {
+      await moderate({ status });
+      onDecided();
+    } catch {
+      // no-op -- row simply stays PENDING_REVIEW if this fails
+    }
+  };
+
+  return (
+    <div className="flex gap-1.5">
+      <button
+        onClick={() => decide('APPROVED')}
+        disabled={submitting}
+        className="rounded border border-green-300 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+      >
+        Approve
+      </button>
+      <button
+        onClick={() => decide('REJECTED')}
+        disabled={submitting}
+        className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+      >
+        Reject
+      </button>
+    </div>
+  );
+}
+
 export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: users, loading: usersLoading } = useAdminUsers();
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
+  const { data: properties, loading: propertiesLoading, refetch: refetchProperties } = useMyProperties();
   const { data: invoices, loading: invoicesLoading } = useInvoices();
   const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
 
@@ -209,7 +241,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
       const filtered = properties.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.city.toLowerCase().includes(searchQuery.toLowerCase()));
       return (
         <table className="w-full text-sm">
-          {th(['Property', 'Location', 'Type', 'Units', 'Listed', 'Status'])}
+          {th(['Property', 'Location', 'Type', 'Units', 'Listed', 'Status', 'Actions'])}
           <tbody className="divide-y divide-gray-100">
             {filtered.map((p) => (
               <tr key={p.id} className="transition-colors hover:bg-gray-50">
@@ -234,11 +266,18 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
                     {p.moderationStatus.replace('_', ' ')}
                   </span>
                 </td>
+                <td className="px-4 py-3.5 whitespace-nowrap">
+                  {p.moderationStatus === 'PENDING_REVIEW' ? (
+                    <ModerationActions propertyId={p.id} onDecided={refetchProperties} />
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && !loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">No properties found.</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">No properties found.</td>
               </tr>
             )}
           </tbody>

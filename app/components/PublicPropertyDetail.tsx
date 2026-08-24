@@ -274,9 +274,11 @@ export function PublicPropertyDetail({
         <div className="grid h-[380px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl">
           {/* main large */}
           <div className={`col-span-2 row-span-2 ${galleryPlaceholders[0]} relative flex items-end p-4`}>
-            <span className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white">
-              <Shield className="h-3 w-3" /> AI Verified
-            </span>
+            {verified && (
+              <span className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white">
+                <Shield className="h-3 w-3" /> Verified
+              </span>
+            )}
           </div>
           {/* 3 smaller */}
           {galleryPlaceholders.slice(1, 3).map((img: string, i: number) => (

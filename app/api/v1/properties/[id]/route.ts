@@ -54,6 +54,11 @@ const updatePropertySchema = z.object({
   exteriorPhotoUrl: z.string().optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
+  // The property's own manager/landlord visibility toggle -- independent of
+  // moderationStatus (the ADMIN review outcome, set via the separate
+  // /moderation route). Gated below: can only ever flip true once ADMIN has
+  // approved the listing; false (unpublish) is always allowed.
+  isPublished: z.boolean().optional(),
 });
 
 export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -91,6 +96,13 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           return NextResponse.json({ error: 'landlordId must reference a LANDLORD user' }, { status: 400 });
         }
       }
+    }
+
+    if (validated.data.isPublished === true && property.moderationStatus !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'This listing must be approved by an admin before it can be published', code: 'NOT_APPROVED' },
+        { status: 409 },
+      );
     }
 
     const updated = await prisma.property.update({ where: { id }, data: validated.data });

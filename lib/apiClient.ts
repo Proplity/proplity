@@ -114,6 +114,10 @@ export const api = {
       apiClient.post<{ data: Unit }>(`/api/v1/properties/${propertyId}/units`, body),
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    setPublished: (propertyId: string, isPublished: boolean) =>
+      apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
+    moderate: (propertyId: string, body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
+      apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}/moderation`, body),
   },
   maintenance: {
     categories: () => apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),

@@ -20,7 +20,8 @@ import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useApplications, useReviewApplication } from '@/hooks/useApplications';
-import type { Application } from '@/lib/api/types';
+import { useModerateProperty, useSetPropertyPublished } from '@/hooks/useProperties';
+import type { Application, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -29,6 +30,105 @@ interface PropertyDetailProps {
 }
 
 const MANAGE_ROLES = ['manager', 'landlord', 'admin'];
+
+const MODERATION_BADGE: Record<string, string> = {
+  PENDING_REVIEW: 'bg-yellow-100 text-yellow-700',
+  APPROVED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+  FLAGGED: 'bg-orange-100 text-orange-700',
+};
+
+// Publishing (the manager/landlord's own visibility toggle) and moderation
+// (ADMIN's real review-queue decision -- CLAUDE.md's "AI/admin review
+// pipeline" comment, no actual AI check exists so this is the real human
+// gate) are independent axes on Property, matching the schema's own design.
+function ListingStatusCard({
+  property,
+  onRefetch,
+}: {
+  property: PropertyDetailData;
+  onRefetch: () => void;
+}) {
+  const auth = useAuth();
+  const isAdmin = auth.user?.role === 'admin';
+  const { submit: setPublished, submitting: publishing, error: publishError } = useSetPropertyPublished(property.id);
+  const { submit: moderate, submitting: moderating, error: moderateError } = useModerateProperty(property.id);
+
+  const handleTogglePublish = async () => {
+    try {
+      await setPublished(!property.isPublished);
+      onRefetch();
+    } catch {
+      // error surfaced via publishError below
+    }
+  };
+
+  const handleModerate = async (status: 'APPROVED' | 'REJECTED') => {
+    try {
+      await moderate({ status });
+      onRefetch();
+    } catch {
+      // error surfaced via moderateError below
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <h2 className="mb-4 font-semibold">Listing Status</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-sm text-gray-600">Moderation</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${MODERATION_BADGE[property.moderationStatus]}`}>
+          {property.moderationStatus.replace('_', ' ')}
+        </span>
+      </div>
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-sm text-gray-600">Visibility</span>
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+            property.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {property.isPublished ? 'Published' : 'Unpublished'}
+        </span>
+      </div>
+
+      {isAdmin && property.moderationStatus === 'PENDING_REVIEW' && (
+        <div className="mb-4 flex gap-2 border-t border-gray-100 pt-4">
+          <button
+            onClick={() => handleModerate('APPROVED')}
+            disabled={moderating}
+            className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            Approve Listing
+          </button>
+          <button
+            onClick={() => handleModerate('REJECTED')}
+            disabled={moderating}
+            className="flex-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            Reject
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={handleTogglePublish}
+        disabled={publishing || (!property.isPublished && property.moderationStatus !== 'APPROVED')}
+        title={
+          !property.isPublished && property.moderationStatus !== 'APPROVED'
+            ? 'An admin must approve this listing before it can be published'
+            : undefined
+        }
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {publishing ? 'Saving…' : property.isPublished ? 'Unpublish Listing' : 'Publish Listing'}
+      </button>
+      {(publishError || moderateError) && (
+        <p className="mt-2 text-xs text-red-600">{publishError || moderateError}</p>
+      )}
+    </div>
+  );
+}
 
 function ApplicationRow({ application, onReviewed }: { application: Application; onReviewed: () => void }) {
   const { submit: review, submitting } = useReviewApplication(application.id);
@@ -80,7 +180,7 @@ function ApplicationRow({ application, onReviewed }: { application: Application;
 
 export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetailProps) {
   const auth = useAuth();
-  const { data: property, loading } = useProperty(propertyId);
+  const { data: property, loading, refetch: refetchProperty } = useProperty(propertyId);
   const { data: leases } = useLeases();
   const { data: invoices } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
@@ -163,7 +263,7 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
             {verified && (
               <div className="flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
                 <Shield className="h-4 w-4" />
-                AI Verified
+                Verified
               </div>
             )}
             <span
@@ -382,6 +482,8 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
         {/* Sidebar -- manager/landlord/admin only */}
         {canManage && (
           <div className="space-y-6">
+            <ListingStatusCard property={property} onRefetch={refetchProperty} />
+
             {/* Financial Summary */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h2 className="mb-4 font-semibold">Financial Summary</h2>
