@@ -19,7 +19,13 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (credentials: { email: string; password: string; rememberMe?: boolean }) => Promise<{ success: boolean; error?: string; user?: User }>;
-  register: (data: { email: string; password: string; name: string; role?: string }) => Promise<{ success: boolean; error?: string }>;
+  register: (data: {
+    email: string;
+    password: string;
+    name: string;
+    role?: string;
+    landlordCode?: string;
+  }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -92,7 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (data: { email: string; password: string; name: string; role?: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    name: string;
+    role?: string;
+    landlordCode?: string;
+  }) => {
     try {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
@@ -106,9 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: resData.error || 'Registration failed' };
       }
 
-      const normalized = normalizeUser(resData.user);
-      setUser(normalized);
-      return { success: true };
+      // No session is established at registration time anymore -- the
+      // account is PENDING_VERIFICATION until the emailed link is used, so
+      // there's no `user` to log in as yet (setUser would just be wrong).
+      return { success: true, requiresVerification: true };
     } catch (err) {
       return { success: false, error: 'Network error during registration' };
     }

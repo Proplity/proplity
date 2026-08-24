@@ -3,10 +3,9 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { signAccessToken } from '@/lib/auth/jwt';
-import { setAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { checkRateLimit, recordAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { sendEmail } from '@/lib/email';
 import { Role, UserStatus } from '@prisma/client';
 
 const registerSchema = z.object({
@@ -14,6 +13,11 @@ const registerSchema = z.object({
   password: z.string().min(6),
   name: z.string().min(1),
   role: z.string().optional(),
+  // Only meaningful when role resolves to MANAGER -- checked for real here
+  // (never trust the client-side GET /manager-codes/check result alone,
+  // that's a UX preview only) and, if valid, linked in the same
+  // transaction as account creation.
+  landlordCode: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, password, name, role: inputRole } = parsed.data;
+    const { email, password, name, role: inputRole, landlordCode } = parsed.data;
 
     // Check duplicate user
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -57,37 +61,68 @@ export async function POST(req: NextRequest) {
       ? (upperRole as Role)
       : Role.TENANT;
 
+    // A MANAGER account must come with a real, currently-redeemable
+    // landlord code -- re-validated here regardless of what the
+    // check-code preview endpoint said, since that response is
+    // client-trusted UX only.
+    let inviteCodeId: string | null = null;
+    if (role === Role.MANAGER) {
+      if (!landlordCode) {
+        return NextResponse.json({ error: 'A landlord invitation code is required to register as a manager' }, { status: 400 });
+      }
+      const code = await prisma.managerInviteCode.findUnique({
+        where: { code: landlordCode.trim().toUpperCase() },
+      });
+      if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
+        return NextResponse.json({ error: 'Invalid or already-used landlord code' }, { status: 400 });
+      }
+      inviteCodeId = code.id;
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    // Create user (Active by default for seamless onboarding, with pending verification support)
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        passwordHash,
-        role,
-        status: UserStatus.ACTIVE,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { email, name, passwordHash, role, status: UserStatus.PENDING_VERIFICATION },
+      });
+
+      await tx.verificationToken.create({
+        data: { userId: created.id, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+      });
+
+      // Re-check-and-link inside the transaction, not just at the earlier
+      // read -- narrows (doesn't eliminate) the window for two concurrent
+      // registrations to both pass the outer check for the same code, same
+      // accepted-race shape as AccessCode's/Application's own duplicate
+      // checks elsewhere in this codebase.
+      if (inviteCodeId) {
+        const stillFree = await tx.managerInviteCode.updateMany({
+          where: { id: inviteCodeId, status: 'ACTIVE', linkedManagerId: null },
+          data: { linkedManagerId: created.id, linkedAt: new Date() },
+        });
+        if (stillFree.count === 0) {
+          throw new Error('LANDLORD_CODE_RACE');
+        }
+      }
+
+      return created;
     });
 
-    const familyId = crypto.randomUUID();
-    const rawRefreshToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
-
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        familyId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your Proplity account',
+      body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\nhttp://localhost:3000/verify-email?token=${rawToken}\n\nThis link expires in 7 days.`,
     });
 
-    const accessToken = await signAccessToken({ sub: user.id, role: user.role });
-    await setAuthCookies(accessToken, rawRefreshToken);
-
+    // No session is established here -- the account is PENDING_VERIFICATION
+    // until the link above is used, and login already 403s that status
+    // with a clear "verify your email" message, so nothing else needs to
+    // change to keep an unverified account locked out until then.
     return NextResponse.json({
       success: true,
+      requiresVerification: true,
       user: {
         id: user.id,
         email: user.email,
@@ -97,6 +132,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
+    if (err?.message === 'LANDLORD_CODE_RACE') {
+      return NextResponse.json({ error: 'This landlord code was just used by someone else' }, { status: 409 });
+    }
     console.error('Registration error:', err);
     return NextResponse.json({ error: 'Failed to process registration' }, { status: 500 });
   }

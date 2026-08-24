@@ -13,7 +13,9 @@ export const POST = withAuth(
       const validated = await validateBody(req, redeemSchema);
       if (!validated.success) return validated.response;
 
-      const code = await prisma.managerInviteCode.findUnique({ where: { code: validated.data.code } });
+      const code = await prisma.managerInviteCode.findUnique({
+        where: { code: validated.data.code.trim().toUpperCase() },
+      });
       if (!code) return NextResponse.json({ error: 'Invalid code' }, { status: 404 });
       if (code.status !== 'ACTIVE') {
         return NextResponse.json({ error: 'This code is no longer active', code: 'CODE_INACTIVE' }, { status: 409 });

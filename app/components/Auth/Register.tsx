@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 
 interface RegisterProps {
-  onRegister: (role: string) => void;
   onSwitchToLogin: () => void;
 }
 
@@ -88,14 +87,6 @@ const SERVICE_CATEGORIES = [
   'Other',
 ];
 
-// Simulated valid landlord codes
-const VALID_LANDLORD_CODES: Record<string, { name: string; properties: number }> = {
-  'LLD-2847-XK': { name: 'Chief Bolarinwa Adeyemi', properties: 8 },
-  'LLD-1193-QR': { name: 'Mrs. Ngozi Okonkwo', properties: 4 },
-  'LLD-5521-BT': { name: 'Alhaji Musa Ibrahim', properties: 12 },
-  'DEMO-CODE': { name: 'Demo Landlord', properties: 3 },
-};
-
 type UserType = 'manager' | 'landlord' | 'tenant' | 'vendor' | '';
 
 interface BaseForm {
@@ -141,7 +132,7 @@ interface VendorForm extends BaseForm {
   bio: string;
 }
 
-export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
+export function Register({ onSwitchToLogin }: RegisterProps) {
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState<UserType>('');
 
@@ -166,6 +157,9 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
     name: string;
     properties: number;
   } | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // --- Landlord state ---
   const [landlordForm, setLandlordForm] = useState<LandlordForm>({
@@ -236,18 +230,24 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
     setStep(2);
   };
 
-  const verifyLandlordCode = () => {
+  const verifyLandlordCode = async () => {
     setCodeStatus('checking');
-    setTimeout(() => {
-      const match = VALID_LANDLORD_CODES[managerForm.landlordCode.trim().toUpperCase()];
-      if (match) {
+    try {
+      const res = await fetch(
+        `/api/v1/manager-codes/check?code=${encodeURIComponent(managerForm.landlordCode.trim())}`,
+      );
+      const body = await res.json();
+      if (res.ok && body.valid) {
         setCodeStatus('valid');
-        setVerifiedLandlord(match);
+        setVerifiedLandlord({ name: body.landlord.name, properties: body.propertiesManaged });
       } else {
         setCodeStatus('invalid');
         setVerifiedLandlord(null);
       }
-    }, 900);
+    } catch {
+      setCodeStatus('invalid');
+      setVerifiedLandlord(null);
+    }
   };
 
   const { register } = useAuth();
@@ -298,12 +298,25 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
             : vendorForm;
 
     const name = `${activeForm.firstName} ${activeForm.lastName}`.trim() || 'User';
-    const res = await register({ email: activeForm.email, password: pwd, name, role: userType });
+    setSubmitError(null);
+    setSubmitting(true);
+    const res = await register({
+      email: activeForm.email,
+      password: pwd,
+      name,
+      role: userType,
+      landlordCode: userType === 'manager' ? managerForm.landlordCode : undefined,
+    });
+    setSubmitting(false);
 
     if (res.success) {
-      onRegister(userType);
+      // No session exists yet -- the account is PENDING_VERIFICATION until
+      // the emailed link is used, so there's nowhere in the app to send
+      // them (onRegister implies an active dashboard to land on). Show the
+      // confirmation in place instead.
+      setRegisteredEmail(activeForm.email);
     } else {
-      alert(res.error || 'Registration failed');
+      setSubmitError(res.error || 'Registration failed');
     }
   };
 
@@ -506,6 +519,31 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
   ];
 
   // ─────────────────────────────────────────────────────────────────────────
+  if (registeredEmail) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+        <div className="w-full max-w-md">
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-lg">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+              <Mail className="h-8 w-8 text-blue-600" />
+            </div>
+            <h2 className="mb-2 text-2xl font-bold">Check Your Email</h2>
+            <p className="mb-6 text-gray-600">
+              We've sent a verification link to <strong>{registeredEmail}</strong>. Click it to
+              activate your account, then sign in.
+            </p>
+            <button
+              onClick={onSwitchToLogin}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              Go to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
       <div className="w-full max-w-2xl">
@@ -529,6 +567,13 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
 
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
           <StepIndicator />
+
+          {submitError && (
+            <div className="mb-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              {submitError}
+            </div>
+          )}
 
           {/* ── STEP 1: Role selection ── */}
           {step === 1 && (
@@ -886,7 +931,12 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
                 onChange={(v) => setManagerForm({ ...managerForm, agreeToTerms: v })}
               />
 
-              <NavButtons onBack={() => setStep(2)} isSubmit nextLabel="Create Account" />
+              <NavButtons
+                onBack={() => setStep(2)}
+                isSubmit
+                nextDisabled={submitting}
+                nextLabel={submitting ? 'Creating Account…' : 'Create Account'}
+              />
             </form>
           )}
 
@@ -1165,7 +1215,12 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
                 onChange={(v) => setLandlordForm({ ...landlordForm, agreeToTerms: v })}
               />
 
-              <NavButtons onBack={() => setStep(2)} isSubmit nextLabel="Create Account" />
+              <NavButtons
+                onBack={() => setStep(2)}
+                isSubmit
+                nextDisabled={submitting}
+                nextLabel={submitting ? 'Creating Account…' : 'Create Account'}
+              />
             </form>
           )}
 
@@ -1301,7 +1356,12 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
                 onChange={(v) => setTenantForm({ ...tenantForm, agreeToTerms: v })}
               />
 
-              <NavButtons onBack={() => setStep(1)} isSubmit nextLabel="Create Free Account" />
+              <NavButtons
+                onBack={() => setStep(1)}
+                isSubmit
+                nextDisabled={submitting}
+                nextLabel={submitting ? 'Creating Account…' : 'Create Free Account'}
+              />
             </form>
           )}
 
@@ -1579,7 +1639,12 @@ export function Register({ onRegister, onSwitchToLogin }: RegisterProps) {
                 onChange={(v) => setVendorForm({ ...vendorForm, agreeToTerms: v })}
               />
 
-              <NavButtons onBack={() => setStep(2)} isSubmit nextLabel="Create Free Account" />
+              <NavButtons
+                onBack={() => setStep(2)}
+                isSubmit
+                nextDisabled={submitting}
+                nextLabel={submitting ? 'Creating Account…' : 'Create Free Account'}
+              />
             </form>
           )}
 

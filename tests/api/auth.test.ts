@@ -114,12 +114,15 @@ describe('auth: register', () => {
   });
 
   it('maps a valid role string case-insensitively, falls back to TENANT otherwise', async () => {
-    const manager = await apiFetch('/api/v1/auth/register', {
+    // 'vendor' here, not 'manager' -- MANAGER now has its own extra
+    // landlordCode requirement, covered separately below, and would only
+    // muddy this test's actual point (case-insensitive mapping + fallback).
+    const vendor = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'newmanager@test.local', password: 'somepassword', name: 'New Manager', role: 'manager' },
+      body: { email: 'newvendor@test.local', password: 'somepassword', name: 'New Vendor', role: 'VENDOR' },
     });
-    expect(manager.status).toBe(200);
-    expect(manager.body.user.role).toBe('manager');
+    expect(vendor.status).toBe(200);
+    expect(vendor.body.user.role).toBe('vendor');
 
     const bogus = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
@@ -138,15 +141,93 @@ describe('auth: register', () => {
     expect(res.body.user.role).toBe('tenant');
   });
 
-  it('registers a new user active by default, sets session cookies, then blocks and rate-limits duplicates', async () => {
+  it('registers a new user as PENDING_VERIFICATION with a real VerificationToken, and sets no session cookies', async () => {
+    const email = 'pending@test.local';
+    const res = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: { email, password: 'somepassword', name: 'Pending Test' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.requiresVerification).toBe(true);
+    expect(res.body.user.status).toBe('PENDING_VERIFICATION');
+    expect(res.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
+    expect(res.setCookies.some((c) => c.startsWith('refresh_token='))).toBe(false);
+
+    const token = await testPrisma.verificationToken.findFirst({ where: { userId: res.body.user.id } });
+    expect(token).not.toBeNull();
+
+    // A still-pending account is correctly locked out of login until verified.
+    const loginAttempt = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email, password: 'somepassword' },
+    });
+    expect(loginAttempt.status).toBe(403);
+  });
+
+  it('MANAGER registration requires a real, still-unused landlord code', async () => {
+    const noCode = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: { email: 'nocode-manager@test.local', password: 'somepassword', name: 'No Code', role: 'manager' },
+    });
+    expect(noCode.status).toBe(400);
+
+    const bogusCode = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'bogus-manager@test.local',
+        password: 'somepassword',
+        name: 'Bogus Code',
+        role: 'manager',
+        landlordCode: 'LLD-0000-00',
+      },
+    });
+    expect(bogusCode.status).toBe(400);
+
+    const landlord = await createUser(Role.LANDLORD);
+    const realCode = await testPrisma.managerInviteCode.create({
+      data: { code: 'LLD-TEST-01', landlordId: landlord.id },
+    });
+
+    const validCode = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'real-manager@test.local',
+        password: 'somepassword',
+        name: 'Real Manager',
+        role: 'manager',
+        landlordCode: 'lld-test-01', // lowercase -- must still match, case-insensitively
+      },
+    });
+    expect(validCode.status).toBe(200);
+    expect(validCode.body.user.role).toBe('manager');
+
+    const linked = await testPrisma.managerInviteCode.findUnique({ where: { id: realCode.id } });
+    expect(linked?.linkedManagerId).toBe(validCode.body.user.id);
+
+    // The same code cannot be used a second time.
+    const reuse = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: {
+        email: 'second-manager@test.local',
+        password: 'somepassword',
+        name: 'Second Manager',
+        role: 'manager',
+        landlordCode: 'LLD-TEST-01',
+      },
+    });
+    expect(reuse.status).toBe(400);
+  });
+
+  // Deliberately last in this describe block -- exhausts register's
+  // IP-scoped rate-limit budget, which would otherwise 429 every
+  // subsequent registration test that shares this describe's beforeAll.
+  it('blocks and rate-limits duplicate registrations for the same email', async () => {
     const email = 'dup@test.local';
     const first = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
       body: { email, password: 'somepassword', name: 'Dup Test' },
     });
     expect(first.status).toBe(200);
-    expect(first.body.user.status).toBe('ACTIVE');
-    expect(first.setCookies.some((c) => c.startsWith('access_token='))).toBe(true);
 
     // 5 duplicate attempts consume register's IP-scoped rate limit budget...
     for (let i = 0; i < 5; i++) {

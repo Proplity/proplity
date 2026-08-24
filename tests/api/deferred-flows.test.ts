@@ -165,6 +165,34 @@ describe('manager-codes: generate, toggle, redeem', () => {
     expect(res.status).toBe(403);
   });
 
+  it('check is unauthenticated, case-insensitive, and never reveals a used/inactive code as valid', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    await createProperty({ landlordId: landlord.id });
+    await createProperty({ landlordId: landlord.id });
+    const created = await apiFetch('/api/v1/manager-codes', {
+      method: 'POST',
+      cookie: await authCookie(landlord.id, landlord.role),
+    });
+    const code = created.body.data.code;
+
+    const missing = await apiFetch(`/api/v1/manager-codes/check?code=DOES-NOT-EXIST`);
+    expect(missing.body.valid).toBe(false);
+
+    const found = await apiFetch(`/api/v1/manager-codes/check?code=${code.toLowerCase()}`);
+    expect(found.body.valid).toBe(true);
+    expect(found.body.landlord.name).toBe(landlord.name);
+    expect(found.body.propertiesManaged).toBe(2);
+
+    // Deactivated codes must not check out as valid either.
+    await apiFetch(`/api/v1/manager-codes/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie: await authCookie(landlord.id, landlord.role),
+      body: { status: 'DEACTIVATED' },
+    });
+    const afterDeactivate = await apiFetch(`/api/v1/manager-codes/check?code=${code}`);
+    expect(afterDeactivate.body.valid).toBe(false);
+  });
+
   it('redeem is MANAGER-only, links exactly once, and rejects an inactive or already-used code', async () => {
     const landlord = await createUser(Role.LANDLORD);
     const manager1 = await createUser(Role.MANAGER);
