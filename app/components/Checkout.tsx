@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { ArrowLeft, CreditCard, Lock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { LogoIcon } from './Logo';
+import { useCheckoutSubscription } from '@/hooks/useSubscription';
+import { usePayInvoice } from '@/hooks/useInvoices';
 
 interface CheckoutProps {
   plan: {
+    tier: 'FREE' | 'PRO';
     name: string;
     price: string;
     units: string;
@@ -28,14 +31,33 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     state: '',
     agreeToTerms: false,
   });
+  const { submit: checkoutSubscription, submitting: checkingOut, error: checkoutError } = useCheckoutSubscription();
+  const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep(2);
-    // Simulate payment processing
-    setTimeout(() => {
-      onComplete();
-    }, 2000);
+    try {
+      const result = await checkoutSubscription({
+        tier: plan.tier,
+        billingCycle: billingCycle === 'yearly' ? 'yearly' : 'monthly',
+      });
+
+      if ('activated' in result) {
+        // Free plan -- nothing to pay, show the in-app success screen.
+        setStep(2);
+        setTimeout(() => onComplete(), 2000);
+        return;
+      }
+
+      // Paid plan -- redirect to Paystack's real hosted checkout. There is
+      // no in-app "success" screen for this path: success only happens once
+      // Paystack redirects back after a real charge, confirmed server-side
+      // by the webhook (see payments/webhook/route.ts), not by this form.
+      const { authorizationUrl } = await payInvoice(result.invoiceId);
+      window.location.href = authorizationUrl;
+    } catch {
+      // error state is already surfaced via the hooks' `error`
+    }
   };
 
   const calculatePrice = () => {
@@ -281,14 +303,21 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
                 </span>
               </label>
 
+              {(checkoutError || payError) && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  {checkoutError || payError}
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={!formData.agreeToTerms}
+                disabled={!formData.agreeToTerms || checkingOut || paying}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Lock className="h-5 w-5" />
-                Complete Purchase
+                {paying ? 'Redirecting to Paystack…' : checkingOut ? 'Processing…' : 'Complete Purchase'}
               </button>
 
               <p className="text-center text-xs text-gray-500">

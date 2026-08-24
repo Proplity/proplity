@@ -355,6 +355,118 @@ describe('payments: webhook (HMAC-SHA512 verification)', () => {
   });
 });
 
+describe('subscriptions: checkout, me, and webhook activation', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('checkout is MANAGER/LANDLORD only', async () => {
+    const tenant = await createUser(Role.TENANT);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const res = await apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'PRO' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('FREE tier activates immediately with no invoice/payment involved', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'FREE' },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.activated).toBe(true);
+
+    const subscription = await testPrisma.subscription.findUnique({ where: { userId: landlord.id } });
+    expect(subscription?.tier).toBe('FREE');
+    expect(subscription?.status).toBe('ACTIVE');
+
+    const invoiceCount = await testPrisma.invoice.count({ where: { userId: landlord.id } });
+    expect(invoiceCount).toBe(0);
+  });
+
+  it('PRO tier creates a real SUBSCRIPTION invoice with server-computed (not client-supplied) pricing', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const monthly = await apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'PRO', billingCycle: 'monthly' },
+    });
+    expect(monthly.status).toBe(201);
+    expect(monthly.body.data.amount).toBe(29_999);
+
+    const invoice = await testPrisma.invoice.findUnique({ where: { id: monthly.body.data.invoiceId } });
+    expect(invoice?.type).toBe('SUBSCRIPTION');
+    expect(invoice?.userId).toBe(manager.id);
+    expect(invoice?.amount).toBe(29_999);
+
+    const yearly = await apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'PRO', billingCycle: 'yearly' },
+    });
+    expect(yearly.status).toBe(201);
+    expect(yearly.body.data.amount).toBe(23_999 * 12);
+  });
+
+  it('GET /me defaults to a real FREE row for a user who never subscribed', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(res.status).toBe(200);
+    expect(res.body.data.tier).toBe('FREE');
+  });
+
+  it('a paid PRO invoice activates the subscription via the webhook, with the right tier/cycle read back from the invoice', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const checkout = await apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'PRO', billingCycle: 'yearly' },
+    });
+    expect(checkout.status).toBe(201);
+    const invoiceId = checkout.body.data.invoiceId;
+
+    const payload = {
+      event: 'charge.success',
+      data: {
+        reference: `sub-ref-${invoiceId}`,
+        amount: checkout.body.data.amount * 100,
+        channel: 'card',
+        paid_at: new Date().toISOString(),
+        metadata: { invoiceId },
+      },
+    };
+    const rawBody = JSON.stringify(payload);
+    const res = await apiFetch('/api/v1/payments/webhook', {
+      method: 'POST',
+      headers: { 'x-paystack-signature': signWebhookBody(rawBody) },
+      rawBody,
+    });
+    expect(res.status).toBe(200);
+
+    const subscription = await testPrisma.subscription.findUnique({ where: { userId: manager.id } });
+    expect(subscription?.tier).toBe('PRO');
+    expect(subscription?.status).toBe('ACTIVE');
+    expect(subscription?.currentPeriodEnd).not.toBeNull();
+    // Yearly cycle -> period end roughly a year out, not a month.
+    const daysOut = (subscription!.currentPeriodEnd!.getTime() - Date.now()) / 86_400_000;
+    expect(daysOut).toBeGreaterThan(300);
+
+    const me = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(me.body.data.tier).toBe('PRO');
+  });
+});
+
 describe('payments: autopay', () => {
   beforeAll(async () => {
     await resetDb();

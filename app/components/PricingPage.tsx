@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Logo } from './Logo';
 import { CheckCircle, Minus, Star, ChevronDown } from 'lucide-react';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 interface PricingPageProps {
   onGetStarted: () => void;
@@ -353,6 +354,7 @@ export function PricingPage({
                     onGetStarted();
                     return;
                   }
+                  if (!subscriptionsEnabled()) return;
                   onSelectPlan({
                     name: plan.name,
                     price: getPrice(plan),
@@ -360,13 +362,14 @@ export function PricingPage({
                     features: plan.features,
                   });
                 }}
-                className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                disabled={plan.id !== 'enterprise' && !subscriptionsEnabled()}
+                className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   plan.popular
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                     : 'border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-600'
                 }`}
               >
-                {plan.cta}
+                {plan.id !== 'enterprise' && !subscriptionsEnabled() ? 'Coming Soon' : plan.cta}
               </button>
             </div>
           ))}

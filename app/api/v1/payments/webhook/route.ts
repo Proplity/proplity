@@ -67,6 +67,39 @@ export async function POST(req: NextRequest) {
           }),
           prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'PAID' } }),
         ]);
+
+        // A subscription invoice paying activates the subscription itself --
+        // tier/cycle have no dedicated column, encoded into the description
+        // at checkout time (see subscriptions/checkout/route.ts).
+        if (invoice.type === 'SUBSCRIPTION' && invoice.userId) {
+          const match = invoice.description?.match(/tier=(\w+) cycle=(\w+)/);
+          const tier = (match?.[1] as 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE' | undefined) ?? 'PRO';
+          const cycle = match?.[2] === 'yearly' ? 'yearly' : 'monthly';
+          const now = new Date();
+          const periodEnd = new Date(now);
+          if (cycle === 'yearly') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+          else periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+          await prisma.subscription.upsert({
+            where: { userId: invoice.userId },
+            create: {
+              userId: invoice.userId,
+              tier,
+              status: 'ACTIVE',
+              providerSubscriptionId: data.reference,
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+            },
+            update: {
+              tier,
+              status: 'ACTIVE',
+              providerSubscriptionId: data.reference,
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+              cancelAtPeriodEnd: false,
+            },
+          });
+        }
       }
     }
 

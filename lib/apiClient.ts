@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   AccessCode,
   AdminUser,
+  CheckoutSubscriptionInput,
   Conversation,
   CreateAccessCodeInput,
   CreateConversationInput,
@@ -20,6 +21,7 @@ import type {
   Note,
   Paginated,
   Property,
+  Subscription,
   Unit,
   UpdateMaintenanceRequestInput,
   Vendor,
@@ -164,5 +166,13 @@ export const api = {
       apiClient.post<{ data: { authorizationUrl: string; reference: string } }>('/api/v1/payments/initialize', {
         invoiceId,
       }),
+  },
+  subscriptions: {
+    me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
+    checkout: (body: CheckoutSubscriptionInput) =>
+      apiClient.post<{ data: { activated: true; subscription: Subscription } | { invoiceId: string; amount: number } }>(
+        '/api/v1/subscriptions/checkout',
+        body,
+      ),
   },
 };

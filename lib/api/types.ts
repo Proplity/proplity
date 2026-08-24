@@ -334,3 +334,12 @@ export type AdminUser = {
   createdAt: string;
   propertiesCount: number;
 };
+
+export type Subscription = {
+  userId: string;
+  tier: 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE';
+  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'TRIALING';
+  currentPeriodEnd: string | null;
+};
+
+export type CheckoutSubscriptionInput = { tier: 'FREE' | 'PRO'; billingCycle?: 'monthly' | 'yearly' };

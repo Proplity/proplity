@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Register } from '../components/Auth/Register';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 function RegisterContent() {
   const router = useRouter();
@@ -12,7 +13,7 @@ function RegisterContent() {
   return (
     <Register
       onRegister={(role) => {
-        if ((role === 'manager' || role === 'landlord') && plan) {
+        if ((role === 'manager' || role === 'landlord') && plan && subscriptionsEnabled()) {
           router.push(`/checkout?plan=${plan}`);
         } else {
           router.push('/dashboard');
