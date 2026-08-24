@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
-import { resetDb } from '../helpers/db';
+import { resetDb, testPrisma } from '../helpers/db';
 import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
@@ -136,6 +136,47 @@ describe('properties: canManageProperty gating (PATCH /properties/[id])', () => 
     });
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe('Renamed');
+  });
+
+  it('forbids the owning manager from reassigning managerId/landlordId themselves -- ADMIN only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const otherManager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { managerId: otherManager.id },
+    });
+    expect(res.status).toBe(403);
+
+    const unchanged = await testPrisma.property.findUnique({ where: { id: property.id } });
+    expect(unchanged?.managerId).toBe(manager.id);
+  });
+
+  it('lets ADMIN reassign managerId, but only to a real MANAGER user', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const newManager = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    const property = await createProperty({ managerId: manager.id });
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+
+    const bogus = await apiFetch(`/api/v1/properties/${property.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { managerId: tenant.id },
+    });
+    expect(bogus.status).toBe(400);
+
+    const real = await apiFetch(`/api/v1/properties/${property.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { managerId: newManager.id },
+    });
+    expect(real.status).toBe(200);
+    expect(real.body.data.managerId).toBe(newManager.id);
   });
 
   it('forbids a different manager from editing someone else\'s property', async () => {

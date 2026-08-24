@@ -1,18 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { signAccessToken } from '@/lib/auth/jwt';
 import { setAuthCookies } from '@/lib/auth/cookies';
 import { checkRateLimit, recordAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { validateCSRF } from '@/lib/auth/csrf';
+import { validateBody } from '@/lib/api/validate';
+
+// A fixed, precomputed bcrypt hash (cost 12, matching real password hashes)
+// with no corresponding real password. Compared against on every login
+// attempt for an email that doesn't exist, so `bcrypt.compare`'s runtime
+// -- dominated by its cost factor, not the input -- stays the same whether
+// or not the account is real. Without this, the short-circuited compare
+// for a nonexistent user returns measurably faster, letting an attacker
+// enumerate registered emails by timing alone.
+const DUMMY_PASSWORD_HASH = '$2b$12$Ap7iynbmTBWuWC3S1WvT..O4K2cs/uJW2VBW265CJTYPUsltUghEq';
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  rememberMe: z.boolean().optional(),
+});
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
     return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 });
   }
 
-  const { email, password, rememberMe = true } = await req.json();
+  const validated = await validateBody(req, loginSchema);
+  if (!validated.success) return validated.response;
+  const { email, password, rememberMe = true } = validated.data;
+
   const identifier = `${getClientIp(req)}:${email}`;
 
   if (!(await checkRateLimit(identifier))) {
@@ -20,9 +40,9 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  const valid = user && (await bcrypt.compare(password, user.passwordHash));
+  const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
-  if (!valid) {
+  if (!user || !valid) {
     await recordAttempt(identifier, user?.id);
     return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
   }

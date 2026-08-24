@@ -7,6 +7,8 @@ import {
   createUnit,
   createMaintenanceRequest,
   createAccessCode,
+  createLease,
+  createInvoice,
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
@@ -162,5 +164,40 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     });
     expect(second.status).toBe(200);
     expect(second.body.result.expired).toBe(0);
+  });
+
+  it('payment-reliability-scorer treats the chronologically-first payment as "the" payment, not insertion order', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+
+    const dueDate = new Date(Date.now() - 10 * 86400000);
+    const invoice = await createInvoice({ leaseId: lease.id, dueDate, status: 'PAID' });
+
+    // Inserted deliberately out of chronological order: the LATE payment
+    // first, the genuinely-on-time one second. Without an explicit
+    // orderBy on the payments relation, payments[0] would be whichever the
+    // DB happens to return first -- this proves the scorer reads the real
+    // chronologically-first payment instead.
+    await testPrisma.payment.create({
+      data: { invoiceId: invoice.id, amount: 50_000, paidAt: new Date(dueDate.getTime() + 2 * 86400000) },
+    });
+    await testPrisma.payment.create({
+      data: { invoiceId: invoice.id, amount: 50_000, paidAt: new Date(dueDate.getTime() - 1 * 86400000) },
+    });
+
+    const res = await apiFetch('/api/v1/cron/payment-reliability-scorer', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(res.status).toBe(200);
+
+    const updated = await testPrisma.lease.findUnique({ where: { id: lease.id } });
+    // The chronologically-first payment (paidAt before dueDate) was on time,
+    // so this lease's only invoice counts as on-time -> EXCELLENT/LOW, not
+    // FAIR/MEDIUM-or-worse as a late-counted misread would produce.
+    expect(updated?.paymentReliability).toBe('EXCELLENT');
+    expect(updated?.riskScore).toBe('LOW');
   });
 });

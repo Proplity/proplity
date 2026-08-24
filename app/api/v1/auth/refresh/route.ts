@@ -64,7 +64,11 @@ export async function POST(req: NextRequest) {
         userId: currentToken.userId,
         tokenHash: newTokenHash,
         familyId: currentToken.familyId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        // Inherit the rotated token's own expiry rather than resetting to a
+        // fresh +7 days -- rotation refreshes the token value, it shouldn't
+        // extend (or shorten) the session length the original login/rememberMe
+        // choice set (1 day / 30 days per login/route.ts).
+        expiresAt: currentToken.expiresAt,
       },
     }),
   ]);
@@ -73,7 +77,14 @@ export async function POST(req: NextRequest) {
     sub: currentToken.user.id,
     role: currentToken.user.role,
   });
-  await setAuthCookies(newAccessToken, newRawRefreshToken);
+  // Cookie maxAge must match the token's actual remaining lifetime (set
+  // above), not cookies.ts's 7-day default -- otherwise the browser drops
+  // the cookie on a different schedule than the DB row actually expires on.
+  const remainingSeconds = Math.max(
+    0,
+    Math.floor((currentToken.expiresAt.getTime() - Date.now()) / 1000),
+  );
+  await setAuthCookies(newAccessToken, newRawRefreshToken, remainingSeconds);
 
   return NextResponse.json({ success: true });
 }

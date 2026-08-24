@@ -48,9 +48,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email address is already registered' }, { status: 409 });
     }
 
-    // Map role string to Role enum
+    // Map role string to Role enum -- ADMIN is deliberately excluded from
+    // this allow-list. It's a real Role enum value, but self-registration
+    // must never be able to mint one; admins are provisioned out-of-band.
+    const SELF_REGISTERABLE_ROLES: Role[] = [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR];
     const upperRole = (inputRole || 'TENANT').toUpperCase();
-    const role: Role = Object.values(Role).includes(upperRole as Role)
+    const role: Role = SELF_REGISTERABLE_ROLES.includes(upperRole as Role)
       ? (upperRole as Role)
       : Role.TENANT;
 

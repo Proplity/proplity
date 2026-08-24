@@ -61,10 +61,22 @@ const patchSchema = z.object({
 });
 
 export const PATCH = withAuth(
-  async (req, _session, ctx: RouteCtx) => {
+  async (req, { session }, ctx: RouteCtx) => {
     const { id } = await ctx.params;
 
     try {
+      const invoice = await loadInvoice(id);
+      if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+
+      // MANAGER may only mutate invoices tied to a property they actually
+      // manage -- a userId-only invoice (e.g. SUBSCRIPTION) with no property
+      // is ADMIN-only, same as an invoice on someone else's property.
+      const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
+      const canManage = session.role === 'ADMIN' || (!!property && canManageProperty(session, property));
+      if (!canManage) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
       const validated = await validateBody(req, patchSchema);
       if (!validated.success) return validated.response;
 

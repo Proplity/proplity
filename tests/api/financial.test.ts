@@ -178,6 +178,49 @@ describe('invoices: [id] access and PATCH', () => {
     expect(allowed.status).toBe(200);
     expect(allowed.body.data.status).toBe('CANCELLED');
   });
+
+  it('PATCH also requires the MANAGER to actually manage the invoice\'s property, not just hold the role', async () => {
+    const realManager = await createUser(Role.MANAGER);
+    const strangerManager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: realManager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const invoice = await createInvoice({ leaseId: lease.id });
+
+    const strangerCookie = await authCookie(strangerManager.id, strangerManager.role);
+    const forbidden = await apiFetch(`/api/v1/invoices/${invoice.id}`, {
+      method: 'PATCH',
+      cookie: strangerCookie,
+      body: { status: 'PAID' },
+    });
+    expect(forbidden.status).toBe(403);
+
+    // Confirm the invoice was genuinely untouched, not just that the response was 403.
+    const stillUnpaid = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(stillUnpaid?.status).not.toBe('PAID');
+
+    const realManagerCookie = await authCookie(realManager.id, realManager.role);
+    const allowed = await apiFetch(`/api/v1/invoices/${invoice.id}`, {
+      method: 'PATCH',
+      cookie: realManagerCookie,
+      body: { status: 'CANCELLED' },
+    });
+    expect(allowed.status).toBe(200);
+  });
+
+  it('PATCH on a userId-only invoice (no property at all) is ADMIN-only, even for a MANAGER', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const otherUser = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: otherUser.id, type: 'ASSOCIATION_FEE' });
+    const cookie = await authCookie(manager.id, manager.role);
+    const res = await apiFetch(`/api/v1/invoices/${invoice.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'CANCELLED' },
+    });
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('payments: initialize', () => {

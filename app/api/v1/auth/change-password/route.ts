@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getServerSession } from '@/lib/auth/session';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
+import { validateBody } from '@/lib/api/validate';
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  // Matches register's own policy (z.string().min(6)) -- this route had no
+  // minimum at all before, letting a logged-in user set a 1-character password.
+  newPassword: z.string().min(6),
+});
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -13,7 +22,10 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { currentPassword, newPassword } = await req.json();
+  const validated = await validateBody(req, changePasswordSchema);
+  if (!validated.success) return validated.response;
+  const { currentPassword, newPassword } = validated.data;
+
   const user = await prisma.user.findUnique({ where: { id: session.sub } });
 
   if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {

@@ -69,6 +69,30 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const validated = await validateBody(req, updatePropertySchema);
     if (!validated.success) return validated.response;
 
+    // Reassigning who manages/owns a property is a takeover vector, not an
+    // ordinary listing edit -- restrict it to ADMIN, and require the target
+    // id to actually be a user with the matching role.
+    if (validated.data.managerId !== undefined || validated.data.landlordId !== undefined) {
+      if (session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Only an admin may reassign a property\'s manager or landlord' },
+          { status: 403 },
+        );
+      }
+      if (validated.data.managerId) {
+        const manager = await prisma.user.findUnique({ where: { id: validated.data.managerId } });
+        if (!manager || manager.role !== 'MANAGER') {
+          return NextResponse.json({ error: 'managerId must reference a MANAGER user' }, { status: 400 });
+        }
+      }
+      if (validated.data.landlordId) {
+        const landlord = await prisma.user.findUnique({ where: { id: validated.data.landlordId } });
+        if (!landlord || landlord.role !== 'LANDLORD') {
+          return NextResponse.json({ error: 'landlordId must reference a LANDLORD user' }, { status: 400 });
+        }
+      }
+    }
+
     const updated = await prisma.property.update({ where: { id }, data: validated.data });
     return NextResponse.json({ data: updated });
   } catch (err) {

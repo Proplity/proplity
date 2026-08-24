@@ -33,6 +33,22 @@ describe('auth: login / me / logout / CSRF', () => {
     expect(res.status).toBe(401);
   });
 
+  it('400s cleanly on a malformed body instead of an unhandled 500', async () => {
+    const res = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'not-an-email', password: '' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 401 (not a crash) for a nonexistent email, same as a wrong password', async () => {
+    const res = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'no-such-user@test.local', password: 'whatever123' },
+    });
+    expect(res.status).toBe(401);
+  });
+
   it('rejects login for a PENDING_VERIFICATION account', async () => {
     await createUser(Role.TENANT, {
       email: 'unverified@test.local',
@@ -113,6 +129,15 @@ describe('auth: register', () => {
     expect(bogus.body.user.role).toBe('tenant');
   });
 
+  it('never grants ADMIN via self-registration, even though it is a valid Role value', async () => {
+    const res = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: { email: 'wannabe-admin@test.local', password: 'somepassword', name: 'Wannabe Admin', role: 'admin' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('tenant');
+  });
+
   it('registers a new user active by default, sets session cookies, then blocks and rate-limits duplicates', async () => {
     const email = 'dup@test.local';
     const first = await apiFetch('/api/v1/auth/register', {
@@ -171,6 +196,34 @@ describe('auth: refresh rotation + reuse detection', () => {
       cookie: cookieB,
     });
     expect(afterFamilyRevoke.status).toBe(401);
+  });
+
+  it('preserves the original rememberMe-based expiry across rotation, not a flat +7 days', async () => {
+    const user = await createUser(Role.TENANT, { email: 'refresh-remember@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-remember@test.local', password: FIXTURE_PASSWORD, rememberMe: false },
+    });
+    const cookie = cookieHeaderFrom(login.setCookies);
+
+    const original = await testPrisma.refreshToken.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(original).toBeTruthy();
+
+    const refresh = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie });
+    expect(refresh.status).toBe(200);
+
+    const rotated = await testPrisma.refreshToken.findFirst({
+      where: { userId: user.id, id: { not: original!.id } },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(rotated).toBeTruthy();
+
+    // rememberMe: false means a real 1-day session -- the rotated token must
+    // inherit that same expiry (down to the second), not reset to +7 days.
+    expect(rotated!.expiresAt.getTime()).toBe(original!.expiresAt.getTime());
   });
 
   it('rejects a refresh request with no refresh_token cookie', async () => {
@@ -242,6 +295,17 @@ describe('auth: change-password', () => {
       method: 'POST',
       cookie,
       body: { currentPassword: 'not-it', newPassword: 'newpassword123' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a new password shorter than the 6-character minimum register enforces', async () => {
+    const user = await createUser(Role.TENANT, { email: 'cp-short@test.local' });
+    const cookie = await authCookie(user.id, user.role);
+    const res = await apiFetch('/api/v1/auth/change-password', {
+      method: 'POST',
+      cookie,
+      body: { currentPassword: FIXTURE_PASSWORD, newPassword: 'ab' },
     });
     expect(res.status).toBe(400);
   });

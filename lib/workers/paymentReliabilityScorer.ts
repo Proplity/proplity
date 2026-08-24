@@ -26,7 +26,14 @@ export async function runPaymentReliabilityScorer(): Promise<{ scored: number; s
   const now = new Date();
   const leases = await prisma.lease.findMany({
     where: { status: { in: ['ACTIVE', 'EXPIRED'] } },
-    include: { invoices: { where: { type: 'RENT', dueDate: { lt: now } }, include: { payments: true } } },
+    include: {
+      invoices: {
+        where: { type: 'RENT', dueDate: { lt: now } },
+        // Chronological, not insertion/DB order -- payments[0] below is
+        // read as "the first payment made against this invoice."
+        include: { payments: { orderBy: { paidAt: 'asc' } } },
+      },
+    },
   });
 
   let scored = 0;
