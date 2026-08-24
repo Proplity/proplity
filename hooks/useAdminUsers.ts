@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import type { AdminUser } from '@/lib/api/types';
 
@@ -10,23 +10,22 @@ export function useAdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    api.admin.users
-      .list({ limit: 100 })
-      .then((res) => {
-        if (!cancelled) setData(res.data.data);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load users');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.admin.users.list({ limit: 100 });
+      setData(res.data.data);
+    } catch {
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { data, loading, error };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
 }

@@ -19,12 +19,14 @@ function Column({
   icon: Icon,
   color,
   onNavigate,
+  loading,
 }: {
   title: string;
   requests: MaintenanceRequest[];
   icon: any;
   color: string;
   onNavigate: (page: any) => void;
+  loading: boolean;
 }) {
   return (
     <div className="min-w-[320px] rounded-lg bg-gray-50 p-4">
@@ -122,7 +124,7 @@ function Column({
             </div>
           );
         })}
-        {requests.length === 0 && <p className="text-sm text-gray-400">Nothing here.</p>}
+        {requests.length === 0 && !loading && <p className="text-sm text-gray-400">Nothing here.</p>}
       </div>
     </div>
   );
@@ -153,25 +155,25 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
 
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
-        <Column title="New Requests" requests={newRequests} icon={AlertCircle} color="text-orange-600" onNavigate={onNavigate} />
-        <Column title="In Progress" requests={inProgress} icon={Clock} color="text-blue-600" onNavigate={onNavigate} />
-        <Column title="Completed" requests={completed} icon={CheckCircle} color="text-green-600" onNavigate={onNavigate} />
+        <Column title="New Requests" requests={newRequests} icon={AlertCircle} color="text-orange-600" onNavigate={onNavigate} loading={loading} />
+        <Column title="In Progress" requests={inProgress} icon={Clock} color="text-blue-600" onNavigate={onNavigate} loading={loading} />
+        <Column title="Completed" requests={completed} icon={CheckCircle} color="text-green-600" onNavigate={onNavigate} loading={loading} />
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="mb-1 text-sm text-gray-600">Total Requests</p>
-          <p className="text-2xl font-semibold">{requests.length}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : requests.length}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="mb-1 text-sm text-gray-600">Resolution Rate</p>
-          <p className="text-2xl font-semibold">{resolutionRate}%</p>
-          <p className="mt-1 text-xs text-gray-500">{resolvedCount} closed of {requests.length}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : `${resolutionRate}%`}</p>
+          <p className="mt-1 text-xs text-gray-500">{loading ? '—' : `${resolvedCount} closed of ${requests.length}`}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="mb-1 text-sm text-gray-600">Total Spent (Completed)</p>
-          <p className="text-2xl font-semibold">₦{totalCost.toLocaleString()}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : `₦${totalCost.toLocaleString()}`}</p>
         </div>
       </div>
     </div>

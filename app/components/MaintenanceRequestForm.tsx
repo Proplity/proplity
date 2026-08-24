@@ -315,15 +315,15 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
             )}
           </div>
 
-          {/* AI Assistance Notice */}
+          {/* What happens next */}
           <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-blue-900">AI-Powered Assistance</p>
+                <p className="text-sm font-medium text-blue-900">What happens next</p>
                 <p className="mt-1 text-xs text-blue-800">
-                  Our AI will automatically categorize your request, estimate the cost, and assign
-                  the best vendor for the job.
+                  Your property manager will review this request, estimate the cost, and assign a
+                  vendor for the job.
                 </p>
               </div>
             </div>

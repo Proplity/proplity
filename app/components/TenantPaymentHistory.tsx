@@ -128,7 +128,7 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">Total Paid</span>
           </div>
-          <p className="text-2xl font-semibold">{totalPaid}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : totalPaid}</p>
           <p className="mt-0.5 text-xs text-gray-400">payments made</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -138,9 +138,9 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">On-Time Rate</span>
           </div>
-          <p className="text-2xl font-semibold">{onTimeRate}%</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : `${onTimeRate}%`}</p>
           <p className="mt-0.5 text-xs text-gray-400">
-            {onTime} of {totalPaid} on time
+            {loading ? '—' : `${onTime} of ${totalPaid} on time`}
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -150,7 +150,7 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">Late Payments</span>
           </div>
-          <p className="text-2xl font-semibold">{late}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : late}</p>
           <p className="mt-0.5 text-xs text-gray-400">times paid late</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -160,7 +160,7 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">Total Amount</span>
           </div>
-          <p className="text-2xl font-semibold">₦{totalAmount.toLocaleString()}</p>
+          <p className="text-2xl font-semibold">{loading ? '—' : `₦${totalAmount.toLocaleString()}`}</p>
           <p className="mt-0.5 text-xs text-gray-400">total paid</p>
         </div>
       </div>
@@ -243,7 +243,7 @@ export function TenantPaymentHistory() {
                   </tr>
                 );
               })}
-              {currentData.length === 0 && (
+              {currentData.length === 0 && !loading && (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">
                     No payments found.

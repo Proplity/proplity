@@ -34,10 +34,10 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   const openMaintenance = maintenanceRequests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
 
   const stats = [
-    { icon: Users, bg: 'bg-blue-50', color: 'text-blue-600', value: String(users.length), label: 'Total Users', breakdown: 'users' as const },
-    { icon: Building2, bg: 'bg-purple-50', color: 'text-purple-600', value: String(properties.length), label: 'Properties Listed', breakdown: 'properties' as const },
-    { icon: DollarSign, bg: 'bg-green-50', color: 'text-green-600', value: `₦${totalCollected.toLocaleString()}`, label: 'Total Transactions', breakdown: 'transactions' as const },
-    { icon: AlertCircle, bg: 'bg-orange-50', color: 'text-orange-600', value: String(openMaintenance.length), label: 'Open Maintenance', breakdown: 'maintenance' as const },
+    { icon: Users, bg: 'bg-blue-50', color: 'text-blue-600', value: loading ? '—' : String(users.length), label: 'Total Users', breakdown: 'users' as const },
+    { icon: Building2, bg: 'bg-purple-50', color: 'text-purple-600', value: loading ? '—' : String(properties.length), label: 'Properties Listed', breakdown: 'properties' as const },
+    { icon: DollarSign, bg: 'bg-green-50', color: 'text-green-600', value: loading ? '—' : `₦${totalCollected.toLocaleString()}`, label: 'Total Transactions', breakdown: 'transactions' as const },
+    { icon: AlertCircle, bg: 'bg-orange-50', color: 'text-orange-600', value: loading ? '—' : String(openMaintenance.length), label: 'Open Maintenance', breakdown: 'maintenance' as const },
   ];
 
   const usersByRole = ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => ({
@@ -199,17 +199,17 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="rounded-lg bg-blue-50 p-4 text-center">
               <BarChart3 className="mx-auto mb-2 h-8 w-8 text-blue-600" />
-              <p className="mb-1 text-2xl font-semibold">{newPropertiesThisWeek}</p>
+              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : newPropertiesThisWeek}</p>
               <p className="text-sm text-gray-600">New Properties</p>
             </div>
             <div className="rounded-lg bg-green-50 p-4 text-center">
               <Wrench className="mx-auto mb-2 h-8 w-8 text-green-600" />
-              <p className="mb-1 text-2xl font-semibold">{openMaintenance.length}</p>
+              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : openMaintenance.length}</p>
               <p className="text-sm text-gray-600">Open Maintenance Requests</p>
             </div>
             <div className="rounded-lg bg-purple-50 p-4 text-center">
               <Users className="mx-auto mb-2 h-8 w-8 text-purple-600" />
-              <p className="mb-1 text-2xl font-semibold">{users.filter((u) => isWithinDays(u.createdAt, 7)).length}</p>
+              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : users.filter((u) => isWithinDays(u.createdAt, 7)).length}</p>
               <p className="text-sm text-gray-600">New Users</p>
             </div>
           </div>

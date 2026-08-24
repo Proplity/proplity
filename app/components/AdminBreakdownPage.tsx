@@ -75,7 +75,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
         <div className="mb-6 grid grid-cols-4 gap-4">
           {byRole.map((c, i) => (
             <div key={c.label} className={`rounded-lg border p-4 ${colors[i]}`}>
-              <p className="text-2xl font-bold">{c.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -94,7 +94,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
             { label: 'Flagged / Rejected', value: flagged, color: 'bg-red-50 border-red-200 text-red-700' },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{c.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -114,7 +114,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
             { label: 'Cancelled', value: `₦${cancelledTotal.toLocaleString()}`, color: 'bg-red-50 border-red-200 text-red-700' },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{c.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -133,7 +133,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
             { label: 'Low Priority', value: low, color: 'bg-gray-50 border-gray-200 text-gray-600' },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{c.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -336,7 +336,7 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
           <p className="mt-0.5 text-sm text-gray-500">{hero.subtitle}</p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold text-gray-900">{hero.stat}</p>
+          <p className="text-3xl font-bold text-gray-900">{loading ? '—' : hero.stat}</p>
           <p className="text-sm text-gray-500">{hero.statLabel}</p>
         </div>
       </div>

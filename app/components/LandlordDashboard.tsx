@@ -45,9 +45,10 @@ function timeAgo(iso: string) {
 
 export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   const { data: properties, loading: propertiesLoading } = useMyProperties();
-  const { data: leases } = useLeases({ status: 'ACTIVE' });
-  const { data: invoices } = useInvoices();
-  const { data: maintenanceRequests } = useMaintenanceRequests();
+  const { data: leases, loading: leasesLoading } = useLeases({ status: 'ACTIVE' });
+  const { data: invoices, loading: invoicesLoading } = useInvoices();
+  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
+  const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
 
   const [managerCodes, setManagerCodes] = useState<ManagerCode[]>([
     {
@@ -177,7 +178,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <p className="text-gray-600">Overview of your property investments</p>
       </div>
 
-      {propertiesLoading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
+      {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -187,7 +188,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{units.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : units.length}</p>
           <p className="text-sm text-gray-600">Total Units</p>
         </div>
 
@@ -197,9 +198,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <Users className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{occupiedUnits}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : occupiedUnits}</p>
           <p className="text-sm text-gray-600">Occupied Units</p>
-          <p className="mt-1 text-xs text-green-600">{occupancyRate}% Occupancy</p>
+          <p className="mt-1 text-xs text-green-600">{loading ? '—' : `${occupancyRate}% Occupancy`}</p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -208,7 +209,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">₦{totalListedRent.toLocaleString()}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : `₦${totalListedRent.toLocaleString()}`}</p>
           <p className="text-sm text-gray-600">Total Listed Rent</p>
         </div>
 
@@ -218,7 +219,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <TrendingUp className="h-6 w-6 text-orange-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{collectionRate}%</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : `${collectionRate}%`}</p>
           <p className="text-sm text-gray-600">Collection Rate</p>
         </div>
       </div>
@@ -262,7 +263,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               </div>
             </div>
           ))}
-          {propertyRows.length === 0 && !propertiesLoading && (
+          {propertyRows.length === 0 && !loading && (
             <p className="p-6 text-sm text-gray-400">No properties yet.</p>
           )}
         </div>
@@ -317,7 +318,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 </div>
               </div>
             ))}
-            {activity.length === 0 && <p className="p-4 text-sm text-gray-400">No recent activity yet.</p>}
+            {activity.length === 0 && !loading && <p className="p-4 text-sm text-gray-400">No recent activity yet.</p>}
           </div>
         </div>
       </div>
@@ -327,7 +328,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <h3 className="mb-4 font-semibold">Owner Actions</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <button
-            onClick={() => alert('Generating financial report...')}
+            onClick={() => alert('Report export is not available yet.')}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Download className="mb-2 h-5 w-5 text-blue-600" />
@@ -335,7 +336,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <p className="text-xs text-gray-600">Financial summary</p>
           </button>
           <button
-            onClick={() => alert('Opening calendar...')}
+            onClick={() => alert('Manager review scheduling is not available yet.')}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Calendar className="mb-2 h-5 w-5 text-green-600" />
@@ -343,7 +344,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <p className="text-xs text-gray-600">With manager</p>
           </button>
           <button
-            onClick={() => alert('Opening detailed analytics...')}
+            onClick={() => onNavigate?.({ type: 'breakdown', breakdownType: 'rent' })}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <PieChart className="mb-2 h-5 w-5 text-purple-600" />

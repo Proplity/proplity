@@ -10,7 +10,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useActiveLease } from '@/hooks/useLeases';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 import type { Invoice, Payment } from '@/lib/api/types';
@@ -48,6 +48,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: invoices, loading: invoicesLoading } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
+  const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
 
   const property = lease?.unit?.property;
   const balance = outstandingBalance(invoices);
@@ -55,6 +56,16 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     .filter((i) => i.status === 'UNPAID' || i.status === 'PARTIALLY_PAID' || i.status === 'OVERDUE')
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
   const payments = recentPayments(invoices);
+
+  const handlePayRent = async () => {
+    if (!nextDue) return;
+    try {
+      const result = await payInvoice(nextDue.id);
+      window.location.href = result.authorizationUrl;
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
+  };
 
   if (leaseLoading || invoicesLoading) {
     return <div className="p-6 text-gray-500">Loading your rental information…</div>;
@@ -230,13 +241,15 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
 
                 <div className="space-y-2">
                   <button
-                    onClick={() => alert('Opening payment portal...')}
-                    className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700"
+                    onClick={handlePayRent}
+                    disabled={!nextDue || paying}
+                    className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Pay Rent Online
+                    {paying ? 'Redirecting to Paystack…' : nextDue ? 'Pay Rent Online' : 'No Balance Due'}
                   </button>
+                  {payError && <p className="text-sm text-red-600">{payError}</p>}
                   <button
-                    onClick={() => alert('Setting up auto-pay...')}
+                    onClick={() => alert('Auto-pay setup is not available yet.')}
                     className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Setup Auto-Pay

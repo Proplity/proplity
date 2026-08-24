@@ -117,13 +117,17 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
       // Property has no subtype field beyond the 4-value PropertyType enum
       // -- the mock form's granular types (Duplex, Bungalow, ...) have no
       // schema home; folded into a descriptive name instead of a lost field.
+      // Utilities likewise has no dedicated column anywhere on Property/Unit
+      // -- folded into the description text rather than silently dropped.
+      const utilitiesNote =
+        formData.utilities.length > 0 ? `\n\nUtilities included: ${formData.utilities.join(', ')}` : '';
       const property = await createProperty({
         name: `${formData.propertyType || 'Property'} at ${formData.address}`,
         address: formData.address,
         city: formData.city,
         state: formData.state,
         type: 'RESIDENTIAL',
-        description: formData.description || undefined,
+        description: formData.description || utilitiesNote ? `${formData.description}${utilitiesNote}` : undefined,
       });
 
       setSubmittingUnit(true);
@@ -135,6 +139,7 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
           rentAmount: parseFloat(formData.rentAmount) || 0,
           listedPaymentFrequency: formData.rentFrequency === 'monthly' ? 'MONTHLY' : 'ANNUAL',
           sqft: formData.sqft ? parseInt(formData.sqft, 10) : undefined,
+          amenities: formData.amenities.length > 0 ? formData.amenities : undefined,
         });
       } finally {
         setSubmittingUnit(false);
@@ -444,7 +449,10 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
               <Video className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">360° Walkthrough Video *</h3>
               <p className="mb-4 text-sm text-gray-600">Required for AI verification</p>
-              <button className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700">
+              <button
+                onClick={() => alert('Media upload is not available yet.')}
+                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+              >
                 Upload Video
               </button>
               {uploadedMedia.video360 && (
@@ -462,7 +470,10 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
               <p className="mb-4 text-sm text-gray-600">
                 Living room, bedrooms, kitchen, bathrooms, etc.
               </p>
-              <button className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700">
+              <button
+                onClick={() => alert('Media upload is not available yet.')}
+                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+              >
                 Upload Photos
               </button>
               <p className="mt-2 text-xs text-gray-500">
@@ -475,7 +486,10 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
               <Home className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">Exterior Building View *</h3>
               <p className="mb-4 text-sm text-gray-600">Front view, compound, parking area</p>
-              <button className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700">
+              <button
+                onClick={() => alert('Media upload is not available yet.')}
+                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+              >
                 Upload Photos
               </button>
               {uploadedMedia.exteriorPhotos && (

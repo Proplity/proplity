@@ -34,8 +34,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   const auth = useAuth();
   const [activeFilter, setActiveFilter] = useState<'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'>('all');
 
-  const { data: jobs, loading } = useMaintenanceRequests();
-  const { data: invoices } = useInvoices();
+  const { data: jobs, loading: jobsLoading } = useMaintenanceRequests();
+  const { data: invoices, loading: invoicesLoading } = useInvoices();
+  const loading = jobsLoading || invoicesLoading;
 
   const now = new Date();
   const completedJobs = jobs.filter((j) => j.status === 'COMPLETED');
@@ -93,7 +94,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <Wrench className="h-6 w-6 text-orange-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{activeJobs.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : activeJobs.length}</p>
           <p className="text-sm text-gray-600">Active Jobs</p>
         </div>
 
@@ -103,7 +104,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{completedThisMonth.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : completedThisMonth.length}</p>
           <p className="text-sm text-gray-600">Completed This Month</p>
         </div>
 
@@ -113,7 +114,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold text-green-600">₦{totalEarningsMTD.toLocaleString()}</p>
+          <p className="mb-1 text-2xl font-semibold text-green-600">{loading ? '—' : `₦${totalEarningsMTD.toLocaleString()}`}</p>
           <p className="text-sm text-gray-600">Total Earnings (MTD)</p>
         </div>
 
@@ -123,7 +124,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <DollarSign className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold text-yellow-600">₦{pendingPayments.toLocaleString()}</p>
+          <p className="mb-1 text-2xl font-semibold text-yellow-600">{loading ? '—' : `₦${pendingPayments.toLocaleString()}`}</p>
           <p className="text-sm text-gray-600">Pending Payments</p>
         </div>
       </div>
@@ -276,7 +277,15 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                       Create Invoice
                     </button>
                   )}
-                  <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">View Details</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate({ type: 'vendor-job-detail', jobId: job.id });
+                    }}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    View Details
+                  </button>
                 </div>
               </div>
             </div>

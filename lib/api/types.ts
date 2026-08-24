@@ -85,6 +85,7 @@ export type CreateUnitInput = {
   listedPaymentFrequency?: string;
   depositAmount?: number;
   sqft?: number;
+  amenities?: string[];
 };
 
 export type CreateViewingInput = { scheduledAt: string; unitId?: string; notes?: string };

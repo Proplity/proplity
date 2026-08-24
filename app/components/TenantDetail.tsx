@@ -164,10 +164,16 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
             </div>
 
             <div className="mt-4 flex gap-2 border-t border-gray-200 pt-4">
-              <button className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              <button
+                onClick={() => alert('Lease renewal is not available yet.')}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
                 Renew Lease
               </button>
-              <button className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <button
+                onClick={() => alert('Sending notices is not available yet.')}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
                 Send Notice
               </button>
             </div>
@@ -287,19 +293,45 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 font-semibold">Quick Actions</h2>
             <div className="space-y-2">
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              <a
+                href={tenant.phoneNumber ? `tel:${tenant.phoneNumber}` : undefined}
+                onClick={(e) => {
+                  if (!tenant.phoneNumber) {
+                    e.preventDefault();
+                    alert('No phone number on file for this tenant.');
+                  }
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
                 <Phone className="h-4 w-4" />
                 Call Tenant
-              </button>
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              </a>
+              <a
+                href={`mailto:${tenant.email}`}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
                 <Mail className="h-4 w-4" />
                 Send Email
-              </button>
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              </a>
+              <a
+                href={tenant.phoneNumber ? `https://wa.me/${tenant.phoneNumber.replace(/\D/g, '')}` : undefined}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => {
+                  if (!tenant.phoneNumber) {
+                    e.preventDefault();
+                    alert('No phone number on file for this tenant.');
+                  }
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
                 <MessageSquare className="h-4 w-4" />
                 WhatsApp
-              </button>
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              </a>
+              <button
+                onClick={() => alert('Sending an invoice from here is not available yet.')}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
                 <FileText className="h-4 w-4" />
                 Send Invoice
               </button>

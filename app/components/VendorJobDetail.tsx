@@ -38,7 +38,7 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
 export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailProps) {
   const { data: job, loading, refetch } = useMaintenanceRequest(jobId);
   const { submit: updateJob, submitting } = useUpdateMaintenanceRequest(jobId);
-  const { data: accessCodes } = useAccessCodes(job?.unitId ?? null);
+  const { data: accessCodes, loading: accessCodesLoading } = useAccessCodes(job?.unitId ?? null);
   const [notes, setNotes] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -168,7 +168,13 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
               </div>
               <div>
                 <p className="mb-1 text-sm text-gray-600">Access Code</p>
-                <p className="text-sm">{activeCode ? `${activeCode.code} (${activeCode.guestName ?? 'gate access'})` : 'No active access code on file — contact tenant to arrange entry.'}</p>
+                <p className="text-sm">
+                  {accessCodesLoading
+                    ? 'Loading…'
+                    : activeCode
+                      ? `${activeCode.code} (${activeCode.guestName ?? 'gate access'})`
+                      : 'No active access code on file — contact tenant to arrange entry.'}
+                </p>
               </div>
             </div>
           </div>
@@ -303,7 +309,7 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
           {job.status !== 'COMPLETED' && job.status !== 'CANCELLED' && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-6">
               <h3 className="mb-2 font-semibold text-green-900">Ready to Complete?</h3>
-              <p className="mb-4 text-sm text-green-800">Mark this job as completed to generate your invoice and receive payment.</p>
+              <p className="mb-4 text-sm text-green-800">Create your invoice for this job to get paid. Your property manager will mark the job as officially completed.</p>
               <button
                 onClick={() => onNavigate({ type: 'vendor-create-invoice', jobId: job.id })}
                 className="w-full rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"

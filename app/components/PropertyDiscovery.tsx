@@ -283,7 +283,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
 
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => alert(`Scheduling tour for ${property.name}...`)}
+                    onClick={() => onNavigate({ type: 'schedule-viewing', propertyId: property.id })}
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                   >
                     Schedule Tour

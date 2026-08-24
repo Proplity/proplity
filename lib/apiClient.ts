@@ -159,4 +159,10 @@ export const api = {
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
   },
+  payments: {
+    initialize: (invoiceId: string) =>
+      apiClient.post<{ data: { authorizationUrl: string; reference: string } }>('/api/v1/payments/initialize', {
+        invoiceId,
+      }),
+  },
 };

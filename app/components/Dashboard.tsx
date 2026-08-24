@@ -45,25 +45,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const stats = [
     {
       label: 'Total Properties',
-      value: String(properties.length),
+      value: loading ? '—' : String(properties.length),
       icon: Home,
       breakdown: 'properties' as const,
     },
     {
       label: 'Active Leases',
-      value: String(activeLeases.length),
+      value: loading ? '—' : String(activeLeases.length),
       icon: Users,
       breakdown: 'tenants' as const,
     },
     {
       label: 'Rent Collected (This Month)',
-      value: `₦${rentCollectedThisMonth.toLocaleString()}`,
+      value: loading ? '—' : `₦${rentCollectedThisMonth.toLocaleString()}`,
       icon: DollarSign,
       breakdown: 'rent' as const,
     },
     {
       label: 'Pending Maintenance',
-      value: String(pendingMaintenanceCount),
+      value: loading ? '—' : String(pendingMaintenanceCount),
       icon: AlertCircle,
       breakdown: 'maintenance' as const,
     },

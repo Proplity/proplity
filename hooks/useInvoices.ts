@@ -7,6 +7,14 @@ export function useCreateInvoice() {
   return useApiSubmit((body: CreateInvoiceInput) => api.invoices.create(body).then((res) => res.data.data));
 }
 
+// Starts a real Paystack checkout for one invoice -- POST /payments/initialize
+// (fully built, just never had a UI caller). Resolves to the authorization
+// URL to redirect the browser to; the actual Payment row is only created
+// once Paystack's webhook fires on charge.success.
+export function usePayInvoice() {
+  return useApiSubmit((invoiceId: string) => api.payments.initialize(invoiceId).then((res) => res.data.data));
+}
+
 // The logged-in user's own invoices (server-scoped by role -- see
 // GET /api/v1/invoices). Used for tenant payment history and rent-status
 // summaries; each invoice carries its real payments[] now that the route

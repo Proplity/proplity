@@ -146,7 +146,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
             { label: 'Vacant / Unpublished', value: vacant, color: 'bg-gray-50 border-gray-200 text-gray-600' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -165,7 +165,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
             { label: 'Overdue', value: overdue, color: 'bg-red-50 border-red-200 text-red-700' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -181,7 +181,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
             { label: 'Collection Rate', value: `${collectionRate}%`, color: 'bg-blue-50 border-blue-200 text-blue-700' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -200,7 +200,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
             { label: 'Low Priority', value: low, color: 'bg-gray-50 border-gray-200 text-gray-600' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -219,7 +219,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
             { label: '90–180 Days', value: later, color: 'bg-green-50 border-green-200 text-green-700' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -539,7 +539,7 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
           <p className="mt-0.5 text-sm text-gray-500">{hero.subtitle}</p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold text-gray-900">{hero.stat}</p>
+          <p className="text-3xl font-bold text-gray-900">{loading ? '—' : hero.stat}</p>
           <p className="text-sm text-gray-500">{hero.statLabel}</p>
         </div>
       </div>

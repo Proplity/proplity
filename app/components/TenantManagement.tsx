@@ -200,20 +200,26 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => alert(`Calling ${lease.tenant?.name ?? 'tenant'}...`)}
+                      <a
+                        href={lease.tenant?.phoneNumber ? `tel:${lease.tenant.phoneNumber}` : undefined}
+                        onClick={(e) => {
+                          if (!lease.tenant?.phoneNumber) {
+                            e.preventDefault();
+                            alert('No phone number on file for this tenant.');
+                          }
+                        }}
                         className="rounded p-1 hover:bg-gray-100"
                         title="Call tenant"
                       >
                         <Phone className="h-4 w-4 text-gray-600" />
-                      </button>
-                      <button
-                        onClick={() => alert(`Emailing ${lease.tenant?.name ?? 'tenant'}...`)}
+                      </a>
+                      <a
+                        href={lease.tenant?.email ? `mailto:${lease.tenant.email}` : undefined}
                         className="rounded p-1 hover:bg-gray-100"
                         title="Email tenant"
                       >
                         <Mail className="h-4 w-4 text-gray-600" />
-                      </button>
+                      </a>
                       <button
                         onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
                         className="rounded p-1 hover:bg-gray-100"

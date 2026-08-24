@@ -280,6 +280,8 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
                 {['Government ID', 'Proof of Income', 'Reference Letter'].map((doc) => (
                   <button
                     key={doc}
+                    type="button"
+                    onClick={() => alert('Document upload is not available yet.')}
                     className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 transition-colors hover:border-blue-400 hover:text-blue-500"
                   >
                     <Upload className="h-3.5 w-3.5" />

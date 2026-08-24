@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, DollarSign, Plus, Trash2, FileText, Send, AlertCircle } from 'lucide-react';
+import { ArrowLeft, DollarSign, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
 import {
   mockInvoiceJobDetails,
   mockInvoiceVendorInfo as vendorInfo,
@@ -313,10 +313,6 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
           >
             <Send className="h-5 w-5" />
             {submitting ? 'Submitting…' : 'Submit Invoice'}
-          </button>
-          <button className="flex items-center gap-2 rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50">
-            <FileText className="h-5 w-5" />
-            Save as Draft
           </button>
           <button
             onClick={onBack}

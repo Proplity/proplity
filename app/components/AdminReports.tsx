@@ -32,10 +32,20 @@ function monthKey(date: string) {
   return `${d.getFullYear()}-${d.getMonth()}`;
 }
 
-function last6Months() {
-  const months: { key: string; label: string }[] = [];
+function monthsForPeriod(period: string) {
   const now = new Date();
-  for (let i = 5; i >= 0; i--) {
+  if (period === 'Last Year') {
+    const months: { key: string; label: string }[] = [];
+    for (let m = 0; m < 12; m++) {
+      const d = new Date(now.getFullYear() - 1, m, 1);
+      months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString('en-US', { month: 'short' }) });
+    }
+    return months;
+  }
+  const count =
+    period === 'Last 30 Days' ? 1 : period === 'Last 3 Months' ? 3 : period === 'This Year' ? now.getMonth() + 1 : 6;
+  const months: { key: string; label: string }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString('en-US', { month: 'short' }) });
   }
@@ -67,13 +77,19 @@ export function AdminReports() {
   const [period, setPeriod] = useState('Last 6 Months');
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
 
-  const { data: users, loading: usersLoading } = useAdminUsers();
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
+  const { data: users, loading: usersLoading, refetch: refetchUsers } = useAdminUsers();
+  const { data: properties, loading: propertiesLoading, refetch: refetchProperties } = useMyProperties();
   const { data: leases } = useLeases();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
+  const { data: invoices, loading: invoicesLoading, refetch: refetchInvoices } = useInvoices();
+  const { data: maintenanceRequests, loading: maintenanceLoading, refetch: refetchMaintenance } = useMaintenanceRequests();
 
   const loading = usersLoading || propertiesLoading || invoicesLoading || maintenanceLoading;
+  const handleRefresh = () => {
+    refetchUsers();
+    refetchProperties();
+    refetchInvoices();
+    refetchMaintenance();
+  };
   const periods = ['Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'This Year', 'Last Year'];
 
   // ---- Shared real computations (platform-wide -- ADMIN sees everything) ----
@@ -92,7 +108,7 @@ export function AdminReports() {
   const openMaintenance = maintenanceRequests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
   const highPriorityOpen = openMaintenance.filter((r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY').length;
 
-  const months = last6Months();
+  const months = monthsForPeriod(period);
   const revenueTrend = months.map(({ key, label }) => ({
     month: label,
     billed: invoices.filter((i) => monthKey(i.dueDate) === key).reduce((sum, i) => sum + i.amount, 0),
@@ -185,8 +201,12 @@ export function AdminReports() {
               </>
             )}
           </div>
-          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50">
-            <RefreshCw className="h-4 w-4" />
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -210,16 +230,16 @@ export function AdminReports() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Total Revenue (All-Time)" value={fmt(collectedTotal)} icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" />
-            <KpiCard label="Total Users" value={String(users.length)} icon={Users} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <KpiCard label="Properties Listed" value={String(properties.length)} icon={Building2} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <KpiCard label="Maintenance Resolved" value={String(completedMaintenance.length)} icon={Wrench} iconBg="bg-orange-50" iconColor="text-orange-600" />
+            <KpiCard label="Total Revenue (All-Time)" value={loading ? '—' : fmt(collectedTotal)} icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" />
+            <KpiCard label="Total Users" value={loading ? '—' : String(users.length)} icon={Users} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <KpiCard label="Properties Listed" value={loading ? '—' : String(properties.length)} icon={Building2} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            <KpiCard label="Maintenance Resolved" value={loading ? '—' : String(completedMaintenance.length)} icon={Wrench} iconBg="bg-orange-50" iconColor="text-orange-600" />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <h3 className="mb-1 font-semibold text-gray-900">Revenue Trend</h3>
-              <p className="mb-4 text-xs text-gray-500">Billed vs. collected · last 6 months</p>
+              <p className="mb-4 text-xs text-gray-500">Billed vs. collected · {period}</p>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={revenueTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -234,7 +254,7 @@ export function AdminReports() {
 
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <h3 className="mb-1 font-semibold text-gray-900">New Users by Role</h3>
-              <p className="mb-4 text-xs text-gray-500">Last 6 months</p>
+              <p className="mb-4 text-xs text-gray-500">{period}</p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={newUsersByMonth} barSize={10}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -285,10 +305,10 @@ export function AdminReports() {
       {activeTab === 'financial' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Total Revenue (All-Time)" value={fmt(collectedTotal)} icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" />
-            <KpiCard label="Pending Amount" value={fmt(pendingTotal)} icon={TrendingUp} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
-            <KpiCard label="Avg. Transaction Value" value={fmt(avgTransactionValue)} icon={BarChart3} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <KpiCard label="Cancelled Rate" value={`${cancelledRate.toFixed(1)}%`} icon={TrendingDown} iconBg="bg-red-50" iconColor="text-red-500" />
+            <KpiCard label="Total Revenue (All-Time)" value={loading ? '—' : fmt(collectedTotal)} icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" />
+            <KpiCard label="Pending Amount" value={loading ? '—' : fmt(pendingTotal)} icon={TrendingUp} iconBg="bg-yellow-50" iconColor="text-yellow-600" />
+            <KpiCard label="Avg. Transaction Value" value={loading ? '—' : fmt(avgTransactionValue)} icon={BarChart3} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            <KpiCard label="Cancelled Rate" value={loading ? '—' : `${cancelledRate.toFixed(1)}%`} icon={TrendingDown} iconBg="bg-red-50" iconColor="text-red-500" />
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -354,16 +374,16 @@ export function AdminReports() {
       {activeTab === 'users' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Property Managers" value={String(users.filter((u) => u.role === 'MANAGER').length)} icon={Users} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <KpiCard label="Landlords" value={String(users.filter((u) => u.role === 'LANDLORD').length)} icon={Users} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <KpiCard label="Tenants" value={String(users.filter((u) => u.role === 'TENANT').length)} icon={Users} iconBg="bg-green-50" iconColor="text-green-600" />
-            <KpiCard label="Service Providers" value={String(users.filter((u) => u.role === 'VENDOR').length)} icon={Users} iconBg="bg-orange-50" iconColor="text-orange-600" />
+            <KpiCard label="Property Managers" value={loading ? '—' : String(users.filter((u) => u.role === 'MANAGER').length)} icon={Users} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <KpiCard label="Landlords" value={loading ? '—' : String(users.filter((u) => u.role === 'LANDLORD').length)} icon={Users} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            <KpiCard label="Tenants" value={loading ? '—' : String(users.filter((u) => u.role === 'TENANT').length)} icon={Users} iconBg="bg-green-50" iconColor="text-green-600" />
+            <KpiCard label="Service Providers" value={loading ? '—' : String(users.filter((u) => u.role === 'VENDOR').length)} icon={Users} iconBg="bg-orange-50" iconColor="text-orange-600" />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <h3 className="mb-1 font-semibold text-gray-900">New Users by Role</h3>
-              <p className="mb-4 text-xs text-gray-500">Last 6 months</p>
+              <p className="mb-4 text-xs text-gray-500">{period}</p>
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={newUsersByMonth}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -427,10 +447,10 @@ export function AdminReports() {
       {activeTab === 'properties' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Total Listed" value={String(properties.length)} icon={Building2} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <KpiCard label="Approved" value={String(properties.filter((p) => p.moderationStatus === 'APPROVED').length)} icon={Building2} iconBg="bg-green-50" iconColor="text-green-600" />
-            <KpiCard label="Avg. Occupancy Rate" value={`${avgOccupancy.toFixed(1)}%`} icon={BarChart3} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <KpiCard label="Avg. Unit Rent" value={fmt(avgRent)} icon={DollarSign} iconBg="bg-orange-50" iconColor="text-orange-600" />
+            <KpiCard label="Total Listed" value={loading ? '—' : String(properties.length)} icon={Building2} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            <KpiCard label="Approved" value={loading ? '—' : String(properties.filter((p) => p.moderationStatus === 'APPROVED').length)} icon={Building2} iconBg="bg-green-50" iconColor="text-green-600" />
+            <KpiCard label="Avg. Occupancy Rate" value={loading ? '—' : `${avgOccupancy.toFixed(1)}%`} icon={BarChart3} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <KpiCard label="Avg. Unit Rent" value={loading ? '—' : fmt(avgRent)} icon={DollarSign} iconBg="bg-orange-50" iconColor="text-orange-600" />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -517,15 +537,15 @@ export function AdminReports() {
       {activeTab === 'maintenance' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Total Requests (All-Time)" value={String(maintenanceRequests.length)} icon={Wrench} iconBg="bg-orange-50" iconColor="text-orange-600" />
-            <KpiCard label="Resolved This Month" value={String(maintenanceByMonth[5]?.resolved ?? 0)} icon={Wrench} iconBg="bg-green-50" iconColor="text-green-600" />
-            <KpiCard label="Avg. Resolution Time" value={resolutionDays.length > 0 ? `${avgResolutionDays.toFixed(1)} days` : 'N/A'} icon={TrendingDown} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <KpiCard label="High Priority Open" value={String(highPriorityOpen)} icon={Wrench} iconBg="bg-red-50" iconColor="text-red-500" />
+            <KpiCard label="Total Requests (All-Time)" value={loading ? '—' : String(maintenanceRequests.length)} icon={Wrench} iconBg="bg-orange-50" iconColor="text-orange-600" />
+            <KpiCard label="Resolved This Month" value={loading ? '—' : String(maintenanceByMonth[maintenanceByMonth.length - 1]?.resolved ?? 0)} icon={Wrench} iconBg="bg-green-50" iconColor="text-green-600" />
+            <KpiCard label="Avg. Resolution Time" value={loading ? '—' : resolutionDays.length > 0 ? `${avgResolutionDays.toFixed(1)} days` : 'N/A'} icon={TrendingDown} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <KpiCard label="High Priority Open" value={loading ? '—' : String(highPriorityOpen)} icon={Wrench} iconBg="bg-red-50" iconColor="text-red-500" />
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <h3 className="mb-1 font-semibold text-gray-900">Maintenance Requests — Created vs. Resolved</h3>
-            <p className="mb-4 text-xs text-gray-500">Last 6 months</p>
+            <p className="mb-4 text-xs text-gray-500">{period}</p>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={maintenanceByMonth} barCategoryGap="35%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

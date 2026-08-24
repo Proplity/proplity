@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 interface PropertyApplicationFormProps {
-  propertyId: number;
+  propertyId: string;
   propertyTitle: string;
   propertyPrice: string;
   onBack: () => void;
