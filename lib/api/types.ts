@@ -343,3 +343,42 @@ export type Subscription = {
 };
 
 export type CheckoutSubscriptionInput = { tier: 'FREE' | 'PRO'; billingCycle?: 'monthly' | 'yearly' };
+
+export type Application = {
+  id: string;
+  unitId: string;
+  applicantId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  details: Record<string, unknown>;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+  applicant?: { id: string; name: string; email: string; phoneNumber: string | null };
+  unit?: { id: string; unitNumber: string; property: { id: string; name: string } };
+};
+
+export type CreateApplicationInput = { unitId: string; details: Record<string, unknown> };
+export type ReviewApplicationInput = { status: 'APPROVED' | 'REJECTED'; reviewNotes?: string };
+
+export type ManagerInviteCode = {
+  id: string;
+  code: string;
+  status: 'ACTIVE' | 'DEACTIVATED';
+  linkedManagerId: string | null;
+  linkedManager?: { id: string; name: string; email: string } | null;
+  landlord?: { id: string; name: string } | null;
+  linkedAt: string | null;
+  createdAt: string;
+};
+
+export type AdCampaign = {
+  id: string;
+  propertyId: string;
+  budget: number;
+  durationDays: number;
+  status: 'ACTIVE' | 'CANCELLED';
+  impressions: number;
+  clicks: number;
+  createdAt: string;
+};

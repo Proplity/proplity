@@ -20,68 +20,73 @@ enum KycStatus {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  name                String
-  passwordHash        String
-  role                Role                 @default(TENANT)
-  status              UserStatus           @default(PENDING_VERIFICATION)
-  phoneNumber         String?
-  avatarUrl           String?
-  bio                 String?
-  kycStatus           KycStatus            @default(UNVERIFIED)
-  moveReason          String?
-  occupantCount       Int?
-  targetMoveInDate    DateTime?
+  id                           String                    @id @default(uuid())
+  email                        String                    @unique
+  name                         String
+  passwordHash                 String
+  role                         Role                      @default(TENANT)
+  status                       UserStatus                @default(PENDING_VERIFICATION)
+  phoneNumber                  String?
+  avatarUrl                    String?
+  bio                          String?
+  kycStatus                    KycStatus                 @default(UNVERIFIED)
+  moveReason                   String?
+  occupantCount                Int?
+  targetMoveInDate             DateTime?
   // Single contact, matching how it's used in practice (one named contact per
   // tenant) — not a separate model, since nothing in the product needs more
   // than one per user.
   emergencyContactName         String?
   emergencyContactRelationship String?
   emergencyContactPhone        String?
-  lastLoginAt         DateTime?
-  refreshTokens       RefreshToken[]
-  verificationToken   VerificationToken?
-  loginAttempts       LoginAttempt[]
-  managedProperties   Property[]           @relation("ManagedProperties")
-  ownedProperties     Property[]           @relation("OwnedProperties")
-  leases              Lease[]              @relation("TenantLeases")
-  maintenanceRequests MaintenanceRequest[] @relation("TenantMaintenance")
-  assignedJobs        MaintenanceRequest[] @relation("VendorJobs")
-  bankAccounts        BankAccount[]
-  issuedAccessCodes   AccessCode[]
-  announcements         Announcement[]            @relation("AnnouncementAuthor")
-  reportedViolations    Violation[]               @relation("ViolationReportedBy")
-  conversations         ConversationParticipant[]
-  messagesSent          Message[]
-  invoices              Invoice[]
-  vendorProfile         VendorProfile?
-  kycVerifications      KycVerification[]
-  vendorRatingsReceived VendorRating[]            @relation("VendorRatingsReceived")
-  vendorRatingsGiven    VendorRating[]            @relation("VendorRatingsGiven")
-  auditLogs             AuditLog[]
-  propertyReviews       PropertyReview[]
-  propertyViewings      PropertyViewing[]
-  subscription          Subscription?
-  notesAuthored         Note[]                    @relation("NoteAuthor")
-  notesAboutMe           Note[]                   @relation("NoteAboutUser")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  lastLoginAt                  DateTime?
+  refreshTokens                RefreshToken[]
+  verificationToken            VerificationToken?
+  loginAttempts                LoginAttempt[]
+  managedProperties            Property[]                @relation("ManagedProperties")
+  ownedProperties              Property[]                @relation("OwnedProperties")
+  leases                       Lease[]                   @relation("TenantLeases")
+  maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
+  assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
+  bankAccounts                 BankAccount[]
+  issuedAccessCodes            AccessCode[]
+  announcements                Announcement[]            @relation("AnnouncementAuthor")
+  reportedViolations           Violation[]               @relation("ViolationReportedBy")
+  conversations                ConversationParticipant[]
+  messagesSent                 Message[]
+  invoices                     Invoice[]
+  vendorProfile                VendorProfile?
+  kycVerifications             KycVerification[]
+  vendorRatingsReceived        VendorRating[]            @relation("VendorRatingsReceived")
+  vendorRatingsGiven           VendorRating[]            @relation("VendorRatingsGiven")
+  auditLogs                    AuditLog[]
+  propertyReviews              PropertyReview[]
+  propertyViewings             PropertyViewing[]
+  subscription                 Subscription?
+  notesAuthored                Note[]                    @relation("NoteAuthor")
+  notesAboutMe                 Note[]                    @relation("NoteAboutUser")
+  submittedApplications        Application[]             @relation("SubmittedApplications")
+  reviewedApplications         Application[]             @relation("ReviewedApplications")
+  issuedManagerCodes           ManagerInviteCode[]       @relation("IssuedManagerCodes")
+  linkedManagerCode            ManagerInviteCode?        @relation("LinkedManagerCode")
+  createdAdCampaigns           AdCampaign[]
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
 model VendorProfile {
-  id                String                 @id @default(uuid())
-  userId            String                 @unique
-  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String                @id @default(uuid())
+  userId            String                @unique
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessName      String
   licenseNumber     String?
   // Many-to-many with the MaintenanceCategory table (operations.prisma) —
   // updated from an enum array now that categories are admin-editable rows.
   serviceCategories MaintenanceCategory[]
   coverageArea      String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 }
 
 // PRD Appendix "ID Verification - API Integration" — records the verification
@@ -140,17 +145,41 @@ enum SubscriptionStatus {
 // the payment provider's own subscription API (e.g. Paystack subscriptions)
 // rather than reimplementing a mandate system here.
 model Subscription {
-  id                    String             @id @default(uuid())
-  userId                String             @unique
-  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tier                  PlanTier           @default(FREE)
-  status                SubscriptionStatus @default(ACTIVE)
+  id                     String             @id @default(uuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier                   PlanTier           @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
   providerSubscriptionId String?
-  currentPeriodStart    DateTime?
-  currentPeriodEnd      DateTime?
-  cancelAtPeriodEnd     Boolean            @default(false)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+enum ManagerInviteCodeStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+// A landlord-generated code a manager enters to link accounts (distinct
+// from AccessCode, which is the unit-scoped gate-access model). Redeeming a
+// code only records the relationship — it does not assign the manager to
+// any Property; that stays the existing, separate action of setting
+// Property.managerId directly.
+model ManagerInviteCode {
+  id              String                  @id @default(uuid())
+  code            String                  @unique
+  landlordId      String
+  landlord        User                    @relation("IssuedManagerCodes", fields: [landlordId], references: [id], onDelete: Cascade)
+  status          ManagerInviteCodeStatus @default(ACTIVE)
+  linkedManagerId String?                 @unique
+  linkedManager   User?                   @relation("LinkedManagerCode", fields: [linkedManagerId], references: [id])
+  linkedAt        DateTime?
+  createdAt       DateTime                @default(now())
+
+  @@index([landlordId, status])
 }
 
 model BankAccount {

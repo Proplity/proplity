@@ -9,10 +9,13 @@ import {
   FileText,
   Home,
   CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
+import { useCreateApplication } from '@/hooks/useApplications';
 
 interface PropertyApplicationFormProps {
   propertyId: string;
+  unitId: string;
   propertyTitle: string;
   propertyPrice: string;
   onBack: () => void;
@@ -21,6 +24,7 @@ interface PropertyApplicationFormProps {
 
 export function PropertyApplicationForm({
   propertyId,
+  unitId,
   propertyTitle,
   propertyPrice,
   onBack,
@@ -70,16 +74,35 @@ export function PropertyApplicationForm({
     agreeToTerms: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { submit: createApplication, submitting, error } = useCreateApplication();
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!formData.agreeToTerms) {
-      alert('Please agree to the terms and conditions');
+      setFormError('Please agree to the terms and conditions');
       return;
     }
-    // Simulate submission
-    setTimeout(() => {
+
+    // File fields can't be sent as-is -- no file-storage endpoint exists in
+    // this codebase yet (same documented gap as MaintenanceRequestForm's
+    // media uploads); recorded as filenames only, not lost silently.
+    const { idDocument, proofOfIncome, employmentLetter, bankStatement, ...rest } = formData;
+    const details = {
+      ...rest,
+      idDocument: idDocument?.name ?? null,
+      proofOfIncome: proofOfIncome?.name ?? null,
+      employmentLetter: employmentLetter?.name ?? null,
+      bankStatement: bankStatement?.name ?? null,
+    };
+
+    try {
+      await createApplication({ unitId, details });
       onSubmit();
-    }, 1000);
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
   };
 
   const handleFileUpload = (field: string, file: File | null) => {
@@ -712,12 +735,20 @@ export function PropertyApplicationForm({
             ) : (
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-green-600 py-3 font-semibold text-white hover:bg-green-700"
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-green-600 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Submit Application
+                {submitting ? 'Submitting…' : 'Submit Application'}
               </button>
             )}
           </div>
+
+          {(formError || error) && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              {formError || error}
+            </div>
+          )}
         </form>
       </div>
     </div>

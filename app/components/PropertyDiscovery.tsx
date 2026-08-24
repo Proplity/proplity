@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProperties } from '@/hooks/useProperties';
+import { useAdCampaign, useCreateAdCampaign, useCancelAdCampaign } from '@/hooks/useAdCampaigns';
 import type { Property } from '@/lib/api/types';
 import {
   Search,
@@ -23,13 +24,58 @@ interface PropertyDiscoveryProps {
   onNavigate: (page: any) => void;
 }
 
-interface AdState {
-  active: boolean;
-  createdAt?: string;
-  budget?: string;
-  duration?: string;
-  impressions?: number;
-  clicks?: number;
+// Real ad status + the Create/Cancel button for one property card. A
+// separate component so useAdCampaign (scoped to one propertyId) can be
+// called once per card rather than needing a bulk endpoint just for this
+// listing page. `refreshKey` in the parent's key= prop forces a refetch
+// after the shared modal above completes an action for this property.
+function AdStatusAndButton({
+  property,
+  onOpenModal,
+}: {
+  property: Property;
+  onOpenModal: (type: 'create' | 'cancel', adId?: string) => void;
+}) {
+  const { data: activeAd } = useAdCampaign(property.id);
+
+  return (
+    <>
+      {activeAd && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4 text-orange-500" />
+            <div>
+              <p className="text-xs font-semibold text-orange-700">Ad Running</p>
+              <p className="text-xs text-orange-600">
+                {activeAd.impressions} impressions · {activeAd.clicks} clicks · {activeAd.durationDays} days
+              </p>
+            </div>
+          </div>
+          <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500"></span>
+            Live
+          </span>
+        </div>
+      )}
+      {activeAd ? (
+        <button
+          onClick={() => onOpenModal('cancel', activeAd.id)}
+          className="flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          <X className="h-3.5 w-3.5" />
+          Cancel Ad
+        </button>
+      ) : (
+        <button
+          onClick={() => onOpenModal('create')}
+          className="flex items-center gap-1 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          Create Ad
+        </button>
+      )}
+    </>
+  );
 }
 
 // Real Property/Unit fields mapped into what the card actually displays --
@@ -63,44 +109,46 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
   const { data: properties, loading, error } = useProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [adStates, setAdStates] = useState<Record<string, AdState>>({});
   const [adModal, setAdModal] = useState<{
     type: 'create' | 'cancel';
     propertyId: string;
     propertyTitle: string;
+    adId?: string;
   } | null>(null);
-  const [adForm, setAdForm] = useState({
-    budget: '₦50,000',
-    duration: '30 days',
-  });
+  const [adForm, setAdForm] = useState({ budget: 50_000, durationDays: 30 });
   const [adSuccess, setAdSuccess] = useState<string | null>(null);
+  // Bumped after a successful create/cancel to remount each card's
+  // AdStatusAndButton (see its key= below), forcing a real refetch instead
+  // of the shared modal trying to reach into a specific card's own hook state.
+  const [adRefreshKey, setAdRefreshKey] = useState(0);
 
-  const handleCreateAd = (propertyId: string) => {
-    setAdStates((prev) => ({
-      ...prev,
-      [propertyId]: {
-        active: true,
-        createdAt: new Date().toLocaleDateString('en-NG', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        }),
-        budget: adForm.budget,
-        duration: adForm.duration,
-        impressions: 0,
-        clicks: 0,
-      },
-    }));
-    setAdSuccess(`Ad created successfully for ${adModal?.propertyTitle}!`);
-    setAdModal(null);
-    setTimeout(() => setAdSuccess(null), 3000);
+  const createAd = useCreateAdCampaign(adModal?.propertyId ?? '');
+  const cancelAd = useCancelAdCampaign(adModal?.propertyId ?? '');
+
+  const handleCreateAd = async () => {
+    if (!adModal) return;
+    try {
+      await createAd.submit(adForm);
+      setAdSuccess(`Ad created successfully for ${adModal.propertyTitle}!`);
+      setAdModal(null);
+      setAdRefreshKey((k) => k + 1);
+      setTimeout(() => setAdSuccess(null), 3000);
+    } catch {
+      // error state is already surfaced via createAd.error, shown in the modal
+    }
   };
 
-  const handleCancelAd = (propertyId: string) => {
-    setAdStates((prev) => ({ ...prev, [propertyId]: { active: false } }));
-    setAdSuccess(`Ad cancelled for ${adModal?.propertyTitle}.`);
-    setAdModal(null);
-    setTimeout(() => setAdSuccess(null), 3000);
+  const handleCancelAd = async () => {
+    if (!adModal?.adId) return;
+    try {
+      await cancelAd.submit(adModal.adId);
+      setAdSuccess(`Ad cancelled for ${adModal.propertyTitle}.`);
+      setAdModal(null);
+      setAdRefreshKey((k) => k + 1);
+      setTimeout(() => setAdSuccess(null), 3000);
+    } catch {
+      // error state is already surfaced via cancelAd.error, shown in the modal
+    }
   };
 
   const filters = [
@@ -260,28 +308,15 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   </div>
                 </div>
 
-                {/* Ad Status Banner */}
-                {adStates[property.id]?.active && (
-                  <div className="mb-3 flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Megaphone className="h-4 w-4 text-orange-500" />
-                      <div>
-                        <p className="text-xs font-semibold text-orange-700">Ad Running</p>
-                        <p className="text-xs text-orange-600">
-                          {adStates[property.id].impressions ?? 0} impressions ·{' '}
-                          {adStates[property.id].clicks ?? 0} clicks ·{' '}
-                          {adStates[property.id].duration}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
-                      <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500"></span>
-                      Live
-                    </span>
-                  </div>
-                )}
+                <AdStatusAndButton
+                  key={`${property.id}-${adRefreshKey}`}
+                  property={property}
+                  onOpenModal={(type, adId) =>
+                    setAdModal({ type, propertyId: property.id, propertyTitle: property.name, adId })
+                  }
+                />
 
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => onNavigate({ type: 'schedule-viewing', propertyId: property.id })}
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -299,35 +334,6 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   >
                     Details
                   </button>
-                  {adStates[property.id]?.active ? (
-                    <button
-                      onClick={() =>
-                        setAdModal({
-                          type: 'cancel',
-                          propertyId: property.id,
-                          propertyTitle: property.name,
-                        })
-                      }
-                      className="flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      Cancel Ad
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        setAdModal({
-                          type: 'create',
-                          propertyId: property.id,
-                          propertyTitle: property.name,
-                        })
-                      }
-                      className="flex items-center gap-1 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50"
-                    >
-                      <Megaphone className="h-3.5 w-3.5" />
-                      Create Ad
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -379,28 +385,28 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                 <label className="mb-1 block text-sm font-medium text-gray-700">Ad Budget</label>
                 <select
                   value={adForm.budget}
-                  onChange={(e) => setAdForm((f) => ({ ...f, budget: e.target.value }))}
+                  onChange={(e) => setAdForm((f) => ({ ...f, budget: Number(e.target.value) }))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"
                 >
-                  <option>₦25,000</option>
-                  <option>₦50,000</option>
-                  <option>₦100,000</option>
-                  <option>₦200,000</option>
-                  <option>₦500,000</option>
+                  <option value={25_000}>₦25,000</option>
+                  <option value={50_000}>₦50,000</option>
+                  <option value={100_000}>₦100,000</option>
+                  <option value={200_000}>₦200,000</option>
+                  <option value={500_000}>₦500,000</option>
                 </select>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Ad Duration</label>
                 <select
-                  value={adForm.duration}
-                  onChange={(e) => setAdForm((f) => ({ ...f, duration: e.target.value }))}
+                  value={adForm.durationDays}
+                  onChange={(e) => setAdForm((f) => ({ ...f, durationDays: Number(e.target.value) }))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"
                 >
-                  <option>7 days</option>
-                  <option>14 days</option>
-                  <option>30 days</option>
-                  <option>60 days</option>
-                  <option>90 days</option>
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={60}>60 days</option>
+                  <option value={90}>90 days</option>
                 </select>
               </div>
               <div className="flex items-start gap-2 rounded-lg border border-orange-100 bg-orange-50 p-3">
@@ -410,6 +416,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   listings on the landing page.
                 </p>
               </div>
+              {createAd.error && <p className="text-sm text-red-600">{createAd.error}</p>}
             </div>
             <div className="flex gap-3 border-t border-gray-200 p-6">
               <button
@@ -419,10 +426,11 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                 Cancel
               </button>
               <button
-                onClick={() => handleCreateAd(adModal.propertyId)}
-                className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                onClick={handleCreateAd}
+                disabled={createAd.submitting}
+                className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Launch Ad
+                {createAd.submitting ? 'Launching…' : 'Launch Ad'}
               </button>
             </div>
           </div>
@@ -452,6 +460,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                 The ad will stop immediately and will no longer appear to prospective tenants.
                 Unused budget will not be refunded.
               </p>
+              {cancelAd.error && <p className="mb-4 text-sm text-red-600">{cancelAd.error}</p>}
               <div className="flex gap-3">
                 <button
                   onClick={() => setAdModal(null)}
@@ -460,10 +469,11 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   Keep Ad
                 </button>
                 <button
-                  onClick={() => handleCancelAd(adModal.propertyId)}
-                  className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+                  onClick={handleCancelAd}
+                  disabled={cancelAd.submitting}
+                  className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Yes, Cancel
+                  {cancelAd.submitting ? 'Cancelling…' : 'Yes, Cancel'}
                 </button>
               </div>
             </div>

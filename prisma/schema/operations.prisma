@@ -27,10 +27,10 @@ enum ScheduleFrequency {
 // migration. Seed with the original six defaults on first deploy — see the
 // seed snippet delivered alongside this schema.
 model MaintenanceCategory {
-  id        String                 @id @default(uuid())
-  name      String                 @unique
-  isActive  Boolean                @default(true)
-  createdAt DateTime               @default(now())
+  id        String                @id @default(uuid())
+  name      String                @unique
+  isActive  Boolean               @default(true)
+  createdAt DateTime              @default(now())
   requests  MaintenanceRequest[]
   schedules MaintenanceSchedule[]
   vendors   VendorProfile[]
@@ -94,16 +94,16 @@ model MaintenanceSchedule {
 
 // One rating per completed job (PRD §5.4 "Work history & reputation signals").
 model VendorRating {
-  id                    String             @id @default(uuid())
-  maintenanceRequestId  String             @unique
-  maintenanceRequest    MaintenanceRequest @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
-  vendorId              String
-  vendor                User               @relation("VendorRatingsReceived", fields: [vendorId], references: [id])
-  ratedById             String
-  ratedBy               User               @relation("VendorRatingsGiven", fields: [ratedById], references: [id])
-  rating                Int
-  comment               String?
-  createdAt             DateTime           @default(now())
+  id                   String             @id @default(uuid())
+  maintenanceRequestId String             @unique
+  maintenanceRequest   MaintenanceRequest @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
+  vendorId             String
+  vendor               User               @relation("VendorRatingsReceived", fields: [vendorId], references: [id])
+  ratedById            String
+  ratedBy              User               @relation("VendorRatingsGiven", fields: [ratedById], references: [id])
+  rating               Int
+  comment              String?
+  createdAt            DateTime           @default(now())
 
   @@index([vendorId])
 }

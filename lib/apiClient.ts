@@ -1,10 +1,13 @@
 import axios from 'axios';
 import type {
   AccessCode,
+  AdCampaign,
   AdminUser,
+  Application,
   CheckoutSubscriptionInput,
   Conversation,
   CreateAccessCodeInput,
+  CreateApplicationInput,
   CreateConversationInput,
   CreateInvoiceInput,
   CreateLeaseInput,
@@ -17,10 +20,12 @@ import type {
   Lease,
   MaintenanceCategory,
   MaintenanceRequest,
+  ManagerInviteCode,
   Message,
   Note,
   Paginated,
   Property,
+  ReviewApplicationInput,
   Subscription,
   Unit,
   UpdateMaintenanceRequestInput,
@@ -174,5 +179,27 @@ export const api = {
         '/api/v1/subscriptions/checkout',
         body,
       ),
+  },
+  applications: {
+    list: (params?: { status?: string; unitId?: string }) =>
+      apiClient.get<{ data: Application[] }>('/api/v1/applications', { params }),
+    get: (id: string) => apiClient.get<{ data: Application }>(`/api/v1/applications/${id}`),
+    create: (body: CreateApplicationInput) => apiClient.post<{ data: Application }>('/api/v1/applications', body),
+    review: (id: string, body: ReviewApplicationInput) =>
+      apiClient.patch<{ data: Application }>(`/api/v1/applications/${id}`, body),
+  },
+  managerCodes: {
+    list: () => apiClient.get<{ data: ManagerInviteCode[] }>('/api/v1/manager-codes'),
+    create: () => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes'),
+    setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
+      apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
+    redeem: (code: string) => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes/redeem', { code }),
+  },
+  adCampaigns: {
+    get: (propertyId: string) => apiClient.get<{ data: AdCampaign | null }>(`/api/v1/properties/${propertyId}/ads`),
+    create: (propertyId: string, body: { budget: number; durationDays: number }) =>
+      apiClient.post<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads`, body),
+    cancel: (propertyId: string, adId: string) =>
+      apiClient.patch<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads/${adId}`),
   },
 };

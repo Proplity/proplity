@@ -12,12 +12,15 @@ import {
   Zap,
   Droplet,
   Shield,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useApplications, useReviewApplication } from '@/hooks/useApplications';
+import type { Application } from '@/lib/api/types';
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -27,12 +30,61 @@ interface PropertyDetailProps {
 
 const MANAGE_ROLES = ['manager', 'landlord', 'admin'];
 
+function ApplicationRow({ application, onReviewed }: { application: Application; onReviewed: () => void }) {
+  const { submit: review, submitting } = useReviewApplication(application.id);
+  const details = application.details as Record<string, unknown>;
+  const name = [details.firstName, details.lastName].filter(Boolean).join(' ') || 'Applicant';
+
+  const handleReview = async (status: 'APPROVED' | 'REJECTED') => {
+    try {
+      await review({ status });
+      onReviewed();
+    } catch {
+      // errors are rare here (409 if already reviewed) -- refetch either way
+      onReviewed();
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <p className="font-medium">{name}</p>
+          <p className="text-xs text-gray-500">
+            Unit {application.unit?.unitNumber} · {details.email as string}
+          </p>
+        </div>
+        <span className="text-xs text-gray-400">{new Date(application.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleReview('APPROVED')}
+          disabled={submitting}
+          className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+        >
+          <CheckCircle className="h-3.5 w-3.5" />
+          Approve
+        </button>
+        <button
+          onClick={() => handleReview('REJECTED')}
+          disabled={submitting}
+          className="flex items-center gap-1 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          <X className="h-3.5 w-3.5" />
+          Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetailProps) {
   const auth = useAuth();
   const { data: property, loading } = useProperty(propertyId);
   const { data: leases } = useLeases();
   const { data: invoices } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
+  const { data: pendingApplications, refetch: refetchApplications } = useApplications({ status: 'PENDING' });
 
   if (loading) {
     return <div className="p-6 text-gray-500">Loading property…</div>;
@@ -60,6 +112,7 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
     (auth.user.role === 'admin' || auth.user.id === property.managerId || auth.user.id === property.landlordId);
 
   const propertyLeases = leases.filter((l) => l.unit?.propertyId === propertyId);
+  const propertyApplications = pendingApplications.filter((a) => a.unit?.property.id === propertyId);
   const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === propertyId);
   const propertyMaintenance = maintenanceRequests
     .filter((r) => r.unit?.propertyId === propertyId)
@@ -244,6 +297,24 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Rental Applications -- manager/landlord/admin only */}
+          {canManage && (
+            <div className="rounded-lg border border-gray-200 bg-white">
+              <div className="border-b border-gray-200 p-6">
+                <h2 className="font-semibold">Rental Applications</h2>
+                <p className="text-sm text-gray-500">Pending applications for units on this property</p>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {propertyApplications.map((application) => (
+                  <ApplicationRow key={application.id} application={application} onReviewed={refetchApplications} />
+                ))}
+                {propertyApplications.length === 0 && (
+                  <p className="p-6 text-sm text-gray-400">No pending applications.</p>
+                )}
               </div>
             </div>
           )}

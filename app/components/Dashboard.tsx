@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -7,11 +8,13 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  KeyRound,
 } from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useRedeemManagerCode } from '@/hooks/useManagerCodes';
 
 interface DashboardProps {
   onNavigate: (page: any) => void;
@@ -32,6 +35,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
 
   const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
+
+  const [codeInput, setCodeInput] = useState('');
+  const [linkedTo, setLinkedTo] = useState<string | null>(null);
+  const { submit: redeemCode, submitting: redeeming, error: redeemError } = useRedeemManagerCode();
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codeInput.trim()) return;
+    try {
+      const result = await redeemCode(codeInput.trim());
+      setLinkedTo(result.landlord?.name ?? 'landlord');
+      setCodeInput('');
+    } catch {
+      // error state is already surfaced via the hook's `error`
+    }
+  };
 
   const rentCollectedThisMonth = invoices
     .flatMap((i) => i.payments)
@@ -200,6 +219,44 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Link to a Landlord -- redeems a code generated on LandlordDashboard's
+          Manager Access Codes panel; recorded as an account link only, does
+          not itself assign this manager to any property. */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+            <KeyRound className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-900">Link to a Landlord</h2>
+            <p className="mt-0.5 text-xs text-gray-500">Enter the code your landlord shared with you.</p>
+          </div>
+        </div>
+        {linkedTo ? (
+          <p className="flex items-center gap-2 text-sm font-medium text-green-700">
+            <CheckCircle className="h-4 w-4" />
+            Linked to {linkedTo}.
+          </p>
+        ) : (
+          <form onSubmit={handleRedeem} className="flex gap-2">
+            <input
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              placeholder="e.g. LLD-2847-XK"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={redeeming || !codeInput.trim()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {redeeming ? 'Linking…' : 'Link'}
+            </button>
+          </form>
+        )}
+        {redeemError && <p className="mt-2 text-sm text-red-600">{redeemError}</p>}
       </div>
     </div>
   );

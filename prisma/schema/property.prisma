@@ -57,38 +57,38 @@ enum ElectricalSetup {
 }
 
 model Property {
-  id                    String          @id @default(uuid())
+  id                    String                @id @default(uuid())
   name                  String
   address               String
   city                  String
   state                 String?
   zipCode               String?
-  type                  PropertyType    @default(RESIDENTIAL)
+  type                  PropertyType          @default(RESIDENTIAL)
   description           String?
   imageUrl              String?
   video360Url           String?
   exteriorPhotoUrl      String?
-  isPublished           Boolean         @default(false)
-  moderationStatus      ModerationStatus @default(PENDING_REVIEW)
+  isPublished           Boolean               @default(false)
+  moderationStatus      ModerationStatus      @default(PENDING_REVIEW)
   moderationNotes       String?
-  trustScore            Float?          @default(100.0)
+  trustScore            Float?                @default(100.0)
   powerReliabilityScore Float?
   floodRiskScore        Float?
   securityRating        Float?
   roadConditionScore    Float?
-  waterSupplyType       WaterSupplyType @default(BOREHOLE)
-  electricalSetup       ElectricalSetup @default(COMBINED)
+  waterSupplyType       WaterSupplyType       @default(BOREHOLE)
+  electricalSetup       ElectricalSetup       @default(COMBINED)
   listingHash           String?
   // Duplicate-listing resolution (PRD §6.2.4). Many-to-one, not one-to-one
   // like Lease.renewedFromId: several duplicate submissions can all merge
   // into the same canonical Property, so no @unique here.
   mergedIntoId          String?
-  mergedInto            Property?       @relation("PropertyMerge", fields: [mergedIntoId], references: [id])
-  mergedFrom            Property[]      @relation("PropertyMerge")
+  mergedInto            Property?             @relation("PropertyMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom            Property[]            @relation("PropertyMerge")
   managerId             String?
-  manager               User?           @relation("ManagedProperties", fields: [managerId], references: [id])
+  manager               User?                 @relation("ManagedProperties", fields: [managerId], references: [id])
   landlordId            String?
-  landlord              User?           @relation("OwnedProperties", fields: [landlordId], references: [id])
+  landlord              User?                 @relation("OwnedProperties", fields: [landlordId], references: [id])
   units                 Unit[]
   announcements         Announcement[]
   conversations         Conversation[]
@@ -96,37 +96,65 @@ model Property {
   neighbourhoodReports  NeighbourhoodReport[]
   viewings              PropertyViewing[]
   reviews               PropertyReview[]
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  adCampaigns           AdCampaign[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+enum AdCampaignStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// PropertyDiscovery.tsx's "Create Ad" / "Cancel Ad" — a real, persisted
+// record. impressions/clicks stay genuinely 0 forever: there is no ad-
+// serving or tracking system anywhere in this codebase to increment them,
+// and this model doesn't fake one.
+model AdCampaign {
+  id           String           @id @default(uuid())
+  propertyId   String
+  property     Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdById  String
+  createdBy    User             @relation(fields: [createdById], references: [id])
+  budget       Int
+  durationDays Int
+  status       AdCampaignStatus @default(ACTIVE)
+  impressions  Int              @default(0)
+  clicks       Int              @default(0)
+  createdAt    DateTime         @default(now())
+  cancelledAt  DateTime?
+
+  @@index([propertyId, status])
 }
 
 model Unit {
-  id                  String               @id @default(uuid())
-  propertyId          String
-  property            Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unitNumber          String
-  bedrooms            Int                  @default(1)
-  bathrooms           Float                @default(1.0)
-  squareFeet          Int?
-  rentAmount          Float
+  id                     String                @id @default(uuid())
+  propertyId             String
+  property               Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitNumber             String
+  bedrooms               Int                   @default(1)
+  bathrooms              Float                 @default(1.0)
+  squareFeet             Int?
+  rentAmount             Float
   // The advertised rent's cycle for a still-vacant unit. Lease.paymentFrequency
   // covers this once tenanted; a listing needs its own value before any Lease
   // exists (e.g. showing "₦1,200,000/year" on a vacant listing).
-  listedPaymentFrequency PaymentFrequency  @default(ANNUAL)
-  depositAmount       Float?
-  status              UnitStatus           @default(VACANT)
-  mediaUrls           String[]
-  amenities           String[]
-  leases              Lease[]
-  maintenanceRequests MaintenanceRequest[]
-  accessCodes         AccessCode[]
-  violations          Violation[]
-  equipment           Equipment[]
-  conditionReports    ConditionReport[]
-  maintenanceSchedules MaintenanceSchedule[]
-  viewings            PropertyViewing[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  listedPaymentFrequency PaymentFrequency      @default(ANNUAL)
+  depositAmount          Float?
+  status                 UnitStatus            @default(VACANT)
+  mediaUrls              String[]
+  amenities              String[]
+  leases                 Lease[]
+  maintenanceRequests    MaintenanceRequest[]
+  accessCodes            AccessCode[]
+  violations             Violation[]
+  equipment              Equipment[]
+  conditionReports       ConditionReport[]
+  maintenanceSchedules   MaintenanceSchedule[]
+  viewings               PropertyViewing[]
+  applications           Application[]
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 
   @@unique([propertyId, unitNumber])
 }
@@ -140,10 +168,10 @@ model Unit {
 // -many with Property, not 1:1: reports get regenerated periodically, and
 // each generation is its own record rather than overwriting the last.
 model NeighbourhoodReport {
-  id           String   @id @default(uuid())
-  propertyId   String
-  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  generatedAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  generatedAt DateTime @default(now())
 
   // Each JSON blob mirrors one section of the report exactly as displayed —
   // e.g. security: { rating, status, features: [{name, available}], crimeRate,
@@ -222,17 +250,17 @@ model PropertyReview {
 }
 
 model Announcement {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   propertyId  String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   authorId    String
-  author      User      @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
   title       String
   body        String
-  isPinned    Boolean   @default(false)
-  publishedAt DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isPinned    Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([propertyId, publishedAt])
 }

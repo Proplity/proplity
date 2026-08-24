@@ -5,9 +5,9 @@
 // Conversation a human would use, so escalation has somewhere to land.
 
 enum ConversationType {
-  DIRECT               // 1:1, e.g. tenant <-> manager
-  MAINTENANCE_THREAD   // tied to a MaintenanceRequest
-  LEASE_THREAD         // tied to a Lease (renewal discussion, notices, etc.)
+  DIRECT // 1:1, e.g. tenant <-> manager
+  MAINTENANCE_THREAD // tied to a MaintenanceRequest
+  LEASE_THREAD // tied to a Lease (renewal discussion, notices, etc.)
   COMMUNITY_DISCUSSION // §5.3 discussion boards — multi-participant, no context link required
   SUPPORT
 }
@@ -26,8 +26,8 @@ enum MessageSenderType {
 }
 
 model Conversation {
-  id                   String                     @id @default(uuid())
-  type                 ConversationType           @default(DIRECT)
+  id                   String                    @id @default(uuid())
+  type                 ConversationType          @default(DIRECT)
   title                String?
   // PRD §9 KPI "AI assistant resolution rate" — null until the thread
   // reaches an outcome; true = the AI handled it without a human reply,
@@ -35,15 +35,15 @@ model Conversation {
   resolvedByAi         Boolean?
   escalatedAt          DateTime?
   propertyId           String?
-  property             Property?                  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  maintenanceRequestId String?                     @unique
-  maintenanceRequest   MaintenanceRequest?         @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
+  property             Property?                 @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  maintenanceRequestId String?                   @unique
+  maintenanceRequest   MaintenanceRequest?       @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
   leaseId              String?
-  lease                Lease?                      @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  lease                Lease?                    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
   participants         ConversationParticipant[]
   messages             Message[]
-  createdAt            DateTime                   @default(now())
-  updatedAt            DateTime                   @updatedAt
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
 }
 
 model ConversationParticipant {

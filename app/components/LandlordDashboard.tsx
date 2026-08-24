@@ -21,15 +21,7 @@ import { useMyProperties } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
-
-interface ManagerCode {
-  id: string;
-  code: string;
-  createdAt: string;
-  status: 'Active' | 'Deactivated';
-  linkedManager: string | null;
-  linkedAt: string | null;
-}
+import { useManagerCodes, useCreateManagerCode, useSetManagerCodeStatus } from '@/hooks/useManagerCodes';
 
 interface LandlordDashboardProps {
   onNavigate?: (page: any) => void;
@@ -50,51 +42,27 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
   const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
 
-  const [managerCodes, setManagerCodes] = useState<ManagerCode[]>([
-    {
-      id: '1',
-      code: 'LLD-2847-XK',
-      createdAt: 'Jun 1, 2026',
-      status: 'Active',
-      linkedManager: 'Tunde Bakare',
-      linkedAt: 'Jun 3, 2026',
-    },
-    {
-      id: '2',
-      code: 'LLD-1193-QR',
-      createdAt: 'May 15, 2026',
-      status: 'Deactivated',
-      linkedManager: 'Kola Adeyemi',
-      linkedAt: 'May 16, 2026',
-    },
-    {
-      id: '3',
-      code: 'LLD-5521-BT',
-      createdAt: 'Jun 20, 2026',
-      status: 'Active',
-      linkedManager: null,
-      linkedAt: null,
-    },
-  ]);
+  const { data: managerCodes, loading: codesLoading, refetch: refetchCodes } = useManagerCodes();
+  const { submit: createCode, submitting: creatingCode } = useCreateManagerCode();
+  const { submit: setCodeStatus } = useSetManagerCodeStatus();
   const [copied, setCopied] = useState<string | null>(null);
 
-  const generateCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const part2 = Array.from({ length: 2 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const newCode: ManagerCode = {
-      id: Date.now().toString(),
-      code: `LLD-${part1}-${part2}`,
-      createdAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      status: 'Active',
-      linkedManager: null,
-      linkedAt: null,
-    };
-    setManagerCodes((prev) => [newCode, ...prev]);
+  const generateCode = async () => {
+    try {
+      await createCode();
+      refetchCodes();
+    } catch {
+      // error is rare/transient here; the button simply stays clickable again
+    }
   };
 
-  const toggleCode = (id: string) => {
-    setManagerCodes((prev) => prev.map((c) => (c.id === id ? { ...c, status: c.status === 'Active' ? 'Deactivated' : 'Active' } : c)));
+  const toggleCode = async (id: string, currentStatus: 'ACTIVE' | 'DEACTIVATED') => {
+    try {
+      await setCodeStatus(id, currentStatus === 'ACTIVE' ? 'DEACTIVATED' : 'ACTIVE');
+      refetchCodes();
+    } catch {
+      // no-op -- UI just doesn't update if this fails
+    }
   };
 
   const copyCode = (code: string) => {
@@ -381,10 +349,11 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           </div>
           <button
             onClick={generateCode}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            disabled={creatingCode}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
-            Generate New Code
+            {creatingCode ? 'Generating…' : 'Generate New Code'}
           </button>
         </div>
 
@@ -399,10 +368,10 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
 
         <div className="divide-y divide-gray-100">
           {managerCodes.map((item) => (
-            <div key={item.id} className={`flex items-center gap-4 p-4 ${item.status === 'Deactivated' ? 'opacity-60' : ''}`}>
+            <div key={item.id} className={`flex items-center gap-4 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}>
               <div
                 className={`flex-shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
-                  item.status === 'Active' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
+                  item.status === 'ACTIVE' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
                 }`}
               >
                 {item.code}
@@ -412,15 +381,16 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {item.status}
+                    {item.status === 'ACTIVE' ? 'Active' : 'Deactivated'}
                   </span>
                   {item.linkedManager ? (
                     <span className="flex items-center gap-1 text-xs text-gray-600">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                      Linked to <span className="font-medium">{item.linkedManager}</span> · since {item.linkedAt}
+                      Linked to <span className="font-medium">{item.linkedManager.name}</span>
+                      {item.linkedAt ? ` · since ${new Date(item.linkedAt).toLocaleDateString()}` : ''}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -429,11 +399,11 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-gray-400">Created {item.createdAt}</p>
+                <p className="mt-1 text-xs text-gray-400">Created {new Date(item.createdAt).toLocaleDateString()}</p>
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-2">
-                {item.status === 'Active' && (
+                {item.status === 'ACTIVE' && (
                   <button
                     onClick={() => copyCode(item.code)}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50"
@@ -450,12 +420,12 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                   </button>
                 )}
                 <button
-                  onClick={() => toggleCode(item.id)}
+                  onClick={() => toggleCode(item.id, item.status)}
                   className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    item.status === 'Active' ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-700 hover:bg-green-50'
+                    item.status === 'ACTIVE' ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-700 hover:bg-green-50'
                   }`}
                 >
-                  {item.status === 'Active' ? (
+                  {item.status === 'ACTIVE' ? (
                     <>
                       <PowerOff className="h-3.5 w-3.5" /> Deactivate
                     </>
@@ -469,7 +439,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             </div>
           ))}
 
-          {managerCodes.length === 0 && (
+          {managerCodes.length === 0 && !codesLoading && (
             <div className="p-8 text-center text-gray-400">
               <KeyRound className="mx-auto mb-2 h-10 w-10 opacity-40" />
               <p className="text-sm">No codes generated yet. Click "Generate New Code" to get started.</p>

@@ -73,11 +73,11 @@ enum RiskLevel {
 }
 
 model Lease {
-  id                 String           @id @default(uuid())
+  id                 String              @id @default(uuid())
   unitId             String
-  unit               Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unit               Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
   tenantId           String
-  tenant             User             @relation("TenantLeases", fields: [tenantId], references: [id])
+  tenant             User                @relation("TenantLeases", fields: [tenantId], references: [id])
   startDate          DateTime
   endDate            DateTime
   /// Amount due per payment CYCLE, not necessarily per calendar month —
@@ -86,21 +86,21 @@ model Lease {
   /// Renamed from `monthlyRent`, which was ambiguous once frequencies beyond
   /// MONTHLY were added — see prior schema review.
   rentAmount         Float
-  paymentFrequency   PaymentFrequency @default(ANNUAL)
+  paymentFrequency   PaymentFrequency    @default(ANNUAL)
   deposit            Float
-  gracePeriodDays    Int              @default(7)
-  lateFeePercentage  Float            @default(5.0)
+  gracePeriodDays    Int                 @default(7)
+  lateFeePercentage  Float               @default(5.0)
   signedAgreementUrl String?
   agreementSignedAt  DateTime?
-  status             LeaseStatus      @default(PENDING)
+  status             LeaseStatus         @default(PENDING)
   // PRD §6.1 "Smart Rent Intelligence" — late-payment prediction and risk
   // flagging. Nullable and timestamped: these are computed periodically by a
   // scoring job, not always populated (e.g. a brand-new lease has no payment
   // history yet to score), and the timestamp lets the UI show how stale the
   // score is rather than presenting a silently-outdated number as current.
-  paymentReliability   PaymentReliability?
-  riskScore            RiskLevel?
-  riskScoreUpdatedAt   DateTime?
+  paymentReliability PaymentReliability?
+  riskScore          RiskLevel?
+  riskScoreUpdatedAt DateTime?
   invoices           Invoice[]
   notices            Notice[]
   conversations      Conversation[]
@@ -111,9 +111,50 @@ model Lease {
   // renewed into at most one new lease, and a new lease renews at most one
   // prior lease. Lets renewals be traced instead of looking like an unrelated
   // new Lease row on the same unit.
-  renewedFromId      String?          @unique
-  renewedFrom        Lease?           @relation("LeaseRenewal", fields: [renewedFromId], references: [id])
-  renewedInto        Lease?           @relation("LeaseRenewal")
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  renewedFromId      String?             @unique
+  renewedFrom        Lease?              @relation("LeaseRenewal", fields: [renewedFromId], references: [id])
+  renewedInto        Lease?              @relation("LeaseRenewal")
+  applications       Application[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// A prospective tenant's rental application for a specific unit —
+// PropertyApplicationForm.tsx's ~20-field form (personal/employment/
+// references) submits here. Scoped to Unit, not Lease, since an approved
+// application still needs a separate, deliberate action to actually create
+// the Lease (matches how AddTenantForm's own lease-creation flow works —
+// approval doesn't auto-generate a tenancy, a manager still sets terms).
+model Application {
+  id           String            @id @default(uuid())
+  unitId       String
+  unit         Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  applicantId  String
+  applicant    User              @relation("SubmittedApplications", fields: [applicantId], references: [id])
+  status       ApplicationStatus @default(PENDING)
+  // Free-form JSON for the form's many fields -- no individual field is
+  // queried/filtered on, same precedent as NeighbourhoodReport's and
+  // ConditionReport's JSON blobs for this shape of read-mostly data.
+  details      Json
+  reviewedById String?
+  reviewedBy   User?             @relation("ReviewedApplications", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  reviewNotes  String?
+  // Set once, at creation time, to the Lease this application resulted in --
+  // same "verified at creation, never re-checked" pattern as
+  // PropertyReview.leaseId (rule 4). Optional: most applications, including
+  // every REJECTED one, never produce a lease at all.
+  leaseId      String?
+  lease        Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([unitId, status])
+  @@index([applicantId])
 }
