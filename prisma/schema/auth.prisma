@@ -46,6 +46,7 @@ model User {
   managedProperties            Property[]                @relation("ManagedProperties")
   ownedProperties              Property[]                @relation("OwnedProperties")
   leases                       Lease[]                   @relation("TenantLeases")
+  leaseSignatures              LeaseSignature[]
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
   bankAccounts                 BankAccount[]

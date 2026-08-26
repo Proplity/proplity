@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ArrowLeft,
   MapPin,
@@ -20,8 +21,10 @@ import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useApplications, useReviewApplication } from '@/hooks/useApplications';
-import { useModerateProperty, useSetPropertyPublished } from '@/hooks/useProperties';
-import type { Application, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
+import { useModerateProperty, useSetPropertyPublished, useImportUnits } from '@/hooks/useProperties';
+import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
+import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
+import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -125,6 +128,211 @@ function ListingStatusCard({
       </button>
       {(publishError || moderateError) && (
         <p className="mt-2 text-xs text-red-600">{publishError || moderateError}</p>
+      )}
+    </div>
+  );
+}
+
+// Announcements: visible to every tenant of the property, postable only by
+// its manager/landlord/admin -- no notification system exists to push
+// these, this is a real, persisted read surface, not a fake preview.
+function AnnouncementsCard({ propertyId, canManage }: { propertyId: string; canManage: boolean }) {
+  const { data: announcements, loading, refetch } = useAnnouncements(propertyId);
+  const { submit: createAnnouncement, submitting, error } = useCreateAnnouncement(propertyId);
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+
+  const handleCreate = async () => {
+    if (!title.trim() || !body.trim()) return;
+    try {
+      await createAnnouncement({ title: title.trim(), body: body.trim() });
+      setTitle('');
+      setBody('');
+      setShowForm(false);
+      refetch();
+    } catch {
+      // error surfaced below
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="flex items-center justify-between border-b border-gray-200 p-6">
+        <div>
+          <h2 className="font-semibold">Announcements</h2>
+          <p className="text-sm text-gray-500">Posted by the property's manager or landlord</p>
+        </div>
+        {canManage && (
+          <button
+            onClick={() => setShowForm((s) => !s)}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+          >
+            {showForm ? 'Cancel' : 'New Announcement'}
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="space-y-3 border-b border-gray-200 p-6">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Message"
+            rows={3}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            onClick={handleCreate}
+            disabled={submitting}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? 'Posting…' : 'Post Announcement'}
+          </button>
+        </div>
+      )}
+
+      <div className="divide-y divide-gray-200">
+        {loading && <p className="p-6 text-sm text-gray-400">Loading…</p>}
+        {!loading &&
+          announcements.map((a) => (
+            <div key={a.id} className="p-4">
+              <div className="mb-1 flex items-center gap-2">
+                {a.isPinned && <span className="text-xs font-medium text-amber-600">Pinned</span>}
+                <p className="font-medium">{a.title}</p>
+              </div>
+              <p className="text-sm text-gray-600">{a.body}</p>
+              <p className="mt-1 text-xs text-gray-400">{new Date(a.publishedAt).toLocaleDateString()}</p>
+            </div>
+          ))}
+        {!loading && announcements.length === 0 && (
+          <p className="p-6 text-sm text-gray-400">No announcements yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Equipment: shared/property-wide assets (generators, elevators) tracked
+// with warranty info -- manager/landlord/admin only.
+function EquipmentCard({ propertyId }: { propertyId: string }) {
+  const { data: equipment, loading, refetch } = useEquipment(propertyId);
+  const { submit: createEquipment, submitting, error } = useCreateEquipment(propertyId);
+  const [showForm, setShowForm] = useState(false);
+  const [type, setType] = useState<Equipment['type']>('OTHER');
+  const [serialNumber, setSerialNumber] = useState('');
+
+  const handleCreate = async () => {
+    try {
+      await createEquipment({ type, serialNumber: serialNumber.trim() || undefined });
+      setSerialNumber('');
+      setShowForm(false);
+      refetch();
+    } catch {
+      // error surfaced below
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold">Equipment</h2>
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          {showForm ? 'Cancel' : '+ Add'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="mb-4 space-y-2 border-b border-gray-100 pb-4">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as Equipment['type'])}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            {(['HVAC', 'WATER_HEATER', 'GENERATOR', 'INVERTER', 'APPLIANCE', 'ELEVATOR', 'OTHER'] as const).map(
+              (t) => (
+                <option key={t} value={t}>
+                  {t.replace('_', ' ')}
+                </option>
+              ),
+            )}
+          </select>
+          <input
+            value={serialNumber}
+            onChange={(e) => setSerialNumber(e.target.value)}
+            placeholder="Serial number (optional)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            onClick={handleCreate}
+            disabled={submitting}
+            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? 'Adding…' : 'Add Equipment'}
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {loading && <p className="text-sm text-gray-400">Loading…</p>}
+        {!loading &&
+          equipment.map((eq) => (
+            <div key={eq.id} className="flex items-center justify-between text-sm">
+              <span>{eq.type.replace('_', ' ')}</span>
+              <span className="text-xs text-gray-400">{eq.serialNumber ?? (eq.unitId ? 'Unit-level' : 'Property-wide')}</span>
+            </div>
+          ))}
+        {!loading && equipment.length === 0 && <p className="text-sm text-gray-400">No equipment tracked yet.</p>}
+      </div>
+    </div>
+  );
+}
+
+// CSV/Excel bulk import of units -- PRD §5.1's "Import/export data (CSV,
+// Excel)" bullet under Property & Unit Management. Partial success is
+// expected (a bad row shouldn't block the good ones), so results always
+// show a per-row error list rather than a single pass/fail.
+function ImportUnitsControl({ propertyId, onImported }: { propertyId: string; onImported: () => void }) {
+  const { submit: importUnits, submitting, error } = useImportUnits(propertyId);
+  const [result, setResult] = useState<{ created: number; errors: { row: number; error: string }[] } | null>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setResult(null);
+    try {
+      const data = await importUnits(file);
+      setResult(data);
+      if (data.created > 0) onImported();
+    } catch {
+      // error surfaced below via the hook's own error state
+    }
+  };
+
+  return (
+    <div className="text-right">
+      <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+        {submitting ? 'Importing…' : 'Import Units (CSV/Excel)'}
+        <input type="file" accept=".csv,.xlsx" onChange={handleFile} disabled={submitting} className="hidden" />
+      </label>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {result && (
+        <p className="mt-1 text-xs text-gray-500">
+          {result.created} unit{result.created === 1 ? '' : 's'} created
+          {result.errors.length > 0 && `, ${result.errors.length} row(s) skipped (e.g. row ${result.errors[0].row}: ${result.errors[0].error})`}
+        </p>
       )}
     </div>
   );
@@ -344,8 +552,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
           {/* Units & Tenants -- manager/landlord/admin only */}
           {canManage && (
             <div className="rounded-lg border border-gray-200 bg-white">
-              <div className="border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between border-b border-gray-200 p-6">
                 <h2 className="font-semibold">Units & Tenants</h2>
+                <ImportUnitsControl propertyId={property.id} onImported={refetchProperty} />
               </div>
               <div className="divide-y divide-gray-200">
                 {property.units.map((unit) => {
@@ -419,6 +628,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
             </div>
           )}
 
+          {/* Announcements -- visible to every tenant of the property */}
+          <AnnouncementsCard propertyId={property.id} canManage={canManage} />
+
           {/* Description */}
           {property.description && (
             <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -483,6 +695,7 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
         {canManage && (
           <div className="space-y-6">
             <ListingStatusCard property={property} onRefetch={refetchProperty} />
+            <EquipmentCard propertyId={property.id} />
 
             {/* Financial Summary */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">

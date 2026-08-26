@@ -139,6 +139,10 @@ export function useCreateUnit(propertyId: string) {
   );
 }
 
+export function useImportUnits(propertyId: string) {
+  return useApiSubmit((file: File) => api.properties.importUnits(propertyId, file).then((res) => res.data.data));
+}
+
 export function useCreateViewing(propertyId: string) {
   return useApiSubmit((body: CreateViewingInput) => api.properties.createViewing(propertyId, body));
 }

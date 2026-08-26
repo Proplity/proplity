@@ -60,14 +60,25 @@ export const POST = withAuth(
         action = 'DENIED';
       }
 
-      const log = await prisma.accessLog.create({
-        data: {
-          accessCodeId: accessCode.id,
-          action,
-          ipAddress: getClientIp(req),
-          deviceInfo: req.headers.get('user-agent') ?? undefined,
-        },
-      });
+      // A single-use code (the default -- most codes today are one-off
+      // guest codes) is consumed on its first GRANTED verification. A
+      // reusable code (singleUse: false, e.g. a permanent gate code) stays
+      // ACTIVE across repeated verifications.
+      const consumesCode = granted && accessCode.singleUse;
+
+      const [log] = await prisma.$transaction([
+        prisma.accessLog.create({
+          data: {
+            accessCodeId: accessCode.id,
+            action,
+            ipAddress: getClientIp(req),
+            deviceInfo: req.headers.get('user-agent') ?? undefined,
+          },
+        }),
+        ...(consumesCode
+          ? [prisma.accessCode.update({ where: { id: accessCode.id }, data: { status: 'USED' } })]
+          : []),
+      ]);
 
       return NextResponse.json({ data: { granted, action, guestName: accessCode.guestName, logId: log.id } });
     } catch (err) {

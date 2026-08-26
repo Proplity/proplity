@@ -45,6 +45,10 @@ const createAccessCodeSchema = z.object({
   guestName: z.string().optional(),
   validFrom: z.coerce.date(),
   validUntil: z.coerce.date().nullable().optional(),
+  // Defaults true (one-time guest code) -- pass false for a code meant to
+  // be reused across multiple gate visits (e.g. a permanent code shared
+  // with a regular visitor) so it doesn't auto-transition to USED.
+  singleUse: z.boolean().optional(),
 });
 
 export const POST = withAuth(
@@ -52,7 +56,7 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, createAccessCodeSchema);
       if (!validated.success) return validated.response;
-      const { unitId, code, guestName, validFrom, validUntil } = validated.data;
+      const { unitId, code, guestName, validFrom, validUntil, singleUse } = validated.data;
 
       const activeLease = await prisma.lease.findFirst({
         where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
@@ -78,7 +82,15 @@ export const POST = withAuth(
       }
 
       const accessCode = await prisma.accessCode.create({
-        data: { unitId, createdById: session.sub, code, guestName, validFrom, validUntil: validUntil ?? null },
+        data: {
+          unitId,
+          createdById: session.sub,
+          code,
+          guestName,
+          validFrom,
+          validUntil: validUntil ?? null,
+          ...(singleUse !== undefined ? { singleUse } : {}),
+        },
       });
       return NextResponse.json({ data: accessCode }, { status: 201 });
     } catch (err) {

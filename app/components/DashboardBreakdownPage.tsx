@@ -520,11 +520,27 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-4">
         <button onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </button>
+        {breakdownType === 'properties' && (
+          <div className="flex gap-2">
+            <a
+              href="/api/v1/properties/export?format=csv"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Export CSV
+            </a>
+            <a
+              href="/api/v1/properties/export?format=xlsx"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Export Excel
+            </a>
+          </div>
+        )}
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}

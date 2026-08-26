@@ -15,6 +15,7 @@ export type ApiResponse<T = any> = {
   status: number;
   body: T;
   setCookies: string[];
+  headers: Headers;
 };
 
 /**
@@ -29,15 +30,21 @@ export async function apiFetch<T = any>(
 ): Promise<ApiResponse<T>> {
   const { method = 'GET', body, rawBody, cookie, headers = {} } = opts;
 
+  // FormData (multipart file uploads) must be sent as-is, with no
+  // Content-Type set -- fetch computes the multipart boundary itself only
+  // when the header is absent, the same constraint apiClient.ts's browser
+  // code works around.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const res = await fetch(`${TEST_BASE_URL}${pathAndQuery}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       Origin: TEST_BASE_URL,
       ...(cookie ? { Cookie: cookie } : {}),
       ...headers,
     },
-    body: rawBody !== undefined ? rawBody : body !== undefined ? JSON.stringify(body) : undefined,
+    body: rawBody !== undefined ? rawBody : isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
     redirect: 'manual',
   });
 
@@ -54,7 +61,7 @@ export async function apiFetch<T = any>(
     responseBody = text as unknown as T;
   }
 
-  return { status: res.status, body: responseBody, setCookies };
+  return { status: res.status, body: responseBody, setCookies, headers: res.headers };
 }
 
 /** Extracts `name=value` pairs from Set-Cookie headers, joined for reuse as a request Cookie header. */

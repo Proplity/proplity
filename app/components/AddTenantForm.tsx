@@ -75,6 +75,10 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
     securityDeposit: '',
     agencyFee: '',
     paymentDueDay: '1',
+    gracePeriodDays: '7',
+    lateFeeType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
+    lateFeePercentage: '0',
+    lateFeeFlatAmount: '0',
   });
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
@@ -118,6 +122,10 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
         rentAmount: parseFloat(leaseDetails.rentAmount) || 0,
         deposit: parseFloat(leaseDetails.securityDeposit) || 0,
         paymentFrequency: RENT_FREQUENCY_MAP[leaseDetails.rentFrequency] ?? 'ANNUAL',
+        gracePeriodDays: parseInt(leaseDetails.gracePeriodDays, 10) || 0,
+        lateFeeType: leaseDetails.lateFeeType,
+        lateFeePercentage: parseFloat(leaseDetails.lateFeePercentage) || 0,
+        lateFeeFlatAmount: parseFloat(leaseDetails.lateFeeFlatAmount) || 0,
       });
 
       alert(
@@ -559,6 +567,81 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Grace Period (days)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={leaseDetails.gracePeriodDays}
+                  onChange={(e) =>
+                    setLeaseDetails((s) => ({ ...s, gracePeriodDays: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="7"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Days after the due date before rent is considered overdue.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Late Fee</label>
+                <select
+                  value={leaseDetails.lateFeeType}
+                  onChange={(e) =>
+                    setLeaseDetails((s) => ({
+                      ...s,
+                      lateFeeType: e.target.value as 'PERCENTAGE' | 'FIXED',
+                    }))
+                  }
+                  className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="PERCENTAGE">Percentage of rent</option>
+                  <option value="FIXED">Flat amount (₦)</option>
+                </select>
+                {leaseDetails.lateFeeType === 'PERCENTAGE' ? (
+                  <>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={leaseDetails.lateFeePercentage}
+                      onChange={(e) =>
+                        setLeaseDetails((s) => ({ ...s, lateFeePercentage: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      placeholder="0"
+                    />
+                    {parseFloat(leaseDetails.lateFeePercentage) > 0 &&
+                      parseFloat(leaseDetails.rentAmount) > 0 && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          ≈ ₦
+                          {(
+                            (parseFloat(leaseDetails.rentAmount) *
+                              parseFloat(leaseDetails.lateFeePercentage)) /
+                            100
+                          ).toLocaleString()}{' '}
+                          per overdue invoice
+                        </p>
+                      )}
+                  </>
+                ) : (
+                  <input
+                    type="number"
+                    min={0}
+                    value={leaseDetails.lateFeeFlatAmount}
+                    onChange={(e) =>
+                      setLeaseDetails((s) => ({ ...s, lateFeeFlatAmount: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 10000"
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}

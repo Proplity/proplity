@@ -359,6 +359,13 @@ model AccessCode {
   // A null validUntil means "no expiry" rather than being an unset value.
   validUntil  DateTime?
   status      AccessCodeStatus @default(ACTIVE)
+  // The flag CLAUDE.md's "known gaps" note was missing -- distinguishes a
+  // one-time guest code (auto-transitions ACTIVE -> USED on its first
+  // GRANTED verification) from a deliberately reusable one (e.g. a
+  // permanent main-gate code for a tenant/staff member), which stays
+  // ACTIVE across repeated verifications until it expires or is revoked.
+  // Defaults true: most codes created today are one-off guest codes.
+  singleUse   Boolean          @default(true)
   revokedAt   DateTime?
   logs        AccessLog[]
   createdAt   DateTime         @default(now())

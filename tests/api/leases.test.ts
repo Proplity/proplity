@@ -334,6 +334,142 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     const refetchedOld = await testPrisma.lease.findUnique({ where: { id: oldLease.id } });
     expect(refetchedOld?.status).toBe('EXPIRED');
   });
+
+  it('lets the managing owner edit gracePeriodDays and late-fee terms directly, unbounded (landlord/manager autonomy)', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(manager.id, manager.role);
+
+    // Switch to a flat-amount late fee with a deliberately large,
+    // unbounded value -- there is no platform-imposed cap.
+    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        gracePeriodDays: 45,
+        lateFeeType: 'FIXED',
+        lateFeeFlatAmount: 999_999,
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.gracePeriodDays).toBe(45);
+    expect(res.body.data.lateFeeType).toBe('FIXED');
+    expect(res.body.data.lateFeeFlatAmount).toBe(999_999);
+
+    const refetched = await testPrisma.lease.findUnique({ where: { id: lease.id } });
+    expect(refetched?.gracePeriodDays).toBe(45);
+    expect(refetched?.lateFeeType).toBe('FIXED');
+  });
+});
+
+describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('activating a PENDING lease (status -> ACTIVE) occupies its unit', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { status: 'PENDING' });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const before = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(before?.status).toBe('VACANT');
+
+    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'ACTIVE' },
+    });
+    expect(res.status).toBe(200);
+
+    const after = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(after?.status).toBe('OCCUPIED');
+  });
+
+  it('terminating the only ACTIVE lease on a unit frees it back to VACANT', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const cookie = await authCookie(manager.id, manager.role);
+    // Occupy it first via the real activation path, then terminate.
+    await apiFetch(`/api/v1/leases/${lease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'ACTIVE' },
+    });
+
+    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'TERMINATED' },
+    });
+    expect(res.status).toBe(200);
+
+    const after = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(after?.status).toBe('VACANT');
+  });
+
+  it('does not vacate a unit that still has another ACTIVE lease when one lease terminates', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenantA = await createUser(Role.TENANT);
+    const tenantB = await createUser(Role.TENANT);
+    // Schema doesn't prevent two leases on one unit -- exercising exactly
+    // that edge case, which is why the route re-queries for a survivor
+    // instead of unconditionally vacating.
+    const leaseA = await createLease(unit.id, tenantA.id, { status: 'ACTIVE' });
+    await createLease(unit.id, tenantB.id, { status: 'ACTIVE' });
+    // Fixtures write directly via Prisma, bypassing the route -- occupy the
+    // unit explicitly first so the guard below has something real to
+    // preserve, rather than trivially passing because it was VACANT anyway.
+    await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const res = await apiFetch(`/api/v1/leases/${leaseA.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'TERMINATED' },
+    });
+    expect(res.status).toBe(200);
+
+    const after = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(after?.status).toBe('OCCUPIED');
+  });
+
+  it('renewal keeps the unit OCCUPIED', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const oldLease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const res = await apiFetch(`/api/v1/leases/${oldLease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        renew: {
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 365 * 86400000).toISOString(),
+          rentAmount: 1_000_000,
+          deposit: 100_000,
+        },
+      },
+    });
+    expect(res.status).toBe(201);
+
+    const after = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(after?.status).toBe('OCCUPIED');
+  });
 });
 
 describe('leases: notices', () => {

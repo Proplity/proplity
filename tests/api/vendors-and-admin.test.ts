@@ -310,4 +310,37 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
     expect(lateFee).toBeNull();
   });
+
+  it('overdue-flagger uses the exact flat amount for a FIXED-type lease, ignoring lateFeePercentage entirely', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    // lateFeePercentage is set too, to prove FIXED mode ignores it rather
+    // than stacking both -- landlord/manager picks exactly one mode.
+    const lease = await createLease(unit.id, tenant.id, {
+      gracePeriodDays: 0,
+      lateFeeType: 'FIXED',
+      lateFeeFlatAmount: 15_000,
+      lateFeePercentage: 50,
+    });
+    const invoice = await createInvoice({
+      leaseId: lease.id,
+      type: 'RENT',
+      amount: 200_000,
+      dueDate: new Date(Date.now() - 86400000),
+      status: 'UNPAID',
+    });
+
+    const res = await apiFetch('/api/v1/cron/overdue-flagger', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.result.lateFeesCreated).toBe(1);
+
+    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    expect(lateFee).not.toBeNull();
+    expect(lateFee?.amount).toBe(15_000);
+    expect(lateFee?.description).toContain(`[late-fee-for:${invoice.id}]`);
+  });
 });

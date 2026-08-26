@@ -94,7 +94,10 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               <Bell className="h-5 w-5 text-gray-600" />
               <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
             </button>
-            <button className="rounded-lg p-2 hover:bg-gray-100">
+            <button
+              onClick={() => router.push('/dashboard/settings')}
+              className="rounded-lg p-2 hover:bg-gray-100"
+            >
               <Settings className="h-5 w-5 text-gray-600" />
             </button>
             <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">

@@ -59,30 +59,39 @@ export async function runOverdueFlagger(): Promise<{
     }
 
     // Late fee: one-time per overdue invoice, RENT only (a late fee on a
-    // SECURITY_DEPOSIT or MAINTENANCE invoice doesn't map to what
-    // Lease.lateFeePercentage means), and never on a LATE_FEE invoice
-    // itself -- without that exclusion, a late fee's own dueDate (set to
-    // "now" at creation, so immediately overdue) would make it a candidate
-    // next run and compound indefinitely.
-    if (invoice.type === 'RENT' && invoice.lease && invoice.lease.lateFeePercentage > 0) {
-      // No FK from a LATE_FEE invoice back to the RENT invoice it's for --
-      // encoded into the description instead (same convention as
-      // subscriptions/checkout's tier/cycle encoding) so this stays
-      // idempotent across runs without a schema change.
-      const marker = `[late-fee-for:${invoice.id}]`;
-      const existingLateFee = await prisma.invoice.findFirst({
-        where: { type: 'LATE_FEE', description: { contains: marker } },
-      });
-      if (!existingLateFee) {
-        const lateFeeAmount = Math.round(invoice.amount * (invoice.lease.lateFeePercentage / 100) * 100) / 100;
-        if (lateFeeAmount > 0) {
+    // SECURITY_DEPOSIT or MAINTENANCE invoice doesn't map to what a lease's
+    // late-fee terms mean), and never on a LATE_FEE invoice itself --
+    // without that exclusion, a late fee's own dueDate (set to "now" at
+    // creation, so immediately overdue) would make it a candidate next run
+    // and compound indefinitely. Landlord/manager picks exactly one mode
+    // per lease (lateFeeType) -- percentage-of-rent or a flat amount --
+    // never both stacked together.
+    if (invoice.type === 'RENT' && invoice.lease) {
+      const lease = invoice.lease;
+      const lateFeeAmount =
+        lease.lateFeeType === 'FIXED'
+          ? lease.lateFeeFlatAmount
+          : Math.round(invoice.amount * (lease.lateFeePercentage / 100) * 100) / 100;
+
+      if (lateFeeAmount > 0) {
+        // No FK from a LATE_FEE invoice back to the RENT invoice it's for --
+        // encoded into the description instead (same convention as
+        // subscriptions/checkout's tier/cycle encoding) so this stays
+        // idempotent across runs without a schema change.
+        const marker = `[late-fee-for:${invoice.id}]`;
+        const existingLateFee = await prisma.invoice.findFirst({
+          where: { type: 'LATE_FEE', description: { contains: marker } },
+        });
+        if (!existingLateFee) {
+          const label =
+            lease.lateFeeType === 'FIXED' ? `flat fee` : `${lease.lateFeePercentage}%`;
           await prisma.invoice.create({
             data: {
               leaseId: invoice.leaseId!,
               type: 'LATE_FEE',
               amount: lateFeeAmount,
               dueDate: now,
-              description: `Late fee (${invoice.lease.lateFeePercentage}%) for overdue invoice ${invoice.invoiceNumber} ${marker}`,
+              description: `Late fee (${label}) for overdue invoice ${invoice.invoiceNumber} ${marker}`,
             },
           });
           lateFeesCreated += 1;

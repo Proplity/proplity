@@ -9,10 +9,11 @@ import {
   FileText,
   MessageSquare,
 } from 'lucide-react';
-import { useActiveLease } from '@/hooks/useLeases';
+import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
 import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
+import { LeaseSignatureCard } from './TenantDetail';
 import type { Invoice, Payment } from '@/lib/api/types';
 
 interface TenantDashboardProps {
@@ -50,6 +51,14 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
 
+  // A PENDING lease (awaiting signature, before a manager activates it)
+  // never shows up via useActiveLease -- fetched separately just to surface
+  // the signing prompt, since that's the only reason a tenant needs to see
+  // it before it's ACTIVE.
+  const { data: pendingLeases } = useLeases({ status: 'PENDING' });
+  const pendingLeaseId = pendingLeases[0]?.id ?? null;
+  const { data: pendingLease, refetch: refetchPendingLease } = useLease(pendingLeaseId);
+
   const property = lease?.unit?.property;
   const balance = outstandingBalance(invoices);
   const nextDue = invoices
@@ -77,6 +86,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         <h1 className="mb-1 text-2xl font-semibold">My Rental Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's your rental information.</p>
       </div>
+
+      {pendingLease && <LeaseSignatureCard lease={pendingLease} onSigned={refetchPendingLease} />}
 
       {/* Quick Actions */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">

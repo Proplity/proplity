@@ -5,6 +5,7 @@ import {
   UserStatus,
   PaymentFrequency,
   LeaseStatus,
+  LateFeeType,
   MaintenancePriority,
   MaintenanceStatus,
   ScheduleFrequency,
@@ -128,7 +129,9 @@ export async function createLease(
     deposit: number;
     status: LeaseStatus;
     gracePeriodDays: number;
+    lateFeeType: LateFeeType;
     lateFeePercentage: number;
+    lateFeeFlatAmount: number;
   }> = {},
 ) {
   return testPrisma.lease.create({
@@ -142,7 +145,9 @@ export async function createLease(
       deposit: overrides.deposit ?? 200_000,
       status: overrides.status ?? LeaseStatus.ACTIVE,
       ...(overrides.gracePeriodDays !== undefined ? { gracePeriodDays: overrides.gracePeriodDays } : {}),
+      ...(overrides.lateFeeType !== undefined ? { lateFeeType: overrides.lateFeeType } : {}),
       ...(overrides.lateFeePercentage !== undefined ? { lateFeePercentage: overrides.lateFeePercentage } : {}),
+      ...(overrides.lateFeeFlatAmount !== undefined ? { lateFeeFlatAmount: overrides.lateFeeFlatAmount } : {}),
     },
   });
 }
@@ -234,6 +239,7 @@ export async function createAccessCode(
     validFrom: Date;
     validUntil: Date | null;
     status: AccessCodeStatus;
+    singleUse: boolean;
   }> = {},
 ) {
   return testPrisma.accessCode.create({
@@ -245,6 +251,7 @@ export async function createAccessCode(
       validFrom: overrides.validFrom ?? new Date(Date.now() - 60_000),
       validUntil: overrides.validUntil ?? null,
       status: overrides.status ?? AccessCodeStatus.ACTIVE,
+      ...(overrides.singleUse !== undefined ? { singleUse: overrides.singleUse } : {}),
     },
   });
 }

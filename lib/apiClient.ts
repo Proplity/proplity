@@ -3,21 +3,32 @@ import type {
   AccessCode,
   AdCampaign,
   AdminUser,
+  Announcement,
   Application,
+  BankAccount,
   CheckoutSubscriptionInput,
+  ConditionReport,
   Conversation,
   CreateAccessCodeInput,
+  CreateAnnouncementInput,
   CreateApplicationInput,
+  CreateBankAccountInput,
+  CreateConditionReportInput,
   CreateConversationInput,
+  CreateEquipmentInput,
   CreateInvoiceInput,
   CreateLeaseInput,
+  UpdateLeaseTermsInput,
   CreateMaintenanceRequestInput,
   CreateMessageInput,
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  CreateViolationInput,
+  Equipment,
   Invoice,
   Lease,
+  LeaseSignature,
   MaintenanceCategory,
   MaintenanceRequest,
   ManagerInviteCode,
@@ -30,6 +41,7 @@ import type {
   Unit,
   UpdateMaintenanceRequestInput,
   Vendor,
+  Violation,
 } from './api/types';
 
 export const apiClient = axios.create({
@@ -112,12 +124,76 @@ export const api = {
       }),
     createUnit: (propertyId: string, body: CreateUnitInput) =>
       apiClient.post<{ data: Unit }>(`/api/v1/properties/${propertyId}/units`, body),
+    importUnits: (propertyId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiClient.post<{ data: { created: number; errors: { row: number; error: string }[] } }>(
+        `/api/v1/properties/${propertyId}/units/import`,
+        formData,
+        // Instance-level default is application/json -- must be cleared so
+        // the browser sets multipart/form-data with the correct boundary
+        // itself, which it only does when no Content-Type is preset.
+        { headers: { 'Content-Type': undefined } },
+      );
+    },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
     moderate: (propertyId: string, body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}/moderation`, body),
+    announcements: {
+      list: (propertyId: string) => apiClient.get<{ data: Announcement[] }>(`/api/v1/properties/${propertyId}/announcements`),
+      create: (propertyId: string, body: CreateAnnouncementInput) =>
+        apiClient.post<{ data: Announcement }>(`/api/v1/properties/${propertyId}/announcements`, body),
+      update: (propertyId: string, announcementId: string, body: Partial<CreateAnnouncementInput>) =>
+        apiClient.patch<{ data: Announcement }>(`/api/v1/properties/${propertyId}/announcements/${announcementId}`, body),
+      remove: (propertyId: string, announcementId: string) =>
+        apiClient.delete<{ data: { id: string; deleted: boolean } }>(
+          `/api/v1/properties/${propertyId}/announcements/${announcementId}`,
+        ),
+    },
+    equipment: {
+      list: (propertyId: string) => apiClient.get<{ data: Equipment[] }>(`/api/v1/properties/${propertyId}/equipment`),
+      create: (propertyId: string, body: CreateEquipmentInput) =>
+        apiClient.post<{ data: Equipment }>(`/api/v1/properties/${propertyId}/equipment`, body),
+      remove: (propertyId: string, equipmentId: string) =>
+        apiClient.delete<{ data: { id: string; deleted: boolean } }>(
+          `/api/v1/properties/${propertyId}/equipment/${equipmentId}`,
+        ),
+    },
+    violations: {
+      list: (propertyId: string, unitId: string) =>
+        apiClient.get<{ data: Violation[] }>(`/api/v1/properties/${propertyId}/units/${unitId}/violations`),
+      create: (propertyId: string, unitId: string, body: CreateViolationInput) =>
+        apiClient.post<{ data: Violation }>(`/api/v1/properties/${propertyId}/units/${unitId}/violations`, body),
+      update: (
+        propertyId: string,
+        unitId: string,
+        violationId: string,
+        body: { status: Violation['status']; resolutionNote?: string },
+      ) =>
+        apiClient.patch<{ data: Violation }>(
+          `/api/v1/properties/${propertyId}/units/${unitId}/violations/${violationId}`,
+          body,
+        ),
+    },
+    conditionReports: {
+      list: (propertyId: string, unitId: string) =>
+        apiClient.get<{ data: ConditionReport[] }>(`/api/v1/properties/${propertyId}/units/${unitId}/condition-reports`),
+      create: (propertyId: string, unitId: string, body: CreateConditionReportInput) =>
+        apiClient.post<{ data: ConditionReport }>(
+          `/api/v1/properties/${propertyId}/units/${unitId}/condition-reports`,
+          body,
+        ),
+    },
+  },
+  bankAccounts: {
+    list: () => apiClient.get<{ data: BankAccount[] }>('/api/v1/bank-accounts'),
+    create: (body: CreateBankAccountInput) => apiClient.post<{ data: BankAccount }>('/api/v1/bank-accounts', body),
+    setDefault: (id: string) => apiClient.patch<{ data: BankAccount }>(`/api/v1/bank-accounts/${id}`, { isDefault: true }),
+    remove: (id: string) =>
+      apiClient.delete<{ data: { id: string; deleted: boolean } }>(`/api/v1/bank-accounts/${id}`),
   },
   maintenance: {
     categories: () => apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
@@ -136,6 +212,12 @@ export const api = {
     list: (params?: { status?: string }) => apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
     get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
+    updateTerms: (id: string, body: UpdateLeaseTermsInput) =>
+      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, body),
+    updateStatus: (id: string, status: string) =>
+      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { status }),
+    sign: (id: string, fullName: string) =>
+      apiClient.post<{ data: LeaseSignature }>(`/api/v1/leases/${id}/sign`, { fullName }),
     notes: {
       list: (leaseId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/leases/${leaseId}/notes`),
       create: (leaseId: string, body: string) =>

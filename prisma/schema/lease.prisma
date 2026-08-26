@@ -12,6 +12,14 @@ enum PaymentFrequency {
   MONTHLY
 }
 
+// Which of Lease's two late-fee fields is actually applied by
+// overdueFlagger -- landlord/manager picks one mode per lease, never both
+// (avoids ambiguity over whether they'd stack).
+enum LateFeeType {
+  PERCENTAGE
+  FIXED
+}
+
 // Covers PRD §5.1 "AI-generated renewal and rent increase notices" and §6.1
 // Lease & Document Intelligence ("AI-drafted: Renewal offers, Rent increase
 // notices, Default notices" + "Expiration alerts"). Also doubles as the
@@ -89,7 +97,12 @@ model Lease {
   paymentFrequency   PaymentFrequency    @default(ANNUAL)
   deposit            Float
   gracePeriodDays    Int                 @default(7)
-  lateFeePercentage  Float               @default(5.0)
+  // Landlord/manager autonomy, not a platform default: 0 means "no late
+  // fee" until a lease's owner deliberately sets one. Which of this field
+  // vs lateFeeFlatAmount is actually used is decided by lateFeeType.
+  lateFeePercentage  Float               @default(0)
+  lateFeeFlatAmount  Float               @default(0)
+  lateFeeType        LateFeeType         @default(PERCENTAGE)
   signedAgreementUrl String?
   agreementSignedAt  DateTime?
   status             LeaseStatus         @default(PENDING)
@@ -115,8 +128,34 @@ model Lease {
   renewedFrom        Lease?              @relation("LeaseRenewal", fields: [renewedFromId], references: [id])
   renewedInto        Lease?              @relation("LeaseRenewal")
   applications       Application[]
+  signatures         LeaseSignature[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+}
+
+// PRD §5.1/§5.2's "E-signature support for the rent agreement" -- click-wrap
+// style (typed full legal name + timestamp + IP), not a drawn/uploaded
+// signature image: there's no file-storage endpoint anywhere in this
+// codebase (documented gap, same reason maintenance photo upload is
+// display-only), so a real signature *image* isn't buildable yet. A typed
+// signature with an audit trail is itself a real, legally-recognized
+// e-signature method (same category as clicking "I agree"), not a fake
+// stand-in -- same "honest, real, but narrower" principle as ad campaigns'
+// zero stats. One row per signer per lease (a lease has at least a tenant
+// and a manager/landlord party) -- `@@unique` prevents the same person
+// signing twice.
+model LeaseSignature {
+  id            String   @id @default(uuid())
+  leaseId       String
+  lease         Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  signerId      String
+  signer        User     @relation(fields: [signerId], references: [id])
+  signerRole    Role
+  fullNameTyped String
+  ipAddress     String?
+  signedAt      DateTime @default(now())
+
+  @@unique([leaseId, signerId])
 }
 
 enum ApplicationStatus {

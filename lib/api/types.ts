@@ -195,9 +195,15 @@ export type Lease = {
   paymentFrequency: string;
   deposit: number;
   status: string;
+  gracePeriodDays: number;
+  lateFeeType: 'PERCENTAGE' | 'FIXED';
+  lateFeePercentage: number;
+  lateFeeFlatAmount: number;
   riskScore?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
   paymentReliability?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | null;
   signedAgreementUrl?: string | null;
+  agreementSignedAt?: string | null;
+  signatures?: LeaseSignature[];
   notices?: Notice[];
   invoices?: Invoice[];
   tenantInvited?: boolean;
@@ -214,6 +220,17 @@ export type CreateLeaseInput = {
   rentAmount: number;
   paymentFrequency?: string;
   deposit: number;
+  gracePeriodDays?: number;
+  lateFeeType?: 'PERCENTAGE' | 'FIXED';
+  lateFeePercentage?: number;
+  lateFeeFlatAmount?: number;
+};
+
+export type UpdateLeaseTermsInput = {
+  gracePeriodDays?: number;
+  lateFeeType?: 'PERCENTAGE' | 'FIXED';
+  lateFeePercentage?: number;
+  lateFeeFlatAmount?: number;
 };
 
 export type Payment = {
@@ -265,6 +282,7 @@ export type AccessCode = {
   validFrom: string;
   validUntil: string | null;
   status: 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED';
+  singleUse: boolean;
 };
 
 export type CreateAccessCodeInput = {
@@ -273,6 +291,7 @@ export type CreateAccessCodeInput = {
   guestName?: string;
   validFrom: string;
   validUntil?: string | null;
+  singleUse?: boolean;
 };
 
 export type Message = {
@@ -382,4 +401,106 @@ export type AdCampaign = {
   impressions: number;
   clicks: number;
   createdAt: string;
+};
+
+export type Announcement = {
+  id: string;
+  propertyId: string;
+  authorId: string;
+  author?: { id: string; name: string; role: string };
+  title: string;
+  body: string;
+  isPinned: boolean;
+  publishedAt: string;
+  createdAt: string;
+};
+
+export type CreateAnnouncementInput = {
+  title: string;
+  body: string;
+  isPinned?: boolean;
+};
+
+export type Violation = {
+  id: string;
+  unitId: string;
+  reportedById: string;
+  reportedBy?: { id: string; name: string; role: string };
+  description: string;
+  severity: 'MINOR' | 'MODERATE' | 'SEVERE';
+  status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED';
+  evidenceUrls: string[];
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+};
+
+export type CreateViolationInput = {
+  description: string;
+  severity?: 'MINOR' | 'MODERATE' | 'SEVERE';
+  evidenceUrls?: string[];
+};
+
+export type ConditionReport = {
+  id: string;
+  unitId: string;
+  rooms: Record<string, unknown>;
+  aiFlags: Record<string, unknown> | null;
+  inconsistencyNotes: string | null;
+  reportedAt: string;
+  createdAt: string;
+};
+
+export type CreateConditionReportInput = {
+  rooms: Record<string, unknown>;
+  inconsistencyNotes?: string;
+};
+
+export type Equipment = {
+  id: string;
+  unitId: string | null;
+  propertyId: string | null;
+  type: 'HVAC' | 'WATER_HEATER' | 'GENERATOR' | 'INVERTER' | 'APPLIANCE' | 'ELEVATOR' | 'OTHER';
+  serialNumber: string | null;
+  installedAt: string | null;
+  warrantyExpiresAt: string | null;
+  createdAt: string;
+};
+
+export type CreateEquipmentInput = {
+  unitId?: string;
+  type: Equipment['type'];
+  serialNumber?: string;
+  installedAt?: string;
+  warrantyExpiresAt?: string;
+};
+
+export type BankAccount = {
+  id: string;
+  userId: string;
+  accountNumber: string;
+  bankCode: string;
+  bankName: string;
+  accountName: string;
+  isDefault: boolean;
+  createdAt: string;
+};
+
+export type CreateBankAccountInput = {
+  accountNumber: string;
+  bankCode: string;
+  bankName: string;
+  accountName: string;
+  isDefault?: boolean;
+};
+
+export type LeaseSignature = {
+  id: string;
+  leaseId: string;
+  signerId: string;
+  signer?: { id: string; name: string; role: string };
+  signerRole: string;
+  fullNameTyped: string;
+  ipAddress: string | null;
+  signedAt: string;
 };

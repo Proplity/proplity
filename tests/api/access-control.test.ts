@@ -273,4 +273,54 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     expect(res.body.data.granted).toBe(false);
     expect(res.body.data.action).toBe('DENIED');
   });
+
+  it('a single-use code (the default) auto-transitions to USED on its first grant, then is denied on reuse', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const code = await createAccessCode(unit.id, tenant.id, { singleUse: true });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const first = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: unit.id, code: code.code },
+    });
+    expect(first.body.data.granted).toBe(true);
+    expect(first.body.data.action).toBe('GRANTED');
+
+    const refetched = await testPrisma.accessCode.findUnique({ where: { id: code.id } });
+    expect(refetched?.status).toBe('USED');
+
+    const second = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: unit.id, code: code.code },
+    });
+    expect(second.body.data.granted).toBe(false);
+    expect(second.body.data.action).toBe('DENIED');
+  });
+
+  it('a reusable (singleUse: false) code stays ACTIVE and can be granted repeatedly', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const code = await createAccessCode(unit.id, tenant.id, { singleUse: false });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    for (let i = 0; i < 2; i++) {
+      const res = await apiFetch('/api/v1/access-codes/verify', {
+        method: 'POST',
+        cookie,
+        body: { unitId: unit.id, code: code.code },
+      });
+      expect(res.body.data.granted).toBe(true);
+      expect(res.body.data.action).toBe('GRANTED');
+    }
+
+    const refetched = await testPrisma.accessCode.findUnique({ where: { id: code.id } });
+    expect(refetched?.status).toBe('ACTIVE');
+  });
 });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { LeaseStatus, PaymentFrequency, Prisma } from '@prisma/client';
+import { LeaseStatus, PaymentFrequency, LateFeeType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
@@ -72,8 +72,12 @@ const createLeaseSchema = z
     rentAmount: z.number().positive(),
     paymentFrequency: z.nativeEnum(PaymentFrequency).optional(),
     deposit: z.number().nonnegative(),
+    // Landlord/manager autonomy, deliberately unbounded -- no platform-
+    // imposed min/max on either field.
     gracePeriodDays: z.number().int().nonnegative().optional(),
+    lateFeeType: z.nativeEnum(LateFeeType).optional(),
     lateFeePercentage: z.number().nonnegative().optional(),
+    lateFeeFlatAmount: z.number().nonnegative().optional(),
   })
   .refine((d) => d.tenantId || (d.tenantEmail && d.tenantName), {
     message: 'Either tenantId, or both tenantEmail and tenantName, are required',

@@ -1,10 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { CreateLeaseInput, Lease, Note } from '@/lib/api/types';
+import type { CreateLeaseInput, Lease, Note, UpdateLeaseTermsInput } from '@/lib/api/types';
 
 export function useCreateLease() {
   return useApiSubmit((body: CreateLeaseInput) => api.leases.create(body).then((res) => res.data.data));
+}
+
+// Edits an existing lease's grace period / late-fee terms -- landlord/
+// manager autonomy, see leases/[id] PATCH.
+export function useUpdateLeaseTerms(leaseId: string) {
+  return useApiSubmit((body: UpdateLeaseTermsInput) =>
+    api.leases.updateTerms(leaseId, body).then((res) => res.data.data),
+  );
+}
+
+// Explicit lease lifecycle transitions (e.g. activating a PENDING lease,
+// terminating an ACTIVE one) -- Unit.status is kept in sync server-side.
+export function useUpdateLeaseStatus(leaseId: string) {
+  return useApiSubmit((status: string) => api.leases.updateStatus(leaseId, status).then((res) => res.data.data));
+}
+
+// Click-wrap e-signature -- see app/api/v1/leases/[id]/sign/route.ts.
+export function useSignLease(leaseId: string) {
+  return useApiSubmit((fullName: string) => api.leases.sign(leaseId, fullName).then((res) => res.data.data));
 }
 
 // The logged-in tenant's own active lease -- a tenant has exactly one in
