@@ -1,0 +1,55 @@
+# Phase: Domain API Phase 9, sub-phase 6 — Admin Views
+
+**Status:** Complete and verified. **Date:** 2026-08-23.
+
+## Why
+
+Sixth and final sub-phase of Phase 9. Covers `AdminDashboard.tsx`, `AdminBreakdownPage.tsx`, `AdminReports.tsx` — flagged from the very start of Phase 9 planning as the highest-risk sub-phase, since these show platform-wide aggregates and (unlike every other sub-phase) needed genuinely new backend work, not just a frontend swap.
+
+## Backend changes
+
+**One new endpoint**: `GET /api/v1/admin/users` (`ADMIN` only). Confirmed by search that no user-listing route existed anywhere in the API — every other domain already had at least a read route from an earlier phase, but nothing ever needed to list `User` rows directly. Returns id/name/email/role/status/phoneNumber/createdAt plus a computed `propertiesCount` (`managedProperties.length + ownedProperties.length`), explicitly excluding `passwordHash` and other auth-internal fields. This backs every "Total Users"/"by role" stat across all 3 components.
+
+No other backend changes were needed — every other platform-wide number this sub-phase needed was already reachable: `GET /properties?scope=mine` (built in 9.3a) returns **all** properties for an `ADMIN` caller (its `where` clause is `{}` for that role), and `GET /leases`/`GET /invoices`/`GET /maintenance/requests` all already have an explicit "ADMIN: no extra scoping, sees everything" branch from their original Phase 1–6 builds. This sub-phase's real backend risk turned out to be one narrow, well-contained gap rather than the broader one initially feared.
+
+## What was built
+
+- **`lib/api/types.ts`** — added `AdminUser`; added `Property.type`/`Property.createdAt` (both real fields that had never been modeled — needed for the admin properties table/breakdown and weren't caught until this sub-phase needed them).
+- **`lib/apiClient.ts`** — added `api.admin.users.list()`.
+- **`hooks/useAdminUsers.ts`** (new file) — `useAdminUsers()`.
+- **`AdminDashboard.tsx`**, **`AdminBreakdownPage.tsx`**, **`AdminReports.tsx`** — full rewrites, described below.
+
+## The mock data here was fabricated at a completely different scale than reality — the central judgment call of this sub-phase
+
+Every other sub-phase's mock data was a plausible small dataset that could be swapped for real data roughly 1:1. The admin mock data was not: it depicted a mature SaaS platform (**12,847 users, 5,421 properties, ₦2.4B in transactions, 99.7% uptime, monthly revenue trending toward ₦1.32B/year, per-Nigerian-state breakdowns with thousands of listings per state**) against a real seeded database of **9 users, 4 properties, 3 leases, 3 invoices, 3 maintenance requests**. There was no way to "hydrate" this without either (a) fabricating enterprise-scale numbers with zero backing, which every prior sub-phase in this engagement has consistently refused to do, or (b) showing the real, small numbers honestly. Every rewrite here does (b) — the admin views now show a platform that is honestly small, not a platform pretending to be large.
+
+## Real-vs-mock shape mismatches resolved (judgment calls)
+
+- **"System Health Monitoring" and the `uptime` breakdown type dropped entirely** (`AdminDashboard`, `AdminBreakdownPage`) — API response time, database load, active sessions, error rate, service-by-service uptime percentages: none of this has any backing. No APM/monitoring stack is integrated anywhere in this Next.js application, and building one is far outside a CRUD platform's scope. The `uptime` breakdown type was replaced with a real `maintenance` type (platform-wide open maintenance requests), reusing the same real computation `DashboardBreakdownPage` (9.3b) already established for one manager's properties, just unscoped for `ADMIN`.
+- **"AI System Performance" dropped entirely** (`AdminDashboard`) — resolution rate, accuracy percentages for AI features that were never built. Per CLAUDE.md's own gaps list, `paymentReliabilityScorer.ts` is an explicit heuristic "not real ML," and no other AI capability described in the PRD has an actual model or confidence score anywhere in the codebase to report on.
+- **"Recent System Issues" replaced with a real "Items Needing Attention" feed** (`AdminDashboard`) — no error/incident-tracking model exists (confirmed: no `ErrorLog`/`IncidentLog` in the schema). Substituted with genuinely real, admin-relevant signals instead: overdue invoices (`Invoice.status === 'OVERDUE'`) and cancelled maintenance requests, sorted by recency — the same "real substitute for a monitoring concept" pattern used successfully elsewhere in this engagement (e.g. `TenantDetail`'s risk badge from the real `paymentReliabilityScorer` output instead of a fabricated insight).
+- **"Platform Growth Analytics" now computed from real `createdAt` timestamps** (last 7 days) instead of hardcoded weekly figures (847 new properties, 1,284 new users) — will honestly show small or zero counts given the seed data was created in one batch, which is the correct, non-misleading behavior for a database that hasn't had a week of real activity yet.
+- **"Total Transactions" now means real payment volume** (`AdminDashboard`, `AdminBreakdownPage`, `AdminReports`) — sum of every real `Payment.amount` platform-wide, not a fabricated ₦2.4B. The `AdminBreakdownPage` transactions table is a real payment ledger (tenant, property, amount, invoice type, method, date) instead of `mockData`'s invented transaction rows.
+- **Property "Views" column dropped** (`AdminBreakdownPage`'s properties table) — no view/analytics-tracking model exists on `Property` or anywhere else.
+- **User "Plan" column dropped** (`AdminBreakdownPage`'s users table) — no per-user subscription/plan field is populated anywhere real; `Subscription` exists in the schema but CLAUDE.md is explicit it's "not in the PRD... confirm with product before building," matching the same reasoning `NeighbourhoodReport`'s premium banner used in sub-phase 2.
+- **"Properties by State" is now genuinely real** (`AdminReports`) — `Property.state` is a real column; grouped and counted directly from it instead of the mock's invented 6-state breakdown with thousands of listings each. Same for "Properties by Type" (the real `PropertyType` enum: `RESIDENTIAL`/`COMMERCIAL`/`INDUSTRIAL`/`MIXED_USE`).
+- **"Subscriptions revenue" dropped from the Financial tab's revenue chart**, replaced with a real breakdown by `InvoiceType` (`RENT`/`MAINTENANCE`/etc.) — `Subscription` isn't in PRD scope (see above), so there's no real subscription revenue to chart; splitting real payment volume by its real invoice type is the closest honest analogue to "where does revenue come from."
+- **"Churn" and month-over-month user-growth deltas dropped** (`AdminReports`' Users tab) — computing real churn would need a user-deactivation-event history that doesn't exist; the "growth" line charts elsewhere use a real last-6-months window (same pattern as `DashboardBreakdownPage`'s Collection Trend from 9.3b), which will honestly show a single spike in whichever month the seed ran and flat elsewhere rather than a fabricated smooth upward trend. The fabricated monthly registration table (with invented per-role monthly deltas and a random churn column) was replaced with a real, static "Users by Role & Status" table instead, since there's no real historical registration data worth charting month-over-month yet.
+- **"Avg. Resolution Time"/"Avg Occupancy Rate"/"Avg List Price" are now real computations** (`AdminReports`) — resolution time from real `completedAt - createdAt` deltas on completed maintenance requests; occupancy from real `Unit.status`; average rent from real `Unit.rentAmount` — none of these needed fabrication, they were just never wired to the real aggregate.
+- **Export/Filter buttons dropped** (`AdminBreakdownPage`, consistent with `DashboardBreakdownPage`'s 9.3b precedent) — decorative, no real target. The Reports page's period-selector dropdown was kept (harmless, decorative — it never actually filtered the mock data either, so no functional regression either way) but its "Export Report" button was dropped since none of the KPI cards or charts is stable enough content to genuinely "export" without a real report-generation feature that doesn't exist.
+- **Admin Controls' "User Management" button now performs a real navigation** (`AdminDashboard`) — routes to the real `admin-breakdown/users` view instead of an `alert()` placeholder, since that view now exists and shows real data. "Security"/"Database"/"Settings" stay as honest placeholders (`alert('...is not built in this phase.')`) rather than fabricated destinations — an explicit statement rather than a silent no-op, matching this sub-phase's general preference for honesty over decoration.
+
+## Verification performed
+
+- `pnpm exec tsc --noEmit` — 0 errors. `pnpm build` — succeeds; `/api/v1/admin/users` appears in the route list.
+- Live-tested against the real dev server and seeded database as `admin@proplity.com`:
+  - `GET /admin/users` returns all 9 real seeded users with correct role/status/`propertiesCount` (spot-checked: `manager@`/`landlord@proplity.com` both correctly show `propertiesCount: 4`, matching all 4 seeded properties they jointly manage/own).
+  - Confirmed `GET /admin/users` returns `403` for a non-`ADMIN` caller (`manager@proplity.com`).
+  - Confirmed `GET /properties?scope=mine`, `GET /invoices`, `GET /maintenance/requests` all return the full platform-wide count (4/3/3 respectively) for the admin account, re-verifying the "ADMIN sees everything" scoping this sub-phase relies on rather than assuming it.
+  - All 6 admin pages (`/admin`, `/admin/reports`, and all 4 `/admin/breakdown/[type]` routes) render `200` with no server-side exception as `admin@proplity.com`.
+  - Confirmed the `/admin` layout guard still correctly redirects a non-admin (`manager@proplity.com` → `307`) — unchanged, but re-confirmed since this sub-phase is the first to meaningfully exercise every admin route at once.
+- **Not verified**: interactive browser click-through (the Reports page's tab switching, period-selector dropdown, breakdown search boxes) — no browser-automation tool available in this environment, same caveat as every prior frontend phase.
+
+## Phase 9 complete
+
+This closes out Phase 9 (all 6 sub-phases: 9.1 public property browsing, 9.2 tenant views, 9.3a/9.3b manager/landlord/property views, 9.4 vendor views, 9.5 messaging, 9.6 admin views). Every one of the 20 originally-catalogued mock-data components (`out/next-phase-analysis.md`) is now real-data-backed, along with 3 components out of that catalog's original scope but touched along the way (`PropertyApplicationForm.tsx` was noted as a flagged, unfixed gap in 9.3b; everything else stayed in scope). `out/next-phase-analysis.md`'s Finding 3 (automated test suite) is the only major item left from that analysis — `CLAUDE.md`/`CURRENT_STATE.md`/`PROJECT_STRUCTURE.md` are now due for another sync pass given the volume of new routes, hooks, and components this phase added since they were last updated (`83a9832`, before Phase 9 started).
