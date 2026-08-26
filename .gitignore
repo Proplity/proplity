@@ -12,3 +12,4 @@ npm-debug.log*
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 .claude/settings.local.json
+.claude/settings.json
