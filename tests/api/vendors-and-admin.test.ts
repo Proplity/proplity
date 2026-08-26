@@ -200,4 +200,114 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(updated?.paymentReliability).toBe('EXCELLENT');
     expect(updated?.riskScore).toBe('LOW');
   });
+
+  it('overdue-flagger respects Lease.gracePeriodDays -- not overdue, no reminder, no late fee, while still within grace', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 10, lateFeePercentage: 5 });
+    // Due 3 days ago -- past dueDate, but well within a 10-day grace period.
+    const invoice = await createInvoice({
+      leaseId: lease.id,
+      type: 'RENT',
+      amount: 100_000,
+      dueDate: new Date(Date.now() - 3 * 86400000),
+      status: 'UNPAID',
+    });
+
+    const res = await apiFetch('/api/v1/cron/overdue-flagger', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.result.flagged).toBe(0);
+    expect(res.body.result.lateFeesCreated).toBe(0);
+
+    const stillUnpaid = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(stillUnpaid?.status).toBe('UNPAID');
+
+    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    expect(lateFee).toBeNull();
+  });
+
+  it('overdue-flagger flags past-grace RENT invoices, sends one reminder, and creates a correctly-computed late fee -- idempotently', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 2, lateFeePercentage: 5 });
+    // Due 5 days ago, 2-day grace -- 3 days genuinely overdue.
+    const invoice = await createInvoice({
+      leaseId: lease.id,
+      type: 'RENT',
+      amount: 200_000,
+      dueDate: new Date(Date.now() - 5 * 86400000),
+      status: 'UNPAID',
+    });
+
+    const first = await apiFetch('/api/v1/cron/overdue-flagger', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(first.status).toBe(200);
+    expect(first.body.result.flagged).toBe(1);
+    expect(first.body.result.remindersSent).toBe(1);
+    expect(first.body.result.lateFeesCreated).toBe(1);
+
+    const flagged = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(flagged?.status).toBe('OVERDUE');
+
+    const reminder = await testPrisma.notice.findFirst({ where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' } });
+    expect(reminder).not.toBeNull();
+
+    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    expect(lateFee).not.toBeNull();
+    expect(lateFee?.amount).toBe(10_000); // 5% of 200,000
+
+    // Running again must not double-send the reminder or double-charge the fee.
+    const second = await apiFetch('/api/v1/cron/overdue-flagger', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(second.status).toBe(200);
+    expect(second.body.result.remindersSent).toBe(0);
+    expect(second.body.result.lateFeesCreated).toBe(0);
+
+    const reminderCount = await testPrisma.notice.count({ where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' } });
+    expect(reminderCount).toBe(1);
+    const lateFeeCount = await testPrisma.invoice.count({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    expect(lateFeeCount).toBe(1);
+
+    // The late fee invoice itself must never compound into a second late fee.
+    const lateFeeInvoice = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFeeOfLateFee = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', description: { contains: `[late-fee-for:${lateFeeInvoice!.id}]` } },
+    });
+    expect(lateFeeOfLateFee).toBeNull();
+  });
+
+  it('overdue-flagger never charges a late fee on a non-RENT invoice, even when lease-tied and past grace', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 0, lateFeePercentage: 5 });
+    const invoice = await createInvoice({
+      leaseId: lease.id,
+      type: 'SECURITY_DEPOSIT',
+      amount: 500_000,
+      dueDate: new Date(Date.now() - 86400000),
+      status: 'UNPAID',
+    });
+
+    const res = await apiFetch('/api/v1/cron/overdue-flagger', {
+      method: 'POST',
+      headers: { 'x-cron-secret': CRON_SECRET },
+    });
+    expect(res.status).toBe(200);
+
+    const flagged = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(flagged?.status).toBe('OVERDUE');
+
+    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    expect(lateFee).toBeNull();
+  });
 });

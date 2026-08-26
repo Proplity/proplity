@@ -127,6 +127,8 @@ export async function createLease(
     paymentFrequency: PaymentFrequency;
     deposit: number;
     status: LeaseStatus;
+    gracePeriodDays: number;
+    lateFeePercentage: number;
   }> = {},
 ) {
   return testPrisma.lease.create({
@@ -139,6 +141,8 @@ export async function createLease(
       paymentFrequency: overrides.paymentFrequency ?? PaymentFrequency.ANNUAL,
       deposit: overrides.deposit ?? 200_000,
       status: overrides.status ?? LeaseStatus.ACTIVE,
+      ...(overrides.gracePeriodDays !== undefined ? { gracePeriodDays: overrides.gracePeriodDays } : {}),
+      ...(overrides.lateFeePercentage !== undefined ? { lateFeePercentage: overrides.lateFeePercentage } : {}),
     },
   });
 }
