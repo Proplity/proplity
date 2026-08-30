@@ -115,7 +115,7 @@ describe('maintenance: requests, list scoping', () => {
     await resetDb();
   });
 
-  it('scopes the list by role: tenant sees own, vendor sees assigned, manager sees their properties\', admin sees all', async () => {
+  it("scopes the list by role: tenant sees own, vendor sees assigned, manager sees their properties', admin sees all", async () => {
     const manager = await createUser(Role.MANAGER);
     const otherManager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
@@ -127,7 +127,10 @@ describe('maintenance: requests, list scoping', () => {
     const otherTenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
 
-    const mine = await createMaintenanceRequest(unit.id, tenant.id, { title: 'Mine', vendorId: vendor.id });
+    const mine = await createMaintenanceRequest(unit.id, tenant.id, {
+      title: 'Mine',
+      vendorId: vendor.id,
+    });
     await createMaintenanceRequest(otherUnit.id, otherTenant.id, { title: 'Not mine' });
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
@@ -184,7 +187,9 @@ describe('maintenance: requests, [id] read access', () => {
     }
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const forbidden = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, { cookie: strangerCookie });
+    const forbidden = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
+      cookie: strangerCookie,
+    });
     expect(forbidden.status).toBe(403);
   });
 });
@@ -230,7 +235,9 @@ describe('maintenance: requests, [id] PATCH -- triage / cancel / progress', () =
     const tenant = await createUser(Role.TENANT);
     const stranger = await createUser(Role.TENANT);
 
-    const byTenant = await createMaintenanceRequest(unit.id, tenant.id, { title: 'Cancel by tenant' });
+    const byTenant = await createMaintenanceRequest(unit.id, tenant.id, {
+      title: 'Cancel by tenant',
+    });
     const tenantCookie = await authCookie(tenant.id, tenant.role);
     const tenantCancel = await apiFetch(`/api/v1/maintenance/requests/${byTenant.id}`, {
       method: 'PATCH',
@@ -240,7 +247,9 @@ describe('maintenance: requests, [id] PATCH -- triage / cancel / progress', () =
     expect(tenantCancel.status).toBe(200);
     expect(tenantCancel.body.data.status).toBe('CANCELLED');
 
-    const byManager = await createMaintenanceRequest(unit.id, tenant.id, { title: 'Cancel by manager' });
+    const byManager = await createMaintenanceRequest(unit.id, tenant.id, {
+      title: 'Cancel by manager',
+    });
     const strangerCookie = await authCookie(stranger.id, stranger.role);
     const strangerCancel = await apiFetch(`/api/v1/maintenance/requests/${byManager.id}`, {
       method: 'PATCH',
@@ -307,13 +316,19 @@ describe('maintenance: requests, [id] PATCH -- triage / cancel / progress', () =
     const completed = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
       method: 'PATCH',
       cookie: vendorCookie,
-      body: { status: 'COMPLETED', completionProofUrl: 'https://example.com/proof.jpg', finalCost: 15_000 },
+      body: {
+        status: 'COMPLETED',
+        completionProofUrl: 'https://example.com/proof.jpg',
+        finalCost: 15_000,
+      },
     });
     expect(completed.status).toBe(200);
     expect(completed.body.data.status).toBe('COMPLETED');
     expect(completed.body.data.completedAt).not.toBeNull();
 
-    const invoice = await testPrisma.invoice.findFirst({ where: { maintenanceRequestId: request.id } });
+    const invoice = await testPrisma.invoice.findFirst({
+      where: { maintenanceRequestId: request.id },
+    });
     expect(invoice).not.toBeNull();
     expect(invoice?.type).toBe('MAINTENANCE');
     expect(invoice?.amount).toBe(15_000);
@@ -353,7 +368,9 @@ describe('maintenance: rating', () => {
     const vendor = await createUser(Role.VENDOR);
     const stranger = await createUser(Role.TENANT);
 
-    const notCompleted = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    const notCompleted = await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+    });
     const tenantCookie = await authCookie(tenant.id, tenant.role);
     const tooEarly = await apiFetch(`/api/v1/maintenance/requests/${notCompleted.id}/rating`, {
       method: 'POST',
@@ -403,7 +420,7 @@ describe('maintenance: schedules', () => {
     expect(res.status).toBe(403);
   });
 
-  it('scopes the list to the caller\'s own properties for MANAGER/LANDLORD, and everything for ADMIN', async () => {
+  it("scopes the list to the caller's own properties for MANAGER/LANDLORD, and everything for ADMIN", async () => {
     const manager = await createUser(Role.MANAGER);
     const otherManager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
@@ -425,7 +442,7 @@ describe('maintenance: schedules', () => {
     expect(adminRes.body.data.length).toBe(2);
   });
 
-  it('gates creation through canManageProperty on the unit\'s own property', async () => {
+  it("gates creation through canManageProperty on the unit's own property", async () => {
     const owner = await createUser(Role.MANAGER);
     const intruder = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: owner.id });
@@ -436,7 +453,12 @@ describe('maintenance: schedules', () => {
     const forbidden = await apiFetch('/api/v1/maintenance/schedules', {
       method: 'POST',
       cookie: intruderCookie,
-      body: { unitId: unit.id, categoryId: category.id, frequency: 'MONTHLY', nextDueDate: new Date().toISOString() },
+      body: {
+        unitId: unit.id,
+        categoryId: category.id,
+        frequency: 'MONTHLY',
+        nextDueDate: new Date().toISOString(),
+      },
     });
     expect(forbidden.status).toBe(403);
 
@@ -444,7 +466,12 @@ describe('maintenance: schedules', () => {
     const created = await apiFetch('/api/v1/maintenance/schedules', {
       method: 'POST',
       cookie: ownerCookie,
-      body: { unitId: unit.id, categoryId: category.id, frequency: 'MONTHLY', nextDueDate: new Date().toISOString() },
+      body: {
+        unitId: unit.id,
+        categoryId: category.id,
+        frequency: 'MONTHLY',
+        nextDueDate: new Date().toISOString(),
+      },
     });
     expect(created.status).toBe(201);
   });

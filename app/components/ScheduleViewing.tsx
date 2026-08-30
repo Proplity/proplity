@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ArrowLeft, Calendar, Clock, MapPin, User, Phone, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  CheckCircle,
+  AlertCircle,
+} from 'lucide-react';
 import { mockViewingAvailableDates as availableDates } from '../store/mockData';
 import { useCreateViewing } from '@/hooks/useProperties';
 

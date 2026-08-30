@@ -29,7 +29,10 @@ export const GET = withAuth(
     try {
       const format = req.nextUrl.searchParams.get('format') === 'xlsx' ? 'xlsx' : 'csv';
 
-      const where = session.role === 'ADMIN' ? {} : { OR: [{ managerId: session.sub }, { landlordId: session.sub }] };
+      const where =
+        session.role === 'ADMIN'
+          ? {}
+          : { OR: [{ managerId: session.sub }, { landlordId: session.sub }] };
 
       const properties = await prisma.property.findMany({
         where,

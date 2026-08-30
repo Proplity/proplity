@@ -3,7 +3,9 @@ import { ScheduleFrequency } from '@prisma/client';
 
 function addInterval(date: Date, frequency: ScheduleFrequency): Date {
   const next = new Date(date);
-  const monthsToAdd = { WEEKLY: 0, MONTHLY: 1, QUARTERLY: 3, SEMI_ANNUAL: 6, ANNUAL: 12 }[frequency];
+  const monthsToAdd = { WEEKLY: 0, MONTHLY: 1, QUARTERLY: 3, SEMI_ANNUAL: 6, ANNUAL: 12 }[
+    frequency
+  ];
   if (frequency === 'WEEKLY') {
     next.setDate(next.getDate() + 7);
   } else {
@@ -42,7 +44,10 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
       // this schedule to fire every single run once it starts being overdue.
       await prisma.maintenanceSchedule.update({
         where: { id: schedule.id },
-        data: { nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency), lastGeneratedAt: now },
+        data: {
+          nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency),
+          lastGeneratedAt: now,
+        },
       });
       continue;
     }
@@ -60,7 +65,10 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
       }),
       prisma.maintenanceSchedule.update({
         where: { id: schedule.id },
-        data: { nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency), lastGeneratedAt: now },
+        data: {
+          nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency),
+          lastGeneratedAt: now,
+        },
       }),
     ]);
     dispatched += 1;

@@ -16,7 +16,10 @@ export const GET = withAuth(
         ...(leaseId ? { leaseId } : {}),
       };
 
-      const mandates = await prisma.autoPayMandate.findMany({ where, orderBy: { createdAt: 'desc' } });
+      const mandates = await prisma.autoPayMandate.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+      });
       return NextResponse.json({ data: mandates });
     } catch (err) {
       return handleApiError(err);
@@ -62,7 +65,10 @@ export const DELETE = withAuth(
       const id = req.nextUrl.searchParams.get('id');
       if (!id) return NextResponse.json({ error: 'id query param is required' }, { status: 400 });
 
-      const mandate = await prisma.autoPayMandate.findUnique({ where: { id }, include: { lease: true } });
+      const mandate = await prisma.autoPayMandate.findUnique({
+        where: { id },
+        include: { lease: true },
+      });
       if (!mandate) return NextResponse.json({ error: 'Mandate not found' }, { status: 404 });
       if (mandate.lease.tenantId !== session.sub) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -70,7 +76,10 @@ export const DELETE = withAuth(
 
       // Soft-cancel only, consistent with the codebase's archive-over-delete
       // convention -- never a hard delete of the mandate row.
-      const updated = await prisma.autoPayMandate.update({ where: { id }, data: { status: 'CANCELLED' } });
+      const updated = await prisma.autoPayMandate.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);

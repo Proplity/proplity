@@ -20,14 +20,16 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
 // debit card from the webhook payload), so this is a best-effort default.
 function mapPaymentMethod(channel: string | undefined): PaymentMethod {
   if (channel === 'card') return 'CREDIT_CARD';
-  if (channel === 'bank' || channel === 'bank_transfer' || channel === 'ussd') return 'BANK_TRANSFER';
+  if (channel === 'bank' || channel === 'bank_transfer' || channel === 'ussd')
+    return 'BANK_TRANSFER';
   return 'BANK_TRANSFER';
 }
 
 export async function POST(req: NextRequest) {
   try {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) return NextResponse.json({ error: 'Payment provider not configured' }, { status: 503 });
+    if (!secretKey)
+      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 503 });
 
     const rawBody = await req.text();
     const signature = req.headers.get('x-paystack-signature');
@@ -40,7 +42,8 @@ export async function POST(req: NextRequest) {
     if (payload.event === 'charge.success') {
       const data = payload.data;
       const invoiceId: string | undefined = data?.metadata?.invoiceId;
-      if (!invoiceId) return NextResponse.json({ error: 'Missing invoiceId in metadata' }, { status: 400 });
+      if (!invoiceId)
+        return NextResponse.json({ error: 'Missing invoiceId in metadata' }, { status: 400 });
 
       const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
       if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });

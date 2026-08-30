@@ -115,9 +115,12 @@ export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
       apiClient.get<Paginated<Property>>('/api/v1/properties', { params }),
-    mine: () => apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
-    get: (propertyId: string) => apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
-    create: (body: CreatePropertyInput) => apiClient.post<{ data: Property }>('/api/v1/properties', body),
+    mine: () =>
+      apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
+    get: (propertyId: string) =>
+      apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
+    create: (body: CreatePropertyInput) =>
+      apiClient.post<{ data: Property }>('/api/v1/properties', body),
     listUnits: (propertyId: string, status?: string) =>
       apiClient.get<{ data: Unit[] }>(`/api/v1/properties/${propertyId}/units`, {
         params: status ? { status } : undefined,
@@ -127,7 +130,9 @@ export const api = {
     importUnits: (propertyId: string, file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return apiClient.post<{ data: { created: number; errors: { row: number; error: string }[] } }>(
+      return apiClient.post<{
+        data: { created: number; errors: { row: number; error: string }[] };
+      }>(
         `/api/v1/properties/${propertyId}/units/import`,
         formData,
         // Instance-level default is application/json -- must be cleared so
@@ -140,21 +145,35 @@ export const api = {
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
-    moderate: (propertyId: string, body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
-      apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}/moderation`, body),
+    moderate: (
+      propertyId: string,
+      body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string },
+    ) => apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}/moderation`, body),
     announcements: {
-      list: (propertyId: string) => apiClient.get<{ data: Announcement[] }>(`/api/v1/properties/${propertyId}/announcements`),
+      list: (propertyId: string) =>
+        apiClient.get<{ data: Announcement[] }>(`/api/v1/properties/${propertyId}/announcements`),
       create: (propertyId: string, body: CreateAnnouncementInput) =>
-        apiClient.post<{ data: Announcement }>(`/api/v1/properties/${propertyId}/announcements`, body),
-      update: (propertyId: string, announcementId: string, body: Partial<CreateAnnouncementInput>) =>
-        apiClient.patch<{ data: Announcement }>(`/api/v1/properties/${propertyId}/announcements/${announcementId}`, body),
+        apiClient.post<{ data: Announcement }>(
+          `/api/v1/properties/${propertyId}/announcements`,
+          body,
+        ),
+      update: (
+        propertyId: string,
+        announcementId: string,
+        body: Partial<CreateAnnouncementInput>,
+      ) =>
+        apiClient.patch<{ data: Announcement }>(
+          `/api/v1/properties/${propertyId}/announcements/${announcementId}`,
+          body,
+        ),
       remove: (propertyId: string, announcementId: string) =>
         apiClient.delete<{ data: { id: string; deleted: boolean } }>(
           `/api/v1/properties/${propertyId}/announcements/${announcementId}`,
         ),
     },
     equipment: {
-      list: (propertyId: string) => apiClient.get<{ data: Equipment[] }>(`/api/v1/properties/${propertyId}/equipment`),
+      list: (propertyId: string) =>
+        apiClient.get<{ data: Equipment[] }>(`/api/v1/properties/${propertyId}/equipment`),
       create: (propertyId: string, body: CreateEquipmentInput) =>
         apiClient.post<{ data: Equipment }>(`/api/v1/properties/${propertyId}/equipment`, body),
       remove: (propertyId: string, equipmentId: string) =>
@@ -164,9 +183,14 @@ export const api = {
     },
     violations: {
       list: (propertyId: string, unitId: string) =>
-        apiClient.get<{ data: Violation[] }>(`/api/v1/properties/${propertyId}/units/${unitId}/violations`),
+        apiClient.get<{ data: Violation[] }>(
+          `/api/v1/properties/${propertyId}/units/${unitId}/violations`,
+        ),
       create: (propertyId: string, unitId: string, body: CreateViolationInput) =>
-        apiClient.post<{ data: Violation }>(`/api/v1/properties/${propertyId}/units/${unitId}/violations`, body),
+        apiClient.post<{ data: Violation }>(
+          `/api/v1/properties/${propertyId}/units/${unitId}/violations`,
+          body,
+        ),
       update: (
         propertyId: string,
         unitId: string,
@@ -180,7 +204,9 @@ export const api = {
     },
     conditionReports: {
       list: (propertyId: string, unitId: string) =>
-        apiClient.get<{ data: ConditionReport[] }>(`/api/v1/properties/${propertyId}/units/${unitId}/condition-reports`),
+        apiClient.get<{ data: ConditionReport[] }>(
+          `/api/v1/properties/${propertyId}/units/${unitId}/condition-reports`,
+        ),
       create: (propertyId: string, unitId: string, body: CreateConditionReportInput) =>
         apiClient.post<{ data: ConditionReport }>(
           `/api/v1/properties/${propertyId}/units/${unitId}/condition-reports`,
@@ -190,16 +216,20 @@ export const api = {
   },
   bankAccounts: {
     list: () => apiClient.get<{ data: BankAccount[] }>('/api/v1/bank-accounts'),
-    create: (body: CreateBankAccountInput) => apiClient.post<{ data: BankAccount }>('/api/v1/bank-accounts', body),
-    setDefault: (id: string) => apiClient.patch<{ data: BankAccount }>(`/api/v1/bank-accounts/${id}`, { isDefault: true }),
+    create: (body: CreateBankAccountInput) =>
+      apiClient.post<{ data: BankAccount }>('/api/v1/bank-accounts', body),
+    setDefault: (id: string) =>
+      apiClient.patch<{ data: BankAccount }>(`/api/v1/bank-accounts/${id}`, { isDefault: true }),
     remove: (id: string) =>
       apiClient.delete<{ data: { id: string; deleted: boolean } }>(`/api/v1/bank-accounts/${id}`),
   },
   maintenance: {
-    categories: () => apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
+    categories: () =>
+      apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
     list: (params?: { status?: string }) =>
       apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
-    get: (id: string) => apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
+    get: (id: string) =>
+      apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
     update: (id: string, body: UpdateMaintenanceRequestInput) =>
       apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
@@ -209,7 +239,8 @@ export const api = {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
   leases: {
-    list: (params?: { status?: string }) => apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
+    list: (params?: { status?: string }) =>
+      apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
     get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
     updateTerms: (id: string, body: UpdateLeaseTermsInput) =>
@@ -227,15 +258,19 @@ export const api = {
   invoices: {
     list: (params?: { type?: string; status?: string }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
-    create: (body: CreateInvoiceInput) => apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
+    create: (body: CreateInvoiceInput) =>
+      apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
   },
   accessCodes: {
-    list: (unitId: string) => apiClient.get<{ data: AccessCode[] }>('/api/v1/access-codes', { params: { unitId } }),
-    create: (body: CreateAccessCodeInput) => apiClient.post<{ data: AccessCode }>('/api/v1/access-codes', body),
+    list: (unitId: string) =>
+      apiClient.get<{ data: AccessCode[] }>('/api/v1/access-codes', { params: { unitId } }),
+    create: (body: CreateAccessCodeInput) =>
+      apiClient.post<{ data: AccessCode }>('/api/v1/access-codes', body),
   },
   conversations: {
     list: () => apiClient.get<{ data: Conversation[] }>('/api/v1/conversations'),
-    create: (body: CreateConversationInput) => apiClient.post<{ data: Conversation }>('/api/v1/conversations', body),
+    create: (body: CreateConversationInput) =>
+      apiClient.post<{ data: Conversation }>('/api/v1/conversations', body),
     messages: {
       list: (conversationId: string, cursor?: string) =>
         apiClient.get<{ data: Message[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
@@ -254,23 +289,27 @@ export const api = {
   },
   payments: {
     initialize: (invoiceId: string) =>
-      apiClient.post<{ data: { authorizationUrl: string; reference: string } }>('/api/v1/payments/initialize', {
-        invoiceId,
-      }),
+      apiClient.post<{ data: { authorizationUrl: string; reference: string } }>(
+        '/api/v1/payments/initialize',
+        {
+          invoiceId,
+        },
+      ),
   },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
     checkout: (body: CheckoutSubscriptionInput) =>
-      apiClient.post<{ data: { activated: true; subscription: Subscription } | { invoiceId: string; amount: number } }>(
-        '/api/v1/subscriptions/checkout',
-        body,
-      ),
+      apiClient.post<{
+        data:
+          { activated: true; subscription: Subscription } | { invoiceId: string; amount: number };
+      }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {
     list: (params?: { status?: string; unitId?: string }) =>
       apiClient.get<{ data: Application[] }>('/api/v1/applications', { params }),
     get: (id: string) => apiClient.get<{ data: Application }>(`/api/v1/applications/${id}`),
-    create: (body: CreateApplicationInput) => apiClient.post<{ data: Application }>('/api/v1/applications', body),
+    create: (body: CreateApplicationInput) =>
+      apiClient.post<{ data: Application }>('/api/v1/applications', body),
     review: (id: string, body: ReviewApplicationInput) =>
       apiClient.patch<{ data: Application }>(`/api/v1/applications/${id}`, body),
   },
@@ -279,10 +318,12 @@ export const api = {
     create: () => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes'),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
-    redeem: (code: string) => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes/redeem', { code }),
+    redeem: (code: string) =>
+      apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes/redeem', { code }),
   },
   adCampaigns: {
-    get: (propertyId: string) => apiClient.get<{ data: AdCampaign | null }>(`/api/v1/properties/${propertyId}/ads`),
+    get: (propertyId: string) =>
+      apiClient.get<{ data: AdCampaign | null }>(`/api/v1/properties/${propertyId}/ads`),
     create: (propertyId: string, body: { budget: number; durationDays: number }) =>
       apiClient.post<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads`, body),
     cancel: (propertyId: string, adId: string) =>

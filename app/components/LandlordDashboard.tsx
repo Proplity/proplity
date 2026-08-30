@@ -21,7 +21,11 @@ import { useMyProperties } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
-import { useManagerCodes, useCreateManagerCode, useSetManagerCodeStatus } from '@/hooks/useManagerCodes';
+import {
+  useManagerCodes,
+  useCreateManagerCode,
+  useSetManagerCodeStatus,
+} from '@/hooks/useManagerCodes';
 
 interface LandlordDashboardProps {
   onNavigate?: (page: any) => void;
@@ -82,11 +86,15 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   const collected = invoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
   const pending = invoices
     .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce((sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)), 0);
+    .reduce(
+      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
+      0,
+    );
   const maintenanceCosts = maintenanceRequests
     .filter((r) => r.status === 'COMPLETED')
     .reduce((sum, r) => sum + (r.finalCost ?? 0), 0);
-  const collectionRate = collected + pending > 0 ? Math.round((collected / (collected + pending)) * 100) : 0;
+  const collectionRate =
+    collected + pending > 0 ? Math.round((collected / (collected + pending)) * 100) : 0;
   const netRevenue = collected - maintenanceCosts;
   const cashTotal = collected + pending + maintenanceCosts;
 
@@ -168,7 +176,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           </div>
           <p className="mb-1 text-2xl font-semibold">{loading ? '—' : occupiedUnits}</p>
           <p className="text-sm text-gray-600">Occupied Units</p>
-          <p className="mt-1 text-xs text-green-600">{loading ? '—' : `${occupancyRate}% Occupancy`}</p>
+          <p className="mt-1 text-xs text-green-600">
+            {loading ? '—' : `${occupancyRate}% Occupancy`}
+          </p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -177,7 +187,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : `₦${totalListedRent.toLocaleString()}`}</p>
+          <p className="mb-1 text-2xl font-semibold">
+            {loading ? '—' : `₦${totalListedRent.toLocaleString()}`}
+          </p>
           <p className="text-sm text-gray-600">Total Listed Rent</p>
         </div>
 
@@ -208,7 +220,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-semibold text-green-600">₦{revenue.toLocaleString()}</p>
+                  <p className="text-xl font-semibold text-green-600">
+                    ₦{revenue.toLocaleString()}
+                  </p>
                   <p className="text-xs text-gray-500">Total Listed Rent</p>
                 </div>
               </div>
@@ -219,7 +233,10 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                     <span className="text-xs font-medium">{occupancy}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div className="h-full rounded-full bg-green-500" style={{ width: `${occupancy}%` }}></div>
+                    <div
+                      className="h-full rounded-full bg-green-500"
+                      style={{ width: `${occupancy}%` }}
+                    ></div>
                   </div>
                 </div>
                 <button
@@ -246,10 +263,30 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           <div className="p-6">
             <div className="space-y-4">
               {[
-                { label: 'Rent Collected', amount: collected, pct: cashTotal > 0 ? (collected / cashTotal) * 100 : 0, color: 'green' },
-                { label: 'Pending Payments', amount: pending, pct: cashTotal > 0 ? (pending / cashTotal) * 100 : 0, color: 'yellow' },
-                { label: 'Maintenance Costs', amount: maintenanceCosts, pct: cashTotal > 0 ? (maintenanceCosts / cashTotal) * 100 : 0, color: 'red' },
-                { label: 'Net Revenue', amount: netRevenue, pct: collected > 0 ? Math.max(0, (netRevenue / collected) * 100) : 0, color: 'blue' },
+                {
+                  label: 'Rent Collected',
+                  amount: collected,
+                  pct: cashTotal > 0 ? (collected / cashTotal) * 100 : 0,
+                  color: 'green',
+                },
+                {
+                  label: 'Pending Payments',
+                  amount: pending,
+                  pct: cashTotal > 0 ? (pending / cashTotal) * 100 : 0,
+                  color: 'yellow',
+                },
+                {
+                  label: 'Maintenance Costs',
+                  amount: maintenanceCosts,
+                  pct: cashTotal > 0 ? (maintenanceCosts / cashTotal) * 100 : 0,
+                  color: 'red',
+                },
+                {
+                  label: 'Net Revenue',
+                  amount: netRevenue,
+                  pct: collected > 0 ? Math.max(0, (netRevenue / collected) * 100) : 0,
+                  color: 'blue',
+                },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="mb-2 flex items-center justify-between">
@@ -257,7 +294,10 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                     <span className="text-sm font-semibold">₦{item.amount.toLocaleString()}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div className={`h-full bg-${item.color}-500 rounded-full`} style={{ width: `${Math.min(100, item.pct)}%` }}></div>
+                    <div
+                      className={`h-full bg-${item.color}-500 rounded-full`}
+                      style={{ width: `${Math.min(100, item.pct)}%` }}
+                    ></div>
                   </div>
                 </div>
               ))}
@@ -280,13 +320,17 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                       {item.tenant && `${item.tenant} • `}
                       {item.property}
                     </p>
-                    {item.amount && <p className="mt-1 text-xs font-medium text-green-600">{item.amount}</p>}
+                    {item.amount && (
+                      <p className="mt-1 text-xs font-medium text-green-600">{item.amount}</p>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500">{timeAgo(item.time)}</span>
                 </div>
               </div>
             ))}
-            {activity.length === 0 && !loading && <p className="p-4 text-sm text-gray-400">No recent activity yet.</p>}
+            {activity.length === 0 && !loading && (
+              <p className="p-4 text-sm text-gray-400">No recent activity yet.</p>
+            )}
           </div>
         </div>
       </div>
@@ -343,7 +387,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <div>
               <h2 className="font-semibold text-gray-900">Manager Access Codes</h2>
               <p className="mt-0.5 text-xs text-gray-500">
-                Share a code with your Property Manager during their registration to link them to your portfolio.
+                Share a code with your Property Manager during their registration to link them to
+                your portfolio.
               </p>
             </div>
           </div>
@@ -360,18 +405,24 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <div className="flex items-start gap-3 border-b border-amber-100 bg-amber-50 p-4">
           <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
           <p className="text-xs text-amber-800">
-            <span className="font-semibold">How it works:</span> Generate a code and share it with the person you
-            want to appoint as your Property Manager. They'll enter it during registration. You can deactivate a
-            code at any time to immediately revoke access — even after they've registered.
+            <span className="font-semibold">How it works:</span> Generate a code and share it with
+            the person you want to appoint as your Property Manager. They'll enter it during
+            registration. You can deactivate a code at any time to immediately revoke access — even
+            after they've registered.
           </p>
         </div>
 
         <div className="divide-y divide-gray-100">
           {managerCodes.map((item) => (
-            <div key={item.id} className={`flex items-center gap-4 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}>
+            <div
+              key={item.id}
+              className={`flex items-center gap-4 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}
+            >
               <div
                 className={`flex-shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
-                  item.status === 'ACTIVE' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
+                  item.status === 'ACTIVE'
+                    ? 'border-blue-200 bg-blue-50 text-blue-800'
+                    : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
                 }`}
               >
                 {item.code}
@@ -381,7 +432,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      item.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      item.status === 'ACTIVE'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
                     }`}
                   >
                     {item.status === 'ACTIVE' ? 'Active' : 'Deactivated'}
@@ -390,7 +443,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                     <span className="flex items-center gap-1 text-xs text-gray-600">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                       Linked to <span className="font-medium">{item.linkedManager.name}</span>
-                      {item.linkedAt ? ` · since ${new Date(item.linkedAt).toLocaleDateString()}` : ''}
+                      {item.linkedAt
+                        ? ` · since ${new Date(item.linkedAt).toLocaleDateString()}`
+                        : ''}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -399,7 +454,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-gray-400">Created {new Date(item.createdAt).toLocaleDateString()}</p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Created {new Date(item.createdAt).toLocaleDateString()}
+                </p>
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-2">
@@ -422,7 +479,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 <button
                   onClick={() => toggleCode(item.id, item.status)}
                   className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    item.status === 'ACTIVE' ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-700 hover:bg-green-50'
+                    item.status === 'ACTIVE'
+                      ? 'border-red-200 text-red-600 hover:bg-red-50'
+                      : 'border-green-200 text-green-700 hover:bg-green-50'
                   }`}
                 >
                   {item.status === 'ACTIVE' ? (
@@ -442,7 +501,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           {managerCodes.length === 0 && !codesLoading && (
             <div className="p-8 text-center text-gray-400">
               <KeyRound className="mx-auto mb-2 h-10 w-10 opacity-40" />
-              <p className="text-sm">No codes generated yet. Click "Generate New Code" to get started.</p>
+              <p className="text-sm">
+                No codes generated yet. Click "Generate New Code" to get started.
+              </p>
             </div>
           )}
         </div>

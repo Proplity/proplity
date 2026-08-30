@@ -33,7 +33,10 @@ describe('applications: submit, list scoping, review', () => {
     const first = await apiFetch('/api/v1/applications', {
       method: 'POST',
       cookie,
-      body: { unitId: unit.id, details: { firstName: 'Ada', lastName: 'Lovelace', email: 'ada@test.local' } },
+      body: {
+        unitId: unit.id,
+        details: { firstName: 'Ada', lastName: 'Lovelace', email: 'ada@test.local' },
+      },
     });
     expect(first.status).toBe(201);
     expect(first.body.data.status).toBe('PENDING');
@@ -71,10 +74,14 @@ describe('applications: submit, list scoping, review', () => {
     expect(tenant1View.body.data.length).toBe(1);
     expect(tenant1View.body.data[0].applicantId).toBe(tenant1.id);
 
-    const managerAView = await apiFetch('/api/v1/applications', { cookie: await authCookie(managerA.id, managerA.role) });
+    const managerAView = await apiFetch('/api/v1/applications', {
+      cookie: await authCookie(managerA.id, managerA.role),
+    });
     expect(managerAView.body.data.length).toBe(2);
 
-    const managerBView = await apiFetch('/api/v1/applications', { cookie: await authCookie(managerB.id, managerB.role) });
+    const managerBView = await apiFetch('/api/v1/applications', {
+      cookie: await authCookie(managerB.id, managerB.role),
+    });
     expect(managerBView.body.data.length).toBe(0);
   });
 
@@ -149,7 +156,7 @@ describe('manager-codes: generate, toggle, redeem', () => {
     expect(toggled.body.data.status).toBe('DEACTIVATED');
   });
 
-  it('a different landlord cannot toggle someone else\'s code', async () => {
+  it("a different landlord cannot toggle someone else's code", async () => {
     const owner = await createUser(Role.LANDLORD);
     const intruder = await createUser(Role.LANDLORD);
     const created = await apiFetch('/api/v1/manager-codes', {
@@ -226,6 +233,62 @@ describe('manager-codes: generate, toggle, redeem', () => {
     expect(secondAttempt.status).toBe(409);
     expect(secondAttempt.body.code).toBe('CODE_USED');
   });
+
+  it('two managers redeeming the SAME code concurrently: exactly one wins', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const created = await apiFetch('/api/v1/manager-codes', {
+      method: 'POST',
+      cookie: await authCookie(landlord.id, landlord.role),
+    });
+    const code = created.body.data.code;
+
+    const managerA = await createUser(Role.MANAGER);
+    const managerB = await createUser(Role.MANAGER);
+    const [cookieA, cookieB] = await Promise.all([
+      authCookie(managerA.id, managerA.role),
+      authCookie(managerB.id, managerB.role),
+    ]);
+
+    // Fired together, deliberately. The old implementation read the row,
+    // saw linkedManagerId === null in BOTH requests, and let both write --
+    // so both callers got a 200 and the loser was silently never linked.
+    const [first, second] = await Promise.all([
+      apiFetch('/api/v1/manager-codes/redeem', { method: 'POST', cookie: cookieA, body: { code } }),
+      apiFetch('/api/v1/manager-codes/redeem', { method: 'POST', cookie: cookieB, body: { code } }),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([200, 409]);
+
+    // And the winner is the one actually recorded -- no lost update.
+    const winner = first.status === 200 ? first : second;
+    const row = await testPrisma.managerInviteCode.findUnique({ where: { code } });
+    expect(row?.linkedManagerId).toBe(winner.body.data.linkedManagerId);
+    expect([managerA.id, managerB.id]).toContain(row?.linkedManagerId);
+  });
+
+  it('rejects redeeming a DEACTIVATED code with CODE_INACTIVE, not CODE_USED', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const landlordCookie = await authCookie(landlord.id, landlord.role);
+    const created = await apiFetch('/api/v1/manager-codes', {
+      method: 'POST',
+      cookie: landlordCookie,
+    });
+    await apiFetch(`/api/v1/manager-codes/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie: landlordCookie,
+      body: { status: 'DEACTIVATED' },
+    });
+
+    const manager = await createUser(Role.MANAGER);
+    const res = await apiFetch('/api/v1/manager-codes/redeem', {
+      method: 'POST',
+      cookie: await authCookie(manager.id, manager.role),
+      body: { code: created.body.data.code },
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('CODE_INACTIVE');
+  });
 });
 
 describe('ad campaigns: create/cancel per property', () => {
@@ -279,7 +342,10 @@ describe('ad campaigns: create/cancel per property', () => {
     });
     const adId = created.body.data.id;
 
-    const cancelled = await apiFetch(`/api/v1/properties/${property.id}/ads/${adId}`, { method: 'PATCH', cookie });
+    const cancelled = await apiFetch(`/api/v1/properties/${property.id}/ads/${adId}`, {
+      method: 'PATCH',
+      cookie,
+    });
     expect(cancelled.status).toBe(200);
     expect(cancelled.body.data.status).toBe('CANCELLED');
 

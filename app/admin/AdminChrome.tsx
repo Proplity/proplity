@@ -29,7 +29,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
             {process.env.NODE_ENV !== 'production' && (
               <RoleSwitcher
                 currentRole="admin"
-                onRoleChange={(newRole) => router.push(newRole === 'admin' ? '/admin' : '/dashboard')}
+                onRoleChange={(newRole) =>
+                  router.push(newRole === 'admin' ? '/admin' : '/dashboard')
+                }
               />
             )}
             <button className="relative rounded-lg p-2 hover:bg-gray-100">
@@ -64,7 +66,8 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
           <nav className="space-y-2">
             {TABS.map((tab) => {
               const Icon = tab.icon;
-              const active = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
+              const active =
+                tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
               return (
                 <button
                   key={tab.label}

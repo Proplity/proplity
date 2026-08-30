@@ -73,7 +73,7 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
         {/* Login Form */}
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
           {errorMessage && (
-            <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+            <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
               <span>{errorMessage}</span>
             </div>

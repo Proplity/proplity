@@ -27,7 +27,8 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     if (!application) return NextResponse.json({ error: 'Application not found' }, { status: 404 });
 
     const canView =
-      application.applicantId === session.sub || canManageProperty(session, application.unit.property);
+      application.applicantId === session.sub ||
+      canManageProperty(session, application.unit.property);
     if (!canView) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     return NextResponse.json({ data: application });
@@ -47,12 +48,16 @@ export const PATCH = withAuth(
 
     try {
       const application = await loadApplication(id);
-      if (!application) return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      if (!application)
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       if (!canManageProperty(session, application.unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (application.status !== 'PENDING') {
-        return NextResponse.json({ error: 'This application has already been reviewed' }, { status: 409 });
+        return NextResponse.json(
+          { error: 'This application has already been reviewed' },
+          { status: 409 },
+        );
       }
 
       const validated = await validateBody(req, patchSchema);

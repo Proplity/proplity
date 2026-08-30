@@ -32,7 +32,13 @@ export async function GET(req: NextRequest) {
           : { OR: [{ managerId: jwtSession.sub }, { landlordId: jwtSession.sub }] };
 
       const [properties, total] = await Promise.all([
-        prisma.property.findMany({ where, skip, take, include: { units: true }, orderBy: { createdAt: 'desc' } }),
+        prisma.property.findMany({
+          where,
+          skip,
+          take,
+          include: { units: true },
+          orderBy: { createdAt: 'desc' },
+        }),
         prisma.property.count({ where }),
       ]);
       const data = properties.map((p) => ({ ...p, units: p.units.map(serializeUnit) }));

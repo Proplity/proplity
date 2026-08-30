@@ -4,7 +4,7 @@
 
 ## Why
 
-First phase wiring the real backend (Phases 0–6) into the actual UI instead of just proving the routes work via `curl`. The original plan left this phase deliberately high-level ("scoped once Phases 1–6 exist"); a full plan was written to `out/phase-7-frontend-integration-plan.md` before implementation, per this project's standing convention for non-trivial phases.
+First phase wiring the real backend (Phases 0–6) into the actual UI instead of just proving the routes work via `curl`. The original plan left this phase deliberately high-level ("scoped once Phases 1–6 exist"); a full plan was written to `docs/development-history/phase-7-frontend-integration-plan.md` before implementation, per this project's standing convention for non-trivial phases.
 
 ## What was built
 

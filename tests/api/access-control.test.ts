@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease, createAccessCode } from '../helpers/fixtures';
+import {
+  createUser,
+  createProperty,
+  createUnit,
+  createLease,
+  createAccessCode,
+} from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -21,7 +27,7 @@ describe('access-codes: list (GET ?unitId=)', () => {
     expect(unknown.status).toBe(404);
   });
 
-  it('allows the managing owner and the unit\'s active tenant; forbids an unrelated tenant', async () => {
+  it("allows the managing owner and the unit's active tenant; forbids an unrelated tenant", async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
@@ -36,7 +42,9 @@ describe('access-codes: list (GET ?unitId=)', () => {
     }
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const forbidden = await apiFetch(`/api/v1/access-codes?unitId=${unit.id}`, { cookie: strangerCookie });
+    const forbidden = await apiFetch(`/api/v1/access-codes?unitId=${unit.id}`, {
+      cookie: strangerCookie,
+    });
     expect(forbidden.status).toBe(403);
   });
 });
@@ -151,7 +159,10 @@ describe('access-codes: [id] GET / DELETE (rule 1 -- soft-revoke only)', () => {
     expect(logCountBefore).toBeGreaterThan(0);
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const res = await apiFetch(`/api/v1/access-codes/${code.id}`, { method: 'DELETE', cookie: tenantCookie });
+    const res = await apiFetch(`/api/v1/access-codes/${code.id}`, {
+      method: 'DELETE',
+      cookie: tenantCookie,
+    });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('REVOKED');
     expect(res.body.data.revokedAt).not.toBeNull();
@@ -178,6 +189,77 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
       body: { unitId: 'x', code: 'x' },
     });
     expect(res.status).toBe(403);
+  });
+
+  it("forbids a MANAGER from verifying a code on a property they don't manage, without consuming it", async () => {
+    const owner = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: owner.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
+    const code = await createAccessCode(unit.id, tenant.id);
+
+    const stranger = await createUser(Role.MANAGER);
+    const cookie = await authCookie(stranger.id, stranger.role);
+
+    const logsBefore = await testPrisma.accessLog.count({ where: { accessCodeId: code.id } });
+    const res = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: unit.id, code: code.code },
+    });
+    expect(res.status).toBe(403);
+
+    // The two side effects that made this more than an information leak: a
+    // single-use code must not be burned, and nothing may be written to the
+    // tenant's access audit trail by a manager with no claim on the unit.
+    const after = await testPrisma.accessCode.findUnique({ where: { id: code.id } });
+    expect(after?.status).toBe('ACTIVE');
+    const logsAfter = await testPrisma.accessLog.count({ where: { accessCodeId: code.id } });
+    expect(logsAfter).toBe(logsBefore);
+  });
+
+  it("still allows the property's own MANAGER to verify", async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
+    const code = await createAccessCode(unit.id, tenant.id);
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const res = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: unit.id, code: code.code },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.granted).toBe(true);
+  });
+
+  it('404s a unit that does not exist', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const res = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: 'no-such-unit', code: 'abcd' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects a code shorter than the create route's own min(4) floor", async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const res = await apiFetch('/api/v1/access-codes/verify', {
+      method: 'POST',
+      cookie,
+      body: { unitId: unit.id, code: 'ab' },
+    });
+    expect(res.status).toBe(400);
   });
 
   it('reports NOT_FOUND for a code that does not exist, logging nothing (no accessCodeId to attach to)', async () => {
@@ -262,7 +344,9 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const code = await createAccessCode(unit.id, tenant.id, { validFrom: new Date(Date.now() + 86400000) });
+    const code = await createAccessCode(unit.id, tenant.id, {
+      validFrom: new Date(Date.now() + 86400000),
+    });
     const cookie = await authCookie(manager.id, manager.role);
 
     const res = await apiFetch('/api/v1/access-codes/verify', {

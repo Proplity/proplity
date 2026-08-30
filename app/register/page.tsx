@@ -13,9 +13,7 @@ function RegisterContent() {
   // verification sits in between), so the old "go straight to checkout"
   // redirect can't happen here anymore -- carried through to /login instead,
   // which resumes it once the now-verified account actually logs in.
-  return (
-    <Register onSwitchToLogin={() => router.push(plan ? `/login?plan=${plan}` : '/login')} />
-  );
+  return <Register onSwitchToLogin={() => router.push(plan ? `/login?plan=${plan}` : '/login')} />;
 }
 
 export default function Page() {

@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A second push to the same branch cancels the first still-running build.
+# Never applied to main: production deploys must not be cancelled halfway
+# through a `prisma migrate deploy`.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  quality:
+    name: Typecheck, format & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # postinstall runs `prisma generate`, which needs no DATABASE_URL
+      # (see the comment in prisma.config.ts).
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # A real gate: the whole tree was formatted in one commit, so any
+      # failure here is genuinely the PR's own. Run `pnpm format` to fix.
+      - name: Check formatting
+        run: pnpm format:check
+
+      # lib/auth/jwt.ts, lib/db.ts and lib/workers/auth.ts all throw at module
+      # load if their secret is unset while NODE_ENV=production -- and `next
+      # build` sets NODE_ENV=production. So the build genuinely needs these
+      # present. They are throwaway values here; the point is only to prove
+      # the build compiles, never to reach a real database.
+      - name: Build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/placeholder?schema=public
+          JWT_SECRET: ci_build_placeholder_secret_not_used_to_sign_anything_real
+          CRON_SECRET: ci_build_placeholder_cron_secret
+        run: pnpm build
+
+  test:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tests/setup/globalSetup.ts reads .env.test off disk with dotenv and
+      # refuses to run without it -- it drops and recreates this database on
+      # every run, so it is deliberately a separate one from any dev DB.
+      - name: Write .env.test
+        run: |
+          cat > .env.test <<'ENVFILE'
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/proplity_test_db?schema=public"
+          JWT_SECRET="test_only_jwt_secret_do_not_use_in_production"
+          CRON_SECRET="test_only_cron_secret_do_not_use_in_production"
+          NODE_ENV="test"
+          PAYSTACK_SECRET_KEY="test_only_paystack_secret_do_not_use_in_production"
+          NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED="true"
+          ENVFILE
+
+      # globalSetup spawns a real `next dev` on port 3101 and the suite makes
+      # real HTTP calls against it, so this is slower than a unit-test run.
+      - name: Run tests
+        run: pnpm test
+        env:
+          TEST_SETUP_LOGS: '1'
+
+  migrate:
+    name: Migrate production database
+    # Only main, and only once both gates are green -- never on a PR, and
+    # never on a preview branch.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # DIRECT_URL, not the pooled DATABASE_URL: `migrate deploy` takes a
+      # session-level advisory lock that a transaction-mode pooler drops.
+      # prisma.config.ts prefers DIRECT_URL and falls back to DATABASE_URL.
+      - name: Apply migrations
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:deploy
+
+  deploy:
+    name: Deploy to Vercel
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
+
+      # Pulls the project's real production env vars into .vercel, so the
+      # build below sees the same configuration the deployed app will.
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # --prebuilt uploads the artifact built above rather than rebuilding on
+      # Vercel, so what was migrated against is exactly what ships.
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

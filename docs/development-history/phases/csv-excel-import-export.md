@@ -4,7 +4,7 @@
 
 ## Why
 
-`out/project-audit.md`: "CSV/Excel import-export — absent, PRD §5.1." PRD §5.1's "Property & Unit Management" bullet lists it explicitly: "Import/export data (CSV, Excel)." First of three items the user asked to work through in order (CSV/Excel → e-signature → settings page).
+`docs/development-history/project-audit.md`: "CSV/Excel import-export — absent, PRD §5.1." PRD §5.1's "Property & Unit Management" bullet lists it explicitly: "Import/export data (CSV, Excel)." First of three items the user asked to work through in order (CSV/Excel → e-signature → settings page).
 
 ## Scope decision
 

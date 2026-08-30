@@ -261,7 +261,8 @@ async function main() {
       state: 'Lagos',
       zipCode: '105102',
       type: PropertyType.RESIDENTIAL,
-      description: 'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
+      description:
+        'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
@@ -282,7 +283,13 @@ async function main() {
             rentAmount: 3500000.0,
             depositAmount: 350000.0,
             status: UnitStatus.OCCUPIED,
-            amenities: ['Air Conditioning', '24/7 Power', 'Fitted Kitchen', 'Water Heater', 'Balcony'],
+            amenities: [
+              'Air Conditioning',
+              '24/7 Power',
+              'Fitted Kitchen',
+              'Water Heater',
+              'Balcony',
+            ],
           },
           {
             unitNumber: '2A',
@@ -308,7 +315,8 @@ async function main() {
       state: 'Lagos',
       zipCode: '105102',
       type: PropertyType.RESIDENTIAL,
-      description: 'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security.',
+      description:
+        'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security.',
       isPublished: true,
       trustScore: 95.0,
       powerReliabilityScore: 88.0,
@@ -330,7 +338,13 @@ async function main() {
             listedPaymentFrequency: PaymentFrequency.ANNUAL,
             depositAmount: 85000.0,
             status: UnitStatus.OCCUPIED,
-            amenities: ['24/7 Power Supply', 'Borehole', 'Security/CCTV', 'Parking Space', 'Generator'],
+            amenities: [
+              '24/7 Power Supply',
+              'Borehole',
+              'Security/CCTV',
+              'Parking Space',
+              'Generator',
+            ],
           },
         ],
       },
@@ -346,7 +360,8 @@ async function main() {
       state: 'Lagos',
       zipCode: '101241',
       type: PropertyType.RESIDENTIAL,
-      description: 'Ultra-exclusive luxury penthouse suite offering panoramic views of the ocean, custom marble finishes, and private pool.',
+      description:
+        'Ultra-exclusive luxury penthouse suite offering panoramic views of the ocean, custom marble finishes, and private pool.',
       isPublished: true,
       trustScore: 99.0,
       powerReliabilityScore: 99.0,
@@ -383,7 +398,8 @@ async function main() {
       state: 'Lagos',
       zipCode: '100252',
       type: PropertyType.RESIDENTIAL,
-      description: 'Comfortable student and young professional self-contain units in the heart of Yaba tech corridor.',
+      description:
+        'Comfortable student and young professional self-contain units in the heart of Yaba tech corridor.',
       isPublished: true,
       trustScore: 84.0,
       powerReliabilityScore: 60.0,
@@ -625,7 +641,8 @@ async function main() {
       reviewerId: tenantAdewale.id,
       leaseId: leaseAdewale.id, // Verified lease
       rating: 5,
-      comment: 'Lekki Heights is an excellent residence. Power is very stable and maintenance responses are immediate.',
+      comment:
+        'Lekki Heights is an excellent residence. Power is very stable and maintenance responses are immediate.',
     },
   });
 
@@ -635,7 +652,8 @@ async function main() {
       reviewerId: tenantJordan.id,
       leaseId: leaseJordan.id, // Verified lease
       rating: 4,
-      comment: 'Great layout and high quality structure. Traffic gets a bit busy around Admiralty Way during rush hours.',
+      comment:
+        'Great layout and high quality structure. Traffic gets a bit busy around Admiralty Way during rush hours.',
     },
   });
 

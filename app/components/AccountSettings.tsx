@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Lock, Landmark, Star, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useBankAccounts, useCreateBankAccount, useSetDefaultBankAccount, useDeleteBankAccount } from '@/hooks/useBankAccounts';
+import {
+  useBankAccounts,
+  useCreateBankAccount,
+  useSetDefaultBankAccount,
+  useDeleteBankAccount,
+} from '@/hooks/useBankAccounts';
 
 // Only sections backed by a real, already-built API are here -- change
 // password (app/api/v1/auth/change-password) and bank accounts
@@ -15,7 +20,8 @@ import { useBankAccounts, useCreateBankAccount, useSetDefaultBankAccount, useDel
 export function AccountSettings() {
   const router = useRouter();
   const auth = useAuth();
-  const showBankAccounts = auth.user && ['manager', 'landlord', 'vendor', 'admin'].includes(auth.user.role);
+  const showBankAccounts =
+    auth.user && ['manager', 'landlord', 'vendor', 'admin'].includes(auth.user.role);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -28,7 +34,9 @@ export function AccountSettings() {
         </button>
         <div>
           <h1 className="text-2xl font-semibold">Account Settings</h1>
-          <p className="text-sm text-gray-500">{auth.user?.name} · {auth.user?.email}</p>
+          <p className="text-sm text-gray-500">
+            {auth.user?.name} · {auth.user?.email}
+          </p>
         </div>
       </div>
 
@@ -115,7 +123,9 @@ function ChangePasswordCard() {
         >
           {submitting ? 'Updating…' : 'Update Password'}
         </button>
-        <p className="text-xs text-gray-400">You'll be signed out on other devices and asked to log in again.</p>
+        <p className="text-xs text-gray-400">
+          You'll be signed out on other devices and asked to log in again.
+        </p>
       </div>
     </div>
   );
@@ -126,11 +136,20 @@ function ChangePasswordCard() {
 // not yet wired to any payout flow.
 function BankAccountsCard() {
   const { data: accounts, loading, refetch } = useBankAccounts();
-  const { submit: createAccount, submitting: creating, error: createError } = useCreateBankAccount();
+  const {
+    submit: createAccount,
+    submitting: creating,
+    error: createError,
+  } = useCreateBankAccount();
   const { submit: setDefault } = useSetDefaultBankAccount();
   const { submit: removeAccount } = useDeleteBankAccount();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ accountNumber: '', bankCode: '', bankName: '', accountName: '' });
+  const [form, setForm] = useState({
+    accountNumber: '',
+    bankCode: '',
+    bankName: '',
+    accountName: '',
+  });
 
   const handleCreate = async () => {
     if (!form.accountNumber || !form.bankCode || !form.bankName || !form.accountName) return;
@@ -212,7 +231,10 @@ function BankAccountsCard() {
         {loading && <p className="text-sm text-gray-400">Loading…</p>}
         {!loading &&
           accounts.map((a) => (
-            <div key={a.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
+            <div
+              key={a.id}
+              className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
+            >
               <div>
                 <p className="text-sm font-medium">
                   {a.bankName} · {a.accountNumber}
@@ -233,13 +255,18 @@ function BankAccountsCard() {
                     Set Default
                   </button>
                 )}
-                <button onClick={() => handleDelete(a.id)} className="text-gray-400 hover:text-red-600">
+                <button
+                  onClick={() => handleDelete(a.id)}
+                  className="text-gray-400 hover:text-red-600"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
           ))}
-        {!loading && accounts.length === 0 && <p className="text-sm text-gray-400">No bank accounts added yet.</p>}
+        {!loading && accounts.length === 0 && (
+          <p className="text-sm text-gray-400">No bank accounts added yet.</p>
+        )}
       </div>
     </div>
   );

@@ -63,7 +63,9 @@ function toLabel(key: string) {
 // every real key shows up instead of only ones a hardcoded layout guessed.
 function renderFields(section: Section, exclude: string[]) {
   const entries = Object.entries(section).filter(
-    ([key, value]) => !exclude.includes(key) && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'),
+    ([key, value]) =>
+      !exclude.includes(key) &&
+      (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'),
   );
   if (entries.length === 0) return null;
   return (
@@ -71,7 +73,9 @@ function renderFields(section: Section, exclude: string[]) {
       {entries.map(([key, value]) => (
         <div key={key}>
           <p className="mb-1 text-sm text-gray-600">{toLabel(key)}</p>
-          <p className="font-medium">{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}</p>
+          <p className="font-medium">
+            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+          </p>
         </div>
       ))}
     </div>
@@ -248,7 +252,9 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
                         <span className="text-2xl font-semibold">{security.rating}</span>
                         <span className="text-sm">/10</span>
                       </div>
-                      {security.status && <p className="mt-1 text-sm text-gray-600">{security.status}</p>}
+                      {security.status && (
+                        <p className="mt-1 text-sm text-gray-600">{security.status}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -268,7 +274,9 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
                       </div>
                     </div>
                   )}
-                  <div className="space-y-4">{renderFields(security, ['rating', 'status', 'notes', 'features'])}</div>
+                  <div className="space-y-4">
+                    {renderFields(security, ['rating', 'status', 'notes', 'features'])}
+                  </div>
                 </div>
                 {security.notes && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -304,13 +312,17 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
                         <span className="text-2xl font-semibold">{electricity.rating}</span>
                         <span className="text-sm">/10</span>
                       </div>
-                      {electricity.status && <p className="mt-1 text-sm text-gray-600">{electricity.status}</p>}
+                      {electricity.status && (
+                        <p className="mt-1 text-sm text-gray-600">{electricity.status}</p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
               <div className="p-6">
-                <div className="mb-6">{renderFields(electricity, ['rating', 'status', 'notes'])}</div>
+                <div className="mb-6">
+                  {renderFields(electricity, ['rating', 'status', 'notes'])}
+                </div>
                 {electricity.notes && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                     <div className="flex items-start gap-2">
@@ -345,13 +357,17 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
                         <span className="text-2xl font-semibold">{roadNetwork.rating}</span>
                         <span className="text-sm">/10</span>
                       </div>
-                      {roadNetwork.status && <p className="mt-1 text-sm text-gray-600">{roadNetwork.status}</p>}
+                      {roadNetwork.status && (
+                        <p className="mt-1 text-sm text-gray-600">{roadNetwork.status}</p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
               <div className="p-6">
-                <div className="mb-6">{renderFields(roadNetwork, ['rating', 'status', 'notes'])}</div>
+                <div className="mb-6">
+                  {renderFields(roadNetwork, ['rating', 'status', 'notes'])}
+                </div>
                 {roadNetwork.notes && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                     <div className="flex items-start gap-2">
@@ -386,54 +402,67 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
                         <span className="text-2xl font-semibold">{flooding.rating}</span>
                         <span className="text-sm">/10</span>
                       </div>
-                      {flooding.status && <p className="mt-1 text-sm text-gray-600">{flooding.status}</p>}
+                      {flooding.status && (
+                        <p className="mt-1 text-sm text-gray-600">{flooding.status}</p>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
               <div className="p-6">
                 <div className="mb-6">
-                  {renderFields(flooding, ['rating', 'status', 'notes', 'historicalFlooding', 'mitigationMeasures'])}
+                  {renderFields(flooding, [
+                    'rating',
+                    'status',
+                    'notes',
+                    'historicalFlooding',
+                    'mitigationMeasures',
+                  ])}
                 </div>
 
-                {Array.isArray(flooding.historicalFlooding) && flooding.historicalFlooding.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="mb-3 font-medium">Historical Flooding Events</h4>
-                    <div className="space-y-2">
-                      {flooding.historicalFlooding.map(
-                        (event: { year: string | number; severity: string; duration: string }, index: number) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
-                          >
-                            <div className="flex items-center gap-3">
-                              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                              <span className="font-medium">{event.year}</span>
+                {Array.isArray(flooding.historicalFlooding) &&
+                  flooding.historicalFlooding.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="mb-3 font-medium">Historical Flooding Events</h4>
+                      <div className="space-y-2">
+                        {flooding.historicalFlooding.map(
+                          (
+                            event: { year: string | number; severity: string; duration: string },
+                            index: number,
+                          ) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                <span className="font-medium">{event.year}</span>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium">{event.severity} flooding</p>
+                                <p className="text-xs text-gray-600">Duration: {event.duration}</p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium">{event.severity} flooding</p>
-                              <p className="text-xs text-gray-600">Duration: {event.duration}</p>
-                            </div>
-                          </div>
-                        ),
-                      )}
+                          ),
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {Array.isArray(flooding.mitigationMeasures) && flooding.mitigationMeasures.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="mb-3 font-medium">Mitigation Measures in Place</h4>
-                    <div className="space-y-2">
-                      {flooding.mitigationMeasures.map((measure: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <span className="text-sm">{measure}</span>
-                        </div>
-                      ))}
+                {Array.isArray(flooding.mitigationMeasures) &&
+                  flooding.mitigationMeasures.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="mb-3 font-medium">Mitigation Measures in Place</h4>
+                      <div className="space-y-2">
+                        {flooding.mitigationMeasures.map((measure: string, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span className="text-sm">{measure}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {flooding.notes && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -526,8 +555,8 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
           {/* Footer */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
             <p className="text-sm text-gray-600">
-              This report is generated based on data collected from various sources and user feedback.
-              Information is subject to change and should be verified independently.
+              This report is generated based on data collected from various sources and user
+              feedback. Information is subject to change and should be verified independently.
             </p>
             <p className="mt-2 text-xs text-gray-500">
               Last updated: {new Date(report.generatedAt).toLocaleDateString()} | © 2026 ProplityTMS

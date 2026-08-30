@@ -4,7 +4,7 @@
 
 ## Why
 
-Next item down `out/project-audit.md`'s remaining list: `Lease.gracePeriodDays` and `lateFeePercentage` were accepted at lease creation and never read anywhere else. `overdueFlagger.ts` flagged an invoice `OVERDUE` the instant `dueDate` passed regardless of grace period, and `InvoiceType.LATE_FEE` had zero creation sites in the entire codebase despite the PRD requiring "auto late fees & penalties."
+Next item down `docs/development-history/project-audit.md`'s remaining list: `Lease.gracePeriodDays` and `lateFeePercentage` were accepted at lease creation and never read anywhere else. `overdueFlagger.ts` flagged an invoice `OVERDUE` the instant `dueDate` passed regardless of grace period, and `InvoiceType.LATE_FEE` had zero creation sites in the entire codebase despite the PRD requiring "auto late fees & penalties."
 
 ## What changed (commit `3b883c5`)
 
@@ -24,4 +24,4 @@ Next item down `out/project-audit.md`'s remaining list: `Lease.gracePeriodDays` 
 
 ## What's next
 
-Remaining from `out/project-audit.md`: repo-wide CSRF coverage (larger, not currently exploitable), the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models (each a real PRD-named feature with zero code, needs individual scoping), and real AI/LLM integration (needs a provider/scope decision first).
+Remaining from `docs/development-history/project-audit.md`: repo-wide CSRF coverage (larger, not currently exploitable), the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models (each a real PRD-named feature with zero code, needs individual scoping), and real AI/LLM integration (needs a provider/scope decision first).

@@ -4,7 +4,9 @@ import { useApiSubmit } from './useApiSubmit';
 import type { CreateInvoiceInput, Invoice } from '@/lib/api/types';
 
 export function useCreateInvoice() {
-  return useApiSubmit((body: CreateInvoiceInput) => api.invoices.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateInvoiceInput) =>
+    api.invoices.create(body).then((res) => res.data.data),
+  );
 }
 
 // Starts a real Paystack checkout for one invoice -- POST /payments/initialize
@@ -12,7 +14,9 @@ export function useCreateInvoice() {
 // URL to redirect the browser to; the actual Payment row is only created
 // once Paystack's webhook fires on charge.success.
 export function usePayInvoice() {
-  return useApiSubmit((invoiceId: string) => api.payments.initialize(invoiceId).then((res) => res.data.data));
+  return useApiSubmit((invoiceId: string) =>
+    api.payments.initialize(invoiceId).then((res) => res.data.data),
+  );
 }
 
 // The logged-in user's own invoices (server-scoped by role -- see

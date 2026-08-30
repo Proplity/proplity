@@ -18,12 +18,16 @@ export const POST = withAuth(
 
     try {
       const request = await prisma.maintenanceRequest.findUnique({ where: { id } });
-      if (!request) return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+      if (!request)
+        return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
       if (request.tenantId !== session.sub) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       if (request.status !== 'COMPLETED') {
-        return NextResponse.json({ error: 'Request must be completed before rating' }, { status: 409 });
+        return NextResponse.json(
+          { error: 'Request must be completed before rating' },
+          { status: 409 },
+        );
       }
       if (!request.vendorId) {
         return NextResponse.json({ error: 'Request has no assigned vendor' }, { status: 409 });

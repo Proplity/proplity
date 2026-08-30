@@ -151,7 +151,10 @@ function ViolationsCard({ propertyId, unitId }: { propertyId: string; unitId: st
     <div className="rounded-lg border border-gray-200 bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold">Violations</h2>
-        <button onClick={() => setShowForm((s) => !s)} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
           {showForm ? 'Cancel' : '+ Report'}
         </button>
       </div>
@@ -192,21 +195,30 @@ function ViolationsCard({ propertyId, unitId }: { propertyId: string; unitId: st
             <div key={v.id} className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm">{v.description}</p>
-                <p className="text-xs text-gray-400">{new Date(v.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(v.createdAt).toLocaleDateString()}
+                </p>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${VIOLATION_BADGE[v.status]}`}>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${VIOLATION_BADGE[v.status]}`}
+                >
                   {v.status.replace('_', ' ')}
                 </span>
                 {v.status !== 'RESOLVED' && (
-                  <button onClick={() => handleResolve(v.id)} className="text-xs text-blue-600 hover:text-blue-700">
+                  <button
+                    onClick={() => handleResolve(v.id)}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
                     Mark Resolved
                   </button>
                 )}
               </div>
             </div>
           ))}
-        {!loading && violations.length === 0 && <p className="text-sm text-gray-400">No violations on record.</p>}
+        {!loading && violations.length === 0 && (
+          <p className="text-sm text-gray-400">No violations on record.</p>
+        )}
       </div>
     </div>
   );
@@ -239,7 +251,10 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
     <div className="rounded-lg border border-gray-200 bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold">Condition Reports</h2>
-        <button onClick={() => setShowForm((s) => !s)} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
           {showForm ? 'Cancel' : '+ New Report'}
         </button>
       </div>
@@ -273,7 +288,9 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
               <p className="text-xs text-gray-400">{new Date(r.reportedAt).toLocaleDateString()}</p>
             </div>
           ))}
-        {!loading && reports.length === 0 && <p className="text-sm text-gray-400">No condition reports yet.</p>}
+        {!loading && reports.length === 0 && (
+          <p className="text-sm text-gray-400">No condition reports yet.</p>
+        )}
       </div>
     </div>
   );
@@ -302,7 +319,10 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
   if (!lease || !lease.tenant) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        >
           <ArrowLeft className="h-5 w-5" />
           Back to Tenants
         </button>
@@ -358,7 +378,10 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
 
   return (
     <div className="p-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+      <button
+        onClick={onBack}
+        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
         <ArrowLeft className="h-5 w-5" />
         Back to Tenants
       </button>
@@ -461,7 +484,9 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                 <p className="mb-1 text-sm text-gray-600">Next Due</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-orange-600" />
-                  <p className="font-medium">{nextDue ? new Date(nextDue).toLocaleDateString() : 'None outstanding'}</p>
+                  <p className="font-medium">
+                    {nextDue ? new Date(nextDue).toLocaleDateString() : 'None outstanding'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -482,7 +507,8 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
               {lease.status === 'ACTIVE' && (
                 <button
                   onClick={async () => {
-                    if (!confirm('Terminate this lease? The unit will be freed up as vacant.')) return;
+                    if (!confirm('Terminate this lease? The unit will be freed up as vacant.'))
+                      return;
                     await submitStatus('TERMINATED');
                     refetchLease();
                   }}
@@ -530,7 +556,9 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                       type="number"
                       min={0}
                       value={termsDraft.gracePeriodDays}
-                      onChange={(e) => setTermsDraft((s) => ({ ...s, gracePeriodDays: e.target.value }))}
+                      onChange={(e) =>
+                        setTermsDraft((s) => ({ ...s, gracePeriodDays: e.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
@@ -539,7 +567,10 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                     <select
                       value={termsDraft.lateFeeType}
                       onChange={(e) =>
-                        setTermsDraft((s) => ({ ...s, lateFeeType: e.target.value as 'PERCENTAGE' | 'FIXED' }))
+                        setTermsDraft((s) => ({
+                          ...s,
+                          lateFeeType: e.target.value as 'PERCENTAGE' | 'FIXED',
+                        }))
                       }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     >
@@ -556,14 +587,19 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                       min={0}
                       step="0.1"
                       value={termsDraft.lateFeePercentage}
-                      onChange={(e) => setTermsDraft((s) => ({ ...s, lateFeePercentage: e.target.value }))}
+                      onChange={(e) =>
+                        setTermsDraft((s) => ({ ...s, lateFeePercentage: e.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                     {parseFloat(termsDraft.lateFeePercentage) > 0 && (
                       <p className="mt-1 text-xs text-gray-400">
                         ≈ ₦
-                        {((lease.rentAmount * parseFloat(termsDraft.lateFeePercentage)) / 100).toLocaleString()} per
-                        overdue invoice
+                        {(
+                          (lease.rentAmount * parseFloat(termsDraft.lateFeePercentage)) /
+                          100
+                        ).toLocaleString()}{' '}
+                        per overdue invoice
                       </p>
                     )}
                   </div>
@@ -574,7 +610,9 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                       type="number"
                       min={0}
                       value={termsDraft.lateFeeFlatAmount}
-                      onChange={(e) => setTermsDraft((s) => ({ ...s, lateFeeFlatAmount: e.target.value }))}
+                      onChange={(e) =>
+                        setTermsDraft((s) => ({ ...s, lateFeeFlatAmount: e.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
@@ -635,18 +673,32 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
               <table className="w-full">
                 <thead className="border-b border-gray-200 bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Reference
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {payments.map(({ payment }) => (
                     <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm">{new Date(payment.paidAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm font-semibold">₦{payment.amount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm">{payment.paymentMethod.replace('_', ' ')}</td>
+                      <td className="px-6 py-4 text-sm">
+                        {new Date(payment.paidAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-semibold">
+                        ₦{payment.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {payment.paymentMethod.replace('_', ' ')}
+                      </td>
                       <td className="px-6 py-4 font-mono text-xs text-gray-500">
                         {payment.transactionRef ?? '—'}
                       </td>
@@ -713,7 +765,9 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
               {notes.map((note) => (
                 <div key={note.id} className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                   <p className="text-sm text-gray-800">{note.body}</p>
-                  <p className="mt-1 text-xs text-gray-500">{new Date(note.createdAt).toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {new Date(note.createdAt).toLocaleString()}
+                  </p>
                 </div>
               ))}
               <textarea
@@ -761,7 +815,11 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                 Send Email
               </a>
               <a
-                href={tenant.phoneNumber ? `https://wa.me/${tenant.phoneNumber.replace(/\D/g, '')}` : undefined}
+                href={
+                  tenant.phoneNumber
+                    ? `https://wa.me/${tenant.phoneNumber.replace(/\D/g, '')}`
+                    : undefined
+                }
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => {
@@ -836,7 +894,11 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
-                <span>{lease.paymentReliability ? `${lease.paymentReliability} payment history` : 'No score yet'}</span>
+                <span>
+                  {lease.paymentReliability
+                    ? `${lease.paymentReliability} payment history`
+                    : 'No score yet'}
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />

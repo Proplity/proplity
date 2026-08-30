@@ -49,7 +49,10 @@ export const POST = withAuth(
 
       const account = await prisma.$transaction(async (tx) => {
         if (shouldBeDefault) {
-          await tx.bankAccount.updateMany({ where: { userId: session.sub, isDefault: true }, data: { isDefault: false } });
+          await tx.bankAccount.updateMany({
+            where: { userId: session.sub, isDefault: true },
+            data: { isDefault: false },
+          });
         }
         return tx.bankAccount.create({
           data: { userId: session.sub, ...rest, isDefault: shouldBeDefault },

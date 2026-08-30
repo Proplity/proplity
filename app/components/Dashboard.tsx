@@ -166,10 +166,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     paid
                   </span>
                 </div>
-                <p className="mb-1 text-sm text-gray-600">{invoice.lease?.unit.property.name ?? '—'}</p>
+                <p className="mb-1 text-sm text-gray-600">
+                  {invoice.lease?.unit.property.name ?? '—'}
+                </p>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-blue-600">₦{payment.amount.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleDateString()}</p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    ₦{payment.amount.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(payment.paidAt).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             ))}
@@ -186,7 +192,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div className="divide-y divide-gray-200">
             {upcomingRenewals.map((lease) => {
-              const daysLeft = Math.ceil((new Date(lease.endDate).getTime() - Date.now()) / MS_PER_DAY);
+              const daysLeft = Math.ceil(
+                (new Date(lease.endDate).getTime() - Date.now()) / MS_PER_DAY,
+              );
               return (
                 <div
                   key={lease.id}
@@ -231,7 +239,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div>
             <h2 className="font-semibold text-gray-900">Link to a Landlord</h2>
-            <p className="mt-0.5 text-xs text-gray-500">Enter the code your landlord shared with you.</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Enter the code your landlord shared with you.
+            </p>
           </div>
         </div>
         {linkedTo ? (
@@ -245,7 +255,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               value={codeInput}
               onChange={(e) => setCodeInput(e.target.value)}
               placeholder="e.g. LLD-2847-XK"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <button
               type="submit"

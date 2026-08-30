@@ -7,12 +7,14 @@ We have successfully implemented the full-stack, in-house authentication system 
 ## 1. Accomplished Tasks
 
 ### Phase 1: Environment & Prisma Setup
+
 - [x] Installed dependencies: `@prisma/client`, `prisma`, `@prisma/adapter-pg`, `pg`, `jose`, `bcryptjs`, `zod`.
 - [x] Configured [prisma/schema.prisma](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/prisma/schema.prisma) with `User`, `RefreshToken`, `VerificationToken`, `LoginAttempt` models and `Role`, `UserStatus` enums.
 - [x] Configured [prisma.config.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/prisma.config.ts) and created [.env](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/.env).
 - [x] Created singleton Prisma client with `@prisma/adapter-pg` driver adapter in [lib/db.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/db.ts).
 
 ### Phase 2: Core Auth Security Utilities (`lib/auth/`)
+
 - [x] **JWT Utility**: [lib/auth/jwt.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/auth/jwt.ts) — Edge-compatible JWT signing and verification (`signAccessToken`, `verifyToken`) using `jose`.
 - [x] **Path-Scoped Cookies**: [lib/auth/cookies.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/auth/cookies.ts) — `setAuthCookies` scoping `access_token` to `path=/` (15 min) and `refresh_token` to `path=/api/auth/refresh` (7 days), plus exact-path `clearAuthCookies`.
 - [x] **CSRF Protection**: [lib/auth/csrf.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/auth/csrf.ts) — Host against Origin/Referer matching defense-in-depth (`validateCSRF`).
@@ -20,6 +22,7 @@ We have successfully implemented the full-stack, in-house authentication system 
 - [x] **Rate Limiter**: [lib/auth/rateLimit.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/auth/rateLimit.ts) — DB-backed login attempt rate limiter and IP parser (`getClientIp`).
 
 ### Phase 3: Backend API Route Handlers (`app/api/auth/`)
+
 - [x] `POST /api/auth/register`: [app/api/auth/register/route.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/app/api/auth/register/route.ts) — Input validation via Zod, duplicate email check, password hashing, user creation, cookie assignment.
 - [x] `POST /api/auth/login`: [app/api/auth/login/route.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/app/api/auth/login/route.ts) — Credential verification, account status checks (`ACTIVE`), non-blocking `lastLoginAt` update, family `refreshToken` issuance.
 - [x] `POST /api/auth/refresh`: [app/api/auth/refresh/route.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/app/api/auth/refresh/route.ts) — Atomic `updateMany` rotation check, reuse detection (revokes full `familyId`), `$transaction` token replacement.
@@ -29,9 +32,11 @@ We have successfully implemented the full-stack, in-house authentication system 
 - [x] `POST /api/auth/verify-email`: [app/api/auth/verify-email/route.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/app/api/auth/verify-email/route.ts) — Email token verification and account activation (CSRF check bypassed by design for email link clicks).
 
 ### Phase 4: Edge Middleware
+
 - [x] [middleware.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/middleware.ts) — Fast Edge JWT verification with `jose`, protecting `/dashboard` & `/admin` routes with automatic login/RBAC redirects.
 
 ### Phase 5: Client Integration & State Management
+
 - [x] [lib/apiClient.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/lib/apiClient.ts) — Deduplicated single `refreshPromise` fetch interceptor.
 - [x] [hooks/useAuthRefresh.ts](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/hooks/useAuthRefresh.ts) — Multi-tab safe silent refresh timer.
 - [x] [context/AuthContext.tsx](file:///home/rojitech/Documents/RTG_CODE/NextJS/proplity/context/AuthContext.tsx) — Global React AuthContext providing `user`, `login`, `register`, `logout`, and auto-rehydration.
@@ -43,6 +48,7 @@ We have successfully implemented the full-stack, in-house authentication system 
 ## 2. Verification Results
 
 ### Automated Build Verification
+
 1. **TypeScript Type Check (`pnpm exec tsc --noEmit`)**: Completed with **0 errors**.
 2. **Next.js Production Build (`pnpm build`)**: Compiled successfully. All 7 API routes and Edge Middleware built with zero errors.
 

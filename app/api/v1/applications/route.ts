@@ -38,7 +38,9 @@ export const GET = withAuth(async (req, { session }) => {
       where,
       include: {
         applicant: { select: { id: true, name: true, email: true, phoneNumber: true } },
-        unit: { select: { id: true, unitNumber: true, property: { select: { id: true, name: true } } } },
+        unit: {
+          select: { id: true, unitNumber: true, property: { select: { id: true, name: true } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -72,7 +74,10 @@ export const POST = withAuth(
       });
       if (existing) {
         return NextResponse.json(
-          { error: 'You already have a pending application for this unit', code: 'APPLICATION_CONFLICT' },
+          {
+            error: 'You already have a pending application for this unit',
+            code: 'APPLICATION_CONFLICT',
+          },
           { status: 409 },
         );
       }

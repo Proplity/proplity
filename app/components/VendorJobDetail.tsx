@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { ArrowLeft, Wrench, MapPin, Calendar, DollarSign, User, Phone, CheckCircle, Clock, Image as ImageIcon, MessageSquare } from 'lucide-react';
+import {
+  ArrowLeft,
+  Wrench,
+  MapPin,
+  Calendar,
+  DollarSign,
+  User,
+  Phone,
+  CheckCircle,
+  Clock,
+  Image as ImageIcon,
+  MessageSquare,
+} from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 
@@ -29,9 +41,18 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
   const entries: { text: string; time: string }[] = [
     { text: 'Job assigned', time: new Date(request.createdAt).toLocaleString() },
   ];
-  if (request.scheduledFor) entries.push({ text: 'Visit scheduled', time: new Date(request.scheduledFor).toLocaleString() });
-  if (request.vendorNotes) entries.push({ text: request.vendorNotes, time: new Date(request.updatedAt).toLocaleString() });
-  if (request.completedAt) entries.push({ text: 'Marked completed', time: new Date(request.completedAt).toLocaleString() });
+  if (request.scheduledFor)
+    entries.push({
+      text: 'Visit scheduled',
+      time: new Date(request.scheduledFor).toLocaleString(),
+    });
+  if (request.vendorNotes)
+    entries.push({ text: request.vendorNotes, time: new Date(request.updatedAt).toLocaleString() });
+  if (request.completedAt)
+    entries.push({
+      text: 'Marked completed',
+      time: new Date(request.completedAt).toLocaleString(),
+    });
   return entries.reverse();
 }
 
@@ -49,7 +70,10 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
   if (!job) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        >
           <ArrowLeft className="h-5 w-5" />
           Back to Jobs
         </button>
@@ -67,7 +91,10 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
   const handleUpdateStatus = async () => {
     setActionError(null);
     try {
-      await updateJob({ status: 'IN_PROGRESS', ...(notes.trim() ? { vendorNotes: notes.trim() } : {}) });
+      await updateJob({
+        status: 'IN_PROGRESS',
+        ...(notes.trim() ? { vendorNotes: notes.trim() } : {}),
+      });
       setNotes('');
       refetch();
     } catch {
@@ -89,18 +116,27 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
 
   return (
     <div className="p-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+      <button
+        onClick={onBack}
+        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
         <ArrowLeft className="h-5 w-5" />
         Back to Jobs
       </button>
 
-      {actionError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{actionError}</div>}
+      {actionError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
         <div className="mb-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}>
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}
+            >
               <Wrench className={`h-6 w-6 text-${priority.color}-600`} />
             </div>
             <div>
@@ -112,8 +148,14 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}>{priority.label}</span>
-            <span className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium bg-${status.color}-100 text-${status.color}-700`}>
+            <span
+              className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}
+            >
+              {priority.label}
+            </span>
+            <span
+              className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium bg-${status.color}-100 text-${status.color}-700`}
+            >
               <StatusIcon className="h-4 w-4" />
               {status.label}
             </span>
@@ -129,15 +171,25 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
             <p className="mb-1 text-gray-600">Scheduled</p>
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4 text-gray-400" />
-              <p className="font-medium">{job.scheduledFor ? new Date(job.scheduledFor).toLocaleDateString() : 'Not scheduled'}</p>
+              <p className="font-medium">
+                {job.scheduledFor
+                  ? new Date(job.scheduledFor).toLocaleDateString()
+                  : 'Not scheduled'}
+              </p>
             </div>
           </div>
           <div>
-            <p className="mb-1 text-gray-600">{job.finalCost != null ? 'Final Payment' : 'Estimated Payment'}</p>
+            <p className="mb-1 text-gray-600">
+              {job.finalCost != null ? 'Final Payment' : 'Estimated Payment'}
+            </p>
             <div className="flex items-center gap-1">
               <DollarSign className="h-4 w-4 text-green-600" />
               <p className="font-semibold text-green-600">
-                {job.finalCost != null ? `₦${job.finalCost.toLocaleString()}` : job.costEstimate != null ? `₦${job.costEstimate.toLocaleString()}` : '—'}
+                {job.finalCost != null
+                  ? `₦${job.finalCost.toLocaleString()}`
+                  : job.costEstimate != null
+                    ? `₦${job.costEstimate.toLocaleString()}`
+                    : '—'}
               </p>
             </div>
           </div>
@@ -162,7 +214,10 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-gray-400" />
                   <p className="font-medium">
-                    {job.unit?.property ? `${job.unit.property.address}, ${job.unit.property.city}` : 'N/A'} · Unit {job.unit?.unitNumber}
+                    {job.unit?.property
+                      ? `${job.unit.property.address}, ${job.unit.property.city}`
+                      : 'N/A'}{' '}
+                    · Unit {job.unit?.unitNumber}
                   </p>
                 </div>
               </div>
@@ -185,7 +240,9 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
               <h2 className="mb-4 font-semibold">Update Job Status</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Progress Notes</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Progress Notes
+                  </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -223,7 +280,10 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
             {job.mediaUrls.length > 0 ? (
               <div className="grid grid-cols-3 gap-3">
                 {job.mediaUrls.map((url, i) => (
-                  <div key={i} className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-100">
+                  <div
+                    key={i}
+                    className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-100"
+                  >
                     <div className="text-center">
                       <ImageIcon className="mx-auto mb-1 h-6 w-6 text-gray-400" />
                       <p className="text-xs text-gray-500">{url}</p>
@@ -309,7 +369,10 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
           {job.status !== 'COMPLETED' && job.status !== 'CANCELLED' && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-6">
               <h3 className="mb-2 font-semibold text-green-900">Ready to Complete?</h3>
-              <p className="mb-4 text-sm text-green-800">Create your invoice for this job to get paid. Your property manager will mark the job as officially completed.</p>
+              <p className="mb-4 text-sm text-green-800">
+                Create your invoice for this job to get paid. Your property manager will mark the
+                job as officially completed.
+              </p>
               <button
                 onClick={() => onNavigate({ type: 'vendor-create-invoice', jobId: job.id })}
                 className="w-full rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"

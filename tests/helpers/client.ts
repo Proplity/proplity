@@ -44,7 +44,14 @@ export async function apiFetch<T = any>(
       ...(cookie ? { Cookie: cookie } : {}),
       ...headers,
     },
-    body: rawBody !== undefined ? rawBody : isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
+    body:
+      rawBody !== undefined
+        ? rawBody
+        : isFormData
+          ? (body as FormData)
+          : body !== undefined
+            ? JSON.stringify(body)
+            : undefined,
     redirect: 'manual',
   });
 

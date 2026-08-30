@@ -247,7 +247,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                       {balance > 0 ? 'Outstanding across your invoices' : 'All payments up to date'}
                     </p>
                   </div>
-                  <CreditCard className={`h-12 w-12 ${balance > 0 ? 'text-orange-600' : 'text-green-600'}`} />
+                  <CreditCard
+                    className={`h-12 w-12 ${balance > 0 ? 'text-orange-600' : 'text-green-600'}`}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -256,7 +258,11 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                     disabled={!nextDue || paying}
                     className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {paying ? 'Redirecting to Paystack…' : nextDue ? 'Pay Rent Online' : 'No Balance Due'}
+                    {paying
+                      ? 'Redirecting to Paystack…'
+                      : nextDue
+                        ? 'Pay Rent Online'
+                        : 'No Balance Due'}
                   </button>
                   {payError && <p className="text-sm text-red-600">{payError}</p>}
                   <button

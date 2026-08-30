@@ -1,0 +1,18 @@
+# Generated / vendored -- never hand-formatted
+pnpm-lock.yaml
+package-lock.json
+node_modules
+.next
+.next-test
+out
+build
+.vercel
+next-env.d.ts
+
+# Prisma owns the formatting of both of these
+prisma/migrations
+prisma/mermaid.mermaid
+
+# Long-form docs and development history -- reflowing prose creates enormous
+# diffs for no benefit
+docs/development-history

@@ -25,4 +25,4 @@ Two sections, both backed by APIs that already existed and were already tested �
 
 ## What's next
 
-Remaining from `out/project-audit.md`: repo-wide CSRF coverage, real AI/LLM integration. All items from this session's three-part request (CSV/Excel → e-signature → settings page) are now complete.
+Remaining from `docs/development-history/project-audit.md`: repo-wide CSRF coverage, real AI/LLM integration. All items from this session's three-part request (CSV/Excel → e-signature → settings page) are now complete.

@@ -50,4 +50,4 @@ Per the user's explicit choice: these 4 stay as-is, follow-up work, not touched 
 
 ## What's next
 
-The 4 deferred fake-flow items above, plus everything already tracked in Finding 4 (`out/next-phase-analysis.md`): real Paystack test-mode key, real email provider, cron scheduling decision, `Unit.status`/`AccessCode.USED` gaps.
+The 4 deferred fake-flow items above, plus everything already tracked in Finding 4 (`docs/development-history/next-phase-analysis.md`): real Paystack test-mode key, real email provider, cron scheduling decision, `Unit.status`/`AccessCode.USED` gaps.

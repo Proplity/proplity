@@ -17,7 +17,10 @@ export const GET = withAuth(
       const lease = await prisma.lease.findUnique({ where: { id } });
       if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
 
-      const notes = await prisma.note.findMany({ where: { leaseId: id }, orderBy: { createdAt: 'desc' } });
+      const notes = await prisma.note.findMany({
+        where: { leaseId: id },
+        orderBy: { createdAt: 'desc' },
+      });
       return NextResponse.json({ data: notes });
     } catch (err) {
       return handleApiError(err);

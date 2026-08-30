@@ -13,3 +13,10 @@ tsconfig.tsbuildinfo
 *.tsbuildinfo
 .claude/settings.local.json
 .claude/settings.json
+
+# npm lockfile is not used -- this project is pnpm-only (see packageManager
+# in package.json). A stray package-lock.json can make Vercel pick npm and
+# install a different dependency tree than the one that was tested.
+package-lock.json
+install.log
+.vercel

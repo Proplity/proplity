@@ -11,10 +11,15 @@ const nextConfig = {
   // that default when the packages sit in pnpm's nested .pnpm store — declaring
   // them explicitly works around it. See vercel/next.js#68805.
   serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
-  typescript: {
-    // Don't block the build on pre-existing type quirks from the export.
-    ignoreBuildErrors: true,
-  },
+  // NOTE: `typescript.ignoreBuildErrors` was removed here deliberately --
+  // `pnpm typecheck` passes clean on the whole tree, so the escape hatch was
+  // only hiding future regressions from the production build. Don't re-add it;
+  // fix the type error instead.
+  // NOTE: do NOT add `outputFileTracingIncludes` for @prisma/client here.
+  // A glob into pnpm's nested store matches sibling *directories* (e.g.
+  // @prisma/client-runtime-utils) which Turbopack then tries to read as a
+  // file and panics on. `serverExternalPackages` above already keeps Prisma
+  // unbundled and traced correctly.
   images: {
     // Property images are loaded from external URLs (e.g. Unsplash) via <img>.
     remotePatterns: [{ protocol: 'https', hostname: '**' }],

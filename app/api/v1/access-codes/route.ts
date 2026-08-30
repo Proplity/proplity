@@ -21,7 +21,8 @@ async function canAccessUnit(session: { sub: string; role: Role }, unitId: strin
 export const GET = withAuth(async (req, { session }) => {
   try {
     const unitId = req.nextUrl.searchParams.get('unitId');
-    if (!unitId) return NextResponse.json({ error: 'unitId query param is required' }, { status: 400 });
+    if (!unitId)
+      return NextResponse.json({ error: 'unitId query param is required' }, { status: 400 });
 
     const { unit, allowed } = await canAccessUnit(session, unitId);
     if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
@@ -73,10 +74,15 @@ export const POST = withAuth(
       // A concurrent request slipping past this check is a real but narrow
       // race window; a genuine unique index would need a migration, out of
       // scope for a route implementation.
-      const conflict = await prisma.accessCode.findFirst({ where: { unitId, code, status: 'ACTIVE' } });
+      const conflict = await prisma.accessCode.findFirst({
+        where: { unitId, code, status: 'ACTIVE' },
+      });
       if (conflict) {
         return NextResponse.json(
-          { error: 'This code is already active for this unit -- choose a different one', code: 'CODE_CONFLICT' },
+          {
+            error: 'This code is already active for this unit -- choose a different one',
+            code: 'CODE_CONFLICT',
+          },
           { status: 409 },
         );
       }

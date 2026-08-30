@@ -41,7 +41,16 @@ export function useCreateViolation(propertyId: string, unitId: string) {
 
 export function useUpdateViolation(propertyId: string, unitId: string) {
   return useApiSubmit(
-    ({ violationId, ...body }: { violationId: string; status: Violation['status']; resolutionNote?: string }) =>
-      api.properties.violations.update(propertyId, unitId, violationId, body).then((res) => res.data.data),
+    ({
+      violationId,
+      ...body
+    }: {
+      violationId: string;
+      status: Violation['status'];
+      resolutionNote?: string;
+    }) =>
+      api.properties.violations
+        .update(propertyId, unitId, violationId, body)
+        .then((res) => res.data.data),
   );
 }

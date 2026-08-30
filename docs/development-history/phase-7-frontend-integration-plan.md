@@ -88,7 +88,7 @@ Update the 5 corresponding `page.tsx` files to drop `Number(id)` conversions, pa
 - `pnpm exec tsc --noEmit`, `pnpm build` after each form is wired.
 - Manual browser click-through per form (log in as the relevant demo role, fill and submit, confirm a real row lands in the DB via a one-off query, confirm the UI's success path fires) — this phase is the first one where "live-tested" means *through the browser*, not just `curl`, since the whole point is the UI path.
 - Clean up test rows created during manual verification the same way prior phases did.
-- Write `out/phases/domain-api-phase-7-frontend-integration.md` once done, per the standing convention.
+- Write `docs/development-history/phases/domain-api-phase-7-frontend-integration.md` once done, per the standing convention.
 
 ## Next after this phase
 

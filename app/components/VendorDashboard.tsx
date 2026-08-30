@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Wrench, DollarSign, CheckCircle, Clock, AlertCircle, Star, Calendar, MapPin, Phone } from 'lucide-react';
+import {
+  Wrench,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Star,
+  Calendar,
+  MapPin,
+  Phone,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -32,7 +42,9 @@ function isThisMonth(iso: string) {
 
 export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   const auth = useAuth();
-  const [activeFilter, setActiveFilter] = useState<'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'>('all');
+  const [activeFilter, setActiveFilter] = useState<
+    'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
+  >('all');
 
   const { data: jobs, loading: jobsLoading } = useMaintenanceRequests();
   const { data: invoices, loading: invoicesLoading } = useInvoices();
@@ -41,7 +53,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   const now = new Date();
   const completedJobs = jobs.filter((j) => j.status === 'COMPLETED');
   const activeJobs = jobs.filter((j) => j.status === 'IN_PROGRESS' || j.status === 'SCHEDULED');
-  const completedThisMonth = completedJobs.filter((j) => j.completedAt && isThisMonth(j.completedAt));
+  const completedThisMonth = completedJobs.filter(
+    (j) => j.completedAt && isThisMonth(j.completedAt),
+  );
   const totalEarningsMTD = completedThisMonth.reduce((sum, j) => sum + (j.finalCost ?? 0), 0);
 
   // Invoice status per job -- an invoice is created automatically when a
@@ -60,17 +74,24 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   // maintenance requests instead of calling that endpoint.
   const ratings = jobs.map((j) => j.vendorRating?.rating).filter((r): r is number => r != null);
   const avgRating = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null;
-  const completionRate = jobs.length > 0 ? Math.round((completedJobs.length / jobs.length) * 100) : 0;
+  const completionRate =
+    jobs.length > 0 ? Math.round((completedJobs.length / jobs.length) * 100) : 0;
 
-  const filteredJobs = activeFilter === 'all' ? jobs : jobs.filter((j) => j.status === activeFilter);
+  const filteredJobs =
+    activeFilter === 'all' ? jobs : jobs.filter((j) => j.status === activeFilter);
 
   const weekAgo = new Date(now.getTime() - 7 * MS_PER_DAY);
-  const completedThisWeek = completedJobs.filter((j) => j.completedAt && new Date(j.completedAt) >= weekAgo);
+  const completedThisWeek = completedJobs.filter(
+    (j) => j.completedAt && new Date(j.completedAt) >= weekAgo,
+  );
   const earningsThisWeek = completedThisWeek.reduce((sum, j) => sum + (j.finalCost ?? 0), 0);
 
   const onTimeEligible = completedJobs.filter((j) => j.scheduledFor);
-  const onTimeCount = onTimeEligible.filter((j) => new Date(j.completedAt!) <= new Date(j.scheduledFor!)).length;
-  const onTimeRate = onTimeEligible.length > 0 ? Math.round((onTimeCount / onTimeEligible.length) * 100) : null;
+  const onTimeCount = onTimeEligible.filter(
+    (j) => new Date(j.completedAt!) <= new Date(j.scheduledFor!),
+  ).length;
+  const onTimeRate =
+    onTimeEligible.length > 0 ? Math.round((onTimeCount / onTimeEligible.length) * 100) : null;
 
   const totalPaid = completedJobs.reduce((sum, j) => {
     const invoice = jobInvoice(j.id);
@@ -114,7 +135,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold text-green-600">{loading ? '—' : `₦${totalEarningsMTD.toLocaleString()}`}</p>
+          <p className="mb-1 text-2xl font-semibold text-green-600">
+            {loading ? '—' : `₦${totalEarningsMTD.toLocaleString()}`}
+          </p>
           <p className="text-sm text-gray-600">Total Earnings (MTD)</p>
         </div>
 
@@ -124,7 +147,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <DollarSign className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold text-yellow-600">{loading ? '—' : `₦${pendingPayments.toLocaleString()}`}</p>
+          <p className="mb-1 text-2xl font-semibold text-yellow-600">
+            {loading ? '—' : `₦${pendingPayments.toLocaleString()}`}
+          </p>
           <p className="text-sm text-gray-600">Pending Payments</p>
         </div>
       </div>
@@ -142,7 +167,10 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                 {avgRating != null ? (
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < Math.round(avgRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${i < Math.round(avgRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                      />
                     ))}
                     <span className="ml-1 text-sm font-medium">{avgRating.toFixed(1)}</span>
                   </div>
@@ -150,7 +178,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                   <span className="text-sm text-gray-500">No ratings yet</span>
                 )}
                 <span className="text-sm text-gray-600">•</span>
-                <span className="text-sm font-medium text-green-600">{completionRate}% Completion Rate</span>
+                <span className="text-sm font-medium text-green-600">
+                  {completionRate}% Completion Rate
+                </span>
               </div>
             </div>
           </div>
@@ -161,15 +191,25 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
       <div className="flex gap-2 overflow-x-auto">
         {[
           { id: 'all' as const, label: 'All Jobs', count: jobs.length },
-          { id: 'SCHEDULED' as const, label: 'Scheduled', count: jobs.filter((j) => j.status === 'SCHEDULED').length },
-          { id: 'IN_PROGRESS' as const, label: 'In Progress', count: jobs.filter((j) => j.status === 'IN_PROGRESS').length },
+          {
+            id: 'SCHEDULED' as const,
+            label: 'Scheduled',
+            count: jobs.filter((j) => j.status === 'SCHEDULED').length,
+          },
+          {
+            id: 'IN_PROGRESS' as const,
+            label: 'In Progress',
+            count: jobs.filter((j) => j.status === 'IN_PROGRESS').length,
+          },
           { id: 'COMPLETED' as const, label: 'Completed', count: completedJobs.length },
         ].map((filter) => (
           <button
             key={filter.id}
             onClick={() => setActiveFilter(filter.id)}
             className={`rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
-              activeFilter === filter.id ? 'bg-blue-600 text-white' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+              activeFilter === filter.id
+                ? 'bg-blue-600 text-white'
+                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
             {filter.label} ({filter.count})
@@ -180,7 +220,8 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
       {/* Job List */}
       <div className="space-y-4">
         {filteredJobs.map((job) => {
-          const status = statusConfig[job.status as keyof typeof statusConfig] ?? statusConfig.SCHEDULED;
+          const status =
+            statusConfig[job.status as keyof typeof statusConfig] ?? statusConfig.SCHEDULED;
           const priority = priorityConfig[job.priority];
           const StatusIcon = status.icon;
           const invoice = jobInvoice(job.id);
@@ -193,7 +234,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
             >
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}>
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}
+                  >
                     <Wrench className={`h-6 w-6 text-${priority.color}-600`} />
                   </div>
                   <div>
@@ -204,10 +247,14 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}>
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}
+                  >
                     {priority.label} Priority
                   </span>
-                  <span className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium bg-${status.color}-100 text-${status.color}-700`}>
+                  <span
+                    className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium bg-${status.color}-100 text-${status.color}-700`}
+                  >
                     <StatusIcon className="h-4 w-4" />
                     {status.label}
                   </span>
@@ -225,7 +272,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-gray-600">{job.status === 'COMPLETED' ? 'Completed' : 'Scheduled'}</p>
+                  <p className="mb-1 text-xs text-gray-600">
+                    {job.status === 'COMPLETED' ? 'Completed' : 'Scheduled'}
+                  </p>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <p className="text-sm font-medium">
@@ -244,7 +293,11 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-4 w-4 text-green-600" />
                     <p className="text-sm font-semibold text-green-600">
-                      {job.finalCost != null ? `₦${job.finalCost.toLocaleString()}` : job.costEstimate != null ? `₦${job.costEstimate.toLocaleString()} est.` : '—'}
+                      {job.finalCost != null
+                        ? `₦${job.finalCost.toLocaleString()}`
+                        : job.costEstimate != null
+                          ? `₦${job.costEstimate.toLocaleString()} est.`
+                          : '—'}
                     </p>
                   </div>
                 </div>
@@ -260,8 +313,15 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <div className="flex items-center justify-between border-t border-gray-200 pt-4">
                 <div>
                   {job.status === 'COMPLETED' && (
-                    <span className={`rounded px-3 py-1 text-xs font-medium ${invoice?.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      Invoice: {!invoice ? 'Not yet created' : invoice.status === 'PAID' ? 'Paid' : 'Pending'}
+                    <span
+                      className={`rounded px-3 py-1 text-xs font-medium ${invoice?.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                    >
+                      Invoice:{' '}
+                      {!invoice
+                        ? 'Not yet created'
+                        : invoice.status === 'PAID'
+                          ? 'Paid'
+                          : 'Pending'}
                     </span>
                   )}
                 </div>
@@ -291,7 +351,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
             </div>
           );
         })}
-        {filteredJobs.length === 0 && !loading && <p className="py-8 text-center text-sm text-gray-400">No jobs in this filter.</p>}
+        {filteredJobs.length === 0 && !loading && (
+          <p className="py-8 text-center text-sm text-gray-400">No jobs in this filter.</p>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -305,7 +367,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Earnings</span>
-              <span className="font-semibold text-green-600">₦{earningsThisWeek.toLocaleString()}</span>
+              <span className="font-semibold text-green-600">
+                ₦{earningsThisWeek.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
@@ -319,11 +383,15 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">On-Time Rate</span>
-              <span className="font-semibold text-green-600">{onTimeRate != null ? `${onTimeRate}%` : 'N/A'}</span>
+              <span className="font-semibold text-green-600">
+                {onTimeRate != null ? `${onTimeRate}%` : 'N/A'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Customer Rating</span>
-              <span className="font-semibold">{avgRating != null ? `${avgRating.toFixed(1)} ⭐` : 'No ratings yet'}</span>
+              <span className="font-semibold">
+                {avgRating != null ? `${avgRating.toFixed(1)} ⭐` : 'No ratings yet'}
+              </span>
             </div>
           </div>
         </div>
@@ -337,7 +405,9 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Pending</span>
-              <span className="font-semibold text-yellow-600">₦{pendingPayments.toLocaleString()}</span>
+              <span className="font-semibold text-yellow-600">
+                ₦{pendingPayments.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>

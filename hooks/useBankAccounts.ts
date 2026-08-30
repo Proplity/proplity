@@ -34,7 +34,9 @@ export function useBankAccounts() {
 }
 
 export function useCreateBankAccount() {
-  return useApiSubmit((body: CreateBankAccountInput) => api.bankAccounts.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateBankAccountInput) =>
+    api.bankAccounts.create(body).then((res) => res.data.data),
+  );
 }
 
 export function useSetDefaultBankAccount() {

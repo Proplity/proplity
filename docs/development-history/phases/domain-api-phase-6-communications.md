@@ -44,4 +44,4 @@ Full live end-to-end pass against the real dev server and seeded database, using
 
 ## Next up
 
-All 6 domain-API phases from `out/domain-api-implementation-plan.md` are now complete. Remaining: Phase 7 (frontend integration — wiring `lib/apiClient.ts` and the existing components to these routes, replacing `app/store/*` mock data) and Phase 8 (background workers/cron jobs).
+All 6 domain-API phases from `docs/development-history/domain-api-implementation-plan.md` are now complete. Remaining: Phase 7 (frontend integration — wiring `lib/apiClient.ts` and the existing components to these routes, replacing `app/store/*` mock data) and Phase 8 (background workers/cron jobs).

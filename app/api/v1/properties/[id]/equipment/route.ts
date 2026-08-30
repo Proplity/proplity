@@ -63,7 +63,10 @@ export const POST = withAuth(
       if (unitId) {
         const unit = await prisma.unit.findUnique({ where: { id: unitId } });
         if (!unit || unit.propertyId !== id) {
-          return NextResponse.json({ error: 'unitId must belong to this property' }, { status: 400 });
+          return NextResponse.json(
+            { error: 'unitId must belong to this property' },
+            { status: 400 },
+          );
         }
       }
 

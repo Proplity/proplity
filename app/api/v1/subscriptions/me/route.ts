@@ -9,7 +9,12 @@ export const GET = withAuth(async (_req, { session }) => {
     // No row yet = never subscribed -- represented as a real FREE tier
     // rather than null, so the frontend has one shape to render either way.
     return NextResponse.json({
-      data: subscription ?? { userId: session.sub, tier: 'FREE', status: 'ACTIVE', currentPeriodEnd: null },
+      data: subscription ?? {
+        userId: session.sub,
+        tier: 'FREE',
+        status: 'ACTIVE',
+        currentPeriodEnd: null,
+      },
     });
   } catch (err) {
     return handleApiError(err);

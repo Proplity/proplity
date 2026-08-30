@@ -18,7 +18,11 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: { email: string; password: string; rememberMe?: boolean }) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (credentials: {
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+  }) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (data: {
     email: string;
     password: string;

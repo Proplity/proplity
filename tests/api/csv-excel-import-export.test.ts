@@ -17,7 +17,7 @@ describe('properties: export (GET /properties/export)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('CSV export is scoped to the caller\'s own properties, one row per unit', async () => {
+  it("CSV export is scoped to the caller's own properties, one row per unit", async () => {
     const manager = await createUser(Role.MANAGER);
     const otherManager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, name: 'Sunrise Court' });
@@ -37,11 +37,14 @@ describe('properties: export (GET /properties/export)', () => {
     expect(text).not.toContain('Other Place');
   });
 
-  it('an ADMIN sees every property\'s units, including tenant info from the active lease', async () => {
+  it("an ADMIN sees every property's units, including tenant info from the active lease", async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, name: 'Admin View Court' });
     const unit = await createUnit(property.id, { unitNumber: '3A' });
-    const tenant = await createUser(Role.TENANT, { name: 'Test Tenant', email: 'exporttest@test.local' });
+    const tenant = await createUser(Role.TENANT, {
+      name: 'Test Tenant',
+      email: 'exporttest@test.local',
+    });
     await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
     const admin = await createUser(Role.ADMIN);
     const cookie = await authCookie(admin.id, admin.role);

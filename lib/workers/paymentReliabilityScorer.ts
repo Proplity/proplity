@@ -17,12 +17,16 @@ function scoreFromRatio(
   const paymentReliability: PaymentReliability =
     ratio >= 0.9 ? 'EXCELLENT' : ratio >= 0.7 ? 'GOOD' : ratio >= 0.5 ? 'FAIR' : 'POOR';
 
-  const riskScore: RiskLevel = missed >= 2 || ratio < 0.5 ? 'HIGH' : missed === 1 || ratio < 0.8 ? 'MEDIUM' : 'LOW';
+  const riskScore: RiskLevel =
+    missed >= 2 || ratio < 0.5 ? 'HIGH' : missed === 1 || ratio < 0.8 ? 'MEDIUM' : 'LOW';
 
   return { paymentReliability, riskScore };
 }
 
-export async function runPaymentReliabilityScorer(): Promise<{ scored: number; skippedNoHistory: number }> {
+export async function runPaymentReliabilityScorer(): Promise<{
+  scored: number;
+  skippedNoHistory: number;
+}> {
   const now = new Date();
   const leases = await prisma.lease.findMany({
     where: { status: { in: ['ACTIVE', 'EXPIRED'] } },

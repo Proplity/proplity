@@ -8,7 +8,7 @@ Third domain API: lease creation, status transitions, renewal (rule 6's `Notice`
 
 ## What was built
 
-Four routes, exactly as scoped in `out/domain-api-implementation-plan.md`'s Phase 3 section:
+Four routes, exactly as scoped in `docs/development-history/domain-api-implementation-plan.md`'s Phase 3 section:
 
 - **`app/api/v1/leases/route.ts`** — `GET` role-scoped (`TENANT` → own, `MANAGER`/`LANDLORD` → leases on units of properties they manage/own, `ADMIN` → all; `VENDOR` excluded entirely — no legitimate use case); `POST` (`ADMIN`/`MANAGER`/`LANDLORD`, ownership-checked via `canManageProperty()` on the unit's property) validates the `tenantId` actually references a `TENANT`-role user, then creates the `Lease` and its initial `RENT` `Invoice` in one interactive `$transaction` (`rentAmount` used as-is — the full cycle amount, never multiplied, per rule 5).
 - **`app/api/v1/leases/[id]/route.ts`** — `GET` (owner tenant, or `canManageProperty()` on the unit's property) returns full detail including the tenant's three flat emergency-contact fields (no nested object exists in the schema, so nothing to transform beyond an explicit field-select that excludes `passwordHash`), notices, invoices, and both renewal-chain directions (`renewedFrom`/`renewedInto`). `PATCH` (`ADMIN`/`MANAGER`/`LANDLORD`, ownership-checked) branches into a plain status transition or a `renew` operation — renewal creates a **new** `Lease` with `renewedFromId` pointing at the old one and `status: 'ACTIVE'`, sets the old lease to `EXPIRED`, both in one transaction. No `PENDING_RENEWAL` status is used anywhere (rule 6).
@@ -49,4 +49,4 @@ Full live end-to-end pass against the real dev server and seeded database, using
 
 ## Next up
 
-Phase 4 — Financial, Invoicing & Payments API (`app/api/v1/invoices/*`), already spec'd in `out/domain-api-implementation-plan.md`.
+Phase 4 — Financial, Invoicing & Payments API (`app/api/v1/invoices/*`), already spec'd in `docs/development-history/domain-api-implementation-plan.md`.

@@ -10,7 +10,10 @@ import { canManageProperty } from '@/lib/api/propertyAccess';
 type RouteCtx = { params: Promise<{ id: string }> };
 
 async function loadLeaseWithProperty(id: string) {
-  return prisma.lease.findUnique({ where: { id }, include: { unit: { include: { property: true } } } });
+  return prisma.lease.findUnique({
+    where: { id },
+    include: { unit: { include: { property: true } } },
+  });
 }
 
 export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
@@ -25,7 +28,10 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const notices = await prisma.notice.findMany({ where: { leaseId: id }, orderBy: { createdAt: 'desc' } });
+    const notices = await prisma.notice.findMany({
+      where: { leaseId: id },
+      orderBy: { createdAt: 'desc' },
+    });
     return NextResponse.json({ data: notices });
   } catch (err) {
     return handleApiError(err);
@@ -78,7 +84,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
           data: {
             status,
             ...(status === 'VIEWED' ? { viewedAt: new Date() } : {}),
-            ...(['ACCEPTED', 'REJECTED', 'COUNTERED'].includes(status) ? { respondedAt: new Date() } : {}),
+            ...(['ACCEPTED', 'REJECTED', 'COUNTERED'].includes(status)
+              ? { respondedAt: new Date() }
+              : {}),
           },
         });
         return NextResponse.json({ data: updated });
@@ -93,7 +101,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
           ...(documentUrl !== undefined ? { documentUrl } : {}),
           ...(proposedTerms !== undefined ? { proposedTerms } : {}),
           ...(invoiceId !== undefined ? { invoiceId } : {}),
-          ...(status !== undefined ? { status, ...(status === 'SENT' ? { sentAt: new Date() } : {}) } : {}),
+          ...(status !== undefined
+            ? { status, ...(status === 'SENT' ? { sentAt: new Date() } : {}) }
+            : {}),
         },
       });
       return NextResponse.json({ data: updated });
@@ -101,7 +111,8 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     // Create a new notice -- staff/property-manager action only.
     if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    if (!type) return NextResponse.json({ error: 'type is required to create a notice' }, { status: 400 });
+    if (!type)
+      return NextResponse.json({ error: 'type is required to create a notice' }, { status: 400 });
 
     const created = await prisma.notice.create({
       data: {

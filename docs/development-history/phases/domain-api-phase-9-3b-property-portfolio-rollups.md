@@ -4,7 +4,7 @@
 
 ## Why
 
-Second half of sub-phase 3 (see `out/phase-9-frontend-hydration-plan.md` for the 3a/3b split rationale). Covers the property/portfolio-rollup group: `PropertyDetail.tsx`, `LandlordDashboard.tsx`, `DashboardBreakdownPage.tsx`. This closes out sub-phase 3 and, with it, all 8 originally-scoped manager/landlord operational views.
+Second half of sub-phase 3 (see `docs/development-history/phase-9-frontend-hydration-plan.md` for the 3a/3b split rationale). Covers the property/portfolio-rollup group: `PropertyDetail.tsx`, `LandlordDashboard.tsx`, `DashboardBreakdownPage.tsx`. This closes out sub-phase 3 and, with it, all 8 originally-scoped manager/landlord operational views.
 
 ## Backend changes
 

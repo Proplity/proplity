@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "regions": ["fra1"],
+  "crons": [
+    {
+      "path": "/api/v1/cron/all",
+      "schedule": "0 2 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/v1/cron/[job]/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
+}

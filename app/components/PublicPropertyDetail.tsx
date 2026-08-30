@@ -166,10 +166,16 @@ export function PublicPropertyDetail({
   };
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-gray-500">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-gray-500">Loading…</div>
+    );
   }
   if (!property) {
-    return <div className="flex min-h-screen items-center justify-center text-gray-500">Property not found.</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-gray-500">
+        Property not found.
+      </div>
+    );
   }
 
   // A property can have multiple units at different prices -- the booking
@@ -273,7 +279,9 @@ export function PublicPropertyDetail({
       <section className="mx-auto w-full max-w-7xl px-6 pt-8 pb-4">
         <div className="grid h-[380px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl">
           {/* main large */}
-          <div className={`col-span-2 row-span-2 ${galleryPlaceholders[0]} relative flex items-end p-4`}>
+          <div
+            className={`col-span-2 row-span-2 ${galleryPlaceholders[0]} relative flex items-end p-4`}
+          >
             {verified && (
               <span className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white">
                 <Shield className="h-3 w-3" /> Verified
@@ -347,8 +355,8 @@ export function PublicPropertyDetail({
                   ))}
                 </div>
                 <span className="text-sm text-gray-600">
-                  {property.reviewStats.averageRating?.toFixed(1) ?? 'No rating yet'} ({property.reviewStats.count}{' '}
-                  reviews)
+                  {property.reviewStats.averageRating?.toFixed(1) ?? 'No rating yet'} (
+                  {property.reviewStats.count} reviews)
                 </span>
               </div>
             </div>
@@ -449,7 +457,9 @@ export function PublicPropertyDetail({
                 </div>
                 <div className="mt-2 flex justify-between border-t border-gray-200 pt-2">
                   <span className="font-semibold text-gray-700">Total</span>
-                  <span className="font-bold text-gray-900">₦{(yearlyAmount + 90000).toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">
+                    ₦{(yearlyAmount + 90000).toLocaleString()}
+                  </span>
                 </div>
               </div>
 

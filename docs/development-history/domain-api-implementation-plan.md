@@ -1,6 +1,6 @@
 # Proplity — Domain API & Integration: Full Step-by-Step Plan
 
-> Companion to `out/proplity_progress.md`. This is the finetuned version of the proposed 8-phase domain API plan, verified line-by-line against `CLAUDE.md`, `CURRENT_STATE.md`, `PROJECT_STRUCTURE.md`, `docs/PRD.md`, and all 8 `prisma/schema/*.prisma` files as of 2026-08-22.
+> Companion to `docs/development-history/proplity_progress.md`. This is the finetuned version of the proposed 8-phase domain API plan, verified line-by-line against `CLAUDE.md`, `CURRENT_STATE.md`, `PROJECT_STRUCTURE.md`, `docs/PRD.md`, and all 8 `prisma/schema/*.prisma` files as of 2026-08-22.
 
 ## Context
 

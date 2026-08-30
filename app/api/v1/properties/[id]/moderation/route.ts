@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
@@ -33,7 +34,11 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, moderationSchema);
       if (!validated.success) return validated.response;
 
-      const data: { moderationStatus: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string; isPublished?: boolean } = {
+      const data: {
+        moderationStatus: 'APPROVED' | 'REJECTED' | 'FLAGGED';
+        moderationNotes?: string;
+        isPublished?: boolean;
+      } = {
         moderationStatus: validated.data.status,
         moderationNotes: validated.data.moderationNotes,
       };
@@ -54,12 +59,16 @@ export const PATCH = withAuth(
         const approved = validated.data.status === 'APPROVED';
         await sendEmail({
           to: recipient.email,
-          subject: approved ? 'Your Proplity listing was approved' : 'Your Proplity listing needs changes',
+          subject: approved
+            ? 'Your Proplity listing was approved'
+            : 'Your Proplity listing needs changes',
           body: approved
-            ? `Hi ${recipient.name},\n\n"${property.name}" has been approved and can now be published.\n\nSign in to Proplity to publish it: http://localhost:3000/dashboard/properties/${property.id}`
+            ? `Hi ${recipient.name},\n\n"${property.name}" has been approved and can now be published.\n\nSign in to Proplity to publish it: ${appUrl(`/dashboard/properties/${property.id}`)}`
             : `Hi ${recipient.name},\n\n"${property.name}" was not approved.${
-                validated.data.moderationNotes ? `\n\nReviewer notes: ${validated.data.moderationNotes}` : ''
-              }\n\nSign in to Proplity for details: http://localhost:3000/dashboard/properties/${property.id}`,
+                validated.data.moderationNotes
+                  ? `\n\nReviewer notes: ${validated.data.moderationNotes}`
+                  : ''
+              }\n\nSign in to Proplity for details: ${appUrl(`/dashboard/properties/${property.id}`)}`,
         });
       }
 

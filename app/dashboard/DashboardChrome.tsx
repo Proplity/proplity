@@ -87,7 +87,9 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
             {process.env.NODE_ENV !== 'production' && role && (
               <RoleSwitcher
                 currentRole={role}
-                onRoleChange={(newRole) => router.push(newRole === 'admin' ? '/admin' : '/dashboard')}
+                onRoleChange={(newRole) =>
+                  router.push(newRole === 'admin' ? '/admin' : '/dashboard')
+                }
               />
             )}
             <button className="relative rounded-lg p-2 hover:bg-gray-100">
@@ -137,7 +139,10 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           <nav className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
-              const active = tab.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(tab.href);
+              const active =
+                tab.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname.startsWith(tab.href);
               return (
                 <button
                   key={tab.label}

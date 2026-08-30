@@ -39,10 +39,21 @@ describe('vendors: list (reputation computed at query time -- rule 8)', () => {
       vendorId: vendor.id,
       status: 'COMPLETED',
     });
-    await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id, status: 'COMPLETED' });
-    await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id, status: 'IN_PROGRESS' });
+    await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      status: 'COMPLETED',
+    });
+    await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      status: 'IN_PROGRESS',
+    });
     await testPrisma.vendorRating.create({
-      data: { maintenanceRequestId: done1.id, vendorId: vendor.id, ratedById: tenant.id, rating: 4 },
+      data: {
+        maintenanceRequestId: done1.id,
+        vendorId: vendor.id,
+        ratedById: tenant.id,
+        rating: 4,
+      },
     });
 
     const noJobsVendor = await createUser(Role.VENDOR, { name: 'Brand New Vendor' });
@@ -181,10 +192,18 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     // DB happens to return first -- this proves the scorer reads the real
     // chronologically-first payment instead.
     await testPrisma.payment.create({
-      data: { invoiceId: invoice.id, amount: 50_000, paidAt: new Date(dueDate.getTime() + 2 * 86400000) },
+      data: {
+        invoiceId: invoice.id,
+        amount: 50_000,
+        paidAt: new Date(dueDate.getTime() + 2 * 86400000),
+      },
     });
     await testPrisma.payment.create({
-      data: { invoiceId: invoice.id, amount: 50_000, paidAt: new Date(dueDate.getTime() - 1 * 86400000) },
+      data: {
+        invoiceId: invoice.id,
+        amount: 50_000,
+        paidAt: new Date(dueDate.getTime() - 1 * 86400000),
+      },
     });
 
     const res = await apiFetch('/api/v1/cron/payment-reliability-scorer', {
@@ -205,7 +224,10 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 10, lateFeePercentage: 5 });
+    const lease = await createLease(unit.id, tenant.id, {
+      gracePeriodDays: 10,
+      lateFeePercentage: 5,
+    });
     // Due 3 days ago -- past dueDate, but well within a 10-day grace period.
     const invoice = await createInvoice({
       leaseId: lease.id,
@@ -226,7 +248,9 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const stillUnpaid = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
     expect(stillUnpaid?.status).toBe('UNPAID');
 
-    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFee = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     expect(lateFee).toBeNull();
   });
 
@@ -234,7 +258,10 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 2, lateFeePercentage: 5 });
+    const lease = await createLease(unit.id, tenant.id, {
+      gracePeriodDays: 2,
+      lateFeePercentage: 5,
+    });
     // Due 5 days ago, 2-day grace -- 3 days genuinely overdue.
     const invoice = await createInvoice({
       leaseId: lease.id,
@@ -256,10 +283,14 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const flagged = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
     expect(flagged?.status).toBe('OVERDUE');
 
-    const reminder = await testPrisma.notice.findFirst({ where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' } });
+    const reminder = await testPrisma.notice.findFirst({
+      where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' },
+    });
     expect(reminder).not.toBeNull();
 
-    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFee = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     expect(lateFee).not.toBeNull();
     expect(lateFee?.amount).toBe(10_000); // 5% of 200,000
 
@@ -272,15 +303,24 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(second.body.result.remindersSent).toBe(0);
     expect(second.body.result.lateFeesCreated).toBe(0);
 
-    const reminderCount = await testPrisma.notice.count({ where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' } });
+    const reminderCount = await testPrisma.notice.count({
+      where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' },
+    });
     expect(reminderCount).toBe(1);
-    const lateFeeCount = await testPrisma.invoice.count({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFeeCount = await testPrisma.invoice.count({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     expect(lateFeeCount).toBe(1);
 
     // The late fee invoice itself must never compound into a second late fee.
-    const lateFeeInvoice = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFeeInvoice = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     const lateFeeOfLateFee = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', description: { contains: `[late-fee-for:${lateFeeInvoice!.id}]` } },
+      where: {
+        type: 'LATE_FEE',
+        description: { contains: `[late-fee-for:${lateFeeInvoice!.id}]` },
+      },
     });
     expect(lateFeeOfLateFee).toBeNull();
   });
@@ -289,7 +329,10 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 0, lateFeePercentage: 5 });
+    const lease = await createLease(unit.id, tenant.id, {
+      gracePeriodDays: 0,
+      lateFeePercentage: 5,
+    });
     const invoice = await createInvoice({
       leaseId: lease.id,
       type: 'SECURITY_DEPOSIT',
@@ -307,7 +350,9 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const flagged = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
     expect(flagged?.status).toBe('OVERDUE');
 
-    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFee = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     expect(lateFee).toBeNull();
   });
 
@@ -338,7 +383,9 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(res.status).toBe(200);
     expect(res.body.result.lateFeesCreated).toBe(1);
 
-    const lateFee = await testPrisma.invoice.findFirst({ where: { type: 'LATE_FEE', leaseId: lease.id } });
+    const lateFee = await testPrisma.invoice.findFirst({
+      where: { type: 'LATE_FEE', leaseId: lease.id },
+    });
     expect(lateFee).not.toBeNull();
     expect(lateFee?.amount).toBe(15_000);
     expect(lateFee?.description).toContain(`[late-fee-for:${invoice.id}]`);

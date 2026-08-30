@@ -1,6 +1,10 @@
 import ExcelJS from 'exceljs';
 
-export async function toXlsx(rows: Record<string, unknown>[], columns: string[], sheetName: string): Promise<Buffer> {
+export async function toXlsx(
+  rows: Record<string, unknown>[],
+  columns: string[],
+  sheetName: string,
+): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(sheetName);
   sheet.columns = columns.map((c) => ({ header: c, key: c, width: 18 }));

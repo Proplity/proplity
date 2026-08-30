@@ -12,7 +12,7 @@ CLAUDE.md's status table lists Paystack as "Not started," and there was no `PAYS
 
 ## What was built
 
-Five routes, exactly as scoped in `out/domain-api-implementation-plan.md`'s Phase 4 section:
+Five routes, exactly as scoped in `docs/development-history/domain-api-implementation-plan.md`'s Phase 4 section:
 
 - **`app/api/v1/invoices/route.ts`** — `GET` filters (`type`/`status`/`dueDate`) plus role-scoping following the same OR-across-relations pattern needed here for the first time (an invoice's owner could be via `lease`, `maintenanceRequest`, or a direct `userId`): `TENANT` sees invoices tied to their own lease, request, or direct charge; `VENDOR` sees invoices on requests assigned to them; `MANAGER`/`LANDLORD` see invoices on properties they manage/own via either the lease or maintenance-request path; `ADMIN` sees all. `POST` restricted to `ADMIN`/`MANAGER`/`VENDOR` exactly as spec'd (no `LANDLORD` — followed literally, matching Phase 3's notes-route precedent for an explicit two/three-role list rather than extending it). `VENDOR` further restricted to `type: MAINTENANCE` invoices where they're the assigned `vendorId` on the referenced request. App-level "at least one of `leaseId`/`maintenanceRequestId`/`userId`" check (Prisma can't express it). `invoiceNumber` never set by app code (`dbgenerated`); a `P2002` retries the insert once.
 - **`app/api/v1/invoices/[id]/route.ts`** — `GET` (owner tenant/vendor, or `canManageProperty()` on the linked lease's or request's property, or `ADMIN`) returns the invoice with its `payments`. `PATCH` (`ADMIN`/`MANAGER` only) updates `status`/`amount`.
@@ -41,4 +41,4 @@ Live-tested end-to-end against the real dev server and seeded database, all 5 de
 
 ## Next up
 
-Phase 5 — Access Control & Visitor Management API (`app/api/v1/access-codes/*`), already spec'd in `out/domain-api-implementation-plan.md`.
+Phase 5 — Access Control & Visitor Management API (`app/api/v1/access-codes/*`), already spec'd in `docs/development-history/domain-api-implementation-plan.md`.

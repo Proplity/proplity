@@ -4,7 +4,7 @@
 
 ## Why
 
-`out/project-audit.md`: "E-signature support — absent beyond marketing copy; no signing flow, no signature field on Lease/Notice." PRD §5.1 lists "E-signature support for the rent agreement" as a real requirement. `Lease.signedAgreementUrl`/`agreementSignedAt` already existed in the schema but nothing ever wrote to either.
+`docs/development-history/project-audit.md`: "E-signature support — absent beyond marketing copy; no signing flow, no signature field on Lease/Notice." PRD §5.1 lists "E-signature support for the rent agreement" as a real requirement. `Lease.signedAgreementUrl`/`agreementSignedAt` already existed in the schema but nothing ever wrote to either.
 
 ## Scope decision
 

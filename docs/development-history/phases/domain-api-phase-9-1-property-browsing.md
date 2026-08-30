@@ -4,7 +4,7 @@
 
 ## Why
 
-First sub-phase of Phase 9 (frontend read-path hydration, Finding 2 from `out/next-phase-analysis.md`). `PropertyDiscovery.tsx` and `PublicPropertyDetail.tsx` were chosen to go first because their backing routes (`GET /properties`, `GET /properties/[id]`) were already fully built and tested in Phase 1 — lowest risk, no new backend work needed.
+First sub-phase of Phase 9 (frontend read-path hydration, Finding 2 from `docs/development-history/next-phase-analysis.md`). `PropertyDiscovery.tsx` and `PublicPropertyDetail.tsx` were chosen to go first because their backing routes (`GET /properties`, `GET /properties/[id]`) were already fully built and tested in Phase 1 — lowest risk, no new backend work needed.
 
 ## What was built
 

@@ -4,7 +4,7 @@
 
 ## Why
 
-Final phase of the roadmap: five recurring maintenance jobs (rent generation, overdue detection, scheduled maintenance dispatch, access-code expiry, payment-reliability scoring) that keep the data model current without a human triggering every state transition by hand. The original plan left this high-level; a full plan was written to `out/phase-8-background-workers-plan.md` before implementation, per this project's convention for non-trivial phases.
+Final phase of the roadmap: five recurring maintenance jobs (rent generation, overdue detection, scheduled maintenance dispatch, access-code expiry, payment-reliability scoring) that keep the data model current without a human triggering every state transition by hand. The original plan left this high-level; a full plan was written to `docs/development-history/phase-8-background-workers-plan.md` before implementation, per this project's convention for non-trivial phases.
 
 ## Trigger mechanism
 
@@ -85,4 +85,4 @@ Actually scheduling these to run automatically (a real Vercel Cron config, cront
 
 ## Roadmap status
 
-This completes the full `out/domain-api-implementation-plan.md` roadmap: Phase 0-pre through Phase 8, all built, type-checked, built, and live-tested against the real dev server and seeded database.
+This completes the full `docs/development-history/domain-api-implementation-plan.md` roadmap: Phase 0-pre through Phase 8, all built, type-checked, built, and live-tested against the real dev server and seeded database.

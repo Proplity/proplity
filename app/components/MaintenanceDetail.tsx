@@ -44,10 +44,23 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
   const entries: { text: string; time: string }[] = [
     { text: 'Request submitted', time: new Date(request.createdAt).toLocaleString() },
   ];
-  if (request.vendor) entries.push({ text: `Assigned to ${request.vendor.name}`, time: new Date(request.updatedAt).toLocaleString() });
-  if (request.scheduledFor) entries.push({ text: 'Visit scheduled', time: new Date(request.scheduledFor).toLocaleString() });
-  if (request.vendorNotes) entries.push({ text: request.vendorNotes, time: new Date(request.updatedAt).toLocaleString() });
-  if (request.completedAt) entries.push({ text: 'Marked completed', time: new Date(request.completedAt).toLocaleString() });
+  if (request.vendor)
+    entries.push({
+      text: `Assigned to ${request.vendor.name}`,
+      time: new Date(request.updatedAt).toLocaleString(),
+    });
+  if (request.scheduledFor)
+    entries.push({
+      text: 'Visit scheduled',
+      time: new Date(request.scheduledFor).toLocaleString(),
+    });
+  if (request.vendorNotes)
+    entries.push({ text: request.vendorNotes, time: new Date(request.updatedAt).toLocaleString() });
+  if (request.completedAt)
+    entries.push({
+      text: 'Marked completed',
+      time: new Date(request.completedAt).toLocaleString(),
+    });
   return entries.reverse();
 }
 
@@ -70,7 +83,10 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
   if (!request) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        >
           <ArrowLeft className="h-5 w-5" />
           Back to Maintenance
         </button>
@@ -109,7 +125,11 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
     }
     setActionError(null);
     try {
-      await updateRequest({ status: 'COMPLETED', completionProofUrl: completionProofUrl.trim(), finalCost: cost });
+      await updateRequest({
+        status: 'COMPLETED',
+        completionProofUrl: completionProofUrl.trim(),
+        finalCost: cost,
+      });
       setShowCompleteModal(false);
       refetch();
     } catch {
@@ -130,20 +150,27 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
 
   return (
     <div className="p-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+      <button
+        onClick={onBack}
+        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
         <ArrowLeft className="h-5 w-5" />
         Back to Maintenance
       </button>
 
       {actionError && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{actionError}</div>
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {actionError}
+        </div>
       )}
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
         <div className="mb-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${currentPriority.color}-50`}>
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${currentPriority.color}-50`}
+            >
               <Wrench className={`h-6 w-6 text-${currentPriority.color}-600`} />
             </div>
             <div>
@@ -213,7 +240,9 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
               <div>
                 <p className="mb-1 text-gray-600">Scheduled For</p>
                 <p className="font-semibold">
-                  {request.scheduledFor ? new Date(request.scheduledFor).toLocaleDateString() : 'Not scheduled'}
+                  {request.scheduledFor
+                    ? new Date(request.scheduledFor).toLocaleDateString()
+                    : 'Not scheduled'}
                 </p>
               </div>
             </div>
@@ -231,7 +260,10 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
             {request.mediaUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {request.mediaUrls.map((url, i) => (
-                  <div key={i} className="flex aspect-video items-center justify-center rounded-lg border border-gray-200 bg-gray-100">
+                  <div
+                    key={i}
+                    className="flex aspect-video items-center justify-center rounded-lg border border-gray-200 bg-gray-100"
+                  >
                     <div className="text-center">
                       <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                       <p className="text-xs text-gray-600">{url}</p>
@@ -285,7 +317,9 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
                 <Phone className="h-4 w-4" />
                 {request.tenant?.phoneNumber ?? 'N/A'}
               </div>
-              <div className="flex items-center gap-2 break-all text-gray-600">{request.tenant?.email}</div>
+              <div className="flex items-center gap-2 break-all text-gray-600">
+                {request.tenant?.email}
+              </div>
             </div>
           </div>
 
@@ -397,7 +431,10 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
 
       {/* Assign Vendor Modal */}
       {showAssignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAssignModal(false)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowAssignModal(false)}
+        >
           <div
             className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -409,7 +446,10 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
                   Assigning for: {request.title} — {request.unit?.property?.name}
                 </p>
               </div>
-              <button onClick={() => setShowAssignModal(false)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100">
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+              >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -443,22 +483,30 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
                       <div>
                         <p className="font-medium text-gray-900">{vendor.businessName}</p>
                         <p className="mt-0.5 text-xs text-gray-500">
-                          {vendor.categories.join(', ') || 'General'} {vendor.coverageArea ? `· ${vendor.coverageArea}` : ''}
+                          {vendor.categories.join(', ') || 'General'}{' '}
+                          {vendor.coverageArea ? `· ${vendor.coverageArea}` : ''}
                         </p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-3">
                           {vendor.rating != null ? (
                             <span className="flex items-center gap-0.5">
                               {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-3 w-3 ${i < Math.round(vendor.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${i < Math.round(vendor.rating!) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                />
                               ))}
-                              <span className="ml-1 text-xs text-gray-600">{vendor.rating.toFixed(1)}</span>
+                              <span className="ml-1 text-xs text-gray-600">
+                                {vendor.rating.toFixed(1)}
+                              </span>
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400">No ratings yet</span>
                           )}
                           <span className="text-xs text-gray-500">{vendor.jobsDone} jobs done</span>
                           {vendor.completionRate != null && (
-                            <span className="text-xs font-medium text-green-600">{vendor.completionRate}% completion</span>
+                            <span className="text-xs font-medium text-green-600">
+                              {vendor.completionRate}% completion
+                            </span>
                           )}
                         </div>
                       </div>
@@ -467,7 +515,9 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
                 </button>
               ))}
               {!vendorsLoading && filteredVendors.length === 0 && (
-                <p className="py-8 text-center text-sm text-gray-400">No vendors match your search.</p>
+                <p className="py-8 text-center text-sm text-gray-400">
+                  No vendors match your search.
+                </p>
               )}
             </div>
           </div>
@@ -476,8 +526,14 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
 
       {/* Mark Completed Modal */}
       {showCompleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCompleteModal(false)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowCompleteModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="mb-4 text-lg font-semibold">Mark as Completed</h2>
             <div className="space-y-4">
               <div>

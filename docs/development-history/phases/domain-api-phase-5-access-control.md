@@ -8,7 +8,7 @@ Fifth domain API: tenant-issued visitor access codes and gate-side verification,
 
 ## What was built
 
-Three routes, exactly as scoped in `out/domain-api-implementation-plan.md`'s Phase 5 section:
+Three routes, exactly as scoped in `docs/development-history/domain-api-implementation-plan.md`'s Phase 5 section:
 
 - **`app/api/v1/access-codes/route.ts`** — `GET` (`?unitId=` required, optional `?status=`) for the unit's creating tenant or `canManageProperty()`; `POST` (`TENANT`, must have an `ACTIVE` lease on the unit — the same guard pattern as Phase 2's maintenance requests) enforces per-unit uniqueness among `ACTIVE` codes in application code, since `AccessCode.code` has no DB-level `@unique` (unlike `Invoice.invoiceNumber`) — a collision returns `409 CODE_CONFLICT` rather than silently overwriting or auto-regenerating.
 - **`app/api/v1/access-codes/[id]/route.ts`** — `GET` (creator or `canManageProperty()`); `DELETE` is **soft-revoke only** (`status: 'REVOKED', revokedAt: new Date()`), gated the same way — never `prisma.accessCode.delete()`, since `AccessLog.accessCode` is `onDelete: Cascade` and a hard delete would wipe the unit's entire access audit trail (rule 1).
@@ -44,4 +44,4 @@ Full live end-to-end pass against the real dev server and seeded database, using
 
 ## Next up
 
-Phase 6 — Communications API (`app/api/v1/conversations/*`), already spec'd in `out/domain-api-implementation-plan.md`. This is the last domain-API phase before Phase 7 (frontend integration) and Phase 8 (background workers).
+Phase 6 — Communications API (`app/api/v1/conversations/*`), already spec'd in `docs/development-history/domain-api-implementation-plan.md`. This is the last domain-API phase before Phase 7 (frontend integration) and Phase 8 (background workers).

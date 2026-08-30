@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -40,7 +41,9 @@ export const GET = withAuth(
           take,
           include: {
             unit: { include: { property: true } },
-            tenant: { select: { id: true, name: true, email: true, phoneNumber: true, avatarUrl: true } },
+            tenant: {
+              select: { id: true, name: true, email: true, phoneNumber: true, avatarUrl: true },
+            },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -89,9 +92,19 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, createLeaseSchema);
       if (!validated.success) return validated.response;
-      const { unitId, tenantId: inputTenantId, tenantEmail, tenantName, tenantPhone, ...rest } = validated.data;
+      const {
+        unitId,
+        tenantId: inputTenantId,
+        tenantEmail,
+        tenantName,
+        tenantPhone,
+        ...rest
+      } = validated.data;
 
-      const unit = await prisma.unit.findUnique({ where: { id: unitId }, include: { property: true } });
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        include: { property: true },
+      });
       if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
       if (!canManageProperty(session, unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -103,7 +116,10 @@ export const POST = withAuth(
       if (tenantId) {
         const tenant = await prisma.user.findUnique({ where: { id: tenantId } });
         if (!tenant || tenant.role !== 'TENANT') {
-          return NextResponse.json({ error: 'tenantId must reference a TENANT user' }, { status: 400 });
+          return NextResponse.json(
+            { error: 'tenantId must reference a TENANT user' },
+            { status: 400 },
+          );
         }
       } else {
         // tenantEmail path: reuse an existing, already-verified TENANT if
@@ -140,13 +156,17 @@ export const POST = withAuth(
           const rawToken = crypto.randomBytes(32).toString('hex');
           const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
           await prisma.verificationToken.create({
-            data: { userId: newTenant.id, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+            data: {
+              userId: newTenant.id,
+              tokenHash,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
           });
 
           await sendEmail({
             to: newTenant.email,
             subject: 'You have been added as a tenant on Proplity',
-            body: `Hi ${newTenant.name},\n\nYou've been added as a tenant on Proplity. Set your password and activate your account:\n\nhttp://localhost:3000/verify-email?token=${rawToken}\n\nThis link expires in 7 days.`,
+            body: `Hi ${newTenant.name},\n\nYou've been added as a tenant on Proplity. Set your password and activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`)}\n\nThis link expires in 7 days.`,
           });
 
           tenantId = newTenant.id;

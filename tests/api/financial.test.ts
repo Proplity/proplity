@@ -33,7 +33,11 @@ describe('invoices: list scoping', () => {
     const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
 
     await createInvoice({ leaseId: lease.id, description: 'rent invoice' });
-    await createInvoice({ maintenanceRequestId: request.id, type: 'MAINTENANCE', description: 'job invoice' });
+    await createInvoice({
+      maintenanceRequestId: request.id,
+      type: 'MAINTENANCE',
+      description: 'job invoice',
+    });
     const otherTenant = await createUser(Role.TENANT);
     await createInvoice({ userId: otherTenant.id, description: 'direct invoice, unrelated' });
 
@@ -79,7 +83,7 @@ describe('invoices: create', () => {
     }
   });
 
-  it('requires at least one of leaseId/maintenanceRequestId/userId (Prisma can\'t express this)', async () => {
+  it("requires at least one of leaseId/maintenanceRequestId/userId (Prisma can't express this)", async () => {
     const admin = await createUser(Role.ADMIN);
     const cookie = await authCookie(admin.id, admin.role);
     const res = await apiFetch('/api/v1/invoices', {
@@ -102,7 +106,12 @@ describe('invoices: create', () => {
     const wrongType = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie: vendorCookie,
-      body: { maintenanceRequestId: request.id, type: 'RENT', amount: 5000, dueDate: new Date().toISOString() },
+      body: {
+        maintenanceRequestId: request.id,
+        type: 'RENT',
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
     });
     expect(wrongType.status).toBe(403);
 
@@ -110,14 +119,24 @@ describe('invoices: create', () => {
     const notAssigned = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie: otherVendorCookie,
-      body: { maintenanceRequestId: request.id, type: 'MAINTENANCE', amount: 5000, dueDate: new Date().toISOString() },
+      body: {
+        maintenanceRequestId: request.id,
+        type: 'MAINTENANCE',
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
     });
     expect(notAssigned.status).toBe(403);
 
     const ok = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie: vendorCookie,
-      body: { maintenanceRequestId: request.id, type: 'MAINTENANCE', amount: 5000, dueDate: new Date().toISOString() },
+      body: {
+        maintenanceRequestId: request.id,
+        type: 'MAINTENANCE',
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
     });
     expect(ok.status).toBe(201);
     expect(ok.body.data.invoiceNumber).toMatch(/^INV-/);
@@ -179,7 +198,7 @@ describe('invoices: [id] access and PATCH', () => {
     expect(allowed.body.data.status).toBe('CANCELLED');
   });
 
-  it('PATCH also requires the MANAGER to actually manage the invoice\'s property, not just hold the role', async () => {
+  it("PATCH also requires the MANAGER to actually manage the invoice's property, not just hold the role", async () => {
     const realManager = await createUser(Role.MANAGER);
     const strangerManager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: realManager.id });
@@ -382,7 +401,9 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.activated).toBe(true);
 
-    const subscription = await testPrisma.subscription.findUnique({ where: { userId: landlord.id } });
+    const subscription = await testPrisma.subscription.findUnique({
+      where: { userId: landlord.id },
+    });
     expect(subscription?.tier).toBe('FREE');
     expect(subscription?.status).toBe('ACTIVE');
 
@@ -402,7 +423,9 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     expect(monthly.status).toBe(201);
     expect(monthly.body.data.amount).toBe(29_999);
 
-    const invoice = await testPrisma.invoice.findUnique({ where: { id: monthly.body.data.invoiceId } });
+    const invoice = await testPrisma.invoice.findUnique({
+      where: { id: monthly.body.data.invoiceId },
+    });
     expect(invoice?.type).toBe('SUBSCRIPTION');
     expect(invoice?.userId).toBe(manager.id);
     expect(invoice?.amount).toBe(29_999);
@@ -454,7 +477,9 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     });
     expect(res.status).toBe(200);
 
-    const subscription = await testPrisma.subscription.findUnique({ where: { userId: manager.id } });
+    const subscription = await testPrisma.subscription.findUnique({
+      where: { userId: manager.id },
+    });
     expect(subscription?.tier).toBe('PRO');
     expect(subscription?.status).toBe('ACTIVE');
     expect(subscription?.currentPeriodEnd).not.toBeNull();
@@ -495,7 +520,7 @@ describe('payments: autopay', () => {
     expect(res.status).toBe(403);
   });
 
-  it('creates a mandate, lists only the caller\'s ACTIVE mandates, and DELETE soft-cancels rather than removing the row', async () => {
+  it("creates a mandate, lists only the caller's ACTIVE mandates, and DELETE soft-cancels rather than removing the row", async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
@@ -521,7 +546,9 @@ describe('payments: autopay', () => {
     expect(deleted.body.data.status).toBe('CANCELLED');
 
     // Soft-cancel, not a hard delete -- the row must still exist.
-    const stillThere = await testPrisma.autoPayMandate.findUnique({ where: { id: created.body.data.id } });
+    const stillThere = await testPrisma.autoPayMandate.findUnique({
+      where: { id: created.body.data.id },
+    });
     expect(stillThere).not.toBeNull();
     expect(stillThere?.status).toBe('CANCELLED');
 

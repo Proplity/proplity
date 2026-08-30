@@ -41,5 +41,7 @@ export function useCreateAdCampaign(propertyId: string) {
 }
 
 export function useCancelAdCampaign(propertyId: string) {
-  return useApiSubmit((adId: string) => api.adCampaigns.cancel(propertyId, adId).then((res) => res.data.data));
+  return useApiSubmit((adId: string) =>
+    api.adCampaigns.cancel(propertyId, adId).then((res) => res.data.data),
+  );
 }

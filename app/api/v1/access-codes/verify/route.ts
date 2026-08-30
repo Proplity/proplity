@@ -6,20 +6,37 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { getClientIp } from '@/lib/auth/rateLimit';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 
 const verifySchema = z.object({
   unitId: z.string(),
-  code: z.string(),
+  // Mirrors the length floor the create route applies. Without it this route
+  // would happily evaluate a 1-character guess.
+  code: z.string().min(4),
 });
 
 // Gate-side verification -- treated as a staff action (ADMIN/MANAGER), since
 // there's no dedicated device/kiosk auth mechanism in this codebase yet.
 export const POST = withAuth(
-  async (req, { session: _session }) => {
+  async (req, { session }) => {
     try {
       const validated = await validateBody(req, verifySchema);
       if (!validated.success) return validated.response;
       const { unitId, code } = validated.data;
+
+      // Property scoping. Every other access-code route gates on
+      // canManageProperty(); this one did not, which let any MANAGER verify
+      // -- and, because a GRANTED single-use code is consumed below, silently
+      // BURN -- gate codes on units belonging to a property they don't
+      // manage, while writing to that tenant's access audit trail.
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        select: { property: { select: { managerId: true, landlordId: true } } },
+      });
+      if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+      if (!canManageProperty(session, unit.property)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       // Most-recently-created match: codes have no DB-level @unique, so in
       // principle more than one row could exist for the same unit+code
@@ -44,7 +61,10 @@ export const POST = withAuth(
 
       if (accessCode.status === 'REVOKED') {
         action = 'REVOKED';
-      } else if (accessCode.status === 'EXPIRED' || (accessCode.validUntil !== null && accessCode.validUntil < now)) {
+      } else if (
+        accessCode.status === 'EXPIRED' ||
+        (accessCode.validUntil !== null && accessCode.validUntil < now)
+      ) {
         action = 'EXPIRED_ATTEMPT';
       } else if (
         accessCode.status === 'ACTIVE' &&
@@ -80,7 +100,9 @@ export const POST = withAuth(
           : []),
       ]);
 
-      return NextResponse.json({ data: { granted, action, guestName: accessCode.guestName, logId: log.id } });
+      return NextResponse.json({
+        data: { granted, action, guestName: accessCode.guestName, logId: log.id },
+      });
     } catch (err) {
       return handleApiError(err);
     }

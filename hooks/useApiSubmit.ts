@@ -10,7 +10,9 @@ function extractErrorMessage(err: unknown): string {
 
 // Shared submit/submitting/error shape for every write hook -- avoids
 // re-deriving the same three lines of state in each of the 5 domain hooks.
-export function useApiSubmit<Args extends unknown[], Result>(fn: (...args: Args) => Promise<Result>) {
+export function useApiSubmit<Args extends unknown[], Result>(
+  fn: (...args: Args) => Promise<Result>,
+) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

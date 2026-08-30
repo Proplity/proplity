@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, DollarSign, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
-import {
-  mockInvoiceJobDetails,
-  mockInvoiceVendorInfo as vendorInfo,
-} from '../store/mockData';
+import { mockInvoiceJobDetails, mockInvoiceVendorInfo as vendorInfo } from '../store/mockData';
 import { useCreateInvoice } from '@/hooks/useInvoices';
 
 interface VendorCreateInvoiceProps {
@@ -78,7 +75,10 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
     // and rendered as text into description instead of being lost.
     const description = lineItems
       .filter((item) => item.description)
-      .map((item) => `${item.description} — ${item.quantity} x ₦${item.rate.toLocaleString()} = ₦${item.amount.toLocaleString()}`)
+      .map(
+        (item) =>
+          `${item.description} — ${item.quantity} x ₦${item.rate.toLocaleString()} = ₦${item.amount.toLocaleString()}`,
+      )
       .join('\n');
 
     try {
@@ -112,9 +112,7 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="mb-2 text-3xl font-bold">INVOICE</h1>
-              <p className="text-sm text-gray-600">
-                For job #{jobId.slice(0, 8)}
-              </p>
+              <p className="text-sm text-gray-600">For job #{jobId.slice(0, 8)}</p>
               <p className="text-sm text-gray-600">
                 Date:{' '}
                 {new Date().toLocaleDateString('en-US', {

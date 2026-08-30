@@ -83,8 +83,7 @@ export async function runOverdueFlagger(): Promise<{
           where: { type: 'LATE_FEE', description: { contains: marker } },
         });
         if (!existingLateFee) {
-          const label =
-            lease.lateFeeType === 'FIXED' ? `flat fee` : `${lease.lateFeePercentage}%`;
+          const label = lease.lateFeeType === 'FIXED' ? `flat fee` : `${lease.lateFeePercentage}%`;
           await prisma.invoice.create({
             data: {
               leaseId: invoice.leaseId!,

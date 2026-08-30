@@ -4,7 +4,7 @@
 
 ## Why
 
-First half of sub-phase 3 (re-scoped mid-implementation — see `out/phase-9-frontend-hydration-plan.md`). Covers the tenant/maintenance operational core a manager uses day to day: `Dashboard.tsx`, `TenantManagement.tsx`, `TenantDetail.tsx`, `MaintenanceBoard.tsx`, `MaintenanceDetail.tsx`. Split out from the full 8-component sub-phase 3 because that was too much to verify as one unit — `PropertyDetail.tsx`, `LandlordDashboard.tsx`, and the 929-line `DashboardBreakdownPage.tsx` are deferred to sub-phase 3b.
+First half of sub-phase 3 (re-scoped mid-implementation — see `docs/development-history/phase-9-frontend-hydration-plan.md`). Covers the tenant/maintenance operational core a manager uses day to day: `Dashboard.tsx`, `TenantManagement.tsx`, `TenantDetail.tsx`, `MaintenanceBoard.tsx`, `MaintenanceDetail.tsx`. Split out from the full 8-component sub-phase 3 because that was too much to verify as one unit — `PropertyDetail.tsx`, `LandlordDashboard.tsx`, and the 929-line `DashboardBreakdownPage.tsx` are deferred to sub-phase 3b.
 
 ## Backend changes
 

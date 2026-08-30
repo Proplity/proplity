@@ -8,7 +8,7 @@ First real consumer of Phase 0's `lib/api/` utilities, and the first domain API 
 
 ## What was built
 
-Seven routes, exactly as scoped in `out/domain-api-implementation-plan.md`'s Phase 1 section:
+Seven routes, exactly as scoped in `docs/development-history/domain-api-implementation-plan.md`'s Phase 1 section:
 
 - **`app/api/v1/properties/route.ts`** — `GET` (public, paginated, filtered by `city`/`state`/`type`/`trustScoreMin`/`powerReliabilityMin`/`floodRiskMax`/`minPrice`/`maxPrice`/`minBedrooms`, the price/bedroom filters via a `units: { some: {...} } }` relation query); `POST` (`ADMIN`/`MANAGER`/`LANDLORD` only, auto-assigns `managerId`/`landlordId` from the session when the caller is that role and didn't specify one, and — the one deliberate behavior enforced here — always creates with `isPublished: false` regardless of what the caller sends, since `moderationStatus` defaults `PENDING_REVIEW` and there's no AI/admin approval flow yet to earn a `true`).
 - **`app/api/v1/properties/[id]/route.ts`** — `GET` (public; property + units + latest neighbourhood report + reviews with a `verified` flag derived from `leaseId !== null` + aggregate rating stats); `PATCH`/`DELETE` gated by a new `canManageProperty()` helper (the property's own `managerId`/`landlordId`, or `ADMIN`). `DELETE` is soft-archive only (`isPublished: false`) — never `prisma.property.delete()`.
@@ -47,4 +47,4 @@ Full live end-to-end pass against a real dev server and the seeded database (not
 
 ## Next up
 
-Phase 2 — Maintenance & Operations API (`app/api/v1/maintenance/*`), already spec'd in `out/domain-api-implementation-plan.md`.
+Phase 2 — Maintenance & Operations API (`app/api/v1/maintenance/*`), already spec'd in `docs/development-history/domain-api-implementation-plan.md`.

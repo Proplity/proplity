@@ -4,11 +4,11 @@
 
 ## Why
 
-Every domain route planned in `out/domain-api-implementation-plan.md` (Properties, Maintenance, Leases, Financial, Access Codes, Communications) depends on the same four pieces of plumbing: an auth/RBAC guard, pagination parsing, Prisma error mapping, and Zod body validation. `lib/api/` didn't exist yet — this was the genuinely next unstarted layer per `CURRENT_STATE.md`'s own status table.
+Every domain route planned in `docs/development-history/domain-api-implementation-plan.md` (Properties, Maintenance, Leases, Financial, Access Codes, Communications) depends on the same four pieces of plumbing: an auth/RBAC guard, pagination parsing, Prisma error mapping, and Zod body validation. `lib/api/` didn't exist yet — this was the genuinely next unstarted layer per `CURRENT_STATE.md`'s own status table.
 
 ## What was built
 
-Four files in `lib/api/`, exactly as scoped in the Phase 0 section of `out/domain-api-implementation-plan.md`, reusing the existing `getServerSession()` (`lib/auth/session.ts`) rather than reinventing session handling:
+Four files in `lib/api/`, exactly as scoped in the Phase 0 section of `docs/development-history/domain-api-implementation-plan.md`, reusing the existing `getServerSession()` (`lib/auth/session.ts`) rather than reinventing session handling:
 
 - **`lib/api/withAuth.ts`** — wraps a route handler, 401s if no session, 403s if `opts.roles` is given and the session's role isn't in it, otherwise calls the handler with `{ session: { sub, role } }`.
 - **`lib/api/pagination.ts`** — `parsePagination(searchParams)` → `{ skip, take, page, limit }` (page/limit from query params, limit capped at 100); `buildMeta(total, page, limit)` → `{ total, page, limit, hasMore }`.
@@ -36,4 +36,4 @@ One real bug hit while building the scaffold itself, unrelated to the four libra
 
 ## Next up
 
-Phase 1 — Properties & Units API (`app/api/v1/properties/*`), the first real consumer of all four `lib/api/` utilities. Full route-by-route spec already written in `out/domain-api-implementation-plan.md`.
+Phase 1 — Properties & Units API (`app/api/v1/properties/*`), the first real consumer of all four `lib/api/` utilities. Full route-by-route spec already written in `docs/development-history/domain-api-implementation-plan.md`.

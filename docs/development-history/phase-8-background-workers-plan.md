@@ -55,7 +55,7 @@ This is a heuristic, not a prediction model — flagged clearly in the phase doc
 - `pnpm exec tsc --noEmit`, `pnpm build`.
 - Live-test each worker against the real seeded database: manufacture the exact condition each one looks for (an overdue invoice, a due maintenance schedule, an expired access code, a lease with a real payment history), run the worker, confirm the correct row-level change, confirm re-running immediately makes no further change (idempotency), clean up test data afterward.
 - Confirm the `CRON_SECRET` guard actually rejects an unauthenticated `POST` and accepts a correctly-authenticated one.
-- Write `out/phases/domain-api-phase-8-background-workers.md` once done, per the standing convention.
+- Write `docs/development-history/phases/domain-api-phase-8-background-workers.md` once done, per the standing convention.
 
 ## Not in scope
 

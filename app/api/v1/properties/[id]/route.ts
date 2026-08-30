@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PropertyType } from '@prisma/client';
+import { PropertyType, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import { getServerSession } from '@/lib/auth/session';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
+/**
+ * Visibility, in three tiers. This route stays *optionally* authenticated --
+ * PublicPropertyDetail browses it logged-out and must keep working -- but an
+ * unpublished listing is no longer readable by anyone who merely knows the id.
+ *
+ * A property is readable when ANY of these hold:
+ *   1. it is published (the public tier -- mirrors the list endpoint's
+ *      `isPublished: true` filter, which is the same gate. `isPublished` can
+ *      only ever be flipped true after ADMIN approval, see PATCH below, so
+ *      published implies moderation-approved);
+ *   2. the caller manages it (its own manager/landlord, or an ADMIN) -- their
+ *      dashboard has to show a pending-review listing;
+ *   3. the caller is a tenant living in it. A landlord can unpublish a
+ *      property that still has sitting tenants, and the tenant-facing property
+ *      page (announcements, unit detail) reads this same endpoint -- so
+ *      occupancy, not publication, is what governs their access.
+ *
+ * Anything else 404s rather than 403s: a 403 would confirm the id exists,
+ * which is exactly the fact being protected.
+ */
 export async function GET(_req: NextRequest, { params }: RouteCtx) {
   try {
     const { id } = await params;
@@ -21,6 +42,26 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
       },
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+
+    if (!property.isPublished) {
+      const jwtSession = await getServerSession();
+      if (!jwtSession) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+      const session = { sub: jwtSession.sub, role: jwtSession.role as Role };
+
+      let visible = canManageProperty(session, property);
+      if (!visible) {
+        // Any lease at all, not just ACTIVE: a tenant mid-renewal or just
+        // past their end date still needs the property's announcements and
+        // their own unit's history.
+        const occupancy = await prisma.lease.findFirst({
+          where: { tenantId: session.sub, unit: { propertyId: id } },
+          select: { id: true },
+        });
+        visible = occupancy !== null;
+      }
+
+      if (!visible) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
 
     const { reviews, units, ...rest } = property;
     const ratings = reviews.map((r) => r.rating);
@@ -80,27 +121,36 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (validated.data.managerId !== undefined || validated.data.landlordId !== undefined) {
       if (session.role !== 'ADMIN') {
         return NextResponse.json(
-          { error: 'Only an admin may reassign a property\'s manager or landlord' },
+          { error: "Only an admin may reassign a property's manager or landlord" },
           { status: 403 },
         );
       }
       if (validated.data.managerId) {
         const manager = await prisma.user.findUnique({ where: { id: validated.data.managerId } });
         if (!manager || manager.role !== 'MANAGER') {
-          return NextResponse.json({ error: 'managerId must reference a MANAGER user' }, { status: 400 });
+          return NextResponse.json(
+            { error: 'managerId must reference a MANAGER user' },
+            { status: 400 },
+          );
         }
       }
       if (validated.data.landlordId) {
         const landlord = await prisma.user.findUnique({ where: { id: validated.data.landlordId } });
         if (!landlord || landlord.role !== 'LANDLORD') {
-          return NextResponse.json({ error: 'landlordId must reference a LANDLORD user' }, { status: 400 });
+          return NextResponse.json(
+            { error: 'landlordId must reference a LANDLORD user' },
+            { status: 400 },
+          );
         }
       }
     }
 
     if (validated.data.isPublished === true && property.moderationStatus !== 'APPROVED') {
       return NextResponse.json(
-        { error: 'This listing must be approved by an admin before it can be published', code: 'NOT_APPROVED' },
+        {
+          error: 'This listing must be approved by an admin before it can be published',
+          code: 'NOT_APPROVED',
+        },
         { status: 409 },
       );
     }

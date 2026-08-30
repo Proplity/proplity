@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Role } from '@prisma/client';
+import { Role, LeaseStatus } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
@@ -17,7 +17,7 @@ describe('leases: list (GET /leases)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('scopes by role: tenant sees own, manager sees their properties\', admin sees all', async () => {
+  it("scopes by role: tenant sees own, manager sees their properties', admin sees all", async () => {
     const manager = await createUser(Role.MANAGER);
     const otherManager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
@@ -58,7 +58,14 @@ describe('leases: create (POST /leases)', () => {
     const res = await apiFetch('/api/v1/leases', {
       method: 'POST',
       cookie,
-      body: { unitId: 'x', startDate: new Date(), endDate: new Date(), rentAmount: 1, deposit: 0, tenantId: 'x' },
+      body: {
+        unitId: 'x',
+        startDate: new Date(),
+        endDate: new Date(),
+        rentAmount: 1,
+        deposit: 0,
+        tenantId: 'x',
+      },
     });
     expect(res.status).toBe(403);
   });
@@ -192,7 +199,9 @@ describe('leases: create (POST /leases)', () => {
     // recovered here to drive a real verify-email round trip. Login's
     // PENDING_VERIFICATION 403 is already covered directly in auth.test.ts;
     // what this route is actually responsible for is these two DB effects.
-    const newUser = await testPrisma.user.findUnique({ where: { email: 'brand-new-tenant@test.local' } });
+    const newUser = await testPrisma.user.findUnique({
+      where: { email: 'brand-new-tenant@test.local' },
+    });
     expect(newUser?.status).toBe('PENDING_VERIFICATION');
     const token = await testPrisma.verificationToken.findUnique({ where: { userId: newUser!.id } });
     expect(token).not.toBeNull();
@@ -596,5 +605,111 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
     const list = await apiFetch(`/api/v1/leases/${lease.id}/notes`, { cookie });
     expect(list.status).toBe(200);
     expect(list.body.data.map((n: any) => n.body)).toContain('Called tenant about late rent.');
+  });
+});
+
+describe('leases: a unit cannot be occupied by two tenants at once', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function occupiedUnit() {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const sitting = await createUser(Role.TENANT);
+    const activeLease = await createLease(unit.id, sitting.id, { status: LeaseStatus.ACTIVE });
+    return { manager, property, unit, sitting, activeLease };
+  }
+
+  it('409s when activating a second lease on a unit that already has an ACTIVE one', async () => {
+    const { manager, unit, activeLease } = await occupiedUnit();
+    const newcomer = await createUser(Role.TENANT);
+    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+
+    const res = await apiFetch(`/api/v1/leases/${pending.id}`, {
+      method: 'PATCH',
+      cookie: await authCookie(manager.id, manager.role),
+      body: { status: 'ACTIVE' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('UNIT_OCCUPIED');
+    expect(res.body.conflictingLeaseId).toBe(activeLease.id);
+  });
+
+  it('rolls the whole activation back -- the rejected lease stays PENDING', async () => {
+    const { manager, unit } = await occupiedUnit();
+    const newcomer = await createUser(Role.TENANT);
+    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+
+    await apiFetch(`/api/v1/leases/${pending.id}`, {
+      method: 'PATCH',
+      cookie: await authCookie(manager.id, manager.role),
+      body: { status: 'ACTIVE' },
+    });
+
+    // The lease.update runs BEFORE the guard inside the transaction, so this
+    // asserts the rollback actually happened rather than leaving a half-
+    // applied activation behind.
+    const after = await testPrisma.lease.findUnique({ where: { id: pending.id } });
+    expect(after?.status).toBe('PENDING');
+  });
+
+  it('still allows CREATING a second lease on an occupied unit (next year is signed early)', async () => {
+    const { manager, unit } = await occupiedUnit();
+    const newcomer = await createUser(Role.TENANT);
+
+    const res = await apiFetch('/api/v1/leases', {
+      method: 'POST',
+      cookie: await authCookie(manager.id, manager.role),
+      body: {
+        unitId: unit.id,
+        tenantId: newcomer.id,
+        startDate: new Date(Date.now() + 400 * 86_400_000).toISOString(),
+        endDate: new Date(Date.now() + 760 * 86_400_000).toISOString(),
+        rentAmount: 1_200_000,
+        deposit: 200_000,
+      },
+    });
+
+    expect(res.status).toBe(201);
+    // PENDING, not ACTIVE -- which is exactly why creation is safe to allow.
+    expect(res.body.data.status).toBe('PENDING');
+  });
+
+  it('allows activating the successor once the sitting lease is terminated', async () => {
+    const { manager, unit, activeLease } = await occupiedUnit();
+    const newcomer = await createUser(Role.TENANT);
+    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const terminated = await apiFetch(`/api/v1/leases/${activeLease.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'TERMINATED' },
+    });
+    expect(terminated.status).toBe(200);
+
+    const res = await apiFetch(`/api/v1/leases/${pending.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'ACTIVE' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('ACTIVE');
+
+    const unitRow = await testPrisma.unit.findUnique({ where: { id: unit.id } });
+    expect(unitRow?.status).toBe('OCCUPIED');
+  });
+
+  it("does not block activating a lease that is already the unit's only ACTIVE one (idempotent re-PATCH)", async () => {
+    const { manager, activeLease } = await occupiedUnit();
+    const res = await apiFetch(`/api/v1/leases/${activeLease.id}`, {
+      method: 'PATCH',
+      cookie: await authCookie(manager.id, manager.role),
+      body: { status: 'ACTIVE' },
+    });
+    expect(res.status).toBe(200);
   });
 });

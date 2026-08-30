@@ -1,8 +1,8 @@
 # Project audit — bugs, security issues, missing features, AI-claims-vs-reality
 
-**Date:** 2026-08-24. Produced by a 4-agent parallel scan of the whole codebase (API routes/workers, auth/security, AI-claims-vs-reality, PRD-vs-implementation) triggered by a direct user request, separate from the earlier component-level UI audit (see `out/phases/component-completeness-audit-and-fixes.md`). Findings that duplicate something CLAUDE.md already documents as known/deliberate are excluded — this file is genuinely new findings only.
+**Date:** 2026-08-24. Produced by a 4-agent parallel scan of the whole codebase (API routes/workers, auth/security, AI-claims-vs-reality, PRD-vs-implementation) triggered by a direct user request, separate from the earlier component-level UI audit (see `docs/development-history/phases/component-completeness-audit-and-fixes.md`). Findings that duplicate something CLAUDE.md already documents as known/deliberate are excluded — this file is genuinely new findings only.
 
-Status column: 🔧 = fixed in the same pass as this scan (see `out/phases/deferred-flows-and-security-fixes.md`), 📋 = logged only, not fixed this pass.
+Status column: 🔧 = fixed in the same pass as this scan (see `docs/development-history/phases/deferred-flows-and-security-fixes.md`), 📋 = logged only, not fixed this pass.
 
 ---
 

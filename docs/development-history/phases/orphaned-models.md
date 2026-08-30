@@ -4,7 +4,7 @@
 
 ## Why
 
-`out/project-audit.md` flagged five real, PRD-named Prisma models with zero application code — no routes, no UI, nothing reading or writing them despite being fully defined in the schema (relations, indexes, and even comments explaining their design were all already in place from whenever the schema was originally authored). User asked to build out all five in one pass rather than pick one at a time.
+`docs/development-history/project-audit.md` flagged five real, PRD-named Prisma models with zero application code — no routes, no UI, nothing reading or writing them despite being fully defined in the schema (relations, indexes, and even comments explaining their design were all already in place from whenever the schema was originally authored). User asked to build out all five in one pass rather than pick one at a time.
 
 No migration was needed — `prisma migrate status` confirmed the database was already in sync; these tables have existed since the original schema, just unused.
 
@@ -40,4 +40,4 @@ No migration was needed — `prisma migrate status` confirmed the database was a
 
 ## What's next
 
-Remaining from `out/project-audit.md`: repo-wide CSRF coverage, real AI/LLM integration, CSV/Excel import-export, e-signature support. A `BankAccount` UI (account-settings page) is now unblocked backend-wise whenever that surface gets built.
+Remaining from `docs/development-history/project-audit.md`: repo-wide CSRF coverage, real AI/LLM integration, CSV/Excel import-export, e-signature support. A `BankAccount` UI (account-settings page) is now unblocked backend-wise whenever that surface gets built.

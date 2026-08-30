@@ -76,7 +76,9 @@ describe('conversations: create -- MAINTENANCE_THREAD', () => {
     });
     expect(second.body.data.id).toBe(first.body.data.id);
 
-    const count = await testPrisma.conversation.count({ where: { maintenanceRequestId: request.id } });
+    const count = await testPrisma.conversation.count({
+      where: { maintenanceRequestId: request.id },
+    });
     expect(count).toBe(1);
   });
 });
@@ -114,7 +116,9 @@ describe('conversations: create -- LEASE_THREAD and COMMUNITY_DISCUSSION', () =>
     const participants = await testPrisma.conversationParticipant.findMany({
       where: { conversationId: created.body.data.id },
     });
-    expect(participants.map((p) => p.userId).sort()).toEqual([tenant.id, manager.id, landlord.id].sort());
+    expect(participants.map((p) => p.userId).sort()).toEqual(
+      [tenant.id, manager.id, landlord.id].sort(),
+    );
   });
 
   it('COMMUNITY_DISCUSSION requires an active lease or management on the property, and includes every active tenant', async () => {
@@ -215,7 +219,9 @@ describe('messages: participant gating, and the unreadCount lifecycle (Phase 9.5
     const conversation = await createConversation('DIRECT', [memberA.id, memberB.id]);
 
     const outsiderCookie = await authCookie(outsider.id, outsider.role);
-    const getRes = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, { cookie: outsiderCookie });
+    const getRes = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, {
+      cookie: outsiderCookie,
+    });
     expect(getRes.status).toBe(403);
 
     const postRes = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, {
@@ -245,7 +251,9 @@ describe('messages: participant gating, and the unreadCount lifecycle (Phase 9.5
     expect(recipientView.unreadCount).toBe(1);
 
     // Reading the thread marks it read (the Phase 9.5 fix).
-    const read = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, { cookie: recipientCookie });
+    const read = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, {
+      cookie: recipientCookie,
+    });
     expect(read.status).toBe(200);
     expect(read.body.data.map((m: any) => m.body)).toContain('Hello there');
 

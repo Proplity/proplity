@@ -45,7 +45,10 @@ export const PATCH = withAuth(
       if (!validated.success) return validated.response;
       const { id, isActive } = validated.data;
 
-      const category = await prisma.maintenanceCategory.update({ where: { id }, data: { isActive } });
+      const category = await prisma.maintenanceCategory.update({
+        where: { id },
+        data: { isActive },
+      });
       return NextResponse.json({ data: category });
     } catch (err) {
       return handleApiError(err);

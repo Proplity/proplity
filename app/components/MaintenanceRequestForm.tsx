@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Wrench, Upload, AlertCircle, Droplet, Zap, Wind, Home } from 'lucide-react';
-import { useMaintenanceCategories, useCreateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
+import {
+  useMaintenanceCategories,
+  useCreateMaintenanceRequest,
+} from '@/hooks/useMaintenanceRequests';
 import { useActiveLease } from '@/hooks/useLeases';
 
 interface MaintenanceRequestFormProps {
@@ -20,7 +23,11 @@ const CATEGORY_BUTTONS = [
   { name: 'Other', label: 'Other', icon: Wrench, color: 'gray' },
 ];
 
-const PRIORITY_MAP: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH' };
+const PRIORITY_MAP: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = {
+  low: 'LOW',
+  medium: 'MEDIUM',
+  high: 'HIGH',
+};
 
 export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestFormProps) {
   const { data: categories } = useMaintenanceCategories();
@@ -106,7 +113,9 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm font-medium">Your Unit</p>
               <p className="text-sm text-gray-600">
-                {activeLease ? `Unit ${activeLease.unitId.slice(0, 8)}` : 'Loading your active lease…'}
+                {activeLease
+                  ? `Unit ${activeLease.unitId.slice(0, 8)}`
+                  : 'Loading your active lease…'}
               </p>
             </div>
           </div>

@@ -10,9 +10,13 @@ import { canManageProperty } from '@/lib/api/propertyAccess';
 type RouteCtx = { params: Promise<{ id: string; equipmentId: string }> };
 
 async function loadOwned(propertyId: string, equipmentId: string) {
-  const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId }, include: { unit: true } });
+  const equipment = await prisma.equipment.findUnique({
+    where: { id: equipmentId },
+    include: { unit: true },
+  });
   if (!equipment) return null;
-  const belongsToProperty = equipment.propertyId === propertyId || equipment.unit?.propertyId === propertyId;
+  const belongsToProperty =
+    equipment.propertyId === propertyId || equipment.unit?.propertyId === propertyId;
   if (!belongsToProperty) return null;
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
   if (!property) return null;
@@ -39,7 +43,10 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, updateEquipmentSchema);
       if (!validated.success) return validated.response;
 
-      const updated = await prisma.equipment.update({ where: { id: equipmentId }, data: validated.data });
+      const updated = await prisma.equipment.update({
+        where: { id: equipmentId },
+        data: validated.data,
+      });
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);

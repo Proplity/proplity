@@ -65,7 +65,11 @@ function monthLabel(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short' });
 }
 
-export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: DashboardBreakdownPageProps) {
+export function DashboardBreakdownPage({
+  breakdownType,
+  onBack,
+  onNavigate,
+}: DashboardBreakdownPageProps) {
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -80,26 +84,46 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
   const iconStyle = ICON_STYLES[breakdownType];
 
   const activeLeases = allLeases.filter((l) => l.status === 'ACTIVE');
-  const terminatedLeases = allLeases.filter((l) => l.status === 'TERMINATED' || l.status === 'EXPIRED');
-  const openMaintenance = maintenanceRequests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
-  const allPayments = invoices.flatMap((invoice) => invoice.payments.map((payment) => ({ invoice, payment })));
+  const terminatedLeases = allLeases.filter(
+    (l) => l.status === 'TERMINATED' || l.status === 'EXPIRED',
+  );
+  const openMaintenance = maintenanceRequests.filter(
+    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
+  );
+  const allPayments = invoices.flatMap((invoice) =>
+    invoice.payments.map((payment) => ({ invoice, payment })),
+  );
 
   const now = new Date();
-  const thisMonthPayments = allPayments.filter((p) => monthKey(p.payment.paidAt) === monthKey(now.toISOString()));
+  const thisMonthPayments = allPayments.filter(
+    (p) => monthKey(p.payment.paidAt) === monthKey(now.toISOString()),
+  );
   const thisMonthCollected = thisMonthPayments.reduce((sum, p) => sum + p.payment.amount, 0);
 
   const collectedTotal = allPayments.reduce((sum, p) => sum + p.payment.amount, 0);
   const pendingTotal = invoices
     .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce((sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)), 0);
-  const collectionRate = collectedTotal + pendingTotal > 0 ? Math.round((collectedTotal / (collectedTotal + pendingTotal)) * 100) : 0;
+    .reduce(
+      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
+      0,
+    );
+  const collectionRate =
+    collectedTotal + pendingTotal > 0
+      ? Math.round((collectedTotal / (collectedTotal + pendingTotal)) * 100)
+      : 0;
 
   const renewalsUpcoming = activeLeases
-    .map((l) => ({ lease: l, daysLeft: Math.ceil((new Date(l.endDate).getTime() - now.getTime()) / MS_PER_DAY) }))
+    .map((l) => ({
+      lease: l,
+      daysLeft: Math.ceil((new Date(l.endDate).getTime() - now.getTime()) / MS_PER_DAY),
+    }))
     .filter((r) => r.daysLeft >= 0 && r.daysLeft <= 180)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  const heroStat: Record<BreakdownType, { title: string; subtitle: string; stat: string; statLabel: string }> = {
+  const heroStat: Record<
+    BreakdownType,
+    { title: string; subtitle: string; stat: string; statLabel: string }
+  > = {
     properties: {
       title: 'Total Properties',
       subtitle: 'All properties under your management portfolio',
@@ -135,15 +159,33 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
   const renderSummaryCards = () => {
     if (breakdownType === 'properties') {
-      const fullyOccupied = properties.filter((p) => p.units.length > 0 && p.units.every((u) => u.status === 'OCCUPIED')).length;
-      const partial = properties.filter((p) => p.units.some((u) => u.status === 'OCCUPIED') && p.units.some((u) => u.status !== 'OCCUPIED')).length;
+      const fullyOccupied = properties.filter(
+        (p) => p.units.length > 0 && p.units.every((u) => u.status === 'OCCUPIED'),
+      ).length;
+      const partial = properties.filter(
+        (p) =>
+          p.units.some((u) => u.status === 'OCCUPIED') &&
+          p.units.some((u) => u.status !== 'OCCUPIED'),
+      ).length;
       const vacant = properties.length - fullyOccupied - partial;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
-            { label: 'Fully Occupied', value: fullyOccupied, color: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Partially Occupied', value: partial, color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
-            { label: 'Vacant / Unpublished', value: vacant, color: 'bg-gray-50 border-gray-200 text-gray-600' },
+            {
+              label: 'Fully Occupied',
+              value: fullyOccupied,
+              color: 'bg-green-50 border-green-200 text-green-700',
+            },
+            {
+              label: 'Partially Occupied',
+              value: partial,
+              color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+            },
+            {
+              label: 'Vacant / Unpublished',
+              value: vacant,
+              color: 'bg-gray-50 border-gray-200 text-gray-600',
+            },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
               <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
@@ -161,7 +203,11 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
             { label: 'Paid', value: paid, color: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Due Soon', value: due, color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
+            {
+              label: 'Due Soon',
+              value: due,
+              color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+            },
             { label: 'Overdue', value: overdue, color: 'bg-red-50 border-red-200 text-red-700' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
@@ -176,9 +222,21 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
-            { label: 'Total Collected', value: `₦${collectedTotal.toLocaleString()}`, color: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Pending', value: `₦${pendingTotal.toLocaleString()}`, color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
-            { label: 'Collection Rate', value: `${collectionRate}%`, color: 'bg-blue-50 border-blue-200 text-blue-700' },
+            {
+              label: 'Total Collected',
+              value: `₦${collectedTotal.toLocaleString()}`,
+              color: 'bg-green-50 border-green-200 text-green-700',
+            },
+            {
+              label: 'Pending',
+              value: `₦${pendingTotal.toLocaleString()}`,
+              color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+            },
+            {
+              label: 'Collection Rate',
+              value: `${collectionRate}%`,
+              color: 'bg-blue-50 border-blue-200 text-blue-700',
+            },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
               <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
@@ -189,15 +247,25 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
       );
     }
     if (breakdownType === 'maintenance') {
-      const high = openMaintenance.filter((r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY').length;
+      const high = openMaintenance.filter(
+        (r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY',
+      ).length;
       const medium = openMaintenance.filter((r) => r.priority === 'MEDIUM').length;
       const low = openMaintenance.filter((r) => r.priority === 'LOW').length;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
             { label: 'High Priority', value: high, color: 'bg-red-50 border-red-200 text-red-700' },
-            { label: 'Medium Priority', value: medium, color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
-            { label: 'Low Priority', value: low, color: 'bg-gray-50 border-gray-200 text-gray-600' },
+            {
+              label: 'Medium Priority',
+              value: medium,
+              color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+            },
+            {
+              label: 'Low Priority',
+              value: low,
+              color: 'bg-gray-50 border-gray-200 text-gray-600',
+            },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
               <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
@@ -214,9 +282,21 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
-            { label: 'Urgent (< 30 days)', value: urgent, color: 'bg-red-50 border-red-200 text-red-700' },
-            { label: '30–90 Days', value: soon, color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
-            { label: '90–180 Days', value: later, color: 'bg-green-50 border-green-200 text-green-700' },
+            {
+              label: 'Urgent (< 30 days)',
+              value: urgent,
+              color: 'bg-red-50 border-red-200 text-red-700',
+            },
+            {
+              label: '30–90 Days',
+              value: soon,
+              color: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+            },
+            {
+              label: '90–180 Days',
+              value: later,
+              color: 'bg-green-50 border-green-200 text-green-700',
+            },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
               <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
@@ -234,7 +314,10 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
       <thead className="sticky top-0 z-10 bg-gray-50">
         <tr>
           {cols.map((col) => (
-            <th key={col} className="border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
+            <th
+              key={col}
+              className="border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase"
+            >
               {col}
             </th>
           ))}
@@ -244,7 +327,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
     if (breakdownType === 'properties') {
       const rows = properties.filter(
-        (p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.city.toLowerCase().includes(searchQuery.toLowerCase()),
+        (p) =>
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.city.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       return (
         <table className="w-full text-sm">
@@ -270,7 +355,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                     </div>
                   </td>
                   <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">{property.city}</td>
-                  <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">{property.units.length}</td>
+                  <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">
+                    {property.units.length}
+                  </td>
                   <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">
                     {occupied}/{property.units.length}
                   </td>
@@ -289,7 +376,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                   </td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <button
-                      onClick={() => onNavigate?.({ type: 'property-detail', propertyId: property.id })}
+                      onClick={() =>
+                        onNavigate?.({ type: 'property-detail', propertyId: property.id })
+                      }
                       className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                     >
                       View Details
@@ -305,24 +394,48 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
     if (breakdownType === 'tenants') {
       if (tenantTab === 'active') {
-        const rows = activeLeases.filter((l) => (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()));
+        const rows = activeLeases.filter((l) =>
+          (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+        );
         return (
           <table className="w-full text-sm">
-            {th(['Tenant', 'Property', 'Unit', 'Lease Start', 'Lease End', 'Rent Status', 'Actions'])}
+            {th([
+              'Tenant',
+              'Property',
+              'Unit',
+              'Lease Start',
+              'Lease End',
+              'Rent Status',
+              'Actions',
+            ])}
             <tbody className="divide-y divide-gray-100">
               {rows.map((lease) => {
                 const status = rentInfo(lease.id, invoices);
                 return (
                   <tr key={lease.id} className="transition-colors hover:bg-gray-50">
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.tenant?.name ?? 'Unknown'}</td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.property?.name ?? '—'}</td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.unitNumber}</td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{new Date(lease.startDate).toLocaleDateString()}</td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{new Date(lease.endDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                      {lease.tenant?.name ?? 'Unknown'}
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                      {lease.unit?.property?.name ?? '—'}
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                      {lease.unit?.unitNumber}
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                      {new Date(lease.startDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                      {new Date(lease.endDate).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-medium ${
-                          status === 'paid' ? 'bg-green-100 text-green-700' : status === 'due' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                          status === 'paid'
+                            ? 'bg-green-100 text-green-700'
+                            : status === 'due'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
                         }`}
                       >
                         {status.toUpperCase()}
@@ -343,17 +456,27 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
           </table>
         );
       }
-      const rows = terminatedLeases.filter((l) => (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()));
+      const rows = terminatedLeases.filter((l) =>
+        (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+      );
       return (
         <table className="w-full text-sm">
           {th(['Tenant', 'Property', 'Unit', 'Lease End', 'Status'])}
           <tbody className="divide-y divide-gray-100">
             {rows.map((lease) => (
               <tr key={lease.id} className="transition-colors hover:bg-red-50/40">
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.tenant?.name ?? 'Unknown'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.property?.name ?? '—'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.unitNumber}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{new Date(lease.endDate).toLocaleDateString()}</td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.tenant?.name ?? 'Unknown'}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.unit?.property?.name ?? '—'}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.unit?.unitNumber}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {new Date(lease.endDate).toLocaleDateString()}
+                </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.status}</td>
               </tr>
             ))}
@@ -371,19 +494,33 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
     if (breakdownType === 'rent') {
       const rows = allPayments
-        .filter((p) => (p.invoice.lease?.tenant.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-        .sort((a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime());
+        .filter((p) =>
+          (p.invoice.lease?.tenant.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .sort(
+          (a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime(),
+        );
       return (
         <table className="w-full text-sm">
           {th(['Tenant', 'Property', 'Amount', 'Payment Method', 'Date'])}
           <tbody className="divide-y divide-gray-100">
             {rows.map(({ invoice, payment }) => (
               <tr key={payment.id} className="transition-colors hover:bg-gray-50">
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{invoice.lease?.tenant.name ?? 'Unknown'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{invoice.lease?.unit.property.name ?? '—'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap font-semibold text-gray-800">₦{payment.amount.toLocaleString()}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{payment.paymentMethod.replace('_', ' ')}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{new Date(payment.paidAt).toLocaleDateString()}</td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {invoice.lease?.tenant.name ?? 'Unknown'}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {invoice.lease?.unit.property.name ?? '—'}
+                </td>
+                <td className="px-4 py-3.5 font-semibold whitespace-nowrap text-gray-800">
+                  ₦{payment.amount.toLocaleString()}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {payment.paymentMethod.replace('_', ' ')}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {new Date(payment.paidAt).toLocaleDateString()}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
@@ -400,7 +537,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
     if (breakdownType === 'maintenance') {
       const rows = openMaintenance.filter(
-        (r) => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || (r.unit?.property?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+        (r) =>
+          r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (r.unit?.property?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
       );
       return (
         <table className="w-full text-sm">
@@ -412,7 +551,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                   {r.unit?.property?.name ?? '—'} · {r.unit?.unitNumber}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{r.title}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{r.tenant?.name ?? 'Unknown'}</td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {r.tenant?.name ?? 'Unknown'}
+                </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{r.priority}</td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
                   {Math.floor((now.getTime() - new Date(r.createdAt).getTime()) / MS_PER_DAY)}d
@@ -440,20 +581,34 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
     }
 
     if (breakdownType === 'renewals') {
-      const rows = renewalsUpcoming.filter((r) => (r.lease.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()));
+      const rows = renewalsUpcoming.filter((r) =>
+        (r.lease.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+      );
       return (
         <table className="w-full text-sm">
           {th(['Tenant', 'Property', 'Unit', 'Current Rent', 'Lease End', 'Days Left', 'Actions'])}
           <tbody className="divide-y divide-gray-100">
             {rows.map(({ lease, daysLeft }) => (
               <tr key={lease.id} className="transition-colors hover:bg-gray-50">
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.tenant?.name ?? 'Unknown'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.property?.name ?? '—'}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.unit?.unitNumber}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">₦{lease.rentAmount.toLocaleString()}</td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{new Date(lease.endDate).toLocaleDateString()}</td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.tenant?.name ?? 'Unknown'}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.unit?.property?.name ?? '—'}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {lease.unit?.unitNumber}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  ₦{lease.rentAmount.toLocaleString()}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
+                  {new Date(lease.endDate).toLocaleDateString()}
+                </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${daysLeft < 30 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${daysLeft < 30 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}
+                  >
                     {daysLeft}d
                   </span>
                 </td>
@@ -487,19 +642,28 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
     const months: { key: string; label: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString('en-US', { month: 'short' }) });
+      months.push({
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        label: d.toLocaleDateString('en-US', { month: 'short' }),
+      });
     }
     return months.map(({ key, label }) => ({
       month: label,
-      expected: invoices.filter((i) => monthKey(i.dueDate) === key).reduce((sum, i) => sum + i.amount, 0),
-      collected: allPayments.filter((p) => monthKey(p.payment.paidAt) === key).reduce((sum, p) => sum + p.payment.amount, 0),
+      expected: invoices
+        .filter((i) => monthKey(i.dueDate) === key)
+        .reduce((sum, i) => sum + i.amount, 0),
+      collected: allPayments
+        .filter((p) => monthKey(p.payment.paidAt) === key)
+        .reduce((sum, p) => sum + p.payment.amount, 0),
     }));
   })();
 
   const rentByProperty = properties
     .map((property, i) => ({
       name: property.name,
-      amount: allPayments.filter((p) => p.invoice.lease?.unit.property.id === property.id).reduce((sum, p) => sum + p.payment.amount, 0),
+      amount: allPayments
+        .filter((p) => p.invoice.lease?.unit.property.id === property.id)
+        .reduce((sum, p) => sum + p.payment.amount, 0),
       fill: CHART_COLORS[i % CHART_COLORS.length],
     }))
     .filter((p) => p.amount > 0);
@@ -521,7 +685,10 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </button>
@@ -547,7 +714,9 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
 
       {/* Hero Row */}
       <div className="flex items-center gap-6 rounded-xl border border-gray-200 bg-white p-6">
-        <div className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex flex-shrink-0 items-center justify-center`}>
+        <div
+          className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex flex-shrink-0 items-center justify-center`}
+        >
           <Icon className={`h-7 w-7 ${iconStyle.color}`} />
         </div>
         <div className="flex-1">
@@ -587,8 +756,25 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                   <YAxis tickFormatter={fmtNaira} tick={{ fontSize: 11 }} width={52} />
                   <Tooltip formatter={(v: number) => fmtNaira(v)} />
                   <Legend />
-                  <Area type="monotone" dataKey="expected" name="Billed" stroke="#818cf8" strokeWidth={2} strokeDasharray="5 3" fill="url(#gradExpected)" dot={false} />
-                  <Area type="monotone" dataKey="collected" name="Collected" stroke="#10b981" strokeWidth={2.5} fill="url(#gradCollected)" dot={{ r: 4, fill: '#10b981' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="expected"
+                    name="Billed"
+                    stroke="#818cf8"
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                    fill="url(#gradExpected)"
+                    dot={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="collected"
+                    name="Collected"
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    fill="url(#gradCollected)"
+                    dot={{ r: 4, fill: '#10b981' }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -598,7 +784,12 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
               <p className="mb-4 text-xs text-gray-500">All-time collected per property</p>
               {rentByProperty.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={rentByProperty} layout="vertical" margin={{ top: 0, right: 12, left: 4, bottom: 0 }} barSize={14}>
+                  <BarChart
+                    data={rentByProperty}
+                    layout="vertical"
+                    margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
+                    barSize={14}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                     <XAxis type="number" tickFormatter={fmtNaira} tick={{ fontSize: 10 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={110} />
@@ -619,12 +810,22 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <h3 className="mb-1 font-semibold text-gray-900">Payment Methods</h3>
-              <p className="mb-4 text-xs text-gray-500">Distribution across all recorded payments</p>
+              <p className="mb-4 text-xs text-gray-500">
+                Distribution across all recorded payments
+              </p>
               {paymentMethods.length > 0 ? (
                 <div className="flex items-center gap-6">
                   <ResponsiveContainer width={160} height={160}>
                     <PieChart>
-                      <Pie data={paymentMethods} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" paddingAngle={3}>
+                      <Pie
+                        data={paymentMethods}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={72}
+                        dataKey="value"
+                        paddingAngle={3}
+                      >
                         {paymentMethods.map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
                         ))}
@@ -636,7 +837,10 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                     {paymentMethods.map((m) => (
                       <div key={m.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: m.fill }} />
+                          <span
+                            className="h-3 w-3 flex-shrink-0 rounded-full"
+                            style={{ background: m.fill }}
+                          />
                           <span className="text-sm text-gray-700">{m.name}</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-800">{m.value}</span>
@@ -656,7 +860,17 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                 <div className="relative flex-shrink-0">
                   <ResponsiveContainer width={160} height={160}>
                     <PieChart>
-                      <Pie data={rentStatusChart} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" paddingAngle={3} startAngle={90} endAngle={-270}>
+                      <Pie
+                        data={rentStatusChart}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={72}
+                        dataKey="value"
+                        paddingAngle={3}
+                        startAngle={90}
+                        endAngle={-270}
+                      >
                         {rentStatusChart.map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
                         ))}
@@ -675,18 +889,27 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
                   {rentStatusChart.map((s) => (
                     <div key={s.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ background: s.fill }} />
+                        <span
+                          className="h-3 w-3 flex-shrink-0 rounded-full"
+                          style={{ background: s.fill }}
+                        />
                         <span className="text-sm text-gray-700">{s.name}</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-800">{fmtNaira(s.value)}</span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {fmtNaira(s.value)}
+                      </span>
                     </div>
                   ))}
                   <div className="border-t border-gray-100 pt-2">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${collectionRate}%` }} />
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+                        style={{ width: `${collectionRate}%` }}
+                      />
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      ₦{collectedTotal.toLocaleString()} of ₦{(collectedTotal + pendingTotal).toLocaleString()} billed
+                      ₦{collectedTotal.toLocaleString()} of ₦
+                      {(collectedTotal + pendingTotal).toLocaleString()} billed
                     </p>
                   </div>
                 </div>
@@ -704,22 +927,30 @@ export function DashboardBreakdownPage({ breakdownType, onBack, onNavigate }: Da
               <button
                 onClick={() => setTenantTab('active')}
                 className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  tenantTab === 'active' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  tenantTab === 'active'
+                    ? 'bg-white text-gray-800 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Users className="h-3.5 w-3.5" />
                 Active
-                <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs text-green-700">{activeLeases.length}</span>
+                <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
+                  {activeLeases.length}
+                </span>
               </button>
               <button
                 onClick={() => setTenantTab('terminated')}
                 className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  tenantTab === 'terminated' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  tenantTab === 'terminated'
+                    ? 'bg-white text-gray-800 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <UserX className="h-3.5 w-3.5" />
                 Terminated / Expired
-                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">{terminatedLeases.length}</span>
+                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                  {terminatedLeases.length}
+                </span>
               </button>
             </div>
           ) : (

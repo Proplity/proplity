@@ -22,7 +22,10 @@ export const PATCH = withAuth(
       if (!validated.success) return validated.response;
 
       const updated = await prisma.$transaction(async (tx) => {
-        await tx.bankAccount.updateMany({ where: { userId: session.sub, isDefault: true }, data: { isDefault: false } });
+        await tx.bankAccount.updateMany({
+          where: { userId: session.sub, isDefault: true },
+          data: { isDefault: false },
+        });
         return tx.bankAccount.update({ where: { id }, data: { isDefault: true } });
       });
 
@@ -53,7 +56,8 @@ export const DELETE = withAuth(
           where: { userId: session.sub },
           orderBy: { createdAt: 'desc' },
         });
-        if (next) await prisma.bankAccount.update({ where: { id: next.id }, data: { isDefault: true } });
+        if (next)
+          await prisma.bankAccount.update({ where: { id: next.id }, data: { isDefault: true } });
       }
 
       return NextResponse.json({ data: { id, deleted: true } });

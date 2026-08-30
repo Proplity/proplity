@@ -378,7 +378,9 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">Unit {unit.unitNumber}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              Unit {unit.unitNumber}
+                            </p>
                             <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
                               <span className="flex items-center gap-1">
                                 <Bed className="h-3 w-3" />
@@ -391,7 +393,8 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
                             </div>
                           </div>
                           <p className="text-sm font-semibold text-blue-600">
-                            ₦{unit.rentAmount.toLocaleString()}/{unit.listedPaymentFrequency.toLowerCase()}
+                            ₦{unit.rentAmount.toLocaleString()}/
+                            {unit.listedPaymentFrequency.toLowerCase()}
                           </p>
                         </div>
                         {selectedUnitId === unit.id && (

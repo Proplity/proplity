@@ -34,7 +34,13 @@ export const POST = withAuth(
         const subscription = await prisma.subscription.upsert({
           where: { userId: session.sub },
           create: { userId: session.sub, tier: 'FREE', status: 'ACTIVE' },
-          update: { tier: 'FREE', status: 'ACTIVE', currentPeriodStart: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
+          update: {
+            tier: 'FREE',
+            status: 'ACTIVE',
+            currentPeriodStart: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+          },
         });
         return NextResponse.json({ data: { activated: true, subscription } }, { status: 201 });
       }

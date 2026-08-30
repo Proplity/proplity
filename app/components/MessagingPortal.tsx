@@ -8,7 +8,14 @@ interface MessagingPortalProps {
   onBack?: () => void;
 }
 
-const AVATAR_COLORS = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500'];
+const AVATAR_COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-teal-500',
+];
 
 const TYPE_LABEL: Record<Conversation['type'], string> = {
   DIRECT: 'Direct message',
@@ -48,8 +55,16 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: conversations, loading: conversationsLoading, refetch: refetchConversations } = useConversations();
-  const { data: messages, loading: messagesLoading, refetch: refetchMessages } = useMessages(selectedId);
+  const {
+    data: conversations,
+    loading: conversationsLoading,
+    refetch: refetchConversations,
+  } = useConversations();
+  const {
+    data: messages,
+    loading: messagesLoading,
+    refetch: refetchMessages,
+  } = useMessages(selectedId);
   const { submit: sendMessage, submitting } = useSendMessage(selectedId ?? '');
 
   const selectedConv = conversations.find((c) => c.id === selectedId) ?? null;
@@ -91,7 +106,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
           )}
           <div>
             <h1 className="text-xl font-bold">Messages</h1>
-            <p className="text-sm text-gray-600">Stay connected with landlords, tenants, and service providers</p>
+            <p className="text-sm text-gray-600">
+              Stay connected with landlords, tenants, and service providers
+            </p>
           </div>
         </div>
       </div>
@@ -113,7 +130,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {conversationsLoading && <p className="p-4 text-sm text-gray-500">Loading conversations…</p>}
+            {conversationsLoading && (
+              <p className="p-4 text-sm text-gray-500">Loading conversations…</p>
+            )}
             {filtered.map((conv, index) => {
               const { name, subtitle } = describe(conv, auth.user?.id);
               return (
@@ -134,12 +153,16 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
                       <div className="mb-1 flex items-center justify-between">
                         <p className="truncate text-sm font-semibold">{name}</p>
                         <span className="text-xs text-gray-500">
-                          {new Date(conv.lastMessage?.createdAt ?? conv.updatedAt).toLocaleDateString()}
+                          {new Date(
+                            conv.lastMessage?.createdAt ?? conv.updatedAt,
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                       <p className="mb-1 text-xs text-gray-500">{subtitle}</p>
                       <div className="flex items-center justify-between">
-                        <p className="flex-1 truncate text-sm text-gray-600">{conv.lastMessage?.body ?? 'No messages yet'}</p>
+                        <p className="flex-1 truncate text-sm text-gray-600">
+                          {conv.lastMessage?.body ?? 'No messages yet'}
+                        </p>
                         {conv.unreadCount > 0 && (
                           <span className="ml-2 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                             {conv.unreadCount}
@@ -153,7 +176,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
             })}
             {!conversationsLoading && filtered.length === 0 && (
               <p className="p-4 text-sm text-gray-400">
-                {conversations.length === 0 ? 'No conversations yet.' : 'No conversations match your search.'}
+                {conversations.length === 0
+                  ? 'No conversations yet.'
+                  : 'No conversations match your search.'}
               </p>
             )}
           </div>
@@ -167,11 +192,15 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500">
-                    <span className="text-sm font-semibold text-white">{initials(describe(selectedConv, auth.user?.id).name)}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {initials(describe(selectedConv, auth.user?.id).name)}
+                    </span>
                   </div>
                   <div>
                     <p className="font-semibold">{describe(selectedConv, auth.user?.id).name}</p>
-                    <p className="text-xs text-gray-500">{describe(selectedConv, auth.user?.id).subtitle}</p>
+                    <p className="text-xs text-gray-500">
+                      {describe(selectedConv, auth.user?.id).subtitle}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -187,15 +216,29 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
 
             {/* Messages */}
             <div className="flex-1 space-y-4 overflow-y-auto p-6">
-              {messagesLoading && messages.length === 0 && <p className="text-sm text-gray-500">Loading messages…</p>}
+              {messagesLoading && messages.length === 0 && (
+                <p className="text-sm text-gray-500">Loading messages…</p>
+              )}
               {messages.map((message) => {
                 const isMe = message.senderId === auth.user?.id;
-                const sender = selectedConv.participants.find((p) => p.userId === message.senderId)?.user;
-                const senderLabel = isMe ? null : (sender?.name ?? (message.senderType === 'AI_ASSISTANT' ? 'AI Assistant' : 'System'));
+                const sender = selectedConv.participants.find(
+                  (p) => p.userId === message.senderId,
+                )?.user;
+                const senderLabel = isMe
+                  ? null
+                  : (sender?.name ??
+                    (message.senderType === 'AI_ASSISTANT' ? 'AI Assistant' : 'System'));
                 return (
-                  <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-md rounded-lg p-4 ${isMe ? 'bg-blue-600 text-white' : 'border border-gray-200 bg-white'}`}>
-                      {senderLabel && <p className="mb-1 text-xs font-semibold text-gray-500">{senderLabel}</p>}
+                  <div
+                    key={message.id}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-md rounded-lg p-4 ${isMe ? 'bg-blue-600 text-white' : 'border border-gray-200 bg-white'}`}
+                    >
+                      {senderLabel && (
+                        <p className="mb-1 text-xs font-semibold text-gray-500">{senderLabel}</p>
+                      )}
                       <p className="text-sm">{message.body}</p>
                       <p className={`mt-2 text-xs ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
                         {new Date(message.createdAt).toLocaleString()}
@@ -242,7 +285,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
                 <Send className="h-10 w-10 text-gray-400" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-gray-700">Select a Conversation</h3>
-              <p className="text-gray-500">Choose a conversation from the list to start messaging</p>
+              <p className="text-gray-500">
+                Choose a conversation from the list to start messaging
+              </p>
             </div>
           </div>
         )}

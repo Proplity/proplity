@@ -21,7 +21,7 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     expect(names).not.toContain('Unpublished One');
   });
 
-  it('serializes a unit\'s squareFeet as sqft', async () => {
+  it("serializes a unit's squareFeet as sqft", async () => {
     const property = await createProperty({ name: 'Sqft Property', isPublished: true });
     await createUnit(property.id, { squareFeet: 850 });
 
@@ -61,18 +61,18 @@ describe('properties: scope=mine', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns only the caller\'s own properties (published or not) for MANAGER/LANDLORD', async () => {
+  it("returns only the caller's own properties (published or not) for MANAGER/LANDLORD", async () => {
     const manager = await createUser(Role.MANAGER);
     const otherManager = await createUser(Role.MANAGER);
     await createProperty({ name: 'Mine Unpublished', managerId: manager.id, isPublished: false });
-    await createProperty({ name: 'Someone Else\'s', managerId: otherManager.id, isPublished: true });
+    await createProperty({ name: "Someone Else's", managerId: otherManager.id, isPublished: true });
 
     const cookie = await authCookie(manager.id, manager.role);
     const res = await apiFetch('/api/v1/properties?scope=mine', { cookie });
     expect(res.status).toBe(200);
     const names = res.body.data.map((p: any) => p.name);
     expect(names).toContain('Mine Unpublished');
-    expect(names).not.toContain('Someone Else\'s');
+    expect(names).not.toContain("Someone Else's");
   });
 
   it('returns every property (any owner) for ADMIN', async () => {
@@ -179,7 +179,7 @@ describe('properties: canManageProperty gating (PATCH /properties/[id])', () => 
     expect(real.body.data.managerId).toBe(newManager.id);
   });
 
-  it('forbids a different manager from editing someone else\'s property', async () => {
+  it("forbids a different manager from editing someone else's property", async () => {
     const owner = await createUser(Role.MANAGER);
     const intruder = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: owner.id });
@@ -216,8 +216,84 @@ describe('properties: canManageProperty gating (PATCH /properties/[id])', () => 
     expect(res.status).toBe(200);
     expect(res.body.data.isPublished).toBe(false);
 
-    const stillThere = await apiFetch(`/api/v1/properties/${property.id}`);
+    // Probed AS THE MANAGER, deliberately. This assertion is about the row
+    // surviving a soft-delete, and it used to probe unauthenticated -- which
+    // silently also asserted that anyone holding the id could still read an
+    // unpublished property. That was the bug; the endpoint now scopes
+    // unpublished listings to their manager/landlord/ADMIN and sitting
+    // tenants, so the owner's own view is the correct probe for "still there".
+    const stillThere = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
     expect(stillThere.status).toBe(200);
+    expect(stillThere.body.data.isPublished).toBe(false);
+
+    // ...and the public must no longer see it. 404 rather than 403: a 403
+    // would confirm the id is real, which is the fact being protected.
+    const anonymous = await apiFetch(`/api/v1/properties/${property.id}`);
+    expect(anonymous.status).toBe(404);
+  });
+});
+
+describe('properties: detail visibility (unpublished listings are not public)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('serves a published property to an anonymous caller', async () => {
+    const property = await createProperty({ isPublished: true });
+    const res = await apiFetch(`/api/v1/properties/${property.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(property.id);
+  });
+
+  it('404s an unpublished property for an anonymous caller who knows the id', async () => {
+    const property = await createProperty({ isPublished: false });
+    const res = await apiFetch(`/api/v1/properties/${property.id}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('404s an unpublished property for a logged-in stranger', async () => {
+    const property = await createProperty({ isPublished: false });
+    const stranger = await createUser(Role.MANAGER);
+    const cookie = await authCookie(stranger.id, stranger.role);
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
+    expect(res.status).toBe(404);
+  });
+
+  it('serves an unpublished property to its own manager', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id, isPublished: false });
+    const cookie = await authCookie(manager.id, manager.role);
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
+    expect(res.status).toBe(200);
+  });
+
+  it('serves an unpublished property to an ADMIN', async () => {
+    const property = await createProperty({ isPublished: false });
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
+    expect(res.status).toBe(200);
+  });
+
+  it('serves an unpublished property to a sitting tenant (a landlord can unpublish an occupied property)', async () => {
+    const property = await createProperty({ isPublished: false });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
+    expect(res.status).toBe(200);
+  });
+
+  it('404s an unpublished property for a tenant who leases somewhere else', async () => {
+    const property = await createProperty({ isPublished: false });
+    const otherProperty = await createProperty({ isPublished: true });
+    const otherUnit = await createUnit(otherProperty.id);
+    const tenant = await createUser(Role.TENANT);
+    await createLease(otherUnit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
+    expect(res.status).toBe(404);
   });
 });
 
@@ -275,7 +351,10 @@ describe('properties: moderation (ADMIN review queue) + publish gating', () => {
   it('rejecting a previously-approved-and-published listing unpublishes it too', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, isPublished: true });
-    await testPrisma.property.update({ where: { id: property.id }, data: { moderationStatus: 'APPROVED' } });
+    await testPrisma.property.update({
+      where: { id: property.id },
+      data: { moderationStatus: 'APPROVED' },
+    });
 
     const admin = await createUser(Role.ADMIN);
     const res = await apiFetch(`/api/v1/properties/${property.id}/moderation`, {
@@ -385,11 +464,14 @@ describe('properties: units', () => {
     expect(created.status).toBe(201);
     expect(created.body.data.sqft).toBe(650);
 
-    const patched = await apiFetch(`/api/v1/properties/${property.id}/units/${created.body.data.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { sqft: 700 },
-    });
+    const patched = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${created.body.data.id}`,
+      {
+        method: 'PATCH',
+        cookie,
+        body: { sqft: 700 },
+      },
+    );
     expect(patched.status).toBe(200);
     expect(patched.body.data.sqft).toBe(700);
   });

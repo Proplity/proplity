@@ -144,10 +144,16 @@ export async function createLease(
       paymentFrequency: overrides.paymentFrequency ?? PaymentFrequency.ANNUAL,
       deposit: overrides.deposit ?? 200_000,
       status: overrides.status ?? LeaseStatus.ACTIVE,
-      ...(overrides.gracePeriodDays !== undefined ? { gracePeriodDays: overrides.gracePeriodDays } : {}),
+      ...(overrides.gracePeriodDays !== undefined
+        ? { gracePeriodDays: overrides.gracePeriodDays }
+        : {}),
       ...(overrides.lateFeeType !== undefined ? { lateFeeType: overrides.lateFeeType } : {}),
-      ...(overrides.lateFeePercentage !== undefined ? { lateFeePercentage: overrides.lateFeePercentage } : {}),
-      ...(overrides.lateFeeFlatAmount !== undefined ? { lateFeeFlatAmount: overrides.lateFeeFlatAmount } : {}),
+      ...(overrides.lateFeePercentage !== undefined
+        ? { lateFeePercentage: overrides.lateFeePercentage }
+        : {}),
+      ...(overrides.lateFeeFlatAmount !== undefined
+        ? { lateFeeFlatAmount: overrides.lateFeeFlatAmount }
+        : {}),
     },
   });
 }

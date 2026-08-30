@@ -55,7 +55,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     });
     if (duplicate) {
       return NextResponse.json(
-        { error: 'A viewing is already booked for this property on this day', code: 'DUPLICATE_BOOKING' },
+        {
+          error: 'A viewing is already booked for this property on this day',
+          code: 'DUPLICATE_BOOKING',
+        },
         { status: 409 },
       );
     }

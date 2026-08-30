@@ -4,7 +4,7 @@
 
 ## Why
 
-Follow-up to `out/phases/late-fees-and-grace-period.md`. That phase made `overdueFlagger.ts` actually *read* `Lease.gracePeriodDays`/`lateFeePercentage`, but neither field was ever configurable anywhere in the real app — `AddTenantForm.tsx` didn't expose them at creation and `PATCH /leases/[id]` had no path to edit them after. User confirmed via direct Q&A: give the autonomy to landlord/manager (not admin — matches who already creates/owns leases), default `lateFeePercentage` to `0` (no fee until deliberately set, was `5.0`), keep `gracePeriodDays` default at `7`, support both a percentage-of-rent mode and a flat-currency-amount mode (mutually exclusive per lease, never stacked), and — after review — no platform-imposed min/max on either field at all.
+Follow-up to `docs/development-history/phases/late-fees-and-grace-period.md`. That phase made `overdueFlagger.ts` actually *read* `Lease.gracePeriodDays`/`lateFeePercentage`, but neither field was ever configurable anywhere in the real app — `AddTenantForm.tsx` didn't expose them at creation and `PATCH /leases/[id]` had no path to edit them after. User confirmed via direct Q&A: give the autonomy to landlord/manager (not admin — matches who already creates/owns leases), default `lateFeePercentage` to `0` (no fee until deliberately set, was `5.0`), keep `gracePeriodDays` default at `7`, support both a percentage-of-rent mode and a flat-currency-amount mode (mutually exclusive per lease, never stacked), and — after review — no platform-imposed min/max on either field at all.
 
 ## What changed
 
@@ -27,4 +27,4 @@ Follow-up to `out/phases/late-fees-and-grace-period.md`. That phase made `overdu
 
 ## What's next
 
-Remaining from `out/project-audit.md`: repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, and real AI/LLM integration.
+Remaining from `docs/development-history/project-audit.md`: repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, and real AI/LLM integration.

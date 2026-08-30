@@ -41,7 +41,9 @@ export function useCreateAnnouncement(propertyId: string) {
 
 export function useUpdateAnnouncement(propertyId: string, announcementId: string) {
   return useApiSubmit((body: Partial<CreateAnnouncementInput>) =>
-    api.properties.announcements.update(propertyId, announcementId, body).then((res) => res.data.data),
+    api.properties.announcements
+      .update(propertyId, announcementId, body)
+      .then((res) => res.data.data),
   );
 }
 

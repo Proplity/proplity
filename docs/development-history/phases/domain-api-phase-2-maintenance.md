@@ -8,7 +8,7 @@ Second domain API, building the maintenance lifecycle: category reference data, 
 
 ## What was built
 
-Five routes, exactly as scoped in `out/domain-api-implementation-plan.md`'s Phase 2 section:
+Five routes, exactly as scoped in `docs/development-history/domain-api-implementation-plan.md`'s Phase 2 section:
 
 - **`app/api/v1/maintenance/categories/route.ts`** — `GET` (public, `isActive = true` only — same public-reference-data pattern as `/properties`, since both tenants submitting requests and admins managing the list need to read it); `POST`/`PATCH` (`ADMIN` only, `PATCH` takes `{ id, isActive }` in the body — no `[id]` subroute since the plan specified a single file).
 - **`app/api/v1/maintenance/requests/route.ts`** — `GET` role-scoped (`TENANT` → own, `VENDOR` → assigned, `MANAGER`/`LANDLORD` → requests on units of properties they manage/own, `ADMIN` → all); `POST` (`TENANT` only), validates an `ACTIVE` lease on the target unit exists for that tenant before allowing submission, `categoryId` left nullable for AI triage per the schema's own comment.
@@ -41,4 +41,4 @@ Full live end-to-end pass against the real dev server and seeded database (not j
 
 ## Next up
 
-Phase 3 — Leases & Tenancy API (`app/api/v1/leases/*`), already spec'd in `out/domain-api-implementation-plan.md`.
+Phase 3 — Leases & Tenancy API (`app/api/v1/leases/*`), already spec'd in `docs/development-history/domain-api-implementation-plan.md`.

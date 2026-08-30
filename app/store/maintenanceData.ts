@@ -136,7 +136,11 @@ export const mockMaintenanceBoardRequests = {
   ],
 };
 
-export function getMockMaintenanceDetailRequest(requestId: number, assignedVendor: any, assignedVendorId: any) {
+export function getMockMaintenanceDetailRequest(
+  requestId: number,
+  assignedVendor: any,
+  assignedVendorId: any,
+) {
   return {
     id: requestId,
     title: 'Broken Water Pipe',

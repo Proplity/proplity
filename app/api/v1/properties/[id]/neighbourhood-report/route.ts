@@ -11,7 +11,8 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
       where: { propertyId: id },
       orderBy: { generatedAt: 'desc' },
     });
-    if (!report) return NextResponse.json({ error: 'No neighbourhood report found' }, { status: 404 });
+    if (!report)
+      return NextResponse.json({ error: 'No neighbourhood report found' }, { status: 404 });
     return NextResponse.json({ data: report });
   } catch (err) {
     return handleApiError(err);

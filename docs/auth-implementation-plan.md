@@ -6,14 +6,14 @@ This supersedes the original draft. Every item below was identified as a gap or 
 
 ## 1. Decisions locked in
 
-| Decision | Choice | Why |
-|---|---|---|
-| Database | **PostgreSQL** everywhere (Docker locally, Neon/Supabase in prod) | SQLite files don't persist on serverless platforms (Vercel/Lambda ephemeral filesystem). No dev/prod parity risk. |
-| Refresh token format | **Opaque random token**, hashed (SHA-256) before storage | JWTs can't be revoked before expiry; opaque + DB lookup can. |
-| Refresh token revocation | **Family-based rotation with reuse detection** | Lets you kill exactly the compromised session chain without logging out every device on that user. |
-| CSRF strategy | **Origin/Host header matching**, deny-by-default | `SameSite=Lax` already blocks the common case; Origin check is cheap defense-in-depth without double-submit-cookie complexity. |
-| Edge Middleware scope | **Signature + expiry check only, no DB** | Prisma isn't Edge-runtime compatible without extra infra (Accelerate/Neon HTTP driver). Keep Edge fast; push real revocation checks to the Node-runtime refresh route. |
-| Account states | `ACTIVE`, `SUSPENDED`, `PENDING_VERIFICATION` | Verification flow is now actually wired to this state (see §6). |
+| Decision                 | Choice                                                            | Why                                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database                 | **PostgreSQL** everywhere (Docker locally, Neon/Supabase in prod) | SQLite files don't persist on serverless platforms (Vercel/Lambda ephemeral filesystem). No dev/prod parity risk.                                                      |
+| Refresh token format     | **Opaque random token**, hashed (SHA-256) before storage          | JWTs can't be revoked before expiry; opaque + DB lookup can.                                                                                                           |
+| Refresh token revocation | **Family-based rotation with reuse detection**                    | Lets you kill exactly the compromised session chain without logging out every device on that user.                                                                     |
+| CSRF strategy            | **Origin/Host header matching**, deny-by-default                  | `SameSite=Lax` already blocks the common case; Origin check is cheap defense-in-depth without double-submit-cookie complexity.                                         |
+| Edge Middleware scope    | **Signature + expiry check only, no DB**                          | Prisma isn't Edge-runtime compatible without extra infra (Accelerate/Neon HTTP driver). Keep Edge fast; push real revocation checks to the Node-runtime refresh route. |
+| Account states           | `ACTIVE`, `SUSPENDED`, `PENDING_VERIFICATION`                     | Verification flow is now actually wired to this state (see §6).                                                                                                        |
 
 ---
 
@@ -537,7 +537,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 }
 ```
 
-**Resolved:** navigation bouncing is handled with a proactive silent-refresh timer, kept *alongside* `apiFetch` (not instead of it) — background-tab timer throttling means the reactive interceptor is still needed as a backstop for whatever the timer misses.
+**Resolved:** navigation bouncing is handled with a proactive silent-refresh timer, kept _alongside_ `apiFetch` (not instead of it) — background-tab timer throttling means the reactive interceptor is still needed as a backstop for whatever the timer misses.
 
 ### `hooks/useAuthRefresh.ts` — proactive timer, multi-tab safe
 
@@ -585,13 +585,15 @@ Mount `useAuthRefresh()` once near the root of the authenticated layout (e.g. in
 ## 7. Verification Plan
 
 ### Automated
+
 - `pnpm dev` + endpoint tests via `curl`/API tests.
 - Edge cases: invalid password, suspended/pending status, expired access token → refresh, role redirection, **concurrent refresh calls** (fire 3+ parallel requests with the same refresh token and confirm exactly one succeeds, others get a clean 401 — not a false reuse-detection wipe).
 
 ### Manual
+
 1. **Cookie inspection** — confirm `access_token` (`path=/`) and `refresh_token` (`path=/api/auth/refresh`) both show `HttpOnly`, `SameSite=Lax`, and (in prod) `Secure`.
 2. **Suspension test** — set `status = 'SUSPENDED'` mid-session; confirm access continues until token expiry, then `/api/auth/refresh` returns 403.
-3. **Reuse detection test** — capture a refresh token, use it once (rotates successfully), then replay the *original* raw token; confirm the entire family is revoked and the legitimate session is also logged out.
+3. **Reuse detection test** — capture a refresh token, use it once (rotates successfully), then replay the _original_ raw token; confirm the entire family is revoked and the legitimate session is also logged out.
 4. **RBAC test** — non-admin hitting `/admin` redirects to `/dashboard`.
 5. **Logout test** — confirm both cookies are actually removed from the browser (not just server-side revoked) by checking DevTools → Application → Cookies after logout.
 6. **CSRF test** — POST to `/api/auth/change-password` from a different origin (e.g. via a local test HTML page) and confirm 403.

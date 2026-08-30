@@ -19,7 +19,7 @@ graph TD
     PrismaClient["💎 Prisma ORM Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL Database (proplity_db)")]
     Cron["⏱️ /api/v1/cron/[job] + scripts/workers/*.ts — built, not scheduled"]
-    Tests["🧪 tests/ (Vitest) — 126 tests, real HTTP against a spawned server + proplity_test_db"]
+    Tests["🧪 tests/ (Vitest) — 214 tests, real HTTP against a spawned server + proplity_test_db"]
 
     Client --> Store
     Client --> Hooks
@@ -150,7 +150,7 @@ proplity/
 │   ├── 📄 rentInvoicer.ts, overdueFlagger.ts, maintenanceScheduleDispatcher.ts
 │   └── 📄 accessCodeExpiryJanitor.ts, paymentReliabilityScorer.ts
 │
-├── 📁 tests/                                # Phase 10 — automated test suite (Vitest), 126 tests, `pnpm test`
+├── 📁 tests/                                # Phase 10 — automated test suite (Vitest), 214 tests, `pnpm test`
 │   ├── 📁 setup/
 │   │   ├── 📄 globalSetup.ts                # Drops/recreates proplity_test_db, migrates, spawns a real next dev server
 │   │   ├── 📄 loadEnv.ts                    # Loads .env.test into each Vitest worker process
@@ -197,19 +197,19 @@ proplity/
 
 ## 📦 Key Directory Breakdown
 
-| Directory | Purpose | Key Technologies |
-|---|---|---|
-| **`app/`** | Real routes end to end — public pages, `dashboard/`, `admin/`, `api/v1/` | Next.js 16 App Router, React, Tailwind CSS |
-| **`app/api/v1/`** | 36 backend REST routes across 6 domains + auth + cron + vendors/admin-users | Route Handlers, `withAuth`, Zod, Prisma |
-| **`app/components/`** | Feature views — 6 wired to real write APIs, 20 hydrated for real-data display (Phase 9), 4 still on mock data (out of scope: AI assistant, marketing pages) | Lucide Icons, Recharts, Embla Carousel |
-| **`app/store/`** | Mock data now backing only the 4 out-of-scope components above | Decoupled TypeScript fixtures |
-| **`hooks/`** | Auth refresh + 10 domain hook files (Phase 7 + 9) | Plain `useState`/`useEffect`, no data-fetching library |
-| **`lib/`** | Auth, shared API infra, background workers, email, DB singleton | `jose`, `bcryptjs`, `@prisma/adapter-pg` |
-| **`lib/workers/` + `scripts/workers/`** | 5 background jobs, HTTP + CLI trigger surfaces | Plain async functions, no job-queue library |
-| **`prisma/`** | Schema, migrations, seeders | Prisma ORM v7 (multi-file schema), PostgreSQL 18 |
-| **`tests/`** | 126 automated tests, 8 files (one per domain) + setup/helpers | Vitest, real HTTP against a spawned `next dev` server + `proplity_test_db` |
-| **`out/`** | Planning docs and per-phase history (gitignored) | Markdown |
-| **`docs/`** | PRD and architecture specs | Markdown |
+| Directory                               | Purpose                                                                                                                                                     | Key Technologies                                                           |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **`app/`**                              | Real routes end to end — public pages, `dashboard/`, `admin/`, `api/v1/`                                                                                    | Next.js 16 App Router, React, Tailwind CSS                                 |
+| **`app/api/v1/`**                       | 36 backend REST routes across 6 domains + auth + cron + vendors/admin-users                                                                                 | Route Handlers, `withAuth`, Zod, Prisma                                    |
+| **`app/components/`**                   | Feature views — 6 wired to real write APIs, 20 hydrated for real-data display (Phase 9), 4 still on mock data (out of scope: AI assistant, marketing pages) | Lucide Icons, Recharts, Embla Carousel                                     |
+| **`app/store/`**                        | Mock data now backing only the 4 out-of-scope components above                                                                                              | Decoupled TypeScript fixtures                                              |
+| **`hooks/`**                            | Auth refresh + 10 domain hook files (Phase 7 + 9)                                                                                                           | Plain `useState`/`useEffect`, no data-fetching library                     |
+| **`lib/`**                              | Auth, shared API infra, background workers, email, DB singleton                                                                                             | `jose`, `bcryptjs`, `@prisma/adapter-pg`                                   |
+| **`lib/workers/` + `scripts/workers/`** | 5 background jobs, HTTP + CLI trigger surfaces                                                                                                              | Plain async functions, no job-queue library                                |
+| **`prisma/`**                           | Schema, migrations, seeders                                                                                                                                 | Prisma ORM v7 (multi-file schema), PostgreSQL 18                           |
+| **`tests/`**                            | 214 automated tests, 13 files (roughly one per domain) + setup/helpers                                                                                      | Vitest, real HTTP against a spawned `next dev` server + `proplity_test_db` |
+| **`docs/development-history/`**         | Planning docs and per-phase history (tracked; moved out of the gitignored `out/` in 85f52a5)                                                                | Markdown                                                                   |
+| **`docs/`**                             | PRD and architecture specs                                                                                                                                  | Markdown                                                                   |
 
 ---
 

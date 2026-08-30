@@ -29,5 +29,7 @@ export function useMySubscription() {
 }
 
 export function useCheckoutSubscription() {
-  return useApiSubmit((body: CheckoutSubscriptionInput) => api.subscriptions.checkout(body).then((res) => res.data.data));
+  return useApiSubmit((body: CheckoutSubscriptionInput) =>
+    api.subscriptions.checkout(body).then((res) => res.data.data),
+  );
 }

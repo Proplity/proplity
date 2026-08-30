@@ -14,9 +14,17 @@ export const GET = withAuth(async (_req, { session }) => {
       include: {
         conversation: {
           include: {
-            participants: { include: { user: { select: { id: true, name: true, avatarUrl: true, role: true } } } },
+            participants: {
+              include: { user: { select: { id: true, name: true, avatarUrl: true, role: true } } },
+            },
             property: { select: { id: true, name: true } },
-            lease: { select: { unit: { select: { unitNumber: true, property: { select: { id: true, name: true } } } } } },
+            lease: {
+              select: {
+                unit: {
+                  select: { unitNumber: true, property: { select: { id: true, name: true } } },
+                },
+              },
+            },
             maintenanceRequest: { select: { title: true } },
           },
         },
@@ -26,7 +34,10 @@ export const GET = withAuth(async (_req, { session }) => {
     const data = await Promise.all(
       participantRows.map(async (p) => {
         const [lastMessage, unreadCount] = await Promise.all([
-          prisma.message.findFirst({ where: { conversationId: p.conversationId }, orderBy: { createdAt: 'desc' } }),
+          prisma.message.findFirst({
+            where: { conversationId: p.conversationId },
+            orderBy: { createdAt: 'desc' },
+          }),
           prisma.message.count({
             where: {
               conversationId: p.conversationId,
@@ -64,20 +75,31 @@ export const POST = withAuth(async (req, { session }) => {
   try {
     const validated = await validateBody(req, createConversationSchema);
     if (!validated.success) return validated.response;
-    const { type, title, participantIds = [], maintenanceRequestId, leaseId, propertyId } = validated.data;
+    const {
+      type,
+      title,
+      participantIds = [],
+      maintenanceRequestId,
+      leaseId,
+      propertyId,
+    } = validated.data;
 
     // MAINTENANCE_THREAD: one thread per request (maintenanceRequestId is
     // @unique on Conversation) -- participants derived from the request's
     // tenant/vendor/property staff rather than caller-supplied.
     if (type === 'MAINTENANCE_THREAD') {
       if (!maintenanceRequestId) {
-        return NextResponse.json({ error: 'maintenanceRequestId is required for MAINTENANCE_THREAD' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'maintenanceRequestId is required for MAINTENANCE_THREAD' },
+          { status: 400 },
+        );
       }
       const request = await prisma.maintenanceRequest.findUnique({
         where: { id: maintenanceRequestId },
         include: { unit: { include: { property: true } } },
       });
-      if (!request) return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+      if (!request)
+        return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
 
       const isParty =
         request.tenantId === session.sub ||
@@ -91,7 +113,8 @@ export const POST = withAuth(async (req, { session }) => {
       const participantUserIds = new Set<string>([request.tenantId]);
       if (request.vendorId) participantUserIds.add(request.vendorId);
       if (request.unit.property.managerId) participantUserIds.add(request.unit.property.managerId);
-      if (request.unit.property.landlordId) participantUserIds.add(request.unit.property.landlordId);
+      if (request.unit.property.landlordId)
+        participantUserIds.add(request.unit.property.landlordId);
 
       const conversation = await prisma.conversation.create({
         data: {
@@ -106,7 +129,11 @@ export const POST = withAuth(async (req, { session }) => {
 
     // LEASE_THREAD: participants derived from the lease's tenant + property staff.
     if (type === 'LEASE_THREAD') {
-      if (!leaseId) return NextResponse.json({ error: 'leaseId is required for LEASE_THREAD' }, { status: 400 });
+      if (!leaseId)
+        return NextResponse.json(
+          { error: 'leaseId is required for LEASE_THREAD' },
+          { status: 400 },
+        );
 
       const lease = await prisma.lease.findUnique({
         where: { id: leaseId },
@@ -114,7 +141,8 @@ export const POST = withAuth(async (req, { session }) => {
       });
       if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
 
-      const isParty = lease.tenantId === session.sub || canManageProperty(session, lease.unit.property);
+      const isParty =
+        lease.tenantId === session.sub || canManageProperty(session, lease.unit.property);
       if (!isParty) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
       const existing = await prisma.conversation.findFirst({ where: { leaseId } });
@@ -125,7 +153,12 @@ export const POST = withAuth(async (req, { session }) => {
       if (lease.unit.property.landlordId) participantUserIds.add(lease.unit.property.landlordId);
 
       const conversation = await prisma.conversation.create({
-        data: { type, title, leaseId, participants: { create: [...participantUserIds].map((userId) => ({ userId })) } },
+        data: {
+          type,
+          title,
+          leaseId,
+          participants: { create: [...participantUserIds].map((userId) => ({ userId })) },
+        },
       });
       return NextResponse.json({ data: conversation }, { status: 201 });
     }
@@ -135,7 +168,11 @@ export const POST = withAuth(async (req, { session }) => {
     // "discover conversations for a property" route, so a board only shows
     // up in someone's GET /conversations if they're already a participant.
     if (type === 'COMMUNITY_DISCUSSION') {
-      if (!propertyId) return NextResponse.json({ error: 'propertyId is required for COMMUNITY_DISCUSSION' }, { status: 400 });
+      if (!propertyId)
+        return NextResponse.json(
+          { error: 'propertyId is required for COMMUNITY_DISCUSSION' },
+          { status: 400 },
+        );
 
       const property = await prisma.property.findUnique({ where: { id: propertyId } });
       if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
@@ -144,7 +181,8 @@ export const POST = withAuth(async (req, { session }) => {
       const hasLease = await prisma.lease.findFirst({
         where: { tenantId: session.sub, unit: { propertyId }, status: 'ACTIVE' },
       });
-      if (!isManager && !hasLease) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!isManager && !hasLease)
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
       const tenants = await prisma.lease.findMany({
         where: { unit: { propertyId }, status: 'ACTIVE' },
@@ -169,7 +207,10 @@ export const POST = withAuth(async (req, { session }) => {
 
     // DIRECT / SUPPORT: unlinked, participants explicitly supplied by the caller.
     if (participantIds.length === 0) {
-      return NextResponse.json({ error: 'participantIds must include at least one other user' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'participantIds must include at least one other user' },
+        { status: 400 },
+      );
     }
     const allParticipantIds = Array.from(new Set([session.sub, ...participantIds]));
 
@@ -188,7 +229,11 @@ export const POST = withAuth(async (req, { session }) => {
     }
 
     const conversation = await prisma.conversation.create({
-      data: { type, title, participants: { create: allParticipantIds.map((userId) => ({ userId })) } },
+      data: {
+        type,
+        title,
+        participants: { create: allParticipantIds.map((userId) => ({ userId })) },
+      },
     });
     return NextResponse.json({ data: conversation }, { status: 201 });
   } catch (err) {

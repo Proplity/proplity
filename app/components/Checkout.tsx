@@ -31,7 +31,11 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     state: '',
     agreeToTerms: false,
   });
-  const { submit: checkoutSubscription, submitting: checkingOut, error: checkoutError } = useCheckoutSubscription();
+  const {
+    submit: checkoutSubscription,
+    submitting: checkingOut,
+    error: checkoutError,
+  } = useCheckoutSubscription();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -317,7 +321,11 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Lock className="h-5 w-5" />
-                {paying ? 'Redirecting to Paystack…' : checkingOut ? 'Processing…' : 'Complete Purchase'}
+                {paying
+                  ? 'Redirecting to Paystack…'
+                  : checkingOut
+                    ? 'Processing…'
+                    : 'Complete Purchase'}
               </button>
 
               <p className="text-center text-xs text-gray-500">

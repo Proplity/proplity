@@ -1,4 +1,14 @@
-import { Droplet, Zap, Wrench, AlertCircle, Clock, CheckCircle, User, MapPin, Wind } from 'lucide-react';
+import {
+  Droplet,
+  Zap,
+  Wrench,
+  AlertCircle,
+  Clock,
+  CheckCircle,
+  User,
+  MapPin,
+  Wind,
+} from 'lucide-react';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import type { MaintenanceRequest } from '@/lib/api/types';
 
@@ -44,7 +54,13 @@ function Column({
         {requests.map((request) => {
           const categoryName = request.category?.name;
           const RequestIcon =
-            categoryName === 'Plumbing' ? Droplet : categoryName === 'Electrical' ? Zap : categoryName === 'HVAC' ? Wind : Wrench;
+            categoryName === 'Plumbing'
+              ? Droplet
+              : categoryName === 'Electrical'
+                ? Zap
+                : categoryName === 'HVAC'
+                  ? Wind
+                  : Wrench;
           const priorityBg =
             request.priority === 'HIGH' || request.priority === 'EMERGENCY'
               ? 'bg-red-50'
@@ -65,10 +81,14 @@ function Column({
             >
               <div className="mb-2 flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${priorityBg}`}>
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${priorityBg}`}
+                  >
                     <RequestIcon className={`h-4 w-4 ${priorityText}`} />
                   </div>
-                  <span className={`rounded px-2 py-1 text-xs font-medium ${priorityColors[request.priority]}`}>
+                  <span
+                    className={`rounded px-2 py-1 text-xs font-medium ${priorityColors[request.priority]}`}
+                  >
                     {request.priority}
                   </span>
                 </div>
@@ -124,7 +144,9 @@ function Column({
             </div>
           );
         })}
-        {requests.length === 0 && !loading && <p className="text-sm text-gray-400">Nothing here.</p>}
+        {requests.length === 0 && !loading && (
+          <p className="text-sm text-gray-400">Nothing here.</p>
+        )}
       </div>
     </div>
   );
@@ -138,7 +160,8 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
   const completed = requests.filter((r) => r.status === 'COMPLETED');
 
   const resolvedCount = completed.length + requests.filter((r) => r.status === 'CANCELLED').length;
-  const resolutionRate = requests.length > 0 ? Math.round((completed.length / requests.length) * 100) : 0;
+  const resolutionRate =
+    requests.length > 0 ? Math.round((completed.length / requests.length) * 100) : 0;
   const totalCost = completed.reduce((sum, r) => sum + (r.finalCost ?? 0), 0);
 
   return (
@@ -155,9 +178,30 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
 
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4">
-        <Column title="New Requests" requests={newRequests} icon={AlertCircle} color="text-orange-600" onNavigate={onNavigate} loading={loading} />
-        <Column title="In Progress" requests={inProgress} icon={Clock} color="text-blue-600" onNavigate={onNavigate} loading={loading} />
-        <Column title="Completed" requests={completed} icon={CheckCircle} color="text-green-600" onNavigate={onNavigate} loading={loading} />
+        <Column
+          title="New Requests"
+          requests={newRequests}
+          icon={AlertCircle}
+          color="text-orange-600"
+          onNavigate={onNavigate}
+          loading={loading}
+        />
+        <Column
+          title="In Progress"
+          requests={inProgress}
+          icon={Clock}
+          color="text-blue-600"
+          onNavigate={onNavigate}
+          loading={loading}
+        />
+        <Column
+          title="Completed"
+          requests={completed}
+          icon={CheckCircle}
+          color="text-green-600"
+          onNavigate={onNavigate}
+          loading={loading}
+        />
       </div>
 
       {/* Stats */}
@@ -169,11 +213,15 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="mb-1 text-sm text-gray-600">Resolution Rate</p>
           <p className="text-2xl font-semibold">{loading ? '—' : `${resolutionRate}%`}</p>
-          <p className="mt-1 text-xs text-gray-500">{loading ? '—' : `${resolvedCount} closed of ${requests.length}`}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {loading ? '—' : `${resolvedCount} closed of ${requests.length}`}
+          </p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="mb-1 text-sm text-gray-600">Total Spent (Completed)</p>
-          <p className="text-2xl font-semibold">{loading ? '—' : `₦${totalCost.toLocaleString()}`}</p>
+          <p className="text-2xl font-semibold">
+            {loading ? '—' : `₦${totalCost.toLocaleString()}`}
+          </p>
         </div>
       </div>
     </div>

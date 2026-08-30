@@ -15,8 +15,12 @@ export default function Page() {
   // exactly one unit (same assumption AddTenantForm already makes), so the
   // vacant one (or the cheapest, if none are vacant) is applied to
   // directly rather than adding a unit-picker step this flow never had.
-  const cheapestUnit = property ? [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0] : undefined;
-  const targetUnit = property ? (property.units.find((u) => u.status === 'VACANT') ?? cheapestUnit) : undefined;
+  const cheapestUnit = property
+    ? [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0]
+    : undefined;
+  const targetUnit = property
+    ? (property.units.find((u) => u.status === 'VACANT') ?? cheapestUnit)
+    : undefined;
   const propertyPrice = cheapestUnit
     ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${cheapestUnit.listedPaymentFrequency.toLowerCase()}`
     : '';

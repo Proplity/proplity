@@ -59,7 +59,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       },
     });
 
-    return NextResponse.json({ data: { ...review, verified: review.leaseId !== null } }, { status: 201 });
+    return NextResponse.json(
+      { data: { ...review, verified: review.leaseId !== null } },
+      { status: 201 },
+    );
   } catch (err) {
     return handleApiError(err);
   }

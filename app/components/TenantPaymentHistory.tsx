@@ -38,7 +38,9 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
   const records: PaymentRecord[] = [];
   for (const invoice of invoices) {
     if (invoice.status === 'CANCELLED') continue;
-    const period = invoice.description ?? `${invoice.type} — ${new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    const period =
+      invoice.description ??
+      `${invoice.type} — ${new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
     if (invoice.payments.length > 0) {
       for (const payment of invoice.payments) {
         records.push({
@@ -75,7 +77,9 @@ export function TenantPaymentHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const totalPaid = allPayments.filter((p) => p.status === 'completed' || p.status === 'late').length;
+  const totalPaid = allPayments.filter(
+    (p) => p.status === 'completed' || p.status === 'late',
+  ).length;
   const onTime = allPayments.filter((p) => p.status === 'completed').length;
   const late = allPayments.filter((p) => p.status === 'late').length;
   const onTimeRate = totalPaid > 0 ? Math.round((onTime / totalPaid) * 100) : 0;
@@ -113,7 +117,9 @@ export function TenantPaymentHistory() {
       {/* Header */}
       <div>
         <h1 className="mb-1 text-2xl font-semibold">Payment History</h1>
-        <p className="text-sm text-gray-500">A full record of your rent and other invoice payments</p>
+        <p className="text-sm text-gray-500">
+          A full record of your rent and other invoice payments
+        </p>
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading payment history…</p>}
@@ -160,7 +166,9 @@ export function TenantPaymentHistory() {
             </div>
             <span className="text-xs text-gray-500">Total Amount</span>
           </div>
-          <p className="text-2xl font-semibold">{loading ? '—' : `₦${totalAmount.toLocaleString()}`}</p>
+          <p className="text-2xl font-semibold">
+            {loading ? '—' : `₦${totalAmount.toLocaleString()}`}
+          </p>
           <p className="mt-0.5 text-xs text-gray-400">total paid</p>
         </div>
       </div>
@@ -224,7 +232,9 @@ export function TenantPaymentHistory() {
                 const Icon = cfg.icon;
                 return (
                   <tr key={`${payment.id}-${i}`} className="transition-colors hover:bg-gray-50">
-                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700">{payment.id}</td>
+                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700">
+                      {payment.id}
+                    </td>
                     <td className="px-5 py-4 font-medium text-gray-800">{payment.period}</td>
                     <td className="px-5 py-4 text-gray-600">{payment.date}</td>
                     <td className="px-5 py-4 font-semibold text-gray-900">

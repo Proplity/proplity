@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Search, Phone, Mail, MapPin, Calendar, DollarSign, AlertCircle, CheckCircle, FileText } from 'lucide-react';
+import {
+  Search,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  DollarSign,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+} from 'lucide-react';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import type { Invoice, Lease } from '@/lib/api/types';
@@ -8,7 +18,14 @@ interface TenantManagementProps {
   onNavigate: (page: any) => void;
 }
 
-const AVATAR_COLORS = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500'];
+const AVATAR_COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-teal-500',
+];
 
 // No stored "rent status" field exists on Lease -- derived from its RENT
 // invoices the same way TenantPaymentHistory derives payment status
@@ -34,7 +51,11 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
     { id: 'all', label: 'All Tenants', count: rows.length },
     { id: 'paid', label: 'Paid', count: rows.filter((r) => r.rent.status === 'paid').length },
     { id: 'due', label: 'Due Soon', count: rows.filter((r) => r.rent.status === 'due').length },
-    { id: 'overdue', label: 'Overdue', count: rows.filter((r) => r.rent.status === 'overdue').length },
+    {
+      id: 'overdue',
+      label: 'Overdue',
+      count: rows.filter((r) => r.rent.status === 'overdue').length,
+    },
   ];
 
   const filteredRows = rows.filter(({ lease, rent }) => {
@@ -201,7 +222,9 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                   <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <a
-                        href={lease.tenant?.phoneNumber ? `tel:${lease.tenant.phoneNumber}` : undefined}
+                        href={
+                          lease.tenant?.phoneNumber ? `tel:${lease.tenant.phoneNumber}` : undefined
+                        }
                         onClick={(e) => {
                           if (!lease.tenant?.phoneNumber) {
                             e.preventDefault();

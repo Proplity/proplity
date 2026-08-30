@@ -1,6 +1,6 @@
 # Post-roadmap analysis: what's next after Phase 8
 
-**Date:** 2026-08-22. All 8 phases of `out/domain-api-implementation-plan.md` are complete, committed, and live-tested (Phase 0-pre through Phase 8 — 34 API routes, 35 page routes, 5 background workers). This document is a fresh scan of the project's actual current state and a prioritized proposal for what comes next.
+**Date:** 2026-08-22. All 8 phases of `docs/development-history/domain-api-implementation-plan.md` are complete, committed, and live-tested (Phase 0-pre through Phase 8 — 34 API routes, 35 page routes, 5 background workers). This document is a fresh scan of the project's actual current state and a prioritized proposal for what comes next.
 
 ---
 

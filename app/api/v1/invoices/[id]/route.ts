@@ -72,7 +72,8 @@ export const PATCH = withAuth(
       // manage -- a userId-only invoice (e.g. SUBSCRIPTION) with no property
       // is ADMIN-only, same as an invoice on someone else's property.
       const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
-      const canManage = session.role === 'ADMIN' || (!!property && canManageProperty(session, property));
+      const canManage =
+        session.role === 'ADMIN' || (!!property && canManageProperty(session, property));
       if (!canManage) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }

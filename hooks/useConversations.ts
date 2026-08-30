@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { Conversation, CreateConversationInput, CreateMessageInput, Message } from '@/lib/api/types';
+import type {
+  Conversation,
+  CreateConversationInput,
+  CreateMessageInput,
+  Message,
+} from '@/lib/api/types';
 
 // Every conversation the logged-in user participates in (server-scoped --
 // see GET /conversations). No polling here: the conversation list only
@@ -84,5 +89,7 @@ export function useSendMessage(conversationId: string) {
 // context (a maintenance request, a lease, a property), not a bare "new
 // message" button, so there's no obvious single entry point to wire yet.
 export function useCreateConversation() {
-  return useApiSubmit((body: CreateConversationInput) => api.conversations.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateConversationInput) =>
+    api.conversations.create(body).then((res) => res.data.data),
+  );
 }

@@ -4,7 +4,7 @@
 
 ## Why
 
-Second sub-phase of Finding 3 (`out/next-phase-analysis.md`). Sub-phase 10.1 built the harness and proved it end-to-end with a 5-test login/me/logout smoke suite; this sub-phase fills in the rest of `/api/v1/auth/*` — register, refresh rotation, change-password, verify-email — with the real security/business-rule assertions CLAUDE.md documents for each.
+Second sub-phase of Finding 3 (`docs/development-history/next-phase-analysis.md`). Sub-phase 10.1 built the harness and proved it end-to-end with a 5-test login/me/logout smoke suite; this sub-phase fills in the rest of `/api/v1/auth/*` — register, refresh rotation, change-password, verify-email — with the real security/business-rule assertions CLAUDE.md documents for each.
 
 ## What was built
 

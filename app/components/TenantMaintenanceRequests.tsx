@@ -40,16 +40,25 @@ function buildTimeline(request: MaintenanceRequest) {
     { text: 'Request submitted', time: new Date(request.createdAt).toLocaleString() },
   ];
   if (request.vendor) {
-    entries.push({ text: `Assigned to ${request.vendor.name}`, time: new Date(request.updatedAt).toLocaleString() });
+    entries.push({
+      text: `Assigned to ${request.vendor.name}`,
+      time: new Date(request.updatedAt).toLocaleString(),
+    });
   }
   if (request.scheduledFor) {
-    entries.push({ text: 'Visit scheduled', time: new Date(request.scheduledFor).toLocaleString() });
+    entries.push({
+      text: 'Visit scheduled',
+      time: new Date(request.scheduledFor).toLocaleString(),
+    });
   }
   if (request.vendorNotes) {
     entries.push({ text: request.vendorNotes, time: new Date(request.updatedAt).toLocaleString() });
   }
   if (request.completedAt) {
-    entries.push({ text: 'Marked completed', time: new Date(request.completedAt).toLocaleString() });
+    entries.push({
+      text: 'Marked completed',
+      time: new Date(request.completedAt).toLocaleString(),
+    });
   }
   return entries.reverse();
 }
@@ -72,7 +81,8 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
   const counts = {
     all: allRequests.length,
     SUBMITTED: allRequests.filter((r) => r.status === 'SUBMITTED').length,
-    IN_PROGRESS: allRequests.filter((r) => r.status === 'IN_PROGRESS' || r.status === 'SCHEDULED').length,
+    IN_PROGRESS: allRequests.filter((r) => r.status === 'IN_PROGRESS' || r.status === 'SCHEDULED')
+      .length,
     COMPLETED: allRequests.filter((r) => r.status === 'COMPLETED').length,
   };
 
@@ -169,8 +179,12 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs text-gray-400">{request.id.slice(0, 8)}</span>
-                        <span className={`rounded border px-2 py-0.5 text-xs font-medium ${pConfig.color}`}>
+                        <span className="font-mono text-xs text-gray-400">
+                          {request.id.slice(0, 8)}
+                        </span>
+                        <span
+                          className={`rounded border px-2 py-0.5 text-xs font-medium ${pConfig.color}`}
+                        >
                           {pConfig.label}
                         </span>
                       </div>
@@ -230,7 +244,9 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                   </div>
 
                   {/* Full description */}
-                  <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{request.description}</div>
+                  <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+                    {request.description}
+                  </div>
 
                   {/* Timeline */}
                   <div>
@@ -245,7 +261,10 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                               className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i === 0 ? 'bg-blue-500' : 'bg-green-500'}`}
                             />
                             {i < timeline.length - 1 && (
-                              <div className="mt-1 w-px flex-1 bg-gray-200" style={{ minHeight: '16px' }} />
+                              <div
+                                className="mt-1 w-px flex-1 bg-gray-200"
+                                style={{ minHeight: '16px' }}
+                              />
                             )}
                           </div>
                           <div className="flex-1 pb-1">

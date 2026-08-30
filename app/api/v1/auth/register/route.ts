@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { appUrl } from '@/lib/appUrl';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -68,13 +69,19 @@ export async function POST(req: NextRequest) {
     let inviteCodeId: string | null = null;
     if (role === Role.MANAGER) {
       if (!landlordCode) {
-        return NextResponse.json({ error: 'A landlord invitation code is required to register as a manager' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'A landlord invitation code is required to register as a manager' },
+          { status: 400 },
+        );
       }
       const code = await prisma.managerInviteCode.findUnique({
         where: { code: landlordCode.trim().toUpperCase() },
       });
       if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
-        return NextResponse.json({ error: 'Invalid or already-used landlord code' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Invalid or already-used landlord code' },
+          { status: 400 },
+        );
       }
       inviteCodeId = code.id;
     }
@@ -89,7 +96,11 @@ export async function POST(req: NextRequest) {
       });
 
       await tx.verificationToken.create({
-        data: { userId: created.id, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+        data: {
+          userId: created.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
       });
 
       // Re-check-and-link inside the transaction, not just at the earlier
@@ -113,7 +124,7 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: user.email,
       subject: 'Verify your Proplity account',
-      body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\nhttp://localhost:3000/verify-email?token=${rawToken}\n\nThis link expires in 7 days.`,
+      body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`)}\n\nThis link expires in 7 days.`,
     });
 
     // No session is established here -- the account is PENDING_VERIFICATION
@@ -133,7 +144,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     if (err?.message === 'LANDLORD_CODE_RACE') {
-      return NextResponse.json({ error: 'This landlord code was just used by someone else' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'This landlord code was just used by someone else' },
+        { status: 409 },
+      );
     }
     console.error('Registration error:', err);
     return NextResponse.json({ error: 'Failed to process registration' }, { status: 500 });

@@ -130,7 +130,9 @@ export function useUnits(propertyId: string | null, status?: string) {
 }
 
 export function useCreateProperty() {
-  return useApiSubmit((body: CreatePropertyInput) => api.properties.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreatePropertyInput) =>
+    api.properties.create(body).then((res) => res.data.data),
+  );
 }
 
 export function useCreateUnit(propertyId: string) {
@@ -140,7 +142,9 @@ export function useCreateUnit(propertyId: string) {
 }
 
 export function useImportUnits(propertyId: string) {
-  return useApiSubmit((file: File) => api.properties.importUnits(propertyId, file).then((res) => res.data.data));
+  return useApiSubmit((file: File) =>
+    api.properties.importUnits(propertyId, file).then((res) => res.data.data),
+  );
 }
 
 export function useCreateViewing(propertyId: string) {
@@ -154,7 +158,8 @@ export function useSetPropertyPublished(propertyId: string) {
 }
 
 export function useModerateProperty(propertyId: string) {
-  return useApiSubmit((body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
-    api.properties.moderate(propertyId, body).then((res) => res.data.data),
+  return useApiSubmit(
+    (body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
+      api.properties.moderate(propertyId, body).then((res) => res.data.data),
   );
 }

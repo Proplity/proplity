@@ -68,7 +68,10 @@ export const POST = withAuth(
           const allSignatures = await tx.leaseSignature.findMany({ where: { leaseId: id } });
           const hasTenantSignature = allSignatures.some((s) => s.signerRole === Role.TENANT);
           const hasLandlordSideSignature = allSignatures.some(
-            (s) => s.signerRole === Role.MANAGER || s.signerRole === Role.LANDLORD || s.signerRole === Role.ADMIN,
+            (s) =>
+              s.signerRole === Role.MANAGER ||
+              s.signerRole === Role.LANDLORD ||
+              s.signerRole === Role.ADMIN,
           );
           if (hasTenantSignature && hasLandlordSideSignature) {
             await tx.lease.update({ where: { id }, data: { agreementSignedAt: new Date() } });

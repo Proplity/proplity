@@ -2,7 +2,10 @@
 // (no codegen in this repo). Only the fields Phase 7's forms actually need
 // are modeled -- not a full mirror of every Prisma field.
 
-export type Paginated<T> = { data: T[]; meta: { total: number; page: number; limit: number; hasMore: boolean } };
+export type Paginated<T> = {
+  data: T[];
+  meta: { total: number; page: number; limit: number; hasMore: boolean };
+};
 
 export type Unit = {
   id: string;
@@ -156,7 +159,13 @@ export type Notice = {
   id: string;
   leaseId: string;
   invoiceId: string | null;
-  type: 'RENEWAL_OFFER' | 'RENT_INCREASE' | 'DEFAULT_NOTICE' | 'EXPIRATION_ALERT' | 'PAYMENT_REMINDER' | 'TERMINATION_NOTICE';
+  type:
+    | 'RENEWAL_OFFER'
+    | 'RENT_INCREASE'
+    | 'DEFAULT_NOTICE'
+    | 'EXPIRATION_ALERT'
+    | 'PAYMENT_REMINDER'
+    | 'TERMINATION_NOTICE';
   status: 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'COUNTERED' | 'EXPIRED';
   content: string | null;
   documentUrl: string | null;
@@ -255,7 +264,14 @@ export type Invoice = {
   } | null;
   maintenanceRequestId: string | null;
   userId: string | null;
-  type: 'RENT' | 'MAINTENANCE' | 'SECURITY_DEPOSIT' | 'UTILITY' | 'LATE_FEE' | 'ASSOCIATION_FEE' | 'SUBSCRIPTION';
+  type:
+    | 'RENT'
+    | 'MAINTENANCE'
+    | 'SECURITY_DEPOSIT'
+    | 'UTILITY'
+    | 'LATE_FEE'
+    | 'ASSOCIATION_FEE'
+    | 'SUBSCRIPTION';
   amount: number;
   dueDate: string;
   status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
@@ -268,7 +284,14 @@ export type CreateInvoiceInput = {
   maintenanceRequestId?: string;
   leaseId?: string;
   userId?: string;
-  type: 'RENT' | 'MAINTENANCE' | 'SECURITY_DEPOSIT' | 'UTILITY' | 'LATE_FEE' | 'ASSOCIATION_FEE' | 'SUBSCRIPTION';
+  type:
+    | 'RENT'
+    | 'MAINTENANCE'
+    | 'SECURITY_DEPOSIT'
+    | 'UTILITY'
+    | 'LATE_FEE'
+    | 'ASSOCIATION_FEE'
+    | 'SUBSCRIPTION';
   amount: number;
   dueDate: string;
   description?: string;
@@ -362,7 +385,10 @@ export type Subscription = {
   currentPeriodEnd: string | null;
 };
 
-export type CheckoutSubscriptionInput = { tier: 'FREE' | 'PRO'; billingCycle?: 'monthly' | 'yearly' };
+export type CheckoutSubscriptionInput = {
+  tier: 'FREE' | 'PRO';
+  billingCycle?: 'monthly' | 'yearly';
+};
 
 export type Application = {
   id: string;

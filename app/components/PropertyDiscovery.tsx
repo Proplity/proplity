@@ -47,7 +47,8 @@ function AdStatusAndButton({
             <div>
               <p className="text-xs font-semibold text-orange-700">Ad Running</p>
               <p className="text-xs text-orange-600">
-                {activeAd.impressions} impressions · {activeAd.clicks} clicks · {activeAd.durationDays} days
+                {activeAd.impressions} impressions · {activeAd.clicks} clicks ·{' '}
+                {activeAd.durationDays} days
               </p>
             </div>
           </div>
@@ -89,7 +90,9 @@ function cardFields(property: Property) {
   const freq = cheapestUnit?.listedPaymentFrequency.toLowerCase() ?? 'year';
 
   return {
-    price: cheapestUnit ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${freq}` : 'Price on request',
+    price: cheapestUnit
+      ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${freq}`
+      : 'Price on request',
     bedrooms: cheapestUnit?.bedrooms ?? 0,
     bathrooms: cheapestUnit?.bathrooms ?? 0,
     sqft: cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : 'N/A',
@@ -99,8 +102,12 @@ function cardFields(property: Property) {
     imageClass: 'bg-gradient-to-br from-blue-100 to-blue-200',
     neighborhood: {
       safety: property.securityRating ? Math.round(property.securityRating / 10) : null,
-      accessibility: property.roadConditionScore ? Math.round(property.roadConditionScore / 10) : null,
-      powerReliability: property.powerReliabilityScore ? Math.round(property.powerReliabilityScore / 10) : null,
+      accessibility: property.roadConditionScore
+        ? Math.round(property.roadConditionScore / 10)
+        : null,
+      powerReliability: property.powerReliabilityScore
+        ? Math.round(property.powerReliabilityScore / 10)
+        : null,
     },
   };
 }
@@ -162,7 +169,8 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
   const filteredProperties = properties.filter((property) => {
     if (selectedFilter === 'verified') return property.moderationStatus === 'APPROVED';
     if (selectedFilter === 'high-trust') return (property.trustScore ?? 0) >= 80;
-    if (selectedFilter === 'new') return Date.now() - new Date(property.createdAt).getTime() < NEW_LISTING_WINDOW_MS;
+    if (selectedFilter === 'new')
+      return Date.now() - new Date(property.createdAt).getTime() < NEW_LISTING_WINDOW_MS;
     return true;
   });
 
@@ -292,18 +300,25 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
 
                 {/* Neighborhood Intelligence */}
                 <div className="mb-4 rounded-lg bg-gray-50 p-3">
-                  <p className="mb-2 text-xs font-medium text-gray-700">Neighborhood Intelligence</p>
+                  <p className="mb-2 text-xs font-medium text-gray-700">
+                    Neighborhood Intelligence
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
-                    {([
-                      ['Safety', card.neighborhood.safety, 'bg-green-500'],
-                      ['Access', card.neighborhood.accessibility, 'bg-blue-500'],
-                      ['Power', card.neighborhood.powerReliability, 'bg-yellow-500'],
-                    ] as const).map(([label, value, color]) => (
+                    {(
+                      [
+                        ['Safety', card.neighborhood.safety, 'bg-green-500'],
+                        ['Access', card.neighborhood.accessibility, 'bg-blue-500'],
+                        ['Power', card.neighborhood.powerReliability, 'bg-yellow-500'],
+                      ] as const
+                    ).map(([label, value, color]) => (
                       <div key={label} className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">{label}</span>
                         <div className="flex items-center gap-1">
                           <div className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
-                            <div className={`h-full ${color}`} style={{ width: `${(value ?? 0) * 10}%` }}></div>
+                            <div
+                              className={`h-full ${color}`}
+                              style={{ width: `${(value ?? 0) * 10}%` }}
+                            ></div>
                           </div>
                           <span className="text-xs font-medium">{value ?? '—'}/10</span>
                         </div>
@@ -311,7 +326,9 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                     ))}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-600">Water</span>
-                      <span className="text-xs font-medium">{property.waterSupplyType.replace('_', ' ')}</span>
+                      <span className="text-xs font-medium">
+                        {property.waterSupplyType.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -320,13 +337,20 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   key={`${property.id}-${adRefreshKey}`}
                   property={property}
                   onOpenModal={(type, adId) =>
-                    setAdModal({ type, propertyId: property.id, propertyTitle: property.name, adId })
+                    setAdModal({
+                      type,
+                      propertyId: property.id,
+                      propertyTitle: property.name,
+                      adId,
+                    })
                   }
                 />
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
-                    onClick={() => onNavigate({ type: 'schedule-viewing', propertyId: property.id })}
+                    onClick={() =>
+                      onNavigate({ type: 'schedule-viewing', propertyId: property.id })
+                    }
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                   >
                     Schedule Tour
@@ -412,7 +436,9 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                 <label className="mb-1 block text-sm font-medium text-gray-700">Ad Duration</label>
                 <select
                   value={adForm.durationDays}
-                  onChange={(e) => setAdForm((f) => ({ ...f, durationDays: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setAdForm((f) => ({ ...f, durationDays: Number(e.target.value) }))
+                  }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"
                 >
                   <option value={7}>7 days</option>

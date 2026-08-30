@@ -35,5 +35,7 @@ export function useAccessCodes(unitId: string | null) {
 }
 
 export function useCreateAccessCode() {
-  return useApiSubmit((body: CreateAccessCodeInput) => api.accessCodes.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateAccessCodeInput) =>
+    api.accessCodes.create(body).then((res) => res.data.data),
+  );
 }

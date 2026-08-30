@@ -29,4 +29,4 @@ Investigating Part A surfaced a related, previously-undocumented fact: `POST /le
 
 ## What's next
 
-Remaining from `out/project-audit.md`: repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, real AI/LLM integration, CSV/Excel import-export, e-signature support.
+Remaining from `docs/development-history/project-audit.md`: repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, real AI/LLM integration, CSV/Excel import-export, e-signature support.

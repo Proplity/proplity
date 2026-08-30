@@ -25,7 +25,9 @@ describe('announcements (property-scoped)', () => {
     expect(postAttempt.status).toBe(403);
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const readAttempt = await apiFetch(`/api/v1/properties/${property.id}/announcements`, { cookie: strangerCookie });
+    const readAttempt = await apiFetch(`/api/v1/properties/${property.id}/announcements`, {
+      cookie: strangerCookie,
+    });
     expect(readAttempt.status).toBe(403);
   });
 
@@ -50,7 +52,9 @@ describe('announcements (property-scoped)', () => {
     expect(pinned.status).toBe(201);
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const list = await apiFetch(`/api/v1/properties/${property.id}/announcements`, { cookie: tenantCookie });
+    const list = await apiFetch(`/api/v1/properties/${property.id}/announcements`, {
+      cookie: tenantCookie,
+    });
     expect(list.status).toBe(200);
     expect(list.body.data.length).toBe(2);
     expect(list.body.data[0].title).toBe('Pinned');
@@ -66,18 +70,24 @@ describe('announcements (property-scoped)', () => {
       body: { title: 'Original', body: 'Text' },
     });
 
-    const edited = await apiFetch(`/api/v1/properties/${property.id}/announcements/${created.body.data.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { title: 'Edited' },
-    });
+    const edited = await apiFetch(
+      `/api/v1/properties/${property.id}/announcements/${created.body.data.id}`,
+      {
+        method: 'PATCH',
+        cookie,
+        body: { title: 'Edited' },
+      },
+    );
     expect(edited.status).toBe(200);
     expect(edited.body.data.title).toBe('Edited');
 
-    const deleted = await apiFetch(`/api/v1/properties/${property.id}/announcements/${created.body.data.id}`, {
-      method: 'DELETE',
-      cookie,
-    });
+    const deleted = await apiFetch(
+      `/api/v1/properties/${property.id}/announcements/${created.body.data.id}`,
+      {
+        method: 'DELETE',
+        cookie,
+      },
+    );
     expect(deleted.status).toBe(200);
     const gone = await testPrisma.announcement.findUnique({ where: { id: created.body.data.id } });
     expect(gone).toBeNull();
@@ -89,7 +99,7 @@ describe('violations (unit-scoped)', () => {
     await resetDb();
   });
 
-  it('the managing owner can report a violation; the unit\'s own tenant can see it; a stranger tenant cannot', async () => {
+  it("the managing owner can report a violation; the unit's own tenant can see it; a stranger tenant cannot", async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
@@ -98,25 +108,34 @@ describe('violations (unit-scoped)', () => {
     const stranger = await createUser(Role.TENANT);
     const managerCookie = await authCookie(manager.id, manager.role);
 
-    const created = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/violations`, {
-      method: 'POST',
-      cookie: managerCookie,
-      body: { description: 'Loud party after hours', severity: 'MODERATE' },
-    });
+    const created = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/violations`,
+      {
+        method: 'POST',
+        cookie: managerCookie,
+        body: { description: 'Loud party after hours', severity: 'MODERATE' },
+      },
+    );
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('OPEN');
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantRead = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/violations`, {
-      cookie: tenantCookie,
-    });
+    const tenantRead = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/violations`,
+      {
+        cookie: tenantCookie,
+      },
+    );
     expect(tenantRead.status).toBe(200);
     expect(tenantRead.body.data.length).toBe(1);
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const strangerRead = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/violations`, {
-      cookie: strangerCookie,
-    });
+    const strangerRead = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/violations`,
+      {
+        cookie: strangerCookie,
+      },
+    );
     expect(strangerRead.status).toBe(403);
   });
 
@@ -125,11 +144,14 @@ describe('violations (unit-scoped)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const cookie = await authCookie(manager.id, manager.role);
-    const created = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/violations`, {
-      method: 'POST',
-      cookie,
-      body: { description: 'Unauthorized pet' },
-    });
+    const created = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/violations`,
+      {
+        method: 'POST',
+        cookie,
+        body: { description: 'Unauthorized pet' },
+      },
+    );
 
     const resolved = await apiFetch(
       `/api/v1/properties/${property.id}/units/${unit.id}/violations/${created.body.data.id}`,
@@ -152,11 +174,14 @@ describe('condition reports (unit-scoped)', () => {
     const unit = await createUnit(property.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/condition-reports`, {
-      method: 'POST',
-      cookie,
-      body: { rooms: { livingRoom: { condition: 'good' }, kitchen: { condition: 'fair' } } },
-    });
+    const res = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/condition-reports`,
+      {
+        method: 'POST',
+        cookie,
+        body: { rooms: { livingRoom: { condition: 'good' }, kitchen: { condition: 'fair' } } },
+      },
+    );
     expect(res.status).toBe(201);
     expect(res.body.data.aiFlags).toBeNull();
     expect(res.body.data.rooms.livingRoom.condition).toBe('good');
@@ -169,11 +194,14 @@ describe('condition reports (unit-scoped)', () => {
     const tenant = await createUser(Role.TENANT);
     const cookie = await authCookie(tenant.id, tenant.role);
 
-    const res = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}/condition-reports`, {
-      method: 'POST',
-      cookie,
-      body: { rooms: {} },
-    });
+    const res = await apiFetch(
+      `/api/v1/properties/${property.id}/units/${unit.id}/condition-reports`,
+      {
+        method: 'POST',
+        cookie,
+        body: { rooms: {} },
+      },
+    );
     expect(res.status).toBe(403);
   });
 });
@@ -235,10 +263,13 @@ describe('equipment (property-wide or unit-specific)', () => {
       body: { type: 'ELEVATOR' },
     });
 
-    const deleted = await apiFetch(`/api/v1/properties/${property.id}/equipment/${created.body.data.id}`, {
-      method: 'DELETE',
-      cookie,
-    });
+    const deleted = await apiFetch(
+      `/api/v1/properties/${property.id}/equipment/${created.body.data.id}`,
+      {
+        method: 'DELETE',
+        cookie,
+      },
+    );
     expect(deleted.status).toBe(200);
   });
 });
@@ -254,7 +285,12 @@ describe('bank accounts (self-service, no payout automation)', () => {
     const res = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie,
-      body: { accountNumber: '1234567890', bankCode: '058', bankName: 'GTBank', accountName: 'Test User' },
+      body: {
+        accountNumber: '1234567890',
+        bankCode: '058',
+        bankName: 'GTBank',
+        accountName: 'Test User',
+      },
     });
     expect(res.status).toBe(403);
   });
@@ -277,25 +313,38 @@ describe('bank accounts (self-service, no payout automation)', () => {
     const first = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie,
-      body: { accountNumber: '1234567890', bankCode: '058', bankName: 'GTBank', accountName: 'First' },
+      body: {
+        accountNumber: '1234567890',
+        bankCode: '058',
+        bankName: 'GTBank',
+        accountName: 'First',
+      },
     });
     expect(first.body.data.isDefault).toBe(true);
 
     const second = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie,
-      body: { accountNumber: '0987654321', bankCode: '011', bankName: 'First Bank', accountName: 'Second', isDefault: true },
+      body: {
+        accountNumber: '0987654321',
+        bankCode: '011',
+        bankName: 'First Bank',
+        accountName: 'Second',
+        isDefault: true,
+      },
     });
     expect(second.body.data.isDefault).toBe(true);
 
-    const refetchedFirst = await testPrisma.bankAccount.findUnique({ where: { id: first.body.data.id } });
+    const refetchedFirst = await testPrisma.bankAccount.findUnique({
+      where: { id: first.body.data.id },
+    });
     expect(refetchedFirst?.isDefault).toBe(false);
 
     const list = await apiFetch('/api/v1/bank-accounts', { cookie });
     expect(list.body.data.length).toBe(2);
   });
 
-  it('only ever returns the caller\'s own accounts, and only they can delete/set-default them', async () => {
+  it("only ever returns the caller's own accounts, and only they can delete/set-default them", async () => {
     const landlordA = await createUser(Role.LANDLORD);
     const landlordB = await createUser(Role.LANDLORD);
     const cookieA = await authCookie(landlordA.id, landlordA.role);
@@ -304,7 +353,12 @@ describe('bank accounts (self-service, no payout automation)', () => {
     const accountA = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie: cookieA,
-      body: { accountNumber: '1111111111', bankCode: '058', bankName: 'GTBank', accountName: 'Owner A' },
+      body: {
+        accountNumber: '1111111111',
+        bankCode: '058',
+        bankName: 'GTBank',
+        accountName: 'Owner A',
+      },
     });
 
     const listB = await apiFetch('/api/v1/bank-accounts', { cookie: cookieB });
@@ -324,17 +378,29 @@ describe('bank accounts (self-service, no payout automation)', () => {
     const first = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie,
-      body: { accountNumber: '1234567890', bankCode: '058', bankName: 'GTBank', accountName: 'First' },
+      body: {
+        accountNumber: '1234567890',
+        bankCode: '058',
+        bankName: 'GTBank',
+        accountName: 'First',
+      },
     });
     const second = await apiFetch('/api/v1/bank-accounts', {
       method: 'POST',
       cookie,
-      body: { accountNumber: '0987654321', bankCode: '011', bankName: 'First Bank', accountName: 'Second' },
+      body: {
+        accountNumber: '0987654321',
+        bankCode: '011',
+        bankName: 'First Bank',
+        accountName: 'Second',
+      },
     });
 
     await apiFetch(`/api/v1/bank-accounts/${first.body.data.id}`, { method: 'DELETE', cookie });
 
-    const refetchedSecond = await testPrisma.bankAccount.findUnique({ where: { id: second.body.data.id } });
+    const refetchedSecond = await testPrisma.bankAccount.findUnique({
+      where: { id: second.body.data.id },
+    });
     expect(refetchedSecond?.isDefault).toBe(true);
   });
 });

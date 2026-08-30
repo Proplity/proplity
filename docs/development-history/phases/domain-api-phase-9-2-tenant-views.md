@@ -57,4 +57,4 @@ Verified via live requests as `manager@`/`vendor@proplity.com` (not just `tenant
 
 ## Next up
 
-Sub-phase 3 — Manager/Landlord operational views (`Dashboard.tsx`, `DashboardBreakdownPage.tsx`, `LandlordDashboard.tsx`, `TenantManagement.tsx`, `TenantDetail.tsx`, `MaintenanceBoard.tsx`, `MaintenanceDetail.tsx`, `PropertyDetail.tsx`) — the largest and most aggregation-heavy group per `out/phase-9-frontend-hydration-plan.md`.
+Sub-phase 3 — Manager/Landlord operational views (`Dashboard.tsx`, `DashboardBreakdownPage.tsx`, `LandlordDashboard.tsx`, `TenantManagement.tsx`, `TenantDetail.tsx`, `MaintenanceBoard.tsx`, `MaintenanceDetail.tsx`, `PropertyDetail.tsx`) — the largest and most aggregation-heavy group per `docs/development-history/phase-9-frontend-hydration-plan.md`.

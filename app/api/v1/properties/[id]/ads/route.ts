@@ -44,7 +44,9 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const existing = await prisma.adCampaign.findFirst({ where: { propertyId, status: 'ACTIVE' } });
+      const existing = await prisma.adCampaign.findFirst({
+        where: { propertyId, status: 'ACTIVE' },
+      });
       if (existing) {
         return NextResponse.json(
           { error: 'This property already has an active ad campaign', code: 'AD_CONFLICT' },

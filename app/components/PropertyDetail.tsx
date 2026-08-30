@@ -21,7 +21,11 @@ import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useApplications, useReviewApplication } from '@/hooks/useApplications';
-import { useModerateProperty, useSetPropertyPublished, useImportUnits } from '@/hooks/useProperties';
+import {
+  useModerateProperty,
+  useSetPropertyPublished,
+  useImportUnits,
+} from '@/hooks/useProperties';
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
@@ -54,8 +58,16 @@ function ListingStatusCard({
 }) {
   const auth = useAuth();
   const isAdmin = auth.user?.role === 'admin';
-  const { submit: setPublished, submitting: publishing, error: publishError } = useSetPropertyPublished(property.id);
-  const { submit: moderate, submitting: moderating, error: moderateError } = useModerateProperty(property.id);
+  const {
+    submit: setPublished,
+    submitting: publishing,
+    error: publishError,
+  } = useSetPropertyPublished(property.id);
+  const {
+    submit: moderate,
+    submitting: moderating,
+    error: moderateError,
+  } = useModerateProperty(property.id);
 
   const handleTogglePublish = async () => {
     try {
@@ -80,7 +92,9 @@ function ListingStatusCard({
       <h2 className="mb-4 font-semibold">Listing Status</h2>
       <div className="mb-4 flex items-center justify-between">
         <span className="text-sm text-gray-600">Moderation</span>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${MODERATION_BADGE[property.moderationStatus]}`}>
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${MODERATION_BADGE[property.moderationStatus]}`}
+        >
           {property.moderationStatus.replace('_', ' ')}
         </span>
       </div>
@@ -209,7 +223,9 @@ function AnnouncementsCard({ propertyId, canManage }: { propertyId: string; canM
                 <p className="font-medium">{a.title}</p>
               </div>
               <p className="text-sm text-gray-600">{a.body}</p>
-              <p className="mt-1 text-xs text-gray-400">{new Date(a.publishedAt).toLocaleDateString()}</p>
+              <p className="mt-1 text-xs text-gray-400">
+                {new Date(a.publishedAt).toLocaleDateString()}
+              </p>
             </div>
           ))}
         {!loading && announcements.length === 0 && (
@@ -259,13 +275,21 @@ function EquipmentCard({ propertyId }: { propertyId: string }) {
             onChange={(e) => setType(e.target.value as Equipment['type'])}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
-            {(['HVAC', 'WATER_HEATER', 'GENERATOR', 'INVERTER', 'APPLIANCE', 'ELEVATOR', 'OTHER'] as const).map(
-              (t) => (
-                <option key={t} value={t}>
-                  {t.replace('_', ' ')}
-                </option>
-              ),
-            )}
+            {(
+              [
+                'HVAC',
+                'WATER_HEATER',
+                'GENERATOR',
+                'INVERTER',
+                'APPLIANCE',
+                'ELEVATOR',
+                'OTHER',
+              ] as const
+            ).map((t) => (
+              <option key={t} value={t}>
+                {t.replace('_', ' ')}
+              </option>
+            ))}
           </select>
           <input
             value={serialNumber}
@@ -290,10 +314,14 @@ function EquipmentCard({ propertyId }: { propertyId: string }) {
           equipment.map((eq) => (
             <div key={eq.id} className="flex items-center justify-between text-sm">
               <span>{eq.type.replace('_', ' ')}</span>
-              <span className="text-xs text-gray-400">{eq.serialNumber ?? (eq.unitId ? 'Unit-level' : 'Property-wide')}</span>
+              <span className="text-xs text-gray-400">
+                {eq.serialNumber ?? (eq.unitId ? 'Unit-level' : 'Property-wide')}
+              </span>
             </div>
           ))}
-        {!loading && equipment.length === 0 && <p className="text-sm text-gray-400">No equipment tracked yet.</p>}
+        {!loading && equipment.length === 0 && (
+          <p className="text-sm text-gray-400">No equipment tracked yet.</p>
+        )}
       </div>
     </div>
   );
@@ -303,9 +331,18 @@ function EquipmentCard({ propertyId }: { propertyId: string }) {
 // Excel)" bullet under Property & Unit Management. Partial success is
 // expected (a bad row shouldn't block the good ones), so results always
 // show a per-row error list rather than a single pass/fail.
-function ImportUnitsControl({ propertyId, onImported }: { propertyId: string; onImported: () => void }) {
+function ImportUnitsControl({
+  propertyId,
+  onImported,
+}: {
+  propertyId: string;
+  onImported: () => void;
+}) {
   const { submit: importUnits, submitting, error } = useImportUnits(propertyId);
-  const [result, setResult] = useState<{ created: number; errors: { row: number; error: string }[] } | null>(null);
+  const [result, setResult] = useState<{
+    created: number;
+    errors: { row: number; error: string }[];
+  } | null>(null);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -325,20 +362,33 @@ function ImportUnitsControl({ propertyId, onImported }: { propertyId: string; on
     <div className="text-right">
       <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
         {submitting ? 'Importing…' : 'Import Units (CSV/Excel)'}
-        <input type="file" accept=".csv,.xlsx" onChange={handleFile} disabled={submitting} className="hidden" />
+        <input
+          type="file"
+          accept=".csv,.xlsx"
+          onChange={handleFile}
+          disabled={submitting}
+          className="hidden"
+        />
       </label>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       {result && (
         <p className="mt-1 text-xs text-gray-500">
           {result.created} unit{result.created === 1 ? '' : 's'} created
-          {result.errors.length > 0 && `, ${result.errors.length} row(s) skipped (e.g. row ${result.errors[0].row}: ${result.errors[0].error})`}
+          {result.errors.length > 0 &&
+            `, ${result.errors.length} row(s) skipped (e.g. row ${result.errors[0].row}: ${result.errors[0].error})`}
         </p>
       )}
     </div>
   );
 }
 
-function ApplicationRow({ application, onReviewed }: { application: Application; onReviewed: () => void }) {
+function ApplicationRow({
+  application,
+  onReviewed,
+}: {
+  application: Application;
+  onReviewed: () => void;
+}) {
   const { submit: review, submitting } = useReviewApplication(application.id);
   const details = application.details as Record<string, unknown>;
   const name = [details.firstName, details.lastName].filter(Boolean).join(' ') || 'Applicant';
@@ -362,7 +412,9 @@ function ApplicationRow({ application, onReviewed }: { application: Application;
             Unit {application.unit?.unitNumber} · {details.email as string}
           </p>
         </div>
-        <span className="text-xs text-gray-400">{new Date(application.createdAt).toLocaleDateString()}</span>
+        <span className="text-xs text-gray-400">
+          {new Date(application.createdAt).toLocaleDateString()}
+        </span>
       </div>
       <div className="flex gap-2">
         <button
@@ -392,7 +444,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
   const { data: leases } = useLeases();
   const { data: invoices } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
-  const { data: pendingApplications, refetch: refetchApplications } = useApplications({ status: 'PENDING' });
+  const { data: pendingApplications, refetch: refetchApplications } = useApplications({
+    status: 'PENDING',
+  });
 
   if (loading) {
     return <div className="p-6 text-gray-500">Loading property…</div>;
@@ -401,7 +455,10 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
   if (!property) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <button
+          onClick={onBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        >
           <ArrowLeft className="h-5 w-5" />
           Back
         </button>
@@ -417,19 +474,28 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
   const canManage =
     !!auth.user &&
     MANAGE_ROLES.includes(auth.user.role) &&
-    (auth.user.role === 'admin' || auth.user.id === property.managerId || auth.user.id === property.landlordId);
+    (auth.user.role === 'admin' ||
+      auth.user.id === property.managerId ||
+      auth.user.id === property.landlordId);
 
   const propertyLeases = leases.filter((l) => l.unit?.propertyId === propertyId);
-  const propertyApplications = pendingApplications.filter((a) => a.unit?.property.id === propertyId);
+  const propertyApplications = pendingApplications.filter(
+    (a) => a.unit?.property.id === propertyId,
+  );
   const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === propertyId);
   const propertyMaintenance = maintenanceRequests
     .filter((r) => r.unit?.propertyId === propertyId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const collected = propertyInvoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
+  const collected = propertyInvoices
+    .flatMap((i) => i.payments)
+    .reduce((sum, p) => sum + p.amount, 0);
   const pending = propertyInvoices
     .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce((sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)), 0);
+    .reduce(
+      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
+      0,
+    );
   const maintenanceCosts = propertyMaintenance
     .filter((r) => r.status === 'COMPLETED')
     .reduce((sum, r) => sum + (r.finalCost ?? 0), 0);
@@ -443,13 +509,20 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
 
   const neighborhood = {
     safety: property.securityRating != null ? Math.round(property.securityRating / 10) : null,
-    accessibility: property.roadConditionScore != null ? Math.round(property.roadConditionScore / 10) : null,
-    powerReliability: property.powerReliabilityScore != null ? Math.round(property.powerReliabilityScore / 10) : null,
+    accessibility:
+      property.roadConditionScore != null ? Math.round(property.roadConditionScore / 10) : null,
+    powerReliability:
+      property.powerReliabilityScore != null
+        ? Math.round(property.powerReliabilityScore / 10)
+        : null,
   };
 
   return (
     <div className="p-6">
-      <button onClick={onBack} className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900">
+      <button
+        onClick={onBack}
+        className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
         <ArrowLeft className="h-5 w-5" />
         Back
       </button>
@@ -496,12 +569,15 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
           </div>
           <div className="flex items-center gap-2">
             <Square className="h-5 w-5 text-gray-400" />
-            <span className="font-medium">{cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : 'N/A'}</span>
+            <span className="font-medium">
+              {cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : 'N/A'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             <span className="font-semibold text-green-600">
-              ₦{(cheapestUnit?.rentAmount ?? 0).toLocaleString()}/{(cheapestUnit?.listedPaymentFrequency ?? 'year').toLowerCase()}
+              ₦{(cheapestUnit?.rentAmount ?? 0).toLocaleString()}/
+              {(cheapestUnit?.listedPaymentFrequency ?? 'year').toLowerCase()}
             </span>
           </div>
         </div>
@@ -536,7 +612,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                 Schedule Viewing
               </button>
               <button
-                onClick={() => onNavigate({ type: 'property-application', propertyId: property.id })}
+                onClick={() =>
+                  onNavigate({ type: 'property-application', propertyId: property.id })
+                }
                 className="rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-700"
               >
                 Apply Now
@@ -558,13 +636,16 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
               </div>
               <div className="divide-y divide-gray-200">
                 {property.units.map((unit) => {
-                  const lease = propertyLeases.find((l) => l.unitId === unit.id && l.status === 'ACTIVE');
+                  const lease = propertyLeases.find(
+                    (l) => l.unitId === unit.id && l.status === 'ACTIVE',
+                  );
                   return (
                     <div key={unit.id} className="p-6">
                       <div className="mb-3 flex items-center justify-between">
                         <p className="font-semibold">Unit {unit.unitNumber}</p>
                         <span className="text-xs text-gray-500">
-                          {unit.bedrooms} bed · {unit.bathrooms} bath · ₦{unit.rentAmount.toLocaleString()}/
+                          {unit.bedrooms} bed · {unit.bathrooms} bath · ₦
+                          {unit.rentAmount.toLocaleString()}/
                           {unit.listedPaymentFrequency.toLowerCase()}
                         </span>
                       </div>
@@ -581,7 +662,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                               </div>
                             </div>
                             <button
-                              onClick={() => onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })}
+                              onClick={() =>
+                                onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })
+                              }
                               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                             >
                               View Tenant
@@ -594,13 +677,17 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                             </div>
                             <div>
                               <p className="text-gray-600">Lease End</p>
-                              <p className="font-medium">{new Date(lease.endDate).toLocaleDateString()}</p>
+                              <p className="font-medium">
+                                {new Date(lease.endDate).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
                         </>
                       ) : (
                         <p className="text-sm text-gray-400">
-                          {unit.status === 'VACANT' ? 'Vacant' : `No active lease (${unit.status.toLowerCase()})`}
+                          {unit.status === 'VACANT'
+                            ? 'Vacant'
+                            : `No active lease (${unit.status.toLowerCase()})`}
                         </p>
                       )}
                     </div>
@@ -615,11 +702,17 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
             <div className="rounded-lg border border-gray-200 bg-white">
               <div className="border-b border-gray-200 p-6">
                 <h2 className="font-semibold">Rental Applications</h2>
-                <p className="text-sm text-gray-500">Pending applications for units on this property</p>
+                <p className="text-sm text-gray-500">
+                  Pending applications for units on this property
+                </p>
               </div>
               <div className="divide-y divide-gray-200">
                 {propertyApplications.map((application) => (
-                  <ApplicationRow key={application.id} application={application} onReviewed={refetchApplications} />
+                  <ApplicationRow
+                    key={application.id}
+                    application={application}
+                    onReviewed={refetchApplications}
+                  />
                 ))}
                 {propertyApplications.length === 0 && (
                   <p className="p-6 text-sm text-gray-400">No pending applications.</p>
@@ -662,9 +755,24 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
             <div className="space-y-4">
               {(
                 [
-                  { label: 'Safety Rating', value: neighborhood.safety, Icon: Shield, color: 'bg-green-500' },
-                  { label: 'Accessibility', value: neighborhood.accessibility, Icon: MapPin, color: 'bg-blue-500' },
-                  { label: 'Power Reliability', value: neighborhood.powerReliability, Icon: Zap, color: 'bg-yellow-500' },
+                  {
+                    label: 'Safety Rating',
+                    value: neighborhood.safety,
+                    Icon: Shield,
+                    color: 'bg-green-500',
+                  },
+                  {
+                    label: 'Accessibility',
+                    value: neighborhood.accessibility,
+                    Icon: MapPin,
+                    color: 'bg-blue-500',
+                  },
+                  {
+                    label: 'Power Reliability',
+                    value: neighborhood.powerReliability,
+                    Icon: Zap,
+                    color: 'bg-yellow-500',
+                  },
                 ] as const
               ).map(
                 ({ label, value, Icon, color }) =>
@@ -678,7 +786,10 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                         <span className="text-sm font-semibold">{value}/10</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                        <div className={`h-full ${color} rounded-full`} style={{ width: `${value * 10}%` }}></div>
+                        <div
+                          className={`h-full ${color} rounded-full`}
+                          style={{ width: `${value * 10}%` }}
+                        ></div>
                       </div>
                     </div>
                   ),
@@ -707,7 +818,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-sm text-gray-600">Collected</span>
-                  <span className="font-semibold text-green-600">₦{collected.toLocaleString()}</span>
+                  <span className="font-semibold text-green-600">
+                    ₦{collected.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-sm text-gray-600">Pending</span>
@@ -715,7 +828,9 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <span className="text-sm text-gray-600">Maintenance Costs</span>
-                  <span className="font-semibold text-red-600">₦{maintenanceCosts.toLocaleString()}</span>
+                  <span className="font-semibold text-red-600">
+                    ₦{maintenanceCosts.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-sm font-semibold">Net Income</span>

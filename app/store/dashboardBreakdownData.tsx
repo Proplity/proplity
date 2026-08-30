@@ -82,7 +82,9 @@ export const activeTenants = [
     'Apt 203',
     'Jan 2025',
     'Dec 2025',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Chidinma Okafor',
@@ -90,7 +92,9 @@ export const activeTenants = [
     'Unit 5B',
     'Mar 2025',
     'Feb 2026',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Ibrahim Musa',
@@ -98,7 +102,9 @@ export const activeTenants = [
     'Apt 14',
     'Jun 2024',
     'May 2025',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
   ],
   [
     'Blessing Eze',
@@ -106,7 +112,9 @@ export const activeTenants = [
     'Flat 8',
     'Sep 2024',
     'Aug 2025',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Funmi Adeyemi',
@@ -114,7 +122,9 @@ export const activeTenants = [
     'Apt 12A',
     'Apr 2025',
     'Mar 2026',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Yemi Oladipo',
@@ -122,7 +132,9 @@ export const activeTenants = [
     'Unit 7',
     'Jul 2024',
     'Jun 2025',
-    <span key="status" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Overdue</span>,
+    <span key="status" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+      Overdue
+    </span>,
   ],
   [
     'Tunde Bakare',
@@ -130,7 +142,9 @@ export const activeTenants = [
     'Flat 3C',
     'Aug 2024',
     'Jul 2025',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
   ],
   [
     'Ngozi Chukwu',
@@ -138,7 +152,9 @@ export const activeTenants = [
     'Apt 401',
     'Feb 2025',
     'Jan 2026',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Emeka Nwosu',
@@ -146,7 +162,9 @@ export const activeTenants = [
     'Apt 107',
     'May 2024',
     'Apr 2025',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Aisha Bello',
@@ -154,7 +172,9 @@ export const activeTenants = [
     'Flat 1A',
     'Jun 2024',
     'May 2025',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
   [
     'Chidi Amaechi',
@@ -162,7 +182,9 @@ export const activeTenants = [
     'Apt 06',
     'Oct 2024',
     'Sep 2025',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
   ],
   [
     'Ola Martins',
@@ -170,7 +192,9 @@ export const activeTenants = [
     'Apt 203',
     'Jan 2025',
     'Dec 2025',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Paid
+    </span>,
   ],
 ];
 
@@ -182,7 +206,9 @@ export const evictedTenants = [
     'Feb 14, 2026',
     'Non-payment of rent',
     '₦1,800,000',
-    <span key="status" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Vacated</span>,
+    <span key="status" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+      Vacated
+    </span>,
   ],
   [
     'Musa Garba',
@@ -191,7 +217,9 @@ export const evictedTenants = [
     'Jan 03, 2026',
     'Property damage',
     '₦450,000',
-    <span key="status" className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">Legal Action</span>,
+    <span key="status" className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+      Legal Action
+    </span>,
   ],
   [
     'Sade Akinwale',
@@ -200,7 +228,9 @@ export const evictedTenants = [
     'Dec 20, 2025',
     'Lease violation',
     '₦0',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Settled</span>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Settled
+    </span>,
   ],
   [
     'Emeka Obi',
@@ -209,7 +239,9 @@ export const evictedTenants = [
     'Nov 11, 2025',
     'Non-payment of rent',
     '₦2,700,000',
-    <span key="status" className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">Legal Action</span>,
+    <span key="status" className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+      Legal Action
+    </span>,
   ],
   [
     'Halima Usman',
@@ -218,7 +250,9 @@ export const evictedTenants = [
     'Oct 05, 2025',
     'Subletting without consent',
     '₦0',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Settled</span>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Settled
+    </span>,
   ],
 ];
 
@@ -229,7 +263,9 @@ export const rentRows = [
     '₦850,000',
     'Bank Transfer',
     '2 hrs ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Chidinma Okafor',
@@ -237,7 +273,9 @@ export const rentRows = [
     '₦1,200,000',
     'Bank Transfer',
     '5 hrs ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Ibrahim Musa',
@@ -245,7 +283,9 @@ export const rentRows = [
     '₦650,000',
     'Mobile Money',
     '1 day ago',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
   ],
   [
     'Blessing Eze',
@@ -253,7 +293,9 @@ export const rentRows = [
     '₦900,000',
     'Bank Transfer',
     '2 days ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Funmi Adeyemi',
@@ -261,7 +303,9 @@ export const rentRows = [
     '₦2,500,000',
     'Bank Transfer',
     '3 days ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Ngozi Chukwu',
@@ -269,7 +313,9 @@ export const rentRows = [
     '₦750,000',
     'Card',
     '4 days ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Emeka Nwosu',
@@ -277,7 +323,9 @@ export const rentRows = [
     '₦850,000',
     'Bank Transfer',
     '5 days ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
   [
     'Aisha Bello',
@@ -285,7 +333,9 @@ export const rentRows = [
     '₦700,000',
     'Mobile Money',
     '6 days ago',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Issued</span>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Issued
+    </span>,
   ],
 ];
 
@@ -326,7 +376,9 @@ export const maintenanceRows = [
     'Lekki Phase 1, Apt 203',
     'AC unit not cooling',
     'Adewale Johnson',
-    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">High</span>,
+    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+      High
+    </span>,
     '3',
   ],
   [
@@ -334,7 +386,9 @@ export const maintenanceRows = [
     'Wuse 2, Apt 14',
     'Leaking roof',
     'Ibrahim Musa',
-    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">High</span>,
+    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+      High
+    </span>,
     '5',
   ],
   [
@@ -342,7 +396,9 @@ export const maintenanceRows = [
     'Surulere, Unit 7',
     'Broken door lock',
     'Yemi Oladipo',
-    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Medium</span>,
+    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Medium
+    </span>,
     '2',
   ],
   [
@@ -350,7 +406,9 @@ export const maintenanceRows = [
     'Ajah, Flat 3C',
     'Plumbing issue',
     'Tunde Bakare',
-    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Medium</span>,
+    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Medium
+    </span>,
     '7',
   ],
   [
@@ -358,7 +416,9 @@ export const maintenanceRows = [
     'Ikeja GRA, Flat 8',
     'Electrical fault',
     'Blessing Eze',
-    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">High</span>,
+    <span key="priority" className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+      High
+    </span>,
     '1',
   ],
   [
@@ -366,7 +426,9 @@ export const maintenanceRows = [
     'VI, Apt 12A',
     'Paint peeling',
     'Funmi Adeyemi',
-    <span key="priority" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">Low</span>,
+    <span key="priority" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+      Low
+    </span>,
     '10',
   ],
   [
@@ -374,7 +436,9 @@ export const maintenanceRows = [
     'Gwarinpa, Apt 401',
     'Gate motor fault',
     'Ngozi Chukwu',
-    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Medium</span>,
+    <span key="priority" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Medium
+    </span>,
     '4',
   ],
 ];
@@ -387,8 +451,12 @@ export const renewalsRows = [
     '₦2,500,000/yr',
     'May 15, 2026',
     '15',
-    <span key="status" className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">Contacted</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Send Reminder</button>,
+    <span key="status" className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+      Contacted
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Send Reminder
+    </button>,
   ],
   [
     'Yemi Oladipo',
@@ -397,8 +465,12 @@ export const renewalsRows = [
     '₦900,000/yr',
     'May 28, 2026',
     '28',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Tunde Bakare',
@@ -407,8 +479,12 @@ export const renewalsRows = [
     '₦700,000/yr',
     'June 5, 2026',
     '36',
-    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">Pending</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+      Pending
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Adewale Johnson',
@@ -417,8 +493,12 @@ export const renewalsRows = [
     '₦850,000/yr',
     'July 1, 2026',
     '62',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Not Started</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Not Started
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Ngozi Chukwu',
@@ -427,8 +507,12 @@ export const renewalsRows = [
     '₦750,000/yr',
     'July 15, 2026',
     '76',
-    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Renewed</span>,
-    <button key="action" className="cursor-default text-xs font-medium text-gray-400">Done</button>,
+    <span key="status" className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+      Renewed
+    </span>,
+    <button key="action" className="cursor-default text-xs font-medium text-gray-400">
+      Done
+    </button>,
   ],
   [
     'Emeka Nwosu',
@@ -437,8 +521,12 @@ export const renewalsRows = [
     '₦850,000/yr',
     'Aug 1, 2026',
     '93',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Not Started</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Not Started
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Chidinma Okafor',
@@ -447,8 +535,12 @@ export const renewalsRows = [
     '₦1,200,000/yr',
     'Aug 20, 2026',
     '112',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Not Started</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Not Started
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Blessing Eze',
@@ -457,8 +549,12 @@ export const renewalsRows = [
     '₦900,000/yr',
     'Sep 1, 2026',
     '124',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Not Started</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Not Started
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
   [
     'Aisha Bello',
@@ -467,8 +563,11 @@ export const renewalsRows = [
     '₦700,000/yr',
     'Sep 15, 2026',
     '138',
-    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Not Started</span>,
-    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">Contact Now</button>,
+    <span key="status" className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+      Not Started
+    </span>,
+    <button key="action" className="text-xs font-medium text-blue-600 hover:underline">
+      Contact Now
+    </button>,
   ],
 ];
-

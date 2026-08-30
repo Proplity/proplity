@@ -1,4 +1,16 @@
-import { Users, Building2, DollarSign, AlertCircle, TrendingUp, Shield, Database, Settings, BarChart3, Wrench, XCircle } from 'lucide-react';
+import {
+  Users,
+  Building2,
+  DollarSign,
+  AlertCircle,
+  TrendingUp,
+  Shield,
+  Database,
+  Settings,
+  BarChart3,
+  Wrench,
+  XCircle,
+} from 'lucide-react';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useMyProperties } from '@/hooks/useProperties';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -31,19 +43,52 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   const loading = usersLoading || propertiesLoading || invoicesLoading || maintenanceLoading;
 
   const totalCollected = invoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
-  const openMaintenance = maintenanceRequests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
+  const openMaintenance = maintenanceRequests.filter(
+    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
+  );
 
   const stats = [
-    { icon: Users, bg: 'bg-blue-50', color: 'text-blue-600', value: loading ? '—' : String(users.length), label: 'Total Users', breakdown: 'users' as const },
-    { icon: Building2, bg: 'bg-purple-50', color: 'text-purple-600', value: loading ? '—' : String(properties.length), label: 'Properties Listed', breakdown: 'properties' as const },
-    { icon: DollarSign, bg: 'bg-green-50', color: 'text-green-600', value: loading ? '—' : `₦${totalCollected.toLocaleString()}`, label: 'Total Transactions', breakdown: 'transactions' as const },
-    { icon: AlertCircle, bg: 'bg-orange-50', color: 'text-orange-600', value: loading ? '—' : String(openMaintenance.length), label: 'Open Maintenance', breakdown: 'maintenance' as const },
+    {
+      icon: Users,
+      bg: 'bg-blue-50',
+      color: 'text-blue-600',
+      value: loading ? '—' : String(users.length),
+      label: 'Total Users',
+      breakdown: 'users' as const,
+    },
+    {
+      icon: Building2,
+      bg: 'bg-purple-50',
+      color: 'text-purple-600',
+      value: loading ? '—' : String(properties.length),
+      label: 'Properties Listed',
+      breakdown: 'properties' as const,
+    },
+    {
+      icon: DollarSign,
+      bg: 'bg-green-50',
+      color: 'text-green-600',
+      value: loading ? '—' : `₦${totalCollected.toLocaleString()}`,
+      label: 'Total Transactions',
+      breakdown: 'transactions' as const,
+    },
+    {
+      icon: AlertCircle,
+      bg: 'bg-orange-50',
+      color: 'text-orange-600',
+      value: loading ? '—' : String(openMaintenance.length),
+      label: 'Open Maintenance',
+      breakdown: 'maintenance' as const,
+    },
   ];
 
   const usersByRole = ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => ({
     type: role.charAt(0) + role.slice(1).toLowerCase(),
     count: users.filter((u) => u.role === role).length,
-    percentage: users.length > 0 ? Math.round((users.filter((u) => u.role === role).length / users.length) * 100) : 0,
+    percentage:
+      users.length > 0
+        ? Math.round((users.filter((u) => u.role === role).length / users.length) * 100)
+        : 0,
     color: ROLE_COLOR[role],
   }));
 
@@ -53,10 +98,18 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   const attentionItems = [
     ...invoices
       .filter((i) => i.status === 'OVERDUE')
-      .map((i) => ({ title: `Invoice ${i.invoiceNumber} overdue`, time: i.dueDate, severity: 'high' as const })),
+      .map((i) => ({
+        title: `Invoice ${i.invoiceNumber} overdue`,
+        time: i.dueDate,
+        severity: 'high' as const,
+      })),
     ...maintenanceRequests
       .filter((r) => r.status === 'CANCELLED')
-      .map((r) => ({ title: `Maintenance request cancelled: ${r.title}`, time: r.updatedAt, severity: 'medium' as const })),
+      .map((r) => ({
+        title: `Maintenance request cancelled: ${r.title}`,
+        time: r.updatedAt,
+        severity: 'medium' as const,
+      })),
   ]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .slice(0, 5);
@@ -79,11 +132,15 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           return (
             <button
               key={stat.label}
-              onClick={() => onNavigate?.({ type: 'admin-breakdown', breakdownType: stat.breakdown })}
+              onClick={() =>
+                onNavigate?.({ type: 'admin-breakdown', breakdownType: stat.breakdown })
+              }
               className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-6 text-left transition-all hover:border-blue-400 hover:shadow-md"
             >
               <div className="mb-4 flex items-center justify-between">
-                <div className={`h-12 w-12 ${stat.bg} flex items-center justify-center rounded-lg transition-opacity group-hover:opacity-80`}>
+                <div
+                  className={`h-12 w-12 ${stat.bg} flex items-center justify-center rounded-lg transition-opacity group-hover:opacity-80`}
+                >
                   <Icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
@@ -115,7 +172,10 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
                     <span className="text-sm font-semibold">{userType.count}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div className={`h-full bg-${userType.color}-500 rounded-full`} style={{ width: `${userType.percentage}%` }}></div>
+                    <div
+                      className={`h-full bg-${userType.color}-500 rounded-full`}
+                      style={{ width: `${userType.percentage}%` }}
+                    ></div>
                   </div>
                 </div>
               ))}
@@ -139,7 +199,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
                   )}
                   <div>
                     <p className="text-sm font-medium">{issue.title}</p>
-                    <p className="text-xs text-gray-500">{new Date(issue.time).toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(issue.time).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -204,12 +266,16 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             </div>
             <div className="rounded-lg bg-green-50 p-4 text-center">
               <Wrench className="mx-auto mb-2 h-8 w-8 text-green-600" />
-              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : openMaintenance.length}</p>
+              <p className="mb-1 text-2xl font-semibold">
+                {loading ? '—' : openMaintenance.length}
+              </p>
               <p className="text-sm text-gray-600">Open Maintenance Requests</p>
             </div>
             <div className="rounded-lg bg-purple-50 p-4 text-center">
               <Users className="mx-auto mb-2 h-8 w-8 text-purple-600" />
-              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : users.filter((u) => isWithinDays(u.createdAt, 7)).length}</p>
+              <p className="mb-1 text-2xl font-semibold">
+                {loading ? '—' : users.filter((u) => isWithinDays(u.createdAt, 7)).length}
+              </p>
               <p className="text-sm text-gray-600">New Users</p>
             </div>
           </div>

@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ valid: false });
     }
 
-    const propertiesManaged = await prisma.property.count({ where: { landlordId: record.landlordId } });
+    const propertiesManaged = await prisma.property.count({
+      where: { landlordId: record.landlordId },
+    });
 
     return NextResponse.json({
       valid: true,

@@ -4,13 +4,13 @@
 
 ## Why
 
-Direct continuation of the component-completeness audit (`out/phases/component-completeness-audit-and-fixes.md`, committed as `4edc850`). The user asked to build real backends for the 4 flows previously left as fake/local-only, confirmed via `AskUserQuestion`: subscription billing (build for real, with an env kill switch), rental applications (full review flow), manager-linking codes, and ad campaigns (persisted, honest zero stats). Mid-planning, the user separately asked for a whole-project scan (bugs, missing features, AI-claims-vs-reality) logged to a file — 4 background agents ran in parallel and surfaced a critical, live-exploitable security bug, which took priority over the new feature work.
+Direct continuation of the component-completeness audit (`docs/development-history/phases/component-completeness-audit-and-fixes.md`, committed as `4edc850`). The user asked to build real backends for the 4 flows previously left as fake/local-only, confirmed via `AskUserQuestion`: subscription billing (build for real, with an env kill switch), rental applications (full review flow), manager-linking codes, and ad campaigns (persisted, honest zero stats). Mid-planning, the user separately asked for a whole-project scan (bugs, missing features, AI-claims-vs-reality) logged to a file — 4 background agents ran in parallel and surfaced a critical, live-exploitable security bug, which took priority over the new feature work.
 
 ## What was built
 
 ### Priority 0 — audit log + 7 real bugs fixed (commit `2dd10ce`)
 
-`out/project-audit.md` — full scan findings (bugs, missing features, AI-claims-vs-reality), independent of this phase's code changes.
+`docs/development-history/project-audit.md` — full scan findings (bugs, missing features, AI-claims-vs-reality), independent of this phase's code changes.
 
 Seven real bugs fixed, each with a regression test:
 1. **CRITICAL** — self-registration accepted any `role` string including `ADMIN` with no allow-list, letting an anonymous request mint a live admin session. Found independently by 2 of the 4 scan agents; confirmed by direct code read. Fixed: `register` now allow-lists `TENANT | LANDLORD | MANAGER | VENDOR` only.
@@ -21,7 +21,7 @@ Seven real bugs fixed, each with a regression test:
 6. `refresh` hardcoded the rotated token to `+7 days` regardless of the original login's `rememberMe` choice (1/30 days), so every session normalized to 7 days on its first background refresh. Fixed: the rotated token now inherits the original token's `expiresAt` directly, and the cookie's `maxAge` is derived from the real remaining lifetime instead of the 7-day default.
 7. `paymentReliabilityScorer.ts` read `invoice.payments[0]` with no `orderBy`, making "first payment" DB-order-dependent instead of chronological. Fixed: `orderBy: { paidAt: 'asc' }`.
 
-Not fixed this pass (logged as a follow-up in `out/project-audit.md`): repo-wide CSRF coverage beyond the 6 auth routes — assessed as not currently exploitable (mitigated by `SameSite=Lax`), and touching every mutating domain route is a larger, separate change.
+Not fixed this pass (logged as a follow-up in `docs/development-history/project-audit.md`): repo-wide CSRF coverage beyond the 6 auth routes — assessed as not currently exploitable (mitigated by `SameSite=Lax`), and touching every mutating domain route is a larger, separate change.
 
 ### Priority 1 — real subscription billing + env kill switch (commit `ac73f93`)
 
@@ -49,4 +49,4 @@ One migration (`20260824105858_add_applications_manager_codes_ad_campaigns`) add
 
 ## What's next
 
-The remaining items from `out/project-audit.md`, roughly by leverage: the property moderation/approval action (`moderationStatus` is never set to `APPROVED` anywhere — the single highest-impact fix left, since it currently blocks every real listing from ever going publicly visible); late-fee/grace-period enforcement in `overdueFlagger.ts` (the data already exists, just isn't read); repo-wide CSRF coverage; the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models; and any real AI/LLM integration, which needs a product decision on provider/scope before any code.
+The remaining items from `docs/development-history/project-audit.md`, roughly by leverage: the property moderation/approval action (`moderationStatus` is never set to `APPROVED` anywhere — the single highest-impact fix left, since it currently blocks every real listing from ever going publicly visible); late-fee/grace-period enforcement in `overdueFlagger.ts` (the data already exists, just isn't read); repo-wide CSRF coverage; the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models; and any real AI/LLM integration, which needs a product decision on provider/scope before any code.

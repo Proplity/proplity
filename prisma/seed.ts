@@ -169,7 +169,8 @@ async function main() {
       state: 'Lagos',
       zipCode: '105102',
       type: PropertyType.RESIDENTIAL,
-      description: 'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
+      description:
+        'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
@@ -190,7 +191,13 @@ async function main() {
             rentAmount: 3500000.0,
             depositAmount: 350000.0,
             status: UnitStatus.OCCUPIED,
-            amenities: ['Air Conditioning', '24/7 Power', 'Fitted Kitchen', 'Water Heater', 'Balcony'],
+            amenities: [
+              'Air Conditioning',
+              '24/7 Power',
+              'Fitted Kitchen',
+              'Water Heater',
+              'Balcony',
+            ],
           },
           {
             unitNumber: '2A',

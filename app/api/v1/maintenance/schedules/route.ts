@@ -17,7 +17,9 @@ export const GET = withAuth(
       const where: Prisma.MaintenanceScheduleWhereInput =
         session.role === 'ADMIN'
           ? {}
-          : { unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } } };
+          : {
+              unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+            };
 
       const [schedules, total] = await Promise.all([
         prisma.maintenanceSchedule.findMany({

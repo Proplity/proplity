@@ -4,7 +4,7 @@
 
 ## Why
 
-First sub-phase of Finding 3 from `out/next-phase-analysis.md` (zero automated test coverage — every prior phase was verified by hand against the live dev server, then thrown away). Full plan in `out/phase-10-test-suite-plan.md`. This sub-phase builds the harness only: no route coverage yet beyond a smoke test proving every piece works end to end.
+First sub-phase of Finding 3 from `docs/development-history/next-phase-analysis.md` (zero automated test coverage — every prior phase was verified by hand against the live dev server, then thrown away). Full plan in `docs/development-history/phase-10-test-suite-plan.md`. This sub-phase builds the harness only: no route coverage yet beyond a smoke test proving every piece works end to end.
 
 ## What was built
 
@@ -42,4 +42,4 @@ One small, accepted side effect: the first time `next dev` runs against the new 
 
 ## What's next
 
-Sub-phases 10.2–10.8 add real RBAC/business-rule coverage per domain (auth's remaining routes, properties, maintenance, leases, financial, access-control/communications, then the cross-cutting vendors/admin/cron routes), each its own commit + phase doc, per `out/phase-10-test-suite-plan.md`.
+Sub-phases 10.2–10.8 add real RBAC/business-rule coverage per domain (auth's remaining routes, properties, maintenance, leases, financial, access-control/communications, then the cross-cutting vendors/admin/cron routes), each its own commit + phase doc, per `docs/development-history/phase-10-test-suite-plan.md`.

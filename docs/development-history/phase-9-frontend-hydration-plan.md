@@ -31,6 +31,6 @@ Same shape as every prior phase in this project:
 2. Identify the real `GET` route(s) already built that supply the data; add a read-hook if one doesn't exist yet (extending `hooks/use*.ts` rather than inventing a new file per component where one already fits).
 3. Replace the mock import with the hook, handle loading/error states, resolve any real vs. mock field-shape mismatches (documented as judgment calls, same as Phase 7's `AddTenantForm`/`VendorCreateInvoice`).
 4. `tsc`/`build` clean; live-test by logging in as the relevant demo role and confirming the SSR-safe render + (where feasible) the actual data returned matches the DB, the same verification depth Phase 7 achieved (no browser-automation tool available in this environment, so interactive click-through stays unverified, same caveat as Phase 7).
-5. Write `out/phases/domain-api-phase-9-<n>-<name>.md` per sub-phase, then commit.
+5. Write `docs/development-history/phases/domain-api-phase-9-<n>-<name>.md` per sub-phase, then commit.
 
 Starting now with sub-phase 1 (Property Discovery & Detail).

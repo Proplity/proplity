@@ -1,6 +1,6 @@
 # Phase 10: Automated Test Suite — plan
 
-**Status:** planning, not yet built. Addresses Finding 3 of `out/next-phase-analysis.md` — zero automated test coverage; every one of the first 9 phases was verified by hand against the live dev server and then thrown away.
+**Status:** planning, not yet built. Addresses Finding 3 of `docs/development-history/next-phase-analysis.md` — zero automated test coverage; every one of the first 9 phases was verified by hand against the live dev server and then thrown away.
 
 ## Goal
 

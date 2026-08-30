@@ -119,14 +119,24 @@ describe('auth: register', () => {
     // muddy this test's actual point (case-insensitive mapping + fallback).
     const vendor = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'newvendor@test.local', password: 'somepassword', name: 'New Vendor', role: 'VENDOR' },
+      body: {
+        email: 'newvendor@test.local',
+        password: 'somepassword',
+        name: 'New Vendor',
+        role: 'VENDOR',
+      },
     });
     expect(vendor.status).toBe(200);
     expect(vendor.body.user.role).toBe('vendor');
 
     const bogus = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'newbogus@test.local', password: 'somepassword', name: 'New Bogus', role: 'superadmin' },
+      body: {
+        email: 'newbogus@test.local',
+        password: 'somepassword',
+        name: 'New Bogus',
+        role: 'superadmin',
+      },
     });
     expect(bogus.status).toBe(200);
     expect(bogus.body.user.role).toBe('tenant');
@@ -135,7 +145,12 @@ describe('auth: register', () => {
   it('never grants ADMIN via self-registration, even though it is a valid Role value', async () => {
     const res = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'wannabe-admin@test.local', password: 'somepassword', name: 'Wannabe Admin', role: 'admin' },
+      body: {
+        email: 'wannabe-admin@test.local',
+        password: 'somepassword',
+        name: 'Wannabe Admin',
+        role: 'admin',
+      },
     });
     expect(res.status).toBe(200);
     expect(res.body.user.role).toBe('tenant');
@@ -153,7 +168,9 @@ describe('auth: register', () => {
     expect(res.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
     expect(res.setCookies.some((c) => c.startsWith('refresh_token='))).toBe(false);
 
-    const token = await testPrisma.verificationToken.findFirst({ where: { userId: res.body.user.id } });
+    const token = await testPrisma.verificationToken.findFirst({
+      where: { userId: res.body.user.id },
+    });
     expect(token).not.toBeNull();
 
     // A still-pending account is correctly locked out of login until verified.
@@ -167,7 +184,12 @@ describe('auth: register', () => {
   it('MANAGER registration requires a real, still-unused landlord code', async () => {
     const noCode = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'nocode-manager@test.local', password: 'somepassword', name: 'No Code', role: 'manager' },
+      body: {
+        email: 'nocode-manager@test.local',
+        password: 'somepassword',
+        name: 'No Code',
+        role: 'manager',
+      },
     });
     expect(noCode.status).toBe(400);
 

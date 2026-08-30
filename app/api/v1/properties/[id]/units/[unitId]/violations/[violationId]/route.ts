@@ -22,8 +22,12 @@ export const PATCH = withAuth(
       if (!violation || violation.unitId !== unitId) {
         return NextResponse.json({ error: 'Violation not found' }, { status: 404 });
       }
-      const unit = await prisma.unit.findUnique({ where: { id: unitId }, include: { property: true } });
-      if (!unit || unit.propertyId !== id) return NextResponse.json({ error: 'Violation not found' }, { status: 404 });
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        include: { property: true },
+      });
+      if (!unit || unit.propertyId !== id)
+        return NextResponse.json({ error: 'Violation not found' }, { status: 404 });
       if (!canManageProperty(session, unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }

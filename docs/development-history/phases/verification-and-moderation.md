@@ -4,7 +4,7 @@
 
 ## Why
 
-Continuation of `out/project-audit.md`'s remaining findings. The user asked directly whether self-registration had email verification (it didn't, despite CLAUDE.md documenting the infrastructure as already built and reusable) and to keep working down the bug list, starting with the audit's top-recommended item: `Property.moderationStatus` never being set to `APPROVED` anywhere, which meant no property submitted through the real `ListProperty.tsx` form could ever become publicly visible.
+Continuation of `docs/development-history/project-audit.md`'s remaining findings. The user asked directly whether self-registration had email verification (it didn't, despite CLAUDE.md documenting the infrastructure as already built and reusable) and to keep working down the bug list, starting with the audit's top-recommended item: `Property.moderationStatus` never being set to `APPROVED` anywhere, which meant no property submitted through the real `ListProperty.tsx` form could ever become publicly visible.
 
 ## What was built (commits `8ed8f2c`, `f3292a3`)
 
@@ -27,4 +27,4 @@ Continuation of `out/project-audit.md`'s remaining findings. The user asked dire
 
 ## What's next
 
-Remaining from `out/project-audit.md`: late-fee/grace-period enforcement in `overdueFlagger.ts` (data already exists, just unread), repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, and any real AI/LLM integration (needs a provider/scope decision first).
+Remaining from `docs/development-history/project-audit.md`: late-fee/grace-period enforcement in `overdueFlagger.ts` (data already exists, just unread), repo-wide CSRF coverage, the orphaned `Violation`/`Announcement`/`ConditionReport`/`Equipment`/`BankAccount` models, and any real AI/LLM integration (needs a provider/scope decision first).

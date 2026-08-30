@@ -4,7 +4,9 @@ import { useApiSubmit } from './useApiSubmit';
 import type { CreateLeaseInput, Lease, Note, UpdateLeaseTermsInput } from '@/lib/api/types';
 
 export function useCreateLease() {
-  return useApiSubmit((body: CreateLeaseInput) => api.leases.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateLeaseInput) =>
+    api.leases.create(body).then((res) => res.data.data),
+  );
 }
 
 // Edits an existing lease's grace period / late-fee terms -- landlord/
@@ -18,12 +20,16 @@ export function useUpdateLeaseTerms(leaseId: string) {
 // Explicit lease lifecycle transitions (e.g. activating a PENDING lease,
 // terminating an ACTIVE one) -- Unit.status is kept in sync server-side.
 export function useUpdateLeaseStatus(leaseId: string) {
-  return useApiSubmit((status: string) => api.leases.updateStatus(leaseId, status).then((res) => res.data.data));
+  return useApiSubmit((status: string) =>
+    api.leases.updateStatus(leaseId, status).then((res) => res.data.data),
+  );
 }
 
 // Click-wrap e-signature -- see app/api/v1/leases/[id]/sign/route.ts.
 export function useSignLease(leaseId: string) {
-  return useApiSubmit((fullName: string) => api.leases.sign(leaseId, fullName).then((res) => res.data.data));
+  return useApiSubmit((fullName: string) =>
+    api.leases.sign(leaseId, fullName).then((res) => res.data.data),
+  );
 }
 
 // The logged-in tenant's own active lease -- a tenant has exactly one in
@@ -150,5 +156,7 @@ export function useLeaseNotes(leaseId: string | null) {
 }
 
 export function useCreateLeaseNote(leaseId: string) {
-  return useApiSubmit((body: string) => api.leases.notes.create(leaseId, body).then((res) => res.data.data));
+  return useApiSubmit((body: string) =>
+    api.leases.notes.create(leaseId, body).then((res) => res.data.data),
+  );
 }

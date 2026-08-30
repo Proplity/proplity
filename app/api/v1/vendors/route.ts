@@ -33,7 +33,9 @@ export const GET = withAuth(
         const totalJobs = v.assignedJobs.length;
         const completionRate = totalJobs > 0 ? Math.round((jobsDone / totalJobs) * 100) : null;
         const ratings = v.vendorRatingsReceived.map((r) => r.rating);
-        const rating = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null;
+        const rating = ratings.length
+          ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+          : null;
 
         return {
           id: v.id,

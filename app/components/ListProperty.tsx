@@ -23,7 +23,11 @@ interface ListPropertyProps {
 }
 
 export function ListProperty({ onBack, userRole }: ListPropertyProps) {
-  const { submit: createProperty, submitting: creatingProperty, error: propertyError } = useCreateProperty();
+  const {
+    submit: createProperty,
+    submitting: creatingProperty,
+    error: propertyError,
+  } = useCreateProperty();
   const [submittingUnit, setSubmittingUnit] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitting = creatingProperty || submittingUnit;
@@ -120,14 +124,19 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
       // Utilities likewise has no dedicated column anywhere on Property/Unit
       // -- folded into the description text rather than silently dropped.
       const utilitiesNote =
-        formData.utilities.length > 0 ? `\n\nUtilities included: ${formData.utilities.join(', ')}` : '';
+        formData.utilities.length > 0
+          ? `\n\nUtilities included: ${formData.utilities.join(', ')}`
+          : '';
       const property = await createProperty({
         name: `${formData.propertyType || 'Property'} at ${formData.address}`,
         address: formData.address,
         city: formData.city,
         state: formData.state,
         type: 'RESIDENTIAL',
-        description: formData.description || utilitiesNote ? `${formData.description}${utilitiesNote}` : undefined,
+        description:
+          formData.description || utilitiesNote
+            ? `${formData.description}${utilitiesNote}`
+            : undefined,
       });
 
       setSubmittingUnit(true);
@@ -145,7 +154,9 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
         setSubmittingUnit(false);
       }
 
-      alert('Property listing submitted for review! You will be notified by email once it is approved.');
+      alert(
+        'Property listing submitted for review! You will be notified by email once it is approved.',
+      );
       onBack();
     } catch {
       setSubmitError(propertyError ?? 'Failed to create the unit for this listing.');

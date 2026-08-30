@@ -68,7 +68,10 @@ export const POST = withAuth(
           });
           created += 1;
         } catch {
-          errors.push({ row: i + 2, error: `Could not create unit "${unitNumber}" (duplicate unit number?)` });
+          errors.push({
+            row: i + 2,
+            error: `Could not create unit "${unitNumber}" (duplicate unit number?)`,
+          });
         }
       }
 

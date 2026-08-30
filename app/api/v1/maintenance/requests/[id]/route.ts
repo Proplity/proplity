@@ -16,7 +16,9 @@ function loadRequest(id: string) {
       unit: {
         include: {
           property: {
-            include: { manager: { select: { id: true, name: true, phoneNumber: true, email: true } } },
+            include: {
+              manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
+            },
           },
         },
       },
@@ -34,7 +36,8 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
 
   try {
     const request = await loadRequest(id);
-    if (!request) return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+    if (!request)
+      return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
 
     const isOwnerTenant = session.role === 'TENANT' && request.tenantId === session.sub;
     const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
@@ -66,15 +69,28 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
   try {
     const request = await loadRequest(id);
-    if (!request) return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+    if (!request)
+      return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
 
     const validated = await validateBody(req, patchSchema);
     if (!validated.success) return validated.response;
-    const { categoryId, priority, vendorId, scheduledFor, status, completionProofUrl, finalCost, vendorNotes } =
-      validated.data;
+    const {
+      categoryId,
+      priority,
+      vendorId,
+      scheduledFor,
+      status,
+      completionProofUrl,
+      finalCost,
+      vendorNotes,
+    } = validated.data;
 
     const canManage = canManageProperty(session, request.unit.property);
-    const isTriage = categoryId !== undefined || priority !== undefined || vendorId !== undefined || scheduledFor !== undefined;
+    const isTriage =
+      categoryId !== undefined ||
+      priority !== undefined ||
+      vendorId !== undefined ||
+      scheduledFor !== undefined;
 
     // Triage: MANAGER/LANDLORD/ADMIN assign category, priority, vendor, schedule.
     if (isTriage) {
@@ -94,7 +110,10 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const updated = await prisma.maintenanceRequest.update({ where: { id }, data: { status: 'CANCELLED' } });
+      const updated = await prisma.maintenanceRequest.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
       return NextResponse.json({ data: updated });
     }
 
@@ -145,7 +164,10 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
       if (!isAssignedVendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-      const updated = await prisma.maintenanceRequest.update({ where: { id }, data: { vendorNotes } });
+      const updated = await prisma.maintenanceRequest.update({
+        where: { id },
+        data: { vendorNotes },
+      });
       return NextResponse.json({ data: updated });
     }
 

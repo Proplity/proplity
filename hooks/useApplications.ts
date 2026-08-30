@@ -30,9 +30,13 @@ export function useApplications(params?: { status?: string; unitId?: string }) {
 }
 
 export function useCreateApplication() {
-  return useApiSubmit((body: CreateApplicationInput) => api.applications.create(body).then((res) => res.data.data));
+  return useApiSubmit((body: CreateApplicationInput) =>
+    api.applications.create(body).then((res) => res.data.data),
+  );
 }
 
 export function useReviewApplication(id: string) {
-  return useApiSubmit((body: ReviewApplicationInput) => api.applications.review(id, body).then((res) => res.data.data));
+  return useApiSubmit((body: ReviewApplicationInput) =>
+    api.applications.review(id, body).then((res) => res.data.data),
+  );
 }

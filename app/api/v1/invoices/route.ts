@@ -23,14 +23,22 @@ export const GET = withAuth(async (req, { session }) => {
 
     if (session.role === 'TENANT') {
       filters.push({
-        OR: [{ lease: { tenantId: session.sub } }, { maintenanceRequest: { tenantId: session.sub } }, { userId: session.sub }],
+        OR: [
+          { lease: { tenantId: session.sub } },
+          { maintenanceRequest: { tenantId: session.sub } },
+          { userId: session.sub },
+        ],
       });
     } else if (session.role === 'VENDOR') {
       filters.push({ maintenanceRequest: { vendorId: session.sub } });
     } else if (session.role === 'MANAGER' || session.role === 'LANDLORD') {
       filters.push({
         OR: [
-          { lease: { unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } } } },
+          {
+            lease: {
+              unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+            },
+          },
           {
             maintenanceRequest: {
               unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
@@ -54,7 +62,9 @@ export const GET = withAuth(async (req, { session }) => {
             select: {
               id: true,
               tenant: { select: { id: true, name: true } },
-              unit: { select: { unitNumber: true, property: { select: { id: true, name: true } } } },
+              unit: {
+                select: { unitNumber: true, property: { select: { id: true, name: true } } },
+              },
             },
           },
         },
@@ -99,11 +109,15 @@ export const POST = withAuth(
       if (session.role === 'VENDOR') {
         if (rest.type !== 'MAINTENANCE' || !maintenanceRequestId) {
           return NextResponse.json(
-            { error: 'Vendors may only create MAINTENANCE invoices linked to a maintenance request' },
+            {
+              error: 'Vendors may only create MAINTENANCE invoices linked to a maintenance request',
+            },
             { status: 403 },
           );
         }
-        const request = await prisma.maintenanceRequest.findUnique({ where: { id: maintenanceRequestId } });
+        const request = await prisma.maintenanceRequest.findUnique({
+          where: { id: maintenanceRequestId },
+        });
         if (!request || request.vendorId !== session.sub) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
