@@ -23,7 +23,7 @@ export default function NotFound() {
         {/* 404 display */}
         <div className="mb-6">
           <div className="relative mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-green-500 shadow-lg shadow-blue-200">
-            <span className="select-none text-5xl font-black text-white/90">404</span>
+            <span className="text-5xl font-black text-white/90 select-none">404</span>
           </div>
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Page not found</h1>
           <p className="text-gray-500">
@@ -33,7 +33,7 @@ export default function NotFound() {
 
         {/* Quick links */}
         <div className="mb-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="mb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <p className="mb-3 text-left text-xs font-semibold tracking-wide text-gray-400 uppercase">
             Where would you like to go?
           </p>
           <div className="space-y-1">

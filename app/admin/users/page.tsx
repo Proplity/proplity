@@ -2,16 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Users,
-  Search,
-  Shield,
-  Building2,
-  ArrowLeft,
-  UserCheck,
-  UserX,
-  Clock,
-} from 'lucide-react';
+import { Users, Search, Shield, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import type { AdminUser } from '@/lib/api/types';
 
@@ -78,7 +69,7 @@ export default function AdminUsersPage() {
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             roleFilter === 'ALL'
               ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+              : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
           All ({users.length})
@@ -92,7 +83,7 @@ export default function AdminUsersPage() {
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 roleFilter === role
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
               {badge.label} ({roleCounts[role] ?? 0})
@@ -109,7 +100,7 @@ export default function AdminUsersPage() {
           placeholder="Search by name, email or phone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 py-2 pr-4 pl-9 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="w-full rounded-lg border border-gray-200 py-2 pr-4 pl-9 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
         />
       </div>
 
@@ -123,7 +114,7 @@ export default function AdminUsersPage() {
       {/* Table */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
+          <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium tracking-wide text-gray-500 uppercase">
             <tr>
               <th className="px-6 py-3 text-left">User</th>
               <th className="px-6 py-3 text-left">Role</th>
@@ -159,7 +150,8 @@ export default function AdminUsersPage() {
                   label: user.role,
                   className: 'bg-gray-100 text-gray-700',
                 };
-                const statusMeta = STATUS_BADGE[user.status] ?? STATUS_BADGE['PENDING_VERIFICATION'];
+                const statusMeta =
+                  STATUS_BADGE[user.status] ?? STATUS_BADGE['PENDING_VERIFICATION'];
                 const StatusIcon = statusMeta.icon;
 
                 return (
