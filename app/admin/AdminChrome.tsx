@@ -8,7 +8,7 @@ import { BarChart3, Users, FileText, Settings, Bell, User, LogOut } from 'lucide
 
 const TABS = [
   { href: '/admin', label: 'System Overview', icon: BarChart3 },
-  { href: '/admin', label: 'User Management', icon: Users },
+  { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
 ];
 
