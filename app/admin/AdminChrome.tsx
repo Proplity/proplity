@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
+import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { useAuth } from '@/context/AuthContext';
 import { BarChart3, Users, FileText, Settings, Bell, User, LogOut } from 'lucide-react';
 
@@ -17,6 +19,14 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [showLogout, setShowLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    await auth.logout();
+    router.push('/login');
+  }
 
   return (
     <div className="flex size-full flex-col bg-gray-50">
@@ -49,10 +59,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
               <span className="text-sm font-medium">{auth.user?.name}</span>
             </button>
             <button
-              onClick={async () => {
-                await auth.logout();
-                router.push('/');
-              }}
+              onClick={() => setShowLogout(true)}
               title="Sign Out"
               className="flex items-center gap-1 rounded-lg p-2 text-red-600 hover:bg-red-50"
             >
@@ -87,6 +94,14 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
+
+      {showLogout && (
+        <LogoutConfirmDialog
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogout(false)}
+          isLoading={loggingOut}
+        />
+      )}
     </div>
   );
 }

@@ -82,7 +82,7 @@ apiClient.interceptors.response.use(
       if (refreshed) {
         return apiClient(originalRequest);
       } else if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        window.location.href = '/login';
       }
     }
 
@@ -101,7 +101,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     if (refreshed) {
       return fetch(url, options);
     } else if (typeof window !== 'undefined') {
-      window.location.href = '/';
+      window.location.href = '/login';
     }
   }
 
