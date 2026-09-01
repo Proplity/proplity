@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
@@ -21,9 +22,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     <div className="flex size-full flex-col bg-gray-50">
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="focus:outline-none">
+          <Link href="/" className="focus:outline-none">
             <Logo />
-          </button>
+          </Link>
 
           <div className="flex items-center gap-4">
             {process.env.NODE_ENV !== 'production' && (
@@ -69,16 +70,16 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
               const active =
                 tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
               return (
-                <button
+                <Link
                   key={tab.label}
-                  onClick={() => router.push(tab.href)}
+                  href={tab.href}
                   className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
                     active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{tab.label}</span>
-                </button>
+                </Link>
               );
             })}
           </nav>
