@@ -187,6 +187,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto">{children}</main>
 
         {showAIAssistant && <AIAssistant onClose={() => setShowAIAssistant(false)} />}
+      </div>
 
       {showLogout && (
         <LogoutConfirmDialog
