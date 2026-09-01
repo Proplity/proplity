@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { LogoIcon } from '../Logo';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -35,9 +36,12 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
     setLoading(false);
 
     if (res.success && res.user?.role) {
+      toast.success(`Welcome back, ${res.user.name ?? 'there'}!`);
       onLogin(res.user.role.toLowerCase());
     } else {
-      setErrorMessage(res.error || 'Invalid credentials');
+      const msg = res.error || 'Invalid credentials';
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -49,9 +53,12 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
       const res = await login({ ...creds, rememberMe: true });
       setLoading(false);
       if (res.success && res.user?.role) {
+        toast.success(`Welcome back, ${res.user.name ?? 'there'}!`);
         onLogin(res.user.role.toLowerCase());
       } else {
-        setErrorMessage(res.error || 'Demo login failed');
+        const msg = res.error || 'Demo login failed';
+        setErrorMessage(msg);
+        toast.error(msg);
       }
     } else {
       onLogin(role.toLowerCase());

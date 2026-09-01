@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { LogoIcon } from '../Logo';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -280,11 +281,11 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
             : vendorForm.agreeToTerms;
 
     if (pwd !== cpwd) {
-      alert('Passwords do not match!');
+      toast.error('Passwords do not match.');
       return;
     }
     if (!terms) {
-      alert('Please agree to the Terms of Service');
+      toast.error('Please agree to the Terms of Service.');
       return;
     }
 
@@ -315,8 +316,11 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
       // them (onRegister implies an active dashboard to land on). Show the
       // confirmation in place instead.
       setRegisteredEmail(activeForm.email);
+      toast.success('Account created! Check your email to verify your account.');
     } else {
-      setSubmitError(res.error || 'Registration failed');
+      const msg = res.error || 'Registration failed';
+      setSubmitError(msg);
+      toast.error(msg);
     }
   };
 

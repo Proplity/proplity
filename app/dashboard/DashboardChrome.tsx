@@ -8,6 +8,7 @@ import { RoleSwitcher } from '../components/RoleSwitcher';
 import { AIAssistant } from '../components/AIAssistant';
 import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 import {
   Home,
   Search,
@@ -75,6 +76,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   async function handleLogout() {
     setLoggingOut(true);
     await auth.logout();
+    toast.info('You have been signed out.');
     router.push('/login');
   }
 
@@ -106,10 +108,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               <Bell className="h-5 w-5 text-gray-600" />
               <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
             </button>
-            <Link
-              href="/dashboard/settings"
-              className="block rounded-lg p-2 hover:bg-gray-100"
-            >
+            <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
               <Settings className="h-5 w-5 text-gray-600" />
             </Link>
             <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">

@@ -7,6 +7,7 @@ import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
 import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 import { BarChart3, Users, FileText, Settings, Bell, User, LogOut } from 'lucide-react';
 
 const TABS = [
@@ -25,6 +26,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   async function handleLogout() {
     setLoggingOut(true);
     await auth.logout();
+    toast.info('You have been signed out.');
     router.push('/login');
   }
 
