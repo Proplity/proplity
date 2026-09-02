@@ -132,10 +132,14 @@ jobs:
       # DIRECT_URL, not the pooled DATABASE_URL: `migrate deploy` takes a
       # session-level advisory lock that a transaction-mode pooler drops.
       # prisma.config.ts prefers DIRECT_URL and falls back to DATABASE_URL.
-      # Pass both inline on the command so they land in process.env before
-      # dotenv/config runs (dotenv skips vars that are already set).
+      # If this step still sees empty values, the secrets aren't defined on
+      # this job's GitHub *Environment* (production) -- Settings ->
+      # Environments -> production -> Secrets, not repo/org secrets.
       - name: Apply migrations
-        run: DIRECT_URL="${{ secrets.DIRECT_URL }}" DATABASE_URL="${{ secrets.DATABASE_URL }}" pnpm db:migrate:deploy
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:deploy
 
   deploy:
     name: Deploy to Vercel
