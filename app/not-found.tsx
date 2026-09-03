@@ -22,7 +22,7 @@ export default function NotFound() {
 
         {/* 404 display */}
         <div className="mb-6">
-          <div className="relative mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-green-500 shadow-lg shadow-blue-200">
+          <div className="relative mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-linear-to-br from-blue-600 to-green-500 shadow-lg shadow-blue-200">
             <span className="text-5xl font-black text-white/90 select-none">404</span>
           </div>
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Page not found</h1>
