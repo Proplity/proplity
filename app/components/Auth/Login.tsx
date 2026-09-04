@@ -26,10 +26,36 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  // Matches the exact message app/api/v1/auth/login/route.ts returns for a
+  // PENDING_VERIFICATION account -- a substring check rather than an error
+  // code, since login's error responses are plain strings throughout this
+  // codebase.
+  const needsVerification = errorMessage?.includes('verify your email') ?? false;
+
+  const handleResendVerification = async () => {
+    setResendState('sending');
+    try {
+      await fetch('/api/v1/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      // The route always 200s regardless of account state (see its own
+      // comment) -- there's nothing more specific to branch on here.
+      setResendState('sent');
+      toast.success('If that email needs verifying, a new link is on its way.');
+    } catch {
+      setResendState('idle');
+      toast.error('Could not resend the verification email. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setResendState('idle');
     setLoading(true);
 
     const res = await login({ email, password, rememberMe });
@@ -80,9 +106,25 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
         {/* Login Form */}
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
           {errorMessage && (
-            <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+              {needsVerification && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendState !== 'idle'}
+                  className="mt-2 ml-7 text-sm font-medium text-red-800 underline hover:text-red-900 disabled:no-underline disabled:opacity-70"
+                >
+                  {resendState === 'sending'
+                    ? 'Sending…'
+                    : resendState === 'sent'
+                      ? 'Verification email sent'
+                      : 'Resend verification email'}
+                </button>
+              )}
             </div>
           )}
 

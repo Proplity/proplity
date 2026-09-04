@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogoIcon } from '../Logo';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ForgotPasswordProps {
   onBack: () => void;
@@ -9,10 +9,35 @@ interface ForgotPasswordProps {
 export function ForgotPassword({ onBack }: ForgotPasswordProps) {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      // The route always responds 200 with the same generic message
+      // regardless of whether the email is registered, by design (see
+      // app/api/v1/auth/forgot-password/route.ts) -- so a non-2xx here
+      // means something actually went wrong (rate limit, bad payload),
+      // not "no such account."
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -72,12 +97,20 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
               </div>
             </div>
 
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+              disabled={submitting}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Send Reset Link
+              {submitting ? 'Sending…' : 'Send Reset Link'}
             </button>
 
             {/* Back Button */}
