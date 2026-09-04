@@ -38,7 +38,7 @@ export default function GlobalError({
 
             {/* Error icon */}
             <div className="mb-6">
-              <div className="relative mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg shadow-red-200">
+              <div className="relative mx-auto mb-4 flex h-32 w-32 items-center justify-center rounded-2xl bg-linear-to-br from-red-500 to-orange-500 shadow-lg shadow-red-200">
                 <AlertTriangle className="h-14 w-14 text-white/90" strokeWidth={1.5} />
               </div>
               <h1 className="mb-2 text-2xl font-bold text-gray-900">Something went wrong</h1>

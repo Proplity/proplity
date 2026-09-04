@@ -889,7 +889,7 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
           </div>
 
           {/* Insights */}
-          <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+          <div className="rounded-lg border border-purple-200 bg-linear-to-br from-purple-50 to-blue-50 p-6">
             <h2 className="mb-3 font-semibold">Payment Reliability</h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">

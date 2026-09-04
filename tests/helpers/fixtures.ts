@@ -68,6 +68,23 @@ export async function createVerificationToken(
   return { rawToken, record };
 }
 
+/** Mirrors reset-password's own token hashing so the route can find what we create here. */
+export async function createPasswordResetToken(
+  userId: string,
+  overrides: Partial<{ expiresAt: Date }> = {},
+) {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const record = await testPrisma.passwordResetToken.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+  return { rawToken, record };
+}
+
 /** Seeds LoginAttempt rows directly to simulate an identifier whose rate limit is already exhausted. */
 export async function fillRateLimit(identifier: string, count = 5) {
   await testPrisma.loginAttempt.createMany({

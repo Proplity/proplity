@@ -172,7 +172,7 @@ export function TenantFeaturePage({
       </nav>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-green-50 via-white to-blue-50 pt-20 pb-24">
+      <section className="bg-linear-to-br from-green-50 via-white to-blue-50 pt-20 pb-24">
         <div className="mx-auto max-w-7xl px-6 text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
             <Home className="h-4 w-4" />

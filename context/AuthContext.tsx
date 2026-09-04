@@ -11,6 +11,8 @@ export interface User {
   name: string;
   role: UserRole;
   status: string;
+  phoneNumber?: string | null;
+  bio?: string | null;
   lastLoginAt?: string;
   createdAt?: string;
 }
