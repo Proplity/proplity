@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Lock, Landmark, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, Landmark, Star, Trash2, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   useBankAccounts,
@@ -11,12 +11,12 @@ import {
   useDeleteBankAccount,
 } from '@/hooks/useBankAccounts';
 
-// Only sections backed by a real, already-built API are here -- change
-// password (app/api/v1/auth/change-password) and bank accounts
+// Change password (app/api/v1/auth/change-password) and bank accounts
 // (app/api/v1/bank-accounts) both existed with zero UI before this page.
-// Profile-field editing (name/phone/etc.) isn't included: there's no
-// PATCH /auth/me route yet, and adding one is a separate backend decision,
-// not a side effect of giving existing endpoints a home.
+// Profile editing (PATCH /auth/me) was added alongside this page's own
+// ProfileCard -- deliberately narrow (name/phone/bio only): no email
+// (needs its own re-verification flow) and no avatar (no file-storage
+// endpoint exists anywhere in this codebase to upload one to).
 export function AccountSettings() {
   const router = useRouter();
   const auth = useAuth();
@@ -40,8 +40,114 @@ export function AccountSettings() {
         </div>
       </div>
 
+      <ProfileCard />
       <ChangePasswordCard />
       {showBankAccounts && <BankAccountsCard />}
+    </div>
+  );
+}
+
+function ProfileCard() {
+  const auth = useAuth();
+  const [name, setName] = useState(auth.user?.name ?? '');
+  const [phoneNumber, setPhoneNumber] = useState(auth.user?.phoneNumber ?? '');
+  const [bio, setBio] = useState(auth.user?.bio ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // auth.user resolves asynchronously (AuthContext fetches /auth/me on
+  // mount) -- the fields above start empty and need to pick up the real
+  // values once it lands, same pattern BankAccountsCard's own hooks use.
+  useEffect(() => {
+    setName(auth.user?.name ?? '');
+    setPhoneNumber(auth.user?.phoneNumber ?? '');
+    setBio(auth.user?.bio ?? '');
+  }, [auth.user?.name, auth.user?.phoneNumber, auth.user?.bio]);
+
+  const handleSubmit = async () => {
+    setError(null);
+    setSaved(false);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phoneNumber: phoneNumber.trim() || null,
+          bio: bio.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Failed to update profile');
+        return;
+      }
+      await auth.refreshUser();
+      setSaved(true);
+    } catch {
+      setError('Failed to update profile');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <UserIcon className="h-5 w-5 text-gray-600" />
+        <h2 className="font-semibold">Profile</h2>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Full name</label>
+          <input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="Full name"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Phone number</label>
+          <input
+            value={phoneNumber}
+            onChange={(e) => {
+              setPhoneNumber(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="+234 803 000 0000"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Bio</label>
+          <textarea
+            value={bio}
+            onChange={(e) => {
+              setBio(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="A short note about yourself"
+            rows={3}
+            maxLength={500}
+            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {saved && !error && <p className="text-sm text-green-600">Profile updated.</p>}
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || !name.trim()}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {submitting ? 'Saving…' : 'Save Profile'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { resetDb, testPrisma } from '../helpers/db';
 import {
   createUser,
   createVerificationToken,
+  createPasswordResetToken,
   fillRateLimit,
   FIXTURE_PASSWORD,
 } from '../helpers/fixtures';
@@ -444,6 +445,303 @@ describe('auth: change-password', () => {
       body: { email, password: 'brandNewPassword1' },
     });
     expect(newLogin.status).toBe(200);
+  });
+});
+
+describe('auth: forgot-password', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('rejects a mismatched Origin (CSRF)', async () => {
+    const res = await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'nobody@test.local' },
+      headers: { Origin: 'http://evil.example.com' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('rate limits repeated attempts for the same ip:email identifier', async () => {
+    // Same discovery trick as the refresh rate-limit test below: getClientIp()
+    // falls back to a literal '127.0.0.1' only when x-forwarded-for is absent,
+    // but Next's own dev server may report the real loopback address instead
+    // (e.g. '::1') -- fire one real request first and read back what the
+    // server actually recorded, rather than assuming the string.
+    await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'fp-limited-probe@test.local' },
+    });
+    const suffix = ':fp-limited-probe@test.local';
+    const probe = await testPrisma.loginAttempt.findFirst({
+      where: { identifier: { endsWith: suffix } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const ip = probe!.identifier.slice(0, probe!.identifier.length - suffix.length);
+
+    await fillRateLimit(`${ip}:fp-limited@test.local`);
+    const res = await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'fp-limited@test.local' },
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it('responds 200 with a generic message for an email that is not registered', async () => {
+    const res = await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'no-such-account@test.local' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/if that email is registered/i);
+  });
+
+  it('creates a real, hashed PasswordResetToken for a registered email', async () => {
+    const user = await createUser(Role.TENANT, { email: 'fp-real@test.local' });
+    const res = await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'fp-real@test.local' },
+    });
+    expect(res.status).toBe(200);
+
+    const token = await testPrisma.passwordResetToken.findUnique({ where: { userId: user.id } });
+    expect(token).not.toBeNull();
+    expect(token!.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('a second request replaces the first token (userId is @unique)', async () => {
+    const user = await createUser(Role.TENANT, { email: 'fp-replace@test.local' });
+    const { record: first } = await createPasswordResetToken(user.id);
+
+    const res = await apiFetch('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'fp-replace@test.local' },
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await testPrisma.passwordResetToken.findMany({ where: { userId: user.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tokenHash).not.toBe(first.tokenHash);
+  });
+});
+
+describe('auth: reset-password', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('is deliberately CSRF-exempt -- succeeds even from a mismatched Origin (rule 3)', async () => {
+    const user = await createUser(Role.TENANT, { email: 'rp-csrf@test.local' });
+    const { rawToken } = await createPasswordResetToken(user.id);
+    const res = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      headers: { Origin: 'http://evil.example.com' },
+      body: { token: rawToken, password: 'brandNewPassword1' },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects an unknown token', async () => {
+    const res = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token: 'not-a-real-token', password: 'brandNewPassword1' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an expired token', async () => {
+    const user = await createUser(Role.TENANT, { email: 'rp-expired@test.local' });
+    const { rawToken } = await createPasswordResetToken(user.id, {
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    const res = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token: rawToken, password: 'brandNewPassword1' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a password shorter than the 6-character minimum', async () => {
+    const user = await createUser(Role.TENANT, { email: 'rp-short@test.local' });
+    const { rawToken } = await createPasswordResetToken(user.id);
+    const res = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token: rawToken, password: 'ab' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('resets the password, revokes existing sessions, and consumes the token', async () => {
+    const email = 'rp-ok@test.local';
+    const user = await createUser(Role.TENANT, { email });
+
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email, password: FIXTURE_PASSWORD },
+    });
+    const sessionCookie = cookieHeaderFrom(login.setCookies);
+
+    const { rawToken } = await createPasswordResetToken(user.id);
+    const reset = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token: rawToken, password: 'brandNewPassword1' },
+    });
+    expect(reset.status).toBe(200);
+
+    // The session that existed before the reset must now be dead.
+    const refresh = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: sessionCookie,
+    });
+    expect(refresh.status).toBe(401);
+
+    // The old password no longer works; the new one does.
+    const oldLogin = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email, password: FIXTURE_PASSWORD },
+    });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email, password: 'brandNewPassword1' },
+    });
+    expect(newLogin.status).toBe(200);
+
+    // The token itself is single-use.
+    const reuse = await apiFetch('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token: rawToken, password: 'yetAnotherPassword1' },
+    });
+    expect(reuse.status).toBe(400);
+  });
+});
+
+describe('auth: resend-verification', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('rejects a mismatched Origin (CSRF)', async () => {
+    const res = await apiFetch('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      body: { email: 'nobody@test.local' },
+      headers: { Origin: 'http://evil.example.com' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('responds 200 generically for an unknown email, without creating anything', async () => {
+    const res = await apiFetch('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      body: { email: 'no-such-account@test.local' },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('responds 200 but does not touch an already-ACTIVE account', async () => {
+    const user = await createUser(Role.TENANT, { email: 'rv-active@test.local' });
+    const res = await apiFetch('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      body: { email: 'rv-active@test.local' },
+    });
+    expect(res.status).toBe(200);
+    const token = await testPrisma.verificationToken.findUnique({ where: { userId: user.id } });
+    expect(token).toBeNull();
+  });
+
+  it('issues a fresh token for a PENDING_VERIFICATION account, replacing any existing one', async () => {
+    const user = await createUser(Role.TENANT, {
+      email: 'rv-pending@test.local',
+      status: UserStatus.PENDING_VERIFICATION,
+    });
+    const { record: original } = await createVerificationToken(user.id);
+
+    const res = await apiFetch('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      body: { email: 'rv-pending@test.local' },
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await testPrisma.verificationToken.findMany({ where: { userId: user.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tokenHash).not.toBe(original.tokenHash);
+  });
+});
+
+describe('auth: PATCH /me (profile edit)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('requires authentication', async () => {
+    const res = await apiFetch('/api/v1/auth/me', {
+      method: 'PATCH',
+      body: { name: 'New Name' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects a mismatched Origin (CSRF)', async () => {
+    const user = await createUser(Role.TENANT, { email: 'pm-csrf@test.local' });
+    const cookie = await authCookie(user.id, user.role);
+    const res = await apiFetch('/api/v1/auth/me', {
+      method: 'PATCH',
+      cookie,
+      headers: { Origin: 'http://evil.example.com' },
+      body: { name: 'New Name' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects an empty patch body', async () => {
+    const user = await createUser(Role.TENANT, { email: 'pm-empty@test.local' });
+    const cookie = await authCookie(user.id, user.role);
+    const res = await apiFetch('/api/v1/auth/me', { method: 'PATCH', cookie, body: {} });
+    expect(res.status).toBe(400);
+  });
+
+  it('cannot smuggle role/status/email through the patch', async () => {
+    const user = await createUser(Role.TENANT, { email: 'pm-smuggle@test.local' });
+    const cookie = await authCookie(user.id, user.role);
+    const res = await apiFetch('/api/v1/auth/me', {
+      method: 'PATCH',
+      cookie,
+      body: { name: 'Still Tenant', role: 'ADMIN', status: 'SUSPENDED', email: 'new@test.local' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('tenant');
+
+    const dbUser = await testPrisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(dbUser.role).toBe('TENANT');
+    expect(dbUser.status).toBe('ACTIVE');
+    expect(dbUser.email).toBe('pm-smuggle@test.local');
+  });
+
+  it('updates name, phoneNumber, and bio, and clears a field when sent null', async () => {
+    const user = await createUser(Role.TENANT, { email: 'pm-ok@test.local' });
+    const cookie = await authCookie(user.id, user.role);
+
+    const res = await apiFetch('/api/v1/auth/me', {
+      method: 'PATCH',
+      cookie,
+      body: { name: 'Updated Name', phoneNumber: '+2348030000000', bio: 'Hello there' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({
+      name: 'Updated Name',
+      phoneNumber: '+2348030000000',
+      bio: 'Hello there',
+    });
+
+    const cleared = await apiFetch('/api/v1/auth/me', {
+      method: 'PATCH',
+      cookie,
+      body: { phoneNumber: null },
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.user.phoneNumber).toBeNull();
+    expect(cleared.body.user.bio).toBe('Hello there');
   });
 });
 

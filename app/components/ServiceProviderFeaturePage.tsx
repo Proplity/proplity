@@ -230,7 +230,7 @@ export function ServiceProviderFeaturePage({
       </nav>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-orange-50 via-white to-yellow-50 pt-20 pb-24">
+      <section className="bg-linear-to-br from-orange-50 via-white to-yellow-50 pt-20 pb-24">
         <div className="mx-auto max-w-7xl px-6 text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700">
             <Wrench className="h-4 w-4" />
