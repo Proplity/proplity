@@ -3,6 +3,18 @@
 Proplity is a **server-rendered** Next.js 16 app: 59 API routes, a `proxy.ts`
 auth gate, and Prisma against Postgres. It cannot be statically exported.
 
+## 0. Branch model
+
+Three tiers, each with its own database and its own GitHub Environment:
+
+| Branch | Role                    | Database                                 | Migrations                                    | App deploy                                   |
+| ------ | ----------------------- | ---------------------------------------- | --------------------------------------------- | -------------------------------------------- |
+| `dev`  | Feature work, PR target | none of its own                          | —                                             | none                                         |
+| `main` | Staging                 | staging DB (`staging` Environment)       | **automatic** on push (`migrate-staging.yml`) | Vercel's own git integration (preview-style) |
+| `prod` | Production              | production DB (`production` Environment) | **manual only** (`migrate-production.yml`)    | **manual only** (`deploy-production.yml`)    |
+
+The flow: `dev` → PR into `main` (CI + `migration-check.yml` gate it) → merges land on `main` and auto-migrate staging → once verified there, PR `main` → `prod` → after merge, a human runs `migrate-production.yml`, confirms it succeeded, then runs `deploy-production.yml`. Production is never touched by an ordinary push — that's the entire point of the split. See `docs/development-history/phases/` for the phase doc explaining why.
+
 ---
 
 ## 1. Provision Postgres
@@ -34,7 +46,8 @@ DIRECT_URL="<direct url>" pnpm db:migrate:deploy
 ## 2. Vercel environment variables
 
 Set these in **Project → Settings → Environment Variables**, scoped to
-Production (and Preview, pointing at a _different_ database).
+Production (and Preview, pointing at a _different_ database — this is what
+`main`-as-staging and PR previews both build against, per §0).
 
 | Variable                            | Required             | Notes                                                                                                                                         |
 | ----------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -72,11 +85,19 @@ schedule, so the dashboard needs almost nothing. Two manual steps:
 
 1. **Node version** — set to 22.x (Settings → General). `package.json` declares
    `engines.node >= 20.9.0`; Next 16 will not run below that.
-2. **Production Git deploys are disabled on purpose.** `vercel.json` sets
-   `git.deploymentEnabled.main = false` so that GitHub Actions owns production:
-   migrations must run _before_ the new code goes live, and Vercel's own Git
-   integration has no way to sequence that. Preview deploys on other branches
-   are unaffected.
+2. **Set the Production Branch to `prod`** (Settings → Git → Production Branch).
+   This is a manual dashboard step — it cannot be set from `vercel.json`.
+   Vercel defaults this to your repo's default branch (`main`), which is now
+   the staging tier under this repo's branch model (§0); leaving it unchanged
+   would make `main` pushes eligible for the production domain/env vars.
+3. **Production Git deploys are disabled on purpose.** `vercel.json` sets
+   `git.deploymentEnabled.prod = false` so that GitHub Actions owns production:
+   migrations must be confirmed healthy _before_ the new code goes live
+   (`migrate-production.yml`, then `deploy-production.yml` — two separate
+   manual steps), and Vercel's own Git integration has no way to sequence
+   that or gate it behind a human. `main` and PR branches are unaffected —
+   Vercel deploys those automatically as before, just as non-production
+   (Preview-scoped) builds.
 
 `regions` is `fra1` (Frankfurt) — the lowest-latency Vercel region for Nigerian
 traffic. Change it in `vercel.json` if your database lives elsewhere; keeping
@@ -146,44 +167,79 @@ daily schedule.
 
 ## 5. GitHub Actions
 
-### Required secrets
+Six workflows, split by branch tier (§0) rather than one file doing
+everything. Repository → Settings → Environments has two environments that
+matter here — `staging` and `production` — each with its **own** secrets;
+they are not shared, and `production`'s deployment-branch policy is
+restricted server-side to the `prod` branch only (Settings → Environments →
+production → Deployment branches), so even a leaked or misconfigured
+workflow cannot touch it from anywhere else. `staging` has no such
+restriction; it only ever runs from `migrate-staging.yml`'s own `main`-only
+trigger.
 
-Repository → Settings → Secrets and variables → Actions. The `migrate` and
-`deploy` jobs use a `production` environment, so you can add required reviewers
-there to gate production behind manual approval.
+### Required secrets, per Environment
 
-| Secret              | Used for                                        |
-| ------------------- | ----------------------------------------------- |
-| `DATABASE_URL`      | production migrations                           |
-| `DIRECT_URL`        | production migrations (unpooled)                |
-| `VERCEL_TOKEN`      | Account Settings → Tokens                       |
-| `VERCEL_ORG_ID`     | from `.vercel/project.json` after `vercel link` |
-| `VERCEL_PROJECT_ID` | same file                                       |
+| Secret              | `staging` | `production` | Used for                                        |
+| ------------------- | --------- | ------------ | ----------------------------------------------- |
+| `DATABASE_URL`      | yes       | yes          | migrations (pooled)                             |
+| `DIRECT_URL`        | if pooled | if pooled    | migrations (unpooled)                           |
+| `VERCEL_TOKEN`      | —         | yes          | Account Settings → Tokens                       |
+| `VERCEL_ORG_ID`     | —         | yes          | from `.vercel/project.json` after `vercel link` |
+| `VERCEL_PROJECT_ID` | —         | yes          | same file                                       |
 
-### `ci.yml` — on PR and on main
+Vercel deploys for `main`/PRs go through Vercel's own git integration (§3),
+not GitHub Actions, so `staging` doesn't need the three Vercel secrets —
+only `production` does, for `deploy-production.yml`.
+
+### `ci.yml` — on push/PR to `dev`, `main`, or `prod`
 
 ```
-quality ─┐
-         ├─> migrate ──> deploy      (main only)
-test  ───┘
+quality (typecheck, format, build)
+test    (full Vitest suite against postgres:18)
 ```
 
-- **quality** — install, typecheck, format check, production build.
-- **test** — the full Vitest suite against a `postgres:18` service container.
-  `globalSetup` drops/recreates `proplity_test_db` and spawns a real `next dev`
-  on port 3101; the workflow writes the `.env.test` the suite requires.
-- **migrate** — `prisma migrate deploy` against production, main only, only
-  after both gates pass.
-- **deploy** — `vercel build` then `vercel deploy --prebuilt --prod`, so the
-  artifact that ships is exactly the one the migration ran against.
+Just the two safety gates now — no migration or deploy step lives here
+anymore (moved out, below). Both jobs run on every push and PR across all
+three branches; neither touches a real database beyond the ephemeral
+`postgres:18` service container `test` spins up itself.
 
-`concurrency` cancels superseded runs on branches but **never on main**, so a
-production deploy is never killed mid-migration.
+### `migrate-staging.yml` — on push to `main`
 
-### `preview.yml` — on PR
+Automatic. `prisma migrate deploy` against the `staging` Environment's
+database, only when a push actually touches `prisma/schema/**` or
+`prisma/migrations/**`. Low risk by design — staging is never the database
+real users hit.
 
-Deploys a preview URL without waiting for tests, so reviewers get a link fast.
-Skipped for forks (they have no access to repository secrets).
+### `migration-check.yml` — on PR into `main` or `prod`
+
+Read-only. Runs `prisma validate` plus an informational `prisma migrate
+diff` against the `staging` database, so schema drift or conflicts surface
+in review instead of at merge time. Skipped for forks (no access to
+environment secrets, same reasoning `preview.yml` already documents).
+
+### `migrate-production.yml` — manual only
+
+`workflow_dispatch`, requires typing `migrate production` into the confirm
+input. Runs `prisma migrate status` before and after `prisma migrate
+deploy` against the `production` Environment, so a bad migration is visible
+immediately rather than discovered later. Gated to the `prod` branch by the
+Environment's own deployment-branch policy — the workflow also checks
+`github.ref` itself as a fast, clear failure if that policy is ever loosened.
+
+### `deploy-production.yml` — manual only, run after the above
+
+`workflow_dispatch`, requires typing `deploy production`. `vercel build`
+then `vercel deploy --prebuilt --prod`, so the artifact that ships is
+exactly the one built against the schema `migrate-production.yml` just
+applied. **Deliberately not chained automatically** to
+`migrate-production.yml` — a human confirms the migration actually
+succeeded before the code that depends on it goes live. Same `prod`-branch
+gate as `migrate-production.yml`.
+
+### `preview.yml` — on PR into `main`
+
+Deploys a preview URL without waiting for tests, so reviewers get a link
+fast. Skipped for forks (they have no access to repository secrets).
 
 > **Point Preview at a non-production database.** Set a Preview-scoped
 > `DATABASE_URL` in Vercel, or a pull request will read and write live data.

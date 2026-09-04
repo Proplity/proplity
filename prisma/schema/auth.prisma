@@ -42,6 +42,7 @@ model User {
   lastLoginAt                  DateTime?
   refreshTokens                RefreshToken[]
   verificationToken            VerificationToken?
+  passwordResetToken           PasswordResetToken?
   loginAttempts                LoginAttempt[]
   managedProperties            Property[]                @relation("ManagedProperties")
   ownedProperties              Property[]                @relation("OwnedProperties")
@@ -211,6 +212,22 @@ model RefreshToken {
 }
 
 model VerificationToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Deliberately a separate model from VerificationToken rather than reusing
+// it with a "purpose" field -- both are 1-per-user (userId @unique), and
+// sharing one table would mean requesting a password reset silently
+// invalidates a pending email-verification link (or vice versa), plus
+// POST /verify-email would need to stop assuming every token it finds means
+// "activate this account." A short expiry (1 hour, vs. the 7-day
+// verification link) since this token grants a real password change.
+model PasswordResetToken {
   id        String   @id @default(uuid())
   userId    String   @unique
   tokenHash String   @unique

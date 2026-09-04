@@ -36,7 +36,7 @@ export const mockProperties: Property[] = [
     trustScore: 95,
     features: ['24/7 Power', 'Borehole', 'Security', 'Parking'],
     agent: 'Verified Landlord',
-    image: 'bg-gradient-to-br from-blue-100 to-blue-200',
+    image: 'bg-linear-to-br from-blue-100 to-blue-200',
     neighborhood: {
       safety: 9,
       accessibility: 8,
@@ -57,7 +57,7 @@ export const mockProperties: Property[] = [
     trustScore: 92,
     features: ['24/7 Power', 'Water treatment', 'Gym', 'Parking'],
     agent: 'Verified Landlord',
-    image: 'bg-gradient-to-br from-green-100 to-green-200',
+    image: 'bg-linear-to-br from-green-100 to-green-200',
     neighborhood: {
       safety: 8,
       accessibility: 9,
@@ -78,7 +78,7 @@ export const mockProperties: Property[] = [
     trustScore: 84,
     features: ['Security', 'Parking'],
     agent: 'Agent Properties',
-    image: 'bg-gradient-to-br from-purple-100 to-purple-200',
+    image: 'bg-linear-to-br from-purple-100 to-purple-200',
     neighborhood: {
       safety: 7,
       accessibility: 9,
@@ -99,7 +99,7 @@ export const mockProperties: Property[] = [
     trustScore: 97,
     features: ['24/7 Power', 'Swimming Pool', 'Gym', 'Security', 'Parking'],
     agent: 'Verified Developer',
-    image: 'bg-gradient-to-br from-orange-100 to-orange-200',
+    image: 'bg-linear-to-br from-orange-100 to-orange-200',
     neighborhood: {
       safety: 9,
       accessibility: 9,
@@ -1366,10 +1366,10 @@ export const mockPublicPropertyDetails: Record<number, any> = {
     reviews: 14,
     badge: 'Available',
     images: [
-      'bg-gradient-to-br from-slate-300 to-slate-500',
-      'bg-gradient-to-br from-stone-300 to-stone-500',
-      'bg-gradient-to-br from-zinc-300 to-zinc-500',
-      'bg-gradient-to-br from-neutral-300 to-neutral-500',
+      'bg-linear-to-br from-slate-300 to-slate-500',
+      'bg-linear-to-br from-stone-300 to-stone-500',
+      'bg-linear-to-br from-zinc-300 to-zinc-500',
+      'bg-linear-to-br from-neutral-300 to-neutral-500',
     ],
     description:
       'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security. Close to schools, shopping centres, and major roads. The apartment boasts floor-to-ceiling windows, Italian tiles, and a fully fitted kitchen.',
@@ -1396,10 +1396,10 @@ export const mockPublicPropertyDetails: Record<number, any> = {
     reviews: 9,
     badge: 'Available',
     images: [
-      'bg-gradient-to-br from-green-300 to-green-600',
-      'bg-gradient-to-br from-emerald-300 to-emerald-500',
-      'bg-gradient-to-br from-teal-300 to-teal-500',
-      'bg-gradient-to-br from-cyan-300 to-cyan-500',
+      'bg-linear-to-br from-green-300 to-green-600',
+      'bg-linear-to-br from-emerald-300 to-emerald-500',
+      'bg-linear-to-br from-teal-300 to-teal-500',
+      'bg-linear-to-br from-cyan-300 to-cyan-500',
     ],
     description:
       'Modern 2-bedroom flat in the prestigious Maitama district. Features a well-fitted kitchen, spacious living area, and a serene environment perfect for professionals.',
@@ -1426,10 +1426,10 @@ export const mockPublicPropertyDetails: Record<number, any> = {
     reviews: 22,
     badge: 'Available',
     images: [
-      'bg-gradient-to-br from-purple-300 to-purple-600',
-      'bg-gradient-to-br from-violet-300 to-violet-500',
-      'bg-gradient-to-br from-fuchsia-300 to-fuchsia-500',
-      'bg-gradient-to-br from-pink-300 to-pink-500',
+      'bg-linear-to-br from-purple-300 to-purple-600',
+      'bg-linear-to-br from-violet-300 to-violet-500',
+      'bg-linear-to-br from-fuchsia-300 to-fuchsia-500',
+      'bg-linear-to-br from-pink-300 to-pink-500',
     ],
     description:
       'Stunning 4-bedroom duplex in the quiet and secure Ikeja GRA neighbourhood. Features a private swimming pool, landscaped garden, and top-of-the-range finishes throughout.',

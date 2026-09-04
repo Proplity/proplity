@@ -86,7 +86,7 @@ export function ScheduleViewing({
 
   if (step === 3) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 via-white to-green-50 p-6">
         <div className="w-full max-w-md">
           <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-lg">
             <div className="mx-auto mb-4 flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-green-100">

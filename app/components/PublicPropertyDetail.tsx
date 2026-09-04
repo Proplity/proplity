@@ -192,10 +192,10 @@ export function PublicPropertyDetail({
   // exteriorPhotoUrl -- gradient placeholders fill in for the 3 remaining
   // gallery slots the original mock design used.
   const galleryPlaceholders = [
-    'bg-gradient-to-br from-blue-100 to-blue-200',
-    'bg-gradient-to-br from-green-100 to-green-200',
-    'bg-gradient-to-br from-purple-100 to-purple-200',
-    'bg-gradient-to-br from-orange-100 to-orange-200',
+    'bg-linear-to-br from-blue-100 to-blue-200',
+    'bg-linear-to-br from-green-100 to-green-200',
+    'bg-linear-to-br from-purple-100 to-purple-200',
+    'bg-linear-to-br from-orange-100 to-orange-200',
   ];
 
   return (
@@ -513,7 +513,7 @@ export function PublicPropertyDetail({
                 key={p.id}
                 className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
               >
-                <div className="relative flex h-36 items-start bg-gradient-to-br from-blue-100 to-blue-200 p-3">
+                <div className="relative flex h-36 items-start bg-linear-to-br from-blue-100 to-blue-200 p-3">
                   <span className="flex items-center gap-1 rounded-full bg-green-500 px-2 py-0.5 text-xs font-bold text-white">
                     <Shield className="h-3 w-3" /> 360° View Available
                   </span>

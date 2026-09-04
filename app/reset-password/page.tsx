@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, Lock, AlertCircle } from 'lucide-react';
 import { LogoIcon } from '../components/Logo';
 
-function VerifyEmailContent() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -21,35 +21,28 @@ function VerifyEmailContent() {
     setError(null);
 
     if (!token) {
-      setError('This verification link is missing its token.');
+      setError('This reset link is missing its token.');
       return;
     }
-    // Password is optional here -- a self-registered user already set one
-    // at signup and can leave both fields blank to just activate. An
-    // invited user (no password yet) must fill them in. Either way, if
-    // anything was typed, it has to be valid.
-    const settingPassword = password.length > 0 || confirmPassword.length > 0;
-    if (settingPassword) {
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match.');
-        return;
-      }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
     }
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/v1/auth/verify-email', {
+      const res = await fetch('/api/v1/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingPassword ? { token, password } : { token }),
+        body: JSON.stringify({ token, password }),
       });
       const body = await res.json();
       if (!res.ok) {
-        setError(body.error ?? 'Verification failed.');
+        setError(body.error ?? 'Reset failed.');
         return;
       }
       setSuccess(true);
@@ -68,10 +61,13 @@ function VerifyEmailContent() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold">Account Activated</h2>
-            <p className="mb-6 text-gray-600">Your account is verified and ready to use.</p>
+            <h2 className="mb-2 text-2xl font-bold">Password Reset</h2>
+            <p className="mb-6 text-gray-600">
+              Your password has been updated. You've been signed out everywhere else for security —
+              sign back in with your new password.
+            </p>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/login')}
               className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
             >
               Sign In
@@ -89,32 +85,28 @@ function VerifyEmailContent() {
           <div className="mb-4 flex justify-center">
             <LogoIcon size={60} />
           </div>
-          <h1 className="mb-2 text-3xl font-bold">Activate Your Account</h1>
-          <p className="text-gray-600">
-            Confirm your email to activate your account. Already set a password when you signed up?
-            Leave the fields below blank.
-          </p>
+          <h1 className="mb-2 text-3xl font-bold">Reset Your Password</h1>
+          <p className="text-gray-600">Choose a new password for your account.</p>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
           {!token && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              This link is missing its verification token.
+              This link is missing its reset token. Request a new one from the sign-in page.
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                New Password <span className="font-normal text-gray-400">(optional)</span>
-              </label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">New Password</label>
               <div className="relative">
                 <Lock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Leave blank to keep your current password"
+                  placeholder="At least 6 characters"
+                  required
                   className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
@@ -122,7 +114,7 @@ function VerifyEmailContent() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                Confirm Password <span className="font-normal text-gray-400">(optional)</span>
+                Confirm Password
               </label>
               <div className="relative">
                 <Lock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
@@ -130,6 +122,7 @@ function VerifyEmailContent() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
                   className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
@@ -147,7 +140,7 @@ function VerifyEmailContent() {
               disabled={submitting || !token}
               className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? 'Activating…' : 'Activate Account'}
+              {submitting ? 'Resetting…' : 'Reset Password'}
             </button>
           </form>
         </div>
@@ -159,7 +152,7 @@ function VerifyEmailContent() {
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <VerifyEmailContent />
+      <ResetPasswordContent />
     </Suspense>
   );
 }
