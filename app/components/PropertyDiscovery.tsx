@@ -99,7 +99,7 @@ function cardFields(property: Property) {
     status: anyVacant ? 'available' : 'occupied',
     verified: property.moderationStatus === 'APPROVED',
     features: cheapestUnit?.amenities ?? [],
-    imageClass: 'bg-gradient-to-br from-blue-100 to-blue-200',
+    imageClass: 'bg-linear-to-br from-blue-100 to-blue-200',
     neighborhood: {
       safety: property.securityRating ? Math.round(property.securityRating / 10) : null,
       accessibility: property.roadConditionScore

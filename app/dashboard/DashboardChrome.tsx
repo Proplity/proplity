@@ -165,7 +165,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           </nav>
 
           {role !== 'vendor' && (
-            <div className="mt-8 rounded-lg bg-gradient-to-br from-blue-50 to-green-50 p-4">
+            <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
               <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
               <p className="mb-3 text-xs text-gray-600">
                 {role === 'tenant'

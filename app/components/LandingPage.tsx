@@ -204,7 +204,7 @@ export function LandingPage({
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 via-white to-green-50 pt-20 pb-32">
+      <section className="bg-linear-to-br from-blue-50 via-white to-green-50 pt-20 pb-32">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-4xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700">
@@ -572,7 +572,7 @@ export function LandingPage({
 
               {/* Video area */}
               <div
-                className="relative bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900"
+                className="relative bg-linear-to-br from-gray-900 via-blue-950 to-gray-900"
                 style={{ aspectRatio: '16/9' }}
               >
                 {/* Background pattern suggestion */}
@@ -686,7 +686,7 @@ export function LandingPage({
                 bedrooms: 3,
                 bathrooms: 2,
                 sqft: '1,200 sq ft',
-                image: 'bg-gradient-to-br from-blue-400 to-blue-600',
+                image: 'bg-linear-to-br from-blue-400 to-blue-600',
                 trustScore: 95,
                 features: ['24/7 Power', 'Borehole', 'Security', 'Parking'],
               },
@@ -698,7 +698,7 @@ export function LandingPage({
                 bedrooms: 2,
                 bathrooms: 2,
                 sqft: '950 sq ft',
-                image: 'bg-gradient-to-br from-green-400 to-green-600',
+                image: 'bg-linear-to-br from-green-400 to-green-600',
                 trustScore: 92,
                 features: ['Generator', 'Water Tank', 'Gated Estate'],
               },
@@ -710,7 +710,7 @@ export function LandingPage({
                 bedrooms: 4,
                 bathrooms: 3,
                 sqft: '1,800 sq ft',
-                image: 'bg-gradient-to-br from-purple-400 to-purple-600',
+                image: 'bg-linear-to-br from-purple-400 to-purple-600',
                 trustScore: 97,
                 features: ['Swimming Pool', 'Gym', 'Garden', '24/7 Power'],
               },
@@ -722,7 +722,7 @@ export function LandingPage({
                 bedrooms: 1,
                 bathrooms: 1,
                 sqft: '600 sq ft',
-                image: 'bg-gradient-to-br from-orange-400 to-orange-600',
+                image: 'bg-linear-to-br from-orange-400 to-orange-600',
                 trustScore: 88,
                 features: ['Furnished', 'WiFi', 'Security'],
               },
@@ -734,7 +734,7 @@ export function LandingPage({
                 bedrooms: 3,
                 bathrooms: 3,
                 sqft: '2,200 sq ft',
-                image: 'bg-gradient-to-br from-pink-400 to-pink-600',
+                image: 'bg-linear-to-br from-pink-400 to-pink-600',
                 trustScore: 99,
                 features: ['Sea View', 'Private Lift', 'Balcony', 'Luxury'],
               },
@@ -746,7 +746,7 @@ export function LandingPage({
                 bedrooms: 2,
                 bathrooms: 2,
                 sqft: '1,000 sq ft',
-                image: 'bg-gradient-to-br from-teal-400 to-teal-600',
+                image: 'bg-linear-to-br from-teal-400 to-teal-600',
                 trustScore: 90,
                 features: ['Garden', 'Parking', 'Quiet Area'],
               },
@@ -851,7 +851,7 @@ export function LandingPage({
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="bg-gradient-to-br from-blue-50 to-green-50 py-20">
+      <section id="pricing" className="bg-linear-to-br from-blue-50 to-green-50 py-20">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h2>

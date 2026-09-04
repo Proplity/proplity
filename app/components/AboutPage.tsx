@@ -339,7 +339,7 @@ export function AboutPage({
 
           {/* City image placeholder — rich gradient + city silhouette */}
           <div className="relative h-80 overflow-hidden rounded-2xl shadow-2xl lg:h-[420px]">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-300 via-amber-400 to-blue-900" />
+            <div className="absolute inset-0 bg-linear-to-br from-orange-300 via-amber-400 to-blue-900" />
             {/* stylised skyline silhouette */}
             <svg
               className="absolute bottom-0 w-full"
