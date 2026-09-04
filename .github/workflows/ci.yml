@@ -2,17 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, prod]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, prod]
   workflow_dispatch:
 
 # A second push to the same branch cancels the first still-running build.
-# Never applied to main: production deploys must not be cancelled halfway
-# through a `prisma migrate deploy`.
+# Safe to always cancel now: this file only runs quality/test checks --
+# migrations and deploys moved to their own dedicated, manually-gated
+# workflows (migrate-staging.yml, migrate-production.yml,
+# deploy-production.yml) that never race a superseding push the way an
+# in-flight `prisma migrate deploy` would.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '22.x'
@@ -108,76 +111,9 @@ jobs:
         env:
           TEST_SETUP_LOGS: '1'
 
-  migrate:
-    name: Migrate production database
-    # Only main, and only once both gates are green -- never on a PR, and
-    # never on a preview branch.
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [quality, test]
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # DIRECT_URL, not the pooled DATABASE_URL: `migrate deploy` takes a
-      # session-level advisory lock that a transaction-mode pooler drops.
-      # prisma.config.ts prefers DIRECT_URL and falls back to DATABASE_URL.
-      # If this step still sees empty values, the secrets aren't defined on
-      # this job's GitHub *Environment* (production) -- Settings ->
-      # Environments -> production -> Secrets, not repo/org secrets.
-      - name: Apply migrations
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm db:migrate:deploy
-
-  deploy:
-    name: Deploy to Vercel
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [migrate]
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
-
-      # Pulls the project's real production env vars into .vercel, so the
-      # build below sees the same configuration the deployed app will.
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      # --prebuilt uploads the artifact built above rather than rebuilding on
-      # Vercel, so what was migrated against is exactly what ships.
-      - name: Deploy
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  # Migrations and Vercel deploys used to live here, gated to main. Now that
+  # main is the staging tier (see migrate-staging.yml) and prod is the real
+  # production gate, both moved to their own dedicated, manually-triggered
+  # workflows: migrate-production.yml and deploy-production.yml. Production
+  # must not be touched by an ordinary push -- that's the whole point of
+  # this split.
