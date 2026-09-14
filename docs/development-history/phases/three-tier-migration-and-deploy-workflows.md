@@ -1,6 +1,6 @@
 # Three-tier branch model: staging auto-migrate + gated manual production
 
-**Status:** Complete. CI validated on `dev`; the manual production workflows are untested (can't be, without a `prod`-restricted GitHub Environment secret and real Vercel/DB credentials this environment doesn't have). **Date:** 2026-09-04.
+**Status:** Live on `dev` and `main`; PR into `prod` open. `main`→`prod` PR #2 syncs `prod` with everything below (not yet merged). `staging` has real Neon credentials and will auto-migrate on the next push to `main` that touches `prisma/`. `production` still has zero secrets and the manual production workflows remain untested — both need real credentials this environment doesn't have. **Date:** 2026-09-04.
 
 ## Why
 
@@ -32,17 +32,25 @@ Prior to this, `main` *was* production — `ci.yml`'s `migrate`/`deploy` jobs ra
 
 ## What's still manual, and why
 
-- **Setting real values for `staging`'s and `production`'s secrets** (`DATABASE_URL`/`DIRECT_URL`/`VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`) — this environment has no network path to any real database or Vercel account, and fabricating placeholder values would be actively misleading. Both Environments currently have zero secrets (checked directly via the API before this phase started); that was already true before this change and is unrelated to it.
+- **`production`'s secrets** (`DATABASE_URL`/`DIRECT_URL`/`VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID`) — still zero, and this environment still has no network path to a real production database or Vercel account. `staging`'s two DB secrets, by contrast, are now set with real Neon credentials the user pasted directly into `gh secret set` via stdin.
+- **A production database distinct from staging** — the user pasted staging's Neon connection strings; both point at compute endpoint `ep-long-poetry-b10ur5jg` (host, not database name, is what isolates a Neon branch). Confirmed with the user that reusing that same endpoint for `production` — even under a differently-named database — would make staging and production the literal same physical database. Production secrets are intentionally not being set until a separate Neon branch/project exists for it.
 - **Vercel's Production Branch dashboard setting** — `vercel.json` cannot set this; it must be changed from `main` to `prod` by hand in Vercel's UI, or Vercel will keep treating `main` pushes as production-domain-eligible regardless of what GitHub Actions does.
-- **Syncing `prod` forward** — `prod` was branched from the *old* `main` (pre this session's work), so it doesn't yet have any of the commits from the still-open `dev`→`main` PR, including these very workflow files. A `main`→`prod` PR is the natural next step once that PR merges — opening one now would be against content that doesn't exist on `main` yet.
+- **`prod` branch sync** — PR #2 (`main`→`prod`) is open but not yet merged, so `prod` still doesn't have this phase's own workflow files yet, or anything from PR #1 (password reset, CI fixes, dependency patches). Once #2 merges, `migrate-production.yml`/`deploy-production.yml` become dispatchable, though still blocked on the `production` secrets above.
 
 ## Verification performed
 
 - `python3 -c "import yaml; yaml.safe_load(...)"` — all 6 workflow files (5 touched/added + `preview.yml` re-checked) parse as valid YAML.
 - `python3 -c "import json; json.load(...)"` — `vercel.json` valid.
 - Confirmed via the GitHub API (not assumed) that the `production` Environment's deployment-branch policy now lists exactly one branch, `prod`, and that `staging` exists.
-- **Not performed, and cannot be from here**: actually running `migrate-staging.yml`, `migration-check.yml`, `migrate-production.yml`, or `deploy-production.yml` end-to-end — all four need real database/Vercel credentials this environment doesn't have. `ci.yml`'s reduced `quality`+`test` jobs were verified the normal way (they're unchanged in substance, just relocated triggers).
+- PR #1 (`dev`→`main`): `CI` and `Check migrations against staging` both completed `success` — the new `ci.yml` and `migration-check.yml` validated against a real PR, not just YAML syntax. Merged 2026-09-04.
+- **Not performed, and cannot be from here**: actually running `migrate-production.yml` or `deploy-production.yml` end-to-end — both need real production database/Vercel credentials this environment doesn't have. `migrate-staging.yml` is wired with real credentials now but hasn't fired yet (waiting on the next `prisma/`-touching push to `main`).
 
 ## What's next
 
-Merge the open `dev`→`main` PR, then open a `main`→`prod` PR to bring `prod` current (this is what makes the two production workflows dispatchable from it at all). Separately, and not blocking: the user needs to (1) paste real connection strings into the `staging` and `production` GitHub Environments, (2) create/paste `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` into `production`, and (3) change Vercel's Production Branch setting to `prod` in the dashboard. None of these three are things this environment can do — they all need real external credentials or dashboard access only the user has.
+1. Merge PR #2 (`main`→`prod`, open) to bring `prod` current.
+2. User sets up a Neon branch/project for production distinct from staging's `ep-long-poetry-b10ur5jg`, then pastes its `DATABASE_URL`/`DIRECT_URL` into the `production` GitHub Environment.
+3. User creates/pastes `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` into `production`.
+4. User changes Vercel's Production Branch setting to `prod` in the dashboard (Settings → Git → Production Branch).
+5. Separately, and lower priority: the `Preview` GitHub Environment also has zero secrets, so PR preview deploys currently fail (`Deploy preview to Vercel` red on PR #1) — pre-existing gap, unrelated to this phase's code.
+
+None of items 2-4 are things this environment can do — they need real external credentials or dashboard access only the user has.
