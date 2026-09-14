@@ -447,6 +447,17 @@ export type CreateAnnouncementInput = {
   isPinned?: boolean;
 };
 
+export type Notification = {
+  id: string;
+  recipientId: string;
+  type: 'ANNOUNCEMENT' | 'MAINTENANCE_STATUS' | 'SYSTEM';
+  title: string;
+  body: string;
+  link: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export type Violation = {
   id: string;
   unitId: string;
