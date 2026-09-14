@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { notifyUser } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -28,6 +29,22 @@ function loadRequest(id: string) {
       conversation: true,
       vendorRating: true,
     },
+  });
+}
+
+// Skips notifying when the tenant is the one who made the change (e.g. a
+// self-cancel) -- nobody needs to be told about an action they just took.
+function notifyTenantOfStatus(
+  request: { id: string; tenantId: string; title: string },
+  actorId: string,
+  body: string,
+) {
+  if (actorId === request.tenantId) return Promise.resolve();
+  return notifyUser(request.tenantId, {
+    type: 'MAINTENANCE_STATUS',
+    title: `Maintenance update: ${request.title}`,
+    body,
+    link: `/dashboard/maintenance/${request.id}`,
   });
 }
 
@@ -100,6 +117,13 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         where: { id },
         data: { categoryId, priority, vendorId, scheduledFor },
       });
+      await notifyTenantOfStatus(
+        request,
+        session.sub,
+        vendorId !== undefined
+          ? `A vendor has been assigned to your request "${request.title}".`
+          : `Your request "${request.title}" has been updated.`,
+      );
       return NextResponse.json({ data: updated });
     }
 
@@ -114,6 +138,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         where: { id },
         data: { status: 'CANCELLED' },
       });
+      await notifyTenantOfStatus(
+        request,
+        session.sub,
+        `Your request "${request.title}" was cancelled.`,
+      );
       return NextResponse.json({ data: updated });
     }
 
@@ -148,6 +177,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
             },
           }),
         ]);
+        await notifyTenantOfStatus(
+          request,
+          session.sub,
+          `Your request "${request.title}" has been completed.`,
+        );
         return NextResponse.json({ data: updated });
       }
 
@@ -155,6 +189,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         where: { id },
         data: { status: 'IN_PROGRESS', ...(vendorNotes !== undefined ? { vendorNotes } : {}) },
       });
+      await notifyTenantOfStatus(
+        request,
+        session.sub,
+        `Work has started on your request "${request.title}".`,
+      );
       return NextResponse.json({ data: updated });
     }
 

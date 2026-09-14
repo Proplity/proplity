@@ -34,6 +34,7 @@ import type {
   ManagerInviteCode,
   Message,
   Note,
+  Notification,
   Paginated,
   Property,
   ReviewApplicationInput,
@@ -286,6 +287,19 @@ export const api = {
       list: (params?: { role?: string; limit?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+  },
+  notifications: {
+    list: (params?: { limit?: number; cursor?: string }) =>
+      apiClient.get<{
+        data: Notification[];
+        meta: { hasMore: boolean; nextCursor: string | null; unreadCount: number };
+      }>('/api/v1/notifications', { params }),
+    markRead: (id: string, isRead: boolean = true) =>
+      apiClient.patch<{ data: Notification }>(`/api/v1/notifications/${id}`, { isRead }),
+    markAllRead: () =>
+      apiClient.post<{ data: { updated: number } }>('/api/v1/notifications/mark-all-read'),
+    remove: (id: string) =>
+      apiClient.delete<{ data: { id: string } }>(`/api/v1/notifications/${id}`),
   },
   payments: {
     initialize: (invoiceId: string) =>
