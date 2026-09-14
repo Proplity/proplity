@@ -13,6 +13,7 @@ import {
   InvoiceStatus,
   AccessCodeStatus,
   ConversationType,
+  NotificationType,
 } from '@prisma/client';
 import { testPrisma } from './db';
 
@@ -275,6 +276,30 @@ export async function createAccessCode(
       validUntil: overrides.validUntil ?? null,
       status: overrides.status ?? AccessCodeStatus.ACTIVE,
       ...(overrides.singleUse !== undefined ? { singleUse: overrides.singleUse } : {}),
+    },
+  });
+}
+
+export async function createNotification(
+  recipientId: string,
+  overrides: Partial<{
+    type: NotificationType;
+    title: string;
+    body: string;
+    link: string | null;
+    isRead: boolean;
+    createdAt: Date;
+  }> = {},
+) {
+  return testPrisma.notification.create({
+    data: {
+      recipientId,
+      type: overrides.type ?? NotificationType.SYSTEM,
+      title: overrides.title ?? 'Test notification',
+      body: overrides.body ?? 'Test notification body',
+      link: overrides.link ?? null,
+      isRead: overrides.isRead ?? false,
+      ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
     },
   });
 }

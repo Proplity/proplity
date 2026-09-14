@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { notifyUsers } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -69,6 +70,27 @@ export const POST = withAuth(
       const announcement = await prisma.announcement.create({
         data: { propertyId: id, authorId: session.sub, ...validated.data },
       });
+
+      // Notify every tenant with an active lease on this property. Awaited
+      // (Vercel can freeze the function right after the response is sent,
+      // so an un-awaited promise here isn't reliably delivered) but errors
+      // are swallowed inside notifyUsers -- a notification hiccup must not
+      // roll back a successfully published announcement.
+      const activeLeases = await prisma.lease.findMany({
+        where: { unit: { propertyId: id }, status: 'ACTIVE' },
+        select: { tenantId: true },
+        distinct: ['tenantId'],
+      });
+      await notifyUsers(
+        activeLeases.map((l) => l.tenantId),
+        {
+          type: 'ANNOUNCEMENT',
+          title: `New announcement: ${property.name}`,
+          body: announcement.title,
+          link: `/dashboard/properties/${id}`,
+        },
+      );
+
       return NextResponse.json({ data: announcement }, { status: 201 });
     } catch (err) {
       return handleApiError(err);
