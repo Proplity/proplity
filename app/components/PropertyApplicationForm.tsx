@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Upload,
@@ -18,8 +20,6 @@ interface PropertyApplicationFormProps {
   unitId: string;
   propertyTitle: string;
   propertyPrice: string;
-  onBack: () => void;
-  onSubmit: () => void;
 }
 
 export function PropertyApplicationForm({
@@ -27,9 +27,9 @@ export function PropertyApplicationForm({
   unitId,
   propertyTitle,
   propertyPrice,
-  onBack,
-  onSubmit,
 }: PropertyApplicationFormProps) {
+  const router = useRouter();
+  const backHref = `/dashboard/properties/${propertyId}`;
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Personal Information
@@ -99,7 +99,10 @@ export function PropertyApplicationForm({
 
     try {
       await createApplication({ unitId, details });
-      onSubmit();
+      alert(
+        'Application submitted successfully! The property manager will review your application and contact you within 24-48 hours.',
+      );
+      router.push('/dashboard');
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -122,13 +125,13 @@ export function PropertyApplicationForm({
       <div className="mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={onBack}
+          <Link
+            href={backHref}
             className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5" />
             Back to Property
-          </button>
+          </Link>
           <h1 className="mb-2 text-2xl font-bold">Apply to Rent</h1>
           <p className="text-gray-600">
             {propertyTitle} • {propertyPrice}
@@ -717,13 +720,12 @@ export function PropertyApplicationForm({
                 Previous
               </button>
             )}
-            <button
-              type="button"
-              onClick={onBack}
-              className="rounded-lg border border-gray-300 px-6 py-3 font-medium hover:bg-gray-50"
+            <Link
+              href={backHref}
+              className="flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 font-medium hover:bg-gray-50"
             >
               Cancel
-            </button>
+            </Link>
             {step < 4 ? (
               <button
                 type="button"

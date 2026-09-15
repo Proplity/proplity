@@ -11,7 +11,6 @@ export default function Page() {
   return (
     <DashboardBreakdownPage
       breakdownType={type as BreakdownType}
-      onBack={() => router.push('/dashboard')}
       onNavigate={(page) => navigateToPage(router, page)}
     />
   );

@@ -8,11 +8,5 @@ export default function Page() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
 
-  return (
-    <PropertyDetail
-      propertyId={id}
-      onBack={() => router.push('/dashboard')}
-      onNavigate={(page) => navigateToPage(router, page)}
-    />
-  );
+  return <PropertyDetail propertyId={id} onNavigate={(page) => navigateToPage(router, page)} />;
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
+import { notifyUser, notifyUsers } from '@/lib/notifications';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -45,7 +46,20 @@ export async function POST(req: NextRequest) {
       if (!invoiceId)
         return NextResponse.json({ error: 'Missing invoiceId in metadata' }, { status: 400 });
 
-      const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: {
+                  property: true,
+                },
+              },
+            },
+          },
+        },
+      });
       if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
       // Paystack can redeliver the same event -- guard against double-
@@ -70,6 +84,29 @@ export async function POST(req: NextRequest) {
           }),
           prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'PAID' } }),
         ]);
+
+        if (invoice.type === 'RENT' && invoice.lease) {
+          const property = invoice.lease.unit?.property;
+          const managersToNotify = [property?.landlordId, property?.managerId].filter(
+            (id): id is string => Boolean(id),
+          );
+          if (managersToNotify.length > 0) {
+            await notifyUsers(managersToNotify, {
+              type: 'SYSTEM',
+              title: 'Rent Payment Received',
+              body: `A rent payment of ₦${(data.amount / 100).toLocaleString()} was received for ${property?.name ?? 'your property'}.`,
+              link: '/dashboard',
+            });
+          }
+          if (invoice.lease.tenantId) {
+            await notifyUser(invoice.lease.tenantId, {
+              type: 'SYSTEM',
+              title: 'Rent Payment Confirmed',
+              body: `Your rent payment of ₦${(data.amount / 100).toLocaleString()} has been received. Thank you!`,
+              link: '/dashboard/payment-history',
+            });
+          }
+        }
 
         // A subscription invoice paying activates the subscription itself --
         // tier/cycle have no dedicated column, encoded into the description

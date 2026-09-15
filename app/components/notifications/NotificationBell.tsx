@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Bell, Megaphone, Wrench, Info } from 'lucide-react';
@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
 } from '@/app/components/ui/dropdown-menu';
 import { useNotificationBell } from '@/hooks/useNotificationBell';
+import { useAuth } from '@/context/AuthContext';
 import { playNotificationSound } from '@/lib/notificationSound';
 import type { Notification } from '@/lib/api/types';
 
@@ -28,9 +29,16 @@ const TYPE_COLOR: Record<Notification['type'], string> = {
 
 export function NotificationBell() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const { items, unreadCount, newlyArrived, clearNewlyArrived, markRead, markAllRead } =
     useNotificationBell();
+
+  const notificationsHref =
+    pathname?.startsWith('/admin') || user?.role === 'admin'
+      ? '/admin/notifications'
+      : '/dashboard/notifications';
 
   // Toast + chime for whatever arrived since the last poll tick -- never for
   // what was already there on mount (useNotificationBell only populates
@@ -130,7 +138,7 @@ export function NotificationBell() {
           <button
             onClick={() => {
               setOpen(false);
-              router.push('/dashboard/notifications');
+              router.push(notificationsHref);
             }}
             className="text-xs font-medium text-blue-600 hover:underline"
           >

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Calendar,
@@ -17,8 +19,6 @@ interface ScheduleViewingProps {
   propertyId: string;
   propertyTitle: string;
   propertyAddress: string;
-  onBack: () => void;
-  onSubmit: () => void;
 }
 
 // Parses a "10:00 AM" / "2:00 PM" slot label into a 24h hour -- the API
@@ -37,9 +37,9 @@ export function ScheduleViewing({
   propertyId,
   propertyTitle,
   propertyAddress,
-  onBack,
-  onSubmit,
 }: ScheduleViewingProps) {
+  const router = useRouter();
+  const backHref = `/dashboard/properties/${propertyId}`;
   const { submit, submitting, error } = useCreateViewing(propertyId);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -78,7 +78,7 @@ export function ScheduleViewing({
       // 3) -- preserved as-is rather than newly wiring it up, since that
       // would change this form's navigation contract beyond this phase's
       // scope of "make the submission real."
-      onSubmit();
+      router.push(backHref);
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -109,12 +109,12 @@ export function ScheduleViewing({
                 <li>• Feel free to ask questions during the tour</li>
               </ul>
             </div>
-            <button
-              onClick={onBack}
-              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+            <Link
+              href={backHref}
+              className="block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white hover:bg-blue-700"
             >
               Back to Property
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -126,13 +126,13 @@ export function ScheduleViewing({
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={onBack}
+          <Link
+            href={backHref}
             className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5" />
             Back to Property
-          </button>
+          </Link>
           <h1 className="mb-2 text-2xl font-bold">Schedule a Viewing</h1>
           <div className="flex items-start gap-2 text-gray-600">
             <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0" />
@@ -383,13 +383,12 @@ export function ScheduleViewing({
                 Back
               </button>
             )}
-            <button
-              type="button"
-              onClick={onBack}
-              className="rounded-lg border border-gray-300 px-6 py-3 font-medium hover:bg-gray-50"
+            <Link
+              href={backHref}
+              className="flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 font-medium hover:bg-gray-50"
             >
               Cancel
-            </button>
+            </Link>
             {step === 1 ? (
               <button
                 type="button"

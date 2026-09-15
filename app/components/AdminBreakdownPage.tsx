@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, Users, Building2, DollarSign, AlertCircle, Search, Clock } from 'lucide-react';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useMyProperties, useModerateProperty } from '@/hooks/useProperties';
@@ -9,7 +10,6 @@ export type AdminBreakdownType = 'users' | 'properties' | 'transactions' | 'main
 
 interface AdminBreakdownPageProps {
   breakdownType: AdminBreakdownType;
-  onBack: () => void;
 }
 
 const ICONS: Record<AdminBreakdownType, any> = {
@@ -63,7 +63,7 @@ function ModerationActions({
   );
 }
 
-export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPageProps) {
+export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: users, loading: usersLoading } = useAdminUsers();
@@ -512,13 +512,13 @@ export function AdminBreakdownPage({ breakdownType, onBack }: AdminBreakdownPage
 
   return (
     <div className="space-y-6 p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/admin"
         className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Admin Dashboard
-      </button>
+      </Link>
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Wrench,
@@ -19,7 +20,6 @@ import { useVendors } from '@/hooks/useVendors';
 
 interface MaintenanceDetailProps {
   requestId: string;
-  onBack: () => void;
 }
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
@@ -64,7 +64,7 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
   return entries.reverse();
 }
 
-export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps) {
+export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const { data: request, loading, refetch } = useMaintenanceRequest(requestId);
   const { submit: updateRequest, submitting } = useUpdateMaintenanceRequest(requestId);
   const { data: vendors, loading: vendorsLoading } = useVendors();
@@ -83,13 +83,13 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
   if (!request) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard/maintenance"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Maintenance
-        </button>
+        </Link>
         <p className="text-gray-500">Request not found.</p>
       </div>
     );
@@ -150,13 +150,13 @@ export function MaintenanceDetail({ requestId, onBack }: MaintenanceDetailProps)
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard/maintenance"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Maintenance
-      </button>
+      </Link>
 
       {actionError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
