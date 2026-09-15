@@ -1,4 +1,7 @@
+'use client';
+
 import { useState } from 'react';
+import Link from 'next/link';
 import { Logo } from './Logo';
 import {
   ChevronDown,
@@ -12,16 +15,6 @@ import {
   CheckCircle,
   ArrowRight,
 } from 'lucide-react';
-
-interface AboutPageProps {
-  onGoHome: () => void;
-  onGetStarted: () => void;
-  onViewPricing: () => void;
-  onViewContact: () => void;
-  onViewLandlordPage: () => void;
-  onViewTenantPage: () => void;
-  onViewVendorPage: () => void;
-}
 
 const STATS = [
   { value: '10,000+', label: 'Properties managed' },
@@ -177,23 +170,15 @@ function PublicNav({
   );
 }
 
-export function AboutPage({
-  onGoHome,
-  onGetStarted,
-  onViewPricing,
-  onViewContact,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-}: AboutPageProps) {
+export function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <button onClick={onGoHome} className="focus:outline-none">
+          <Link href="/" className="focus:outline-none">
             <Logo />
-          </button>
+          </Link>
           <div className="hidden items-center gap-8 md:flex">
             <div className="group relative">
               <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -211,52 +196,43 @@ export function AboutPage({
               <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
                 <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
                   {[
-                    { label: 'For Landlords', action: onViewLandlordPage },
-                    { label: 'For Tenants', action: onViewTenantPage },
+                    { label: 'For Landlords', href: '/for-landlords' },
+                    { label: 'For Tenants', href: '/for-tenants' },
                     {
                       label: 'For Service Providers',
-                      action: onViewVendorPage,
+                      href: '/for-vendors',
                     },
                   ].map((item) => (
-                    <button
+                    <Link
                       key={item.label}
-                      onClick={item.action}
+                      href={item.href}
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                     >
                       {item.label}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
             </div>
-            <button
-              onClick={onGoHome}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               How it Works
-            </button>
-            <button
-              onClick={onViewContact}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Contact Us
-            </button>
+            </Link>
             <span className="border-b-2 border-blue-600 pb-0.5 text-sm font-semibold text-blue-600">
               About Us
             </span>
-            <button
-              onClick={onViewPricing}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Pricing
-            </button>
+            </Link>
           </div>
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/login"
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             Get Started
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -329,12 +305,12 @@ export function AboutPage({
                 management as easy as sending a WhatsApp message.
               </p>
             </div>
-            <button
-              onClick={onGetStarted}
+            <Link
+              href="/login"
               className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition-all hover:gap-3"
             >
               Get started today <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
 
           {/* City image placeholder — rich gradient + city silhouette */}
@@ -438,12 +414,12 @@ export function AboutPage({
                 </li>
               ))}
             </ul>
-            <button
-              onClick={onGetStarted}
+            <Link
+              href="/login"
               className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 transition-all hover:gap-3"
             >
               Learn more <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
 
           {/* Dark screen mockup */}
@@ -531,12 +507,12 @@ export function AboutPage({
           <blockquote className="mb-5 text-xl leading-snug font-semibold text-gray-900 md:text-2xl">
             Property management shouldn't be a hassle. It should be clear, efficient, and scalable.
           </blockquote>
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/login"
             className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition-all hover:gap-3"
           >
             Start with Proplity <ArrowRight className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -547,12 +523,12 @@ export function AboutPage({
           Join thousands of landlords and property managers already using Proplity to simplify their
           operations.
         </p>
-        <button
-          onClick={onGetStarted}
+        <Link
+          href="/login"
           className="rounded-xl bg-white px-8 py-3 text-sm font-bold text-blue-700 shadow-lg transition-colors hover:bg-blue-50"
         >
           Get Free Trial
-        </button>
+        </Link>
       </section>
 
       {/* ── Footer ── */}

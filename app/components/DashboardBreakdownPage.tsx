@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, Home, Users, DollarSign, AlertCircle, UserX, Search } from 'lucide-react';
 import {
   AreaChart,
@@ -25,7 +26,6 @@ export type BreakdownType = 'properties' | 'tenants' | 'rent' | 'maintenance' | 
 
 interface DashboardBreakdownPageProps {
   breakdownType: BreakdownType;
-  onBack: () => void;
   onNavigate?: (page: any) => void;
 }
 
@@ -65,11 +65,7 @@ function monthLabel(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short' });
 }
 
-export function DashboardBreakdownPage({
-  breakdownType,
-  onBack,
-  onNavigate,
-}: DashboardBreakdownPageProps) {
+export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -685,13 +681,13 @@ export function DashboardBreakdownPage({
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard"
           className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
-        </button>
+        </Link>
         {breakdownType === 'properties' && (
           <div className="flex gap-2">
             <a

@@ -1,4 +1,8 @@
+'use client';
+
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,12 +34,8 @@ const RENT_FREQUENCY_MAP: Record<string, string> = {
   yearly: 'ANNUAL',
 };
 
-interface AddTenantFormProps {
-  onBack: () => void;
-  onComplete: () => void;
-}
-
-export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
+export function AddTenantForm() {
+  const router = useRouter();
   const { data: properties } = useProperties();
   const { submit: createLease, submitting, error } = useCreateLease();
 
@@ -133,7 +133,7 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
           ? `Tenancy created! An invitation has been sent to ${tenantInfo.email} to set up their account.`
           : `Tenancy created and linked to the existing account for ${tenantInfo.email}.`,
       );
-      onComplete();
+      router.push('/dashboard/tenants');
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -143,12 +143,12 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
     <div className="mx-auto max-w-3xl p-6">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard/tenants"
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"
         >
           <ArrowLeft className="h-5 w-5 text-gray-600" />
-        </button>
+        </Link>
         <div>
           <h1 className="text-2xl font-semibold">Add New Tenant</h1>
           <p className="text-sm text-gray-500">Fill in tenant details and link to a property</p>
@@ -745,7 +745,7 @@ export function AddTenantForm({ onBack, onComplete }: AddTenantFormProps) {
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
         <button
-          onClick={() => (step === 0 ? onBack() : setStep((s) => s - 1))}
+          onClick={() => (step === 0 ? router.push('/dashboard/tenants') : setStep((s) => s - 1))}
           className="flex items-center gap-2 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
         >
           <ArrowLeft className="h-4 w-4" />
