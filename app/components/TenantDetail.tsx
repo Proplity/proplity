@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Phone,
@@ -27,7 +28,6 @@ import type { Lease, Violation } from '@/lib/api/types';
 
 interface TenantDetailProps {
   leaseId: string;
-  onBack: () => void;
 }
 
 // Click-wrap e-signature: typed full legal name + timestamp + IP, not a
@@ -296,7 +296,7 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
   );
 }
 
-export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
+export function TenantDetail({ leaseId }: TenantDetailProps) {
   const { data: lease, loading, refetch: refetchLease } = useLease(leaseId);
   const { data: notes, refetch: refetchNotes } = useLeaseNotes(leaseId);
   const { data: allRequests } = useMaintenanceRequests();
@@ -319,13 +319,13 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
   if (!lease || !lease.tenant) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard/tenants"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Tenants
-        </button>
+        </Link>
         <p className="text-gray-500">Tenant not found.</p>
       </div>
     );
@@ -378,13 +378,13 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard/tenants"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Tenants
-      </button>
+      </Link>
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Upload,
@@ -18,11 +20,11 @@ import { useCreateProperty } from '@/hooks/useProperties';
 import { api } from '@/lib/apiClient';
 
 interface ListPropertyProps {
-  onBack: () => void;
   userRole: 'manager' | 'landlord';
 }
 
-export function ListProperty({ onBack, userRole }: ListPropertyProps) {
+export function ListProperty({ userRole }: ListPropertyProps) {
+  const router = useRouter();
   const {
     submit: createProperty,
     submitting: creatingProperty,
@@ -157,7 +159,7 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
       alert(
         'Property listing submitted for review! You will be notified by email once it is approved.',
       );
-      onBack();
+      router.push('/dashboard');
     } catch {
       setSubmitError(propertyError ?? 'Failed to create the unit for this listing.');
     }
@@ -181,13 +183,13 @@ export function ListProperty({ onBack, userRole }: ListPropertyProps) {
     <div className="mx-auto max-w-4xl p-6">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard"
           className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Dashboard
-        </button>
+        </Link>
         <h1 className="mb-2 text-2xl font-semibold">List a New Property</h1>
         <p className="text-gray-600">
           {userRole === 'landlord'

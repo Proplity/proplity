@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { ScheduleViewing } from '../../../../components/ScheduleViewing';
 import { api } from '@/lib/apiClient';
 
 export default function Page() {
-  const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [property, setProperty] = useState<{ name: string; address: string } | null>(null);
 
@@ -28,8 +27,6 @@ export default function Page() {
       propertyId={id}
       propertyTitle={property?.name ?? ''}
       propertyAddress={property?.address ?? ''}
-      onBack={() => router.push(`/dashboard/properties/${id}`)}
-      onSubmit={() => router.push(`/dashboard/properties/${id}`)}
     />
   );
 }

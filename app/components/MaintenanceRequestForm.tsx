@@ -1,15 +1,12 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Wrench, Upload, AlertCircle, Droplet, Zap, Wind, Home } from 'lucide-react';
 import {
   useMaintenanceCategories,
   useCreateMaintenanceRequest,
 } from '@/hooks/useMaintenanceRequests';
 import { useActiveLease } from '@/hooks/useLeases';
-
-interface MaintenanceRequestFormProps {
-  onBack: () => void;
-  onSubmit: () => void;
-}
 
 // Maps the form's fixed category buttons to a real MaintenanceCategory by
 // name -- MaintenanceCategory is a DB table (admin-editable), not an enum,
@@ -29,7 +26,8 @@ const PRIORITY_MAP: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = {
   high: 'HIGH',
 };
 
-export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestFormProps) {
+export function MaintenanceRequestForm() {
+  const router = useRouter();
   const { data: categories } = useMaintenanceCategories();
   const { data: activeLease } = useActiveLease();
   const { submit, submitting, error } = useCreateMaintenanceRequest();
@@ -75,7 +73,8 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
         // local display list only, not actually uploaded.
         mediaUrls: [],
       });
-      onSubmit();
+      alert('Maintenance request submitted successfully!');
+      router.push('/dashboard');
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -93,13 +92,13 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={onBack}
+          <Link
+            href="/dashboard"
             className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5" />
             Back to Dashboard
-          </button>
+          </Link>
           <h1 className="mb-2 text-2xl font-bold">Submit Maintenance Request</h1>
           <p className="text-gray-600">
             Let us know what needs to be fixed and we'll get it resolved quickly
@@ -347,13 +346,12 @@ export function MaintenanceRequestForm({ onBack, onSubmit }: MaintenanceRequestF
 
           {/* Submit Buttons */}
           <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={onBack}
+            <Link
+              href="/dashboard"
               className="rounded-lg border border-gray-300 px-6 py-3 font-medium hover:bg-gray-50"
             >
               Cancel
-            </button>
+            </Link>
             <button
               type="submit"
               disabled={submitting}

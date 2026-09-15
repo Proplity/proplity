@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Download,
@@ -17,10 +18,6 @@ import {
 } from 'lucide-react';
 import { useActiveLease } from '@/hooks/useLeases';
 import { useProperty } from '@/hooks/useProperties';
-
-interface NeighbourhoodReportProps {
-  onBack: () => void;
-}
 
 // Each section is a loosely-typed JSON blob (NeighbourhoodReport model,
 // property.prisma) -- read fields defensively since nothing enforces their
@@ -82,7 +79,7 @@ function renderFields(section: Section, exclude: string[]) {
   );
 }
 
-export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
+export function NeighbourhoodReport() {
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
@@ -116,9 +113,9 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
   if (!lease) {
     return (
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <button onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100">
+        <Link href="/dashboard" className="rounded-lg p-2 hover:bg-gray-100">
           <ArrowLeft className="h-5 w-5" />
-        </button>
+        </Link>
         <p className="text-gray-500">You need an active lease to view a neighbourhood report.</p>
       </div>
     );
@@ -136,9 +133,9 @@ export function NeighbourhoodReport({ onBack }: NeighbourhoodReportProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100">
+          <Link href="/dashboard" className="rounded-lg p-2 hover:bg-gray-100">
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Link>
           <div>
             <h1 className="text-2xl font-semibold">Neighbourhood Report</h1>
             <p className="text-gray-600">Comprehensive insights about your area</p>

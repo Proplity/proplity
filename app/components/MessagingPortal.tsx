@@ -1,12 +1,11 @@
+'use client';
+
 import { useState } from 'react';
+import Link from 'next/link';
 import { Send, Search, Paperclip, Phone, Video, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations, useMessages, useSendMessage } from '@/hooks/useConversations';
 import type { Conversation } from '@/lib/api/types';
-
-interface MessagingPortalProps {
-  onBack?: () => void;
-}
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -49,7 +48,7 @@ function describe(conv: Conversation, selfId: string | undefined) {
   return { name, subtitle, others };
 }
 
-export function MessagingPortal({ onBack }: MessagingPortalProps) {
+export function MessagingPortal() {
   const auth = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -99,11 +98,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
       {/* Header */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center gap-4">
-          {onBack && (
-            <button onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100">
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          )}
+          <Link href="/dashboard" className="rounded-lg p-2 hover:bg-gray-100">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
           <div>
             <h1 className="text-xl font-bold">Messages</h1>
             <p className="text-sm text-gray-600">

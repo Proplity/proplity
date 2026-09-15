@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Wrench,
@@ -17,7 +18,6 @@ import { useAccessCodes } from '@/hooks/useAccessCodes';
 
 interface VendorJobDetailProps {
   jobId: string;
-  onBack: () => void;
   onNavigate: (page: any) => void;
 }
 
@@ -56,7 +56,7 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
   return entries.reverse();
 }
 
-export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailProps) {
+export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
   const { data: job, loading, refetch } = useMaintenanceRequest(jobId);
   const { submit: updateJob, submitting } = useUpdateMaintenanceRequest(jobId);
   const { data: accessCodes, loading: accessCodesLoading } = useAccessCodes(job?.unitId ?? null);
@@ -70,13 +70,13 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
   if (!job) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Jobs
-        </button>
+        </Link>
         <p className="text-gray-500">Job not found.</p>
       </div>
     );
@@ -116,13 +116,13 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Jobs
-      </button>
+      </Link>
 
       {actionError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">

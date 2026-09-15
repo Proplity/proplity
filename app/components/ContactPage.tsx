@@ -1,4 +1,7 @@
+'use client';
+
 import { useState } from 'react';
+import Link from 'next/link';
 import { Logo } from './Logo';
 import {
   Mail,
@@ -10,15 +13,6 @@ import {
   ExternalLink,
   Send,
 } from 'lucide-react';
-
-interface ContactPageProps {
-  onGoHome: () => void;
-  onGetStarted: () => void;
-  onViewPricing: () => void;
-  onViewLandlordPage: () => void;
-  onViewTenantPage: () => void;
-  onViewVendorPage: () => void;
-}
 
 const FAQS = [
   {
@@ -95,14 +89,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-export function ContactPage({
-  onGoHome,
-  onGetStarted,
-  onViewPricing,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-}: ContactPageProps) {
+export function ContactPage() {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -127,9 +114,9 @@ export function ContactPage({
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <button onClick={onGoHome} className="focus:outline-none">
+          <Link href="/" className="focus:outline-none">
             <Logo />
-          </button>
+          </Link>
 
           <div className="hidden items-center gap-8 md:flex">
             {/* Features dropdown */}
@@ -149,53 +136,44 @@ export function ContactPage({
               <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
                 <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
                   {[
-                    { label: 'For Landlords', action: onViewLandlordPage },
-                    { label: 'For Tenants', action: onViewTenantPage },
+                    { label: 'For Landlords', href: '/for-landlords' },
+                    { label: 'For Tenants', href: '/for-tenants' },
                     {
                       label: 'For Service Providers',
-                      action: onViewVendorPage,
+                      href: '/for-vendors',
                     },
                   ].map((item) => (
-                    <button
+                    <Link
                       key={item.label}
-                      onClick={item.action}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      href={item.href}
+                      className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                     >
                       {item.label}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
             </div>
-            <button
-              onClick={onGoHome}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               How it Works
-            </button>
+            </Link>
             <span className="border-b-2 border-blue-600 pb-0.5 text-sm font-semibold text-blue-600">
               Contact Us
             </span>
-            <button
-              onClick={onGoHome}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               About Us
-            </button>
-            <button
-              onClick={onViewPricing}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Pricing
-            </button>
+            </Link>
           </div>
 
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/login"
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             Get Started
-          </button>
+          </Link>
         </div>
       </nav>
 

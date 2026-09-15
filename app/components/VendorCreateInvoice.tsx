@@ -1,14 +1,16 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, DollarSign, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
 import { mockInvoiceJobDetails, mockInvoiceVendorInfo as vendorInfo } from '../store/mockData';
 import { useCreateInvoice } from '@/hooks/useInvoices';
 
 interface VendorCreateInvoiceProps {
   jobId: string;
-  onBack: () => void;
 }
 
-export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps) {
+export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
+  const router = useRouter();
   const { submit, submitting, error } = useCreateInvoice();
   const [lineItems, setLineItems] = useState([
     {
@@ -90,7 +92,7 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
         description,
       });
       alert('Invoice submitted successfully! Payment will be processed within 48 hours.');
-      onBack();
+      router.push('/dashboard');
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -98,13 +100,13 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
 
   return (
     <div className="mx-auto max-w-5xl p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back
-      </button>
+      </Link>
 
       <div className="rounded-lg border border-gray-200 bg-white p-8">
         {/* Header */}
@@ -312,12 +314,12 @@ export function VendorCreateInvoice({ jobId, onBack }: VendorCreateInvoiceProps)
             <Send className="h-5 w-5" />
             {submitting ? 'Submitting…' : 'Submit Invoice'}
           </button>
-          <button
-            onClick={onBack}
-            className="rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
-          </button>
+          </Link>
         </div>
 
         {/* Info */}

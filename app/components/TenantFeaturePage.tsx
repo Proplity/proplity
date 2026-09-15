@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   Home,
   Search,
@@ -14,27 +15,7 @@ import {
 import { Logo } from './Logo';
 import { mockTenantFeaturePaymentHistory as paymentHistory } from '../store/mockData';
 
-interface TenantFeaturePageProps {
-  onGetStarted: () => void;
-  onGoHome?: () => void;
-  onViewPricing?: () => void;
-  onViewContact?: () => void;
-  onViewAbout?: () => void;
-  onViewLandlordPage?: () => void;
-  onViewTenantPage?: () => void;
-  onViewVendorPage?: () => void;
-}
-
-export function TenantFeaturePage({
-  onGetStarted,
-  onGoHome,
-  onViewPricing,
-  onViewContact,
-  onViewAbout,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-}: TenantFeaturePageProps) {
+export function TenantFeaturePage() {
   const features = [
     {
       icon: Search,
@@ -97,9 +78,9 @@ export function TenantFeaturePage({
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <button onClick={onGoHome ?? onGetStarted} className="focus:outline-none">
+          <Link href="/" className="focus:outline-none">
             <Logo />
-          </button>
+          </Link>
           <div className="hidden items-center gap-8 md:flex">
             <div className="group relative">
               <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -116,58 +97,46 @@ export function TenantFeaturePage({
               </button>
               <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
                 <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  <button
-                    onClick={onViewLandlordPage}
+                  <Link
+                    href="/for-landlords"
                     className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                   >
                     For Landlords
-                  </button>
-                  <button
-                    onClick={onViewTenantPage}
+                  </Link>
+                  <Link
+                    href="/for-tenants"
                     className="w-full px-4 py-2.5 text-left text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                   >
                     For Tenants
-                  </button>
-                  <button
-                    onClick={onViewVendorPage}
+                  </Link>
+                  <Link
+                    href="/for-vendors"
                     className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                   >
                     For Service Providers
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
-            <button
-              onClick={onGoHome}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               How it Works
-            </button>
-            <button
-              onClick={onViewContact}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Contact Us
-            </button>
-            <button
-              onClick={onViewAbout}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               About Us
-            </button>
-            <button
-              onClick={onViewPricing}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Pricing
-            </button>
+            </Link>
           </div>
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/register"
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             Get Started
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -186,13 +155,13 @@ export function TenantFeaturePage({
             tenancy from one place. No agents, no hidden fees, no stress.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={onGetStarted}
+            <Link
+              href="/register"
               className="flex items-center gap-2 rounded-lg bg-green-600 px-8 py-4 text-lg font-semibold text-white hover:bg-green-700"
             >
               Register as a Tenant
               <ArrowRight className="h-5 w-5" />
-            </button>
+            </Link>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <CheckCircle className="h-5 w-5 text-green-500" />
               Free forever
@@ -378,13 +347,13 @@ export function TenantFeaturePage({
           <p className="mb-8 text-xl text-green-100">
             Join thousands of Nigerians who found their homes on Proplity.
           </p>
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/register"
             className="inline-flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-green-600 hover:bg-gray-100"
           >
             Create Your Tenant Account
             <ArrowRight className="h-5 w-5" />
-          </button>
+          </Link>
           <p className="mt-4 text-sm text-green-200">
             Free forever · No credit card · No agent fees
           </p>
