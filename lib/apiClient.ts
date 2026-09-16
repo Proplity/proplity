@@ -287,6 +287,16 @@ export const api = {
       list: (params?: { role?: string; limit?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+    settings: {
+      get: () =>
+        apiClient.get<{
+          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
+        }>('/api/v1/admin/settings'),
+      update: (data: { autoCompleteMaintenanceOnInvoice: boolean }) =>
+        apiClient.patch<{
+          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
+        }>('/api/v1/admin/settings', data),
+    },
   },
   notifications: {
     list: (params?: { limit?: number; cursor?: string }) =>
@@ -309,6 +319,12 @@ export const api = {
           invoiceId,
         },
       ),
+  },
+  uploads: {
+    sign: (folder: 'maintenance-requests' | 'applications') =>
+      apiClient.post<{
+        data: { cloudName: string; apiKey: string; timestamp: number; signature: string };
+      }>('/api/v1/uploads/sign', { folder }),
   },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
