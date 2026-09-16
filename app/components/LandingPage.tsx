@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from './Logo';
 import { WatchDemoModal } from './WatchDemoModal';
+import { useAuth } from '@/context/AuthContext';
 import {
   ArrowRight,
   Shield,
@@ -24,6 +25,8 @@ import {
 } from 'lucide-react';
 
 export function LandingPage() {
+  const { user } = useAuth();
+  const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const features = [
     {
@@ -162,10 +165,10 @@ export function LandingPage() {
 
           {/* CTA */}
           <Link
-            href="/login"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            href={user ? dashboardPath : '/login'}
+            className="cursor-pointer rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
           >
-            Get Started
+            {user ? 'Go to Dashboard' : 'Get Started'}
           </Link>
         </div>
       </nav>
@@ -216,10 +219,10 @@ export function LandingPage() {
 
             <div className="flex items-center justify-center gap-4">
               <Link
-                href="/login"
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-lg font-semibold text-white hover:bg-blue-700"
+                href={user ? dashboardPath : '/login'}
+                className="flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-lg font-semibold text-white hover:bg-blue-700"
               >
-                Start Free Trial
+                {user ? 'Go to Dashboard' : 'Start Free Trial'}
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <button
@@ -802,8 +805,8 @@ export function LandingPage() {
 
           <div className="mt-12 text-center">
             <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-8 py-4 text-lg font-semibold text-white hover:from-blue-700 hover:to-green-700"
+              href={user ? '/dashboard/discover' : '/login'}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-8 py-4 text-lg font-semibold text-white hover:from-blue-700 hover:to-green-700"
             >
               Browse All Properties
               <ArrowRight className="h-5 w-5" />
@@ -909,10 +912,10 @@ export function LandingPage() {
             Join thousands of property managers already using Proplity
           </p>
           <Link
-            href="/login"
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-blue-600 hover:bg-gray-100"
+            href={user ? dashboardPath : '/login'}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-blue-600 hover:bg-gray-100"
           >
-            Start Your Free Trial
+            {user ? 'Go to Dashboard' : 'Start Your Free Trial'}
             <ArrowRight className="h-5 w-5" />
           </Link>
         </div>

@@ -727,6 +727,13 @@ async function main() {
     },
   });
 
+  // Mark platform setup as complete
+  await prisma.systemSettings.upsert({
+    where: { id: 'global' },
+    update: { setupComplete: true },
+    create: { id: 'global', setupComplete: true },
+  });
+
   console.log('🌱 Rich Proplity seed2 completed successfully!');
   console.log({
     admin: admin.email,
