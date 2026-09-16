@@ -35,6 +35,10 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
   const needsVerification = errorMessage?.includes('verify your email') ?? false;
 
   const handleResendVerification = async () => {
+    if (!email.trim()) {
+      toast.error('Enter your email address above first.');
+      return;
+    }
     setResendState('sending');
     try {
       await fetch('/api/v1/auth/resend-verification', {
@@ -187,6 +191,28 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
                 Forgot password?
               </button>
             </div>
+
+            {/* Always-visible resend link -- not gated behind a failed
+                login attempt, so it works even if you never got (or lost)
+                the original verification email and don't remember which
+                device you registered on. */}
+            {!needsVerification && (
+              <p className="text-center text-sm text-gray-500">
+                Didn&apos;t get a verification email?{' '}
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendState !== 'idle'}
+                  className="font-medium text-blue-600 hover:text-blue-700 disabled:no-underline disabled:opacity-70"
+                >
+                  {resendState === 'sending'
+                    ? 'Sending…'
+                    : resendState === 'sent'
+                      ? 'Sent'
+                      : 'Resend it'}
+                </button>
+              </p>
+            )}
 
             {/* Submit Button */}
             <button

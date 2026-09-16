@@ -1,10 +1,17 @@
 // Platform-wide singleton configuration. The single row (id = 'global') is
 // auto-created by the seed script or by the first-run setup wizard. Guards
 // the one-time superadmin bootstrap flow: once setupComplete flips to true,
-// the /setup endpoint permanently self-disables.
-
+// the /setup endpoint permanently self-disables. Also holds admin-editable
+// platform toggles (see PATCH /api/v1/admin/settings) -- a single row is
+// simpler than a generic key/value settings table for the handful of
+// booleans this app actually needs.
 model SystemSettings {
-  id            String   @id @default("global")
-  setupComplete Boolean  @default(false)
-  updatedAt     DateTime @updatedAt
+  id                               String   @id @default("global")
+  setupComplete                    Boolean  @default(false)
+  // When true (default), submitting a vendor invoice against a maintenance
+  // request also marks that request COMPLETED in the same transaction.
+  // Admin-toggleable (Platform Settings) for operators who invoice interim
+  // costs mid-job and don't want that to auto-close the request.
+  autoCompleteMaintenanceOnInvoice Boolean  @default(true)
+  updatedAt                        DateTime @updatedAt
 }

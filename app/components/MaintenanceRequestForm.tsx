@@ -7,6 +7,7 @@ import {
   useCreateMaintenanceRequest,
 } from '@/hooks/useMaintenanceRequests';
 import { useActiveLease } from '@/hooks/useLeases';
+import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
 
 // Maps the form's fixed category buttons to a real MaintenanceCategory by
 // name -- MaintenanceCategory is a DB table (admin-editable), not an enum,
@@ -26,6 +27,11 @@ const PRIORITY_MAP: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = {
   high: 'HIGH',
 };
 
+interface FormImage {
+  name: string;
+  url: string | null;
+}
+
 export function MaintenanceRequestForm() {
   const router = useRouter();
   const { data: categories } = useMaintenanceCategories();
@@ -40,9 +46,10 @@ export function MaintenanceRequestForm() {
     location: '',
     preferredDate: '',
     preferredTime: '',
-    images: [] as File[],
+    images: [] as FormImage[],
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +76,7 @@ export function MaintenanceRequestForm() {
         description,
         categoryId: category?.id,
         priority: PRIORITY_MAP[formData.priority],
-        // No file-storage endpoint exists in any phase yet -- images stay a
-        // local display list only, not actually uploaded.
-        mediaUrls: [],
+        mediaUrls: formData.images.filter((i) => i.url).map((i) => i.url as string),
       });
       alert('Maintenance request submitted successfully!');
       router.push('/dashboard');
@@ -80,10 +85,32 @@ export function MaintenanceRequestForm() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setFormData({ ...formData, images: [...formData.images, ...filesArray] });
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    e.target.value = '';
+
+    if (!uploadsEnabled()) {
+      // No storage provider configured in this environment -- still show
+      // the selection so the form feels responsive, but url stays null so
+      // it's never silently claimed as saved (see the note rendered below).
+      setFormData((s) => ({
+        ...s,
+        images: [...s.images, ...filesArray.map((f) => ({ name: f.name, url: null }))],
+      }));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(
+        filesArray.map((f) => uploadFile(f, 'maintenance-requests')),
+      );
+      setFormData((s) => ({ ...s, images: [...s.images, ...uploaded] }));
+    } catch {
+      setFormError('One or more photos failed to upload. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -276,11 +303,21 @@ export function MaintenanceRequestForm() {
               Photos help us understand the issue better and respond faster
             </p>
 
+            {!uploadsEnabled() && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  Photo upload isn&apos;t available in this environment yet. You can still select
+                  files below, but they won&apos;t be saved or sent with your request.
+                </span>
+              </div>
+            )}
+
             <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
               <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
               <label className="cursor-pointer">
                 <span className="font-medium text-blue-600 hover:text-blue-700">
-                  Click to upload
+                  {uploading ? 'Uploading…' : 'Click to upload'}
                 </span>
                 <span className="text-gray-600"> or drag and drop</span>
                 <input
@@ -288,6 +325,7 @@ export function MaintenanceRequestForm() {
                   multiple
                   accept="image/*"
                   onChange={handleImageUpload}
+                  disabled={uploading}
                   className="hidden"
                 />
               </label>
@@ -305,7 +343,12 @@ export function MaintenanceRequestForm() {
                       key={index}
                       className="flex items-center justify-between rounded bg-gray-50 p-2"
                     >
-                      <span className="text-sm text-gray-600">{file.name}</span>
+                      <span className="text-sm text-gray-600">
+                        {file.name}
+                        {!file.url && (
+                          <span className="ml-2 text-xs text-amber-700">(not saved)</span>
+                        )}
+                      </span>
                       <button
                         type="button"
                         onClick={() => {
