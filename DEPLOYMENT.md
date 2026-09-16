@@ -49,16 +49,18 @@ Set these in **Project → Settings → Environment Variables**, scoped to
 Production (and Preview, pointing at a _different_ database — this is what
 `main`-as-staging and PR previews both build against, per §0).
 
-| Variable                            | Required             | Notes                                                                                                                                         |
-| ----------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                      | **yes**              | Pooled endpoint.                                                                                                                              |
-| `DIRECT_URL`                        | if pooled            | Only read by the Prisma CLI, not the app.                                                                                                     |
-| `JWT_SECRET`                        | **yes**              | `openssl rand -hex 64`. Rotating it logs everyone out.                                                                                        |
-| `CRON_SECRET`                       | **yes**              | Name must be exactly this — see §4.                                                                                                           |
-| `NEXT_PUBLIC_APP_URL`               | strongly recommended | Base URL for links in outbound email. Falls back to Vercel's own domain vars, but set it — it's the only value that survives a custom domain. |
-| `PAYSTACK_SECRET_KEY`               | for payments         | Unset ⇒ payment routes return a clean 503.                                                                                                    |
-| `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED` | no                   | `"true"` turns on real billing. Build-time inlined.                                                                                           |
-| `NODE_ENV`                          | **no**               | Vercel sets it. Do not add it manually.                                                                                                       |
+| Variable                             | Required             | Notes                                                                                                                                         |
+| ------------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                       | **yes**              | Pooled endpoint.                                                                                                                              |
+| `DIRECT_URL`                         | if pooled            | Only read by the Prisma CLI, not the app.                                                                                                     |
+| `JWT_SECRET`                         | **yes**              | `openssl rand -hex 64`. Rotating it logs everyone out.                                                                                        |
+| `CRON_SECRET`                        | **yes**              | Name must be exactly this — see §4.                                                                                                           |
+| `NEXT_PUBLIC_APP_URL`                | strongly recommended | Base URL for links in outbound email. Falls back to Vercel's own domain vars, but set it — it's the only value that survives a custom domain. |
+| `PAYSTACK_SECRET_KEY`                | for payments         | Unset ⇒ payment routes return a clean 503.                                                                                                    |
+| `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED`  | no                   | `"true"` turns on real billing. Build-time inlined.                                                                                           |
+| `SETUP_TOKEN`                        | no                   | Defense-in-depth for `/setup` (first-run admin wizard). See §8.                                                                               |
+| `NEXT_PUBLIC_SETUP_REDIRECT_ENABLED` | no                   | `"true"` makes `/login` auto-redirect to `/setup` until the first admin exists. Build-time inlined. See §8.                                   |
+| `NODE_ENV`                           | **no**               | Vercel sets it. Do not add it manually.                                                                                                       |
 
 ### These are needed at BUILD time, not just runtime
 
@@ -284,3 +286,34 @@ should expect from a live system.
   Tailwind class names, so it edits JSX, not just whitespace.
 - **ESLint is not configured at all** — there is no config file, and Next 16
   removed `next lint`. The broken `lint` script was replaced with `typecheck`.
+
+## 8. First-run setup wizard (`/setup`)
+
+A fresh database has no admin account. `/setup` (unauthenticated) and
+`POST /api/v1/setup` bootstrap exactly one `ADMIN` user, then self-disable
+permanently — see `docs/development-history/phases/first-run-setup-wizard.md`
+for the full design.
+
+- **Seeded environments never see it.** `prisma/seed.ts` and `seed2.ts` both
+  upsert `SystemSettings.setupComplete = true` as their last step, so `/setup`
+  immediately redirects to `/login` on any environment created via `pnpm
+prisma db seed`. Only a genuinely fresh, unseeded production database needs
+  the wizard.
+- **`SETUP_TOKEN`** (optional) — if set, `POST /api/v1/setup` requires this
+  exact value (`x-setup-token` header or the form's token field), checked with
+  `crypto.timingSafeEqual`. Unset means no extra token is required: whoever
+  reaches `/setup` first on a fresh deploy becomes admin. Set this before the
+  first deploy if the app is reachable before you've logged in and created the
+  admin yourself.
+- **`NEXT_PUBLIC_SETUP_REDIRECT_ENABLED`** (optional, default off) — when
+  `"true"`, `/login` checks `GET /api/v1/setup` on mount and redirects to
+  `/setup` if no admin exists yet, so a deployer doesn't need to already know
+  the `/setup` URL. Leave off (default) if you'd rather hand deployers the URL
+  directly, or in any seeded environment where the extra request is wasted.
+  Build-time inlined like every other `NEXT_PUBLIC_*` var — a Vercel env
+  change here needs a redeploy.
+- **The race is intentionally open, not silently unsafe.** The guard against
+  two people completing setup at once is an atomic `updateMany({ where: {
+setupComplete: false } })` inside a transaction — only the first concurrent
+  `POST` can ever flip the flag; a second one gets `409`. `SETUP_TOKEN` is the
+  control for _who_ gets to race at all.
