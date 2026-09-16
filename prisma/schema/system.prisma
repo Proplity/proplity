@@ -1,0 +1,10 @@
+// Platform-wide singleton configuration. The single row (id = 'global') is
+// auto-created by the seed script or by the first-run setup wizard. Guards
+// the one-time superadmin bootstrap flow: once setupComplete flips to true,
+// the /setup endpoint permanently self-disables.
+
+model SystemSettings {
+  id            String   @id @default("global")
+  setupComplete Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+}
