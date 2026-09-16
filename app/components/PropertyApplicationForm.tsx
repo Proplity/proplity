@@ -14,6 +14,12 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useCreateApplication } from '@/hooks/useApplications';
+import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
+
+interface FormDocument {
+  name: string;
+  url: string | null;
+}
 
 interface PropertyApplicationFormProps {
   propertyId: string;
@@ -63,10 +69,10 @@ export function PropertyApplicationForm({
     emergencyContactRelationship: '',
 
     // Documents
-    idDocument: null as File | null,
-    proofOfIncome: null as File | null,
-    employmentLetter: null as File | null,
-    bankStatement: null as File | null,
+    idDocument: null as FormDocument | null,
+    proofOfIncome: null as FormDocument | null,
+    employmentLetter: null as FormDocument | null,
+    bankStatement: null as FormDocument | null,
 
     // Additional
     reasonForMoving: '',
@@ -76,6 +82,7 @@ export function PropertyApplicationForm({
 
   const { submit: createApplication, submitting, error } = useCreateApplication();
   const [formError, setFormError] = useState<string | null>(null);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,16 +92,17 @@ export function PropertyApplicationForm({
       return;
     }
 
-    // File fields can't be sent as-is -- no file-storage endpoint exists in
-    // this codebase yet (same documented gap as MaintenanceRequestForm's
-    // media uploads); recorded as filenames only, not lost silently.
+    // Prefer the real uploaded URL; fall back to the filename alone when no
+    // storage provider is configured in this environment, so the document
+    // is at least recorded by name rather than lost silently.
     const { idDocument, proofOfIncome, employmentLetter, bankStatement, ...rest } = formData;
+    const docValue = (doc: FormDocument | null) => (doc ? (doc.url ?? doc.name) : null);
     const details = {
       ...rest,
-      idDocument: idDocument?.name ?? null,
-      proofOfIncome: proofOfIncome?.name ?? null,
-      employmentLetter: employmentLetter?.name ?? null,
-      bankStatement: bankStatement?.name ?? null,
+      idDocument: docValue(idDocument),
+      proofOfIncome: docValue(proofOfIncome),
+      employmentLetter: docValue(employmentLetter),
+      bankStatement: docValue(bankStatement),
     };
 
     try {
@@ -108,8 +116,29 @@ export function PropertyApplicationForm({
     }
   };
 
-  const handleFileUpload = (field: string, file: File | null) => {
-    setFormData({ ...formData, [field]: file });
+  const handleFileUpload = async (field: string, file: File | null) => {
+    if (!file) {
+      setFormData({ ...formData, [field]: null });
+      return;
+    }
+
+    if (!uploadsEnabled()) {
+      // No storage provider configured in this environment -- keep the
+      // selection visible, but url stays null so it's never silently
+      // claimed as saved (see the "(not saved)" note rendered below).
+      setFormData({ ...formData, [field]: { name: file.name, url: null } });
+      return;
+    }
+
+    setUploadingField(field);
+    try {
+      const uploaded = await uploadFile(file, 'applications');
+      setFormData((s) => ({ ...s, [field]: uploaded }));
+    } catch {
+      setFormError(`${file.name} failed to upload. Please try again.`);
+    } finally {
+      setUploadingField(null);
+    }
   };
 
   const nextStep = () => {
@@ -622,6 +651,17 @@ export function PropertyApplicationForm({
                 Required Documents
               </h2>
 
+              {!uploadsEnabled() && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>
+                    Document upload isn&apos;t available in this environment yet. You can still
+                    select files below, but only their file names will be recorded, not the files
+                    themselves.
+                  </span>
+                </div>
+              )}
+
               {[
                 {
                   id: 'idDocument',
@@ -653,15 +693,25 @@ export function PropertyApplicationForm({
                       <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50">
                         <Upload className="h-5 w-5 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {formData[doc.id as keyof typeof formData]
-                            ? (formData[doc.id as keyof typeof formData] as File).name
-                            : 'Choose file'}
+                          {uploadingField === doc.id ? (
+                            'Uploading…'
+                          ) : formData[doc.id as keyof typeof formData] ? (
+                            <>
+                              {(formData[doc.id as keyof typeof formData] as FormDocument).name}
+                              {!(formData[doc.id as keyof typeof formData] as FormDocument).url && (
+                                <span className="ml-2 text-xs text-amber-700">(not saved)</span>
+                              )}
+                            </>
+                          ) : (
+                            'Choose file'
+                          )}
                         </span>
                       </div>
                       <input
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
                         onChange={(e) => handleFileUpload(doc.id, e.target.files?.[0] || null)}
+                        disabled={uploadingField === doc.id}
                         className="hidden"
                         required={doc.required}
                       />

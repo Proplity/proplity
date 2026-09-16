@@ -9,12 +9,21 @@ import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { NotificationBell } from '../components/notifications/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { BarChart3, Users, FileText, Settings, User, LogOut } from 'lucide-react';
+import {
+  BarChart3,
+  Users,
+  FileText,
+  Settings,
+  SlidersHorizontal,
+  User,
+  LogOut,
+} from 'lucide-react';
 
 const TABS = [
   { href: '/admin', label: 'System Overview', icon: BarChart3 },
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
+  { href: '/admin/settings', label: 'Platform Settings', icon: SlidersHorizontal },
 ];
 
 export function AdminChrome({ children }: { children: React.ReactNode }) {
@@ -49,9 +58,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
               />
             )}
             <NotificationBell />
-            <button className="rounded-lg p-2 hover:bg-gray-100">
+            <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
               <Settings className="h-5 w-5 text-gray-600" />
-            </button>
+            </Link>
             <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
                 <User className="h-4 w-4 text-white" />
