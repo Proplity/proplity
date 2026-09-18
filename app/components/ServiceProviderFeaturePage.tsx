@@ -13,7 +13,7 @@ import {
   Users,
   BarChart3,
 } from 'lucide-react';
-import { Logo } from './Logo';
+import { MarketingNav } from './MarketingNav';
 import { mockServiceProviderFeatureJobs as jobs } from '../store/mockData';
 
 export function ServiceProviderFeaturePage() {
@@ -133,70 +133,7 @@ export function ServiceProviderFeaturePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link href="/" className="focus:outline-none">
-            <Logo />
-          </Link>
-          <div className="hidden items-center gap-8 md:flex">
-            <div className="group relative">
-              <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-                Features
-                <svg
-                  className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-                <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  <Link
-                    href="/for-landlords"
-                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    For Landlords
-                  </Link>
-                  <Link
-                    href="/for-tenants"
-                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    For Tenants
-                  </Link>
-                  <Link
-                    href="/for-vendors"
-                    className="w-full px-4 py-2.5 text-left text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    For Service Providers
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              How it Works
-            </Link>
-            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Contact Us
-            </Link>
-            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              About Us
-            </Link>
-            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Pricing
-            </Link>
-          </div>
-          <Link
-            href="/register"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Get Started
-          </Link>
-        </div>
-      </nav>
+      <MarketingNav ctaHref="/register" ctaLabel="Get Started" />
 
       {/* Hero */}
       <section className="bg-linear-to-br from-orange-50 via-white to-yellow-50 pt-20 pb-24">

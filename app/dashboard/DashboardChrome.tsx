@@ -8,6 +8,7 @@ import { RoleSwitcher } from '../components/RoleSwitcher';
 import { AIAssistant } from '../components/AIAssistant';
 import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { NotificationBell } from '../components/notifications/NotificationBell';
+import { MobileTabBar } from './MobileTabBar';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -32,21 +33,38 @@ function getTabsForRole(role: Role) {
     case 'manager':
       return [
         { href: '/dashboard', label: 'Dashboard', icon: Home },
-        { href: '/dashboard/discover', label: 'Discover Properties', icon: Search },
+        {
+          href: '/dashboard/discover',
+          label: 'Discover Properties',
+          shortLabel: 'Discover',
+          icon: Search,
+        },
         { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
         { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
     case 'tenant':
       return [
-        { href: '/dashboard', label: 'My Dashboard', icon: Home },
-        { href: '/dashboard/discover', label: 'Browse Properties', icon: Search },
-        { href: '/dashboard/payment-history', label: 'Payment History', icon: Receipt },
+        { href: '/dashboard', label: 'My Dashboard', shortLabel: 'Dashboard', icon: Home },
+        {
+          href: '/dashboard/discover',
+          label: 'Browse Properties',
+          shortLabel: 'Browse',
+          icon: Search,
+        },
+        {
+          href: '/dashboard/payment-history',
+          label: 'Payment History',
+          shortLabel: 'Payments',
+          icon: Receipt,
+        },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
     case 'landlord':
       return [
         { href: '/dashboard', label: 'Portfolio', icon: Building2 },
+        { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
+        { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
     case 'vendor':
@@ -72,6 +90,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -95,7 +114,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
             <Logo />
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {process.env.NODE_ENV !== 'production' && role && (
               <RoleSwitcher
                 currentRole={role}
@@ -105,30 +124,86 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               />
             )}
             <NotificationBell />
-            <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
-              <Settings className="h-5 w-5 text-gray-600" />
-            </Link>
-            <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
+
+            {/* Desktop: Settings, name + avatar, and Sign Out stay as three
+                separate controls. */}
+            <div className="hidden items-center gap-4 lg:flex">
+              <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
+                <Settings className="h-5 w-5 text-gray-600" />
+              </Link>
+              <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
+                >
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">{auth.user?.name}</span>
+              </button>
+              <button
+                onClick={() => setShowLogout(true)}
+                title="Sign Out"
+                className="flex items-center gap-1 rounded-lg p-2 text-red-600 hover:bg-red-50"
               >
-                <User className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-sm font-medium">{auth.user?.name}</span>
-            </button>
-            <button
-              onClick={() => setShowLogout(true)}
-              title="Sign Out"
-              className="flex items-center gap-1 rounded-lg p-2 text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Small screens: Settings and Sign Out fold into a menu off
+                the avatar instead of taking three separate slots in an
+                already-tight header. */}
+            <div className="relative lg:hidden">
+              <button
+                onClick={() => setAvatarMenuOpen((open) => !open)}
+                aria-label="Account menu"
+                aria-expanded={avatarMenuOpen}
+                className="flex items-center gap-2 rounded-lg p-1 hover:bg-gray-100"
+              >
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
+                >
+                  <User className="h-4 w-4 text-white" />
+                </div>
+              </button>
+
+              {avatarMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setAvatarMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute top-full right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
+                    <p className="truncate px-4 py-1.5 text-sm font-medium text-gray-900">
+                      {auth.user?.name}
+                    </p>
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setAvatarMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        setShowLogout(true);
+                      }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 border-r border-gray-200 bg-white p-4">
+        <aside className="hidden w-64 border-r border-gray-200 bg-white p-4 lg:block">
           {(role === 'manager' || role === 'landlord') && (
             <Link
               href="/dashboard/properties/new"
@@ -180,10 +255,24 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           )}
         </aside>
 
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
 
         {showAIAssistant && <AIAssistant onClose={() => setShowAIAssistant(false)} />}
       </div>
+
+      {role && (
+        <MobileTabBar
+          tabs={tabs}
+          isActive={(href) =>
+            href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+          }
+          listPropertyHref={
+            role === 'manager' || role === 'landlord' ? '/dashboard/properties/new' : undefined
+          }
+          onOpenAIAssistant={role !== 'vendor' ? () => setShowAIAssistant(true) : undefined}
+          onLogout={() => setShowLogout(true)}
+        />
+      )}
 
       {showLogout && (
         <LogoutConfirmDialog

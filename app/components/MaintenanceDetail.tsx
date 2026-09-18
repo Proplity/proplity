@@ -14,9 +14,11 @@ import {
   Star,
   X,
   UserCheck,
+  MessageSquare,
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useVendors } from '@/hooks/useVendors';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 
 interface MaintenanceDetailProps {
   requestId: string;
@@ -66,6 +68,7 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
 
 export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const { data: request, loading, refetch } = useMaintenanceRequest(requestId);
+  const { open: openConversation } = useOpenConversation();
   const { submit: updateRequest, submitting } = useUpdateMaintenanceRequest(requestId);
   const { data: vendors, loading: vendorsLoading } = useVendors();
 
@@ -321,6 +324,15 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                 {request.tenant?.email}
               </div>
             </div>
+            <button
+              onClick={() =>
+                openConversation({ type: 'MAINTENANCE_THREAD', maintenanceRequestId: request.id })
+              }
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Message about this request
+            </button>
           </div>
 
           {/* Assigned Vendor Card */}

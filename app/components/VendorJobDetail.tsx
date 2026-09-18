@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 
 interface VendorJobDetailProps {
   jobId: string;
@@ -58,6 +59,7 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
 
 export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
   const { data: job, loading, refetch } = useMaintenanceRequest(jobId);
+  const { open: openConversation } = useOpenConversation();
   const { submit: updateJob, submitting } = useUpdateMaintenanceRequest(jobId);
   const { data: accessCodes, loading: accessCodesLoading } = useAccessCodes(job?.unitId ?? null);
   const [notes, setNotes] = useState('');
@@ -318,7 +320,9 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
                   </div>
                 </div>
                 <button
-                  onClick={() => onNavigate({ type: 'messages' })}
+                  onClick={() =>
+                    openConversation({ type: 'MAINTENANCE_THREAD', maintenanceRequestId: job.id })
+                  }
                   className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   <MessageSquare className="mr-2 inline h-4 w-4" />
@@ -370,8 +374,7 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
             <div className="rounded-lg border border-green-200 bg-green-50 p-6">
               <h3 className="mb-2 font-semibold text-green-900">Ready to Complete?</h3>
               <p className="mb-4 text-sm text-green-800">
-                Create your invoice for this job to get paid. Your property manager will mark the
-                job as officially completed.
+                Create your invoice for this job to get paid and close it out.
               </p>
               <button
                 onClick={() => onNavigate({ type: 'vendor-create-invoice', jobId: job.id })}

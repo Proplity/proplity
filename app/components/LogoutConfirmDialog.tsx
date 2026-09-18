@@ -56,6 +56,7 @@ export function LogoutConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={isLoading}
+            aria-label="Confirm sign out"
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-60"
           >
             {isLoading ? (
