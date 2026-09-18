@@ -1,10 +1,7 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from './Logo';
+import { MarketingNav } from './MarketingNav';
 import {
-  ChevronDown,
   Users,
   TrendingUp,
   Shield,
@@ -85,156 +82,10 @@ const VALUES = [
   },
 ];
 
-// Reusable nav — same structure as other public pages
-function PublicNav({
-  onGoHome,
-  onViewContact,
-  onViewPricing,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-  activePage,
-}: {
-  onGoHome: () => void;
-  onViewContact: () => void;
-  onViewPricing: () => void;
-  onViewLandlordPage: () => void;
-  onViewTenantPage: () => void;
-  onViewVendorPage: () => void;
-  activePage?: string;
-  onGetStarted?: () => void;
-}) {
-  const link = (label: string, action: () => void) => {
-    const active = activePage === label;
-    return (
-      <button
-        onClick={action}
-        className={`text-sm font-medium transition-colors ${active ? 'border-b-2 border-blue-600 pb-0.5 text-blue-600' : 'text-gray-700 hover:text-gray-900'}`}
-      >
-        {label}
-      </button>
-    );
-  };
-  return (
-    <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-        <button onClick={onGoHome} className="focus:outline-none">
-          <Logo />
-        </button>
-        <div className="hidden items-center gap-8 md:flex">
-          {/* Features dropdown */}
-          <div className="group relative">
-            <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-              Features
-              <svg
-                className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180 group-hover:text-gray-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-              <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                {[
-                  { label: 'For Landlords', action: onViewLandlordPage },
-                  { label: 'For Tenants', action: onViewTenantPage },
-                  { label: 'For Service Providers', action: onViewVendorPage },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={item.action}
-                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          {link('How it Works', onGoHome)}
-          {link('Contact Us', onViewContact)}
-          {link('About Us', onGoHome)}
-          {link('Pricing', onViewPricing)}
-        </div>
-        <button
-          onClick={onGoHome}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-        >
-          Get Started
-        </button>
-      </div>
-    </nav>
-  );
-}
-
 export function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link href="/" className="focus:outline-none">
-            <Logo />
-          </Link>
-          <div className="hidden items-center gap-8 md:flex">
-            <div className="group relative">
-              <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-                Features
-                <svg
-                  className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180 group-hover:text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-                <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  {[
-                    { label: 'For Landlords', href: '/for-landlords' },
-                    { label: 'For Tenants', href: '/for-tenants' },
-                    {
-                      label: 'For Service Providers',
-                      href: '/for-vendors',
-                    },
-                  ].map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              How it Works
-            </Link>
-            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Contact Us
-            </Link>
-            <span className="border-b-2 border-blue-600 pb-0.5 text-sm font-semibold text-blue-600">
-              About Us
-            </span>
-            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Pricing
-            </Link>
-          </div>
-          <Link
-            href="/login"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Get Started
-          </Link>
-        </div>
-      </nav>
+      <MarketingNav ctaHref="/login" ctaLabel="Get Started" />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-gray-950 pt-16 pb-24 text-white">
