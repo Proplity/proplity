@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useProperties } from '@/hooks/useProperties';
 import { useAdCampaign, useCreateAdCampaign, useCancelAdCampaign } from '@/hooks/useAdCampaigns';
 import type { Property } from '@/lib/api/types';
@@ -113,6 +114,7 @@ function cardFields(property: Property) {
 }
 
 export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
+  const { user } = useAuth();
   const { data: properties, loading, error } = useProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -131,6 +133,12 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
 
   const createAd = useCreateAdCampaign(adModal?.propertyId ?? '');
   const cancelAd = useCancelAdCampaign(adModal?.propertyId ?? '');
+
+  // Mirrors the server's canManageProperty (lib/api/propertyAccess.ts) --
+  // ad campaigns are a manager/landlord/admin tool for their own listing,
+  // not something every role should see a button for while browsing.
+  const canManageAds = (property: Property) =>
+    user?.role === 'admin' || property.managerId === user?.id || property.landlordId === user?.id;
 
   const handleCreateAd = async () => {
     if (!adModal) return;
@@ -333,18 +341,20 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
                   </div>
                 </div>
 
-                <AdStatusAndButton
-                  key={`${property.id}-${adRefreshKey}`}
-                  property={property}
-                  onOpenModal={(type, adId) =>
-                    setAdModal({
-                      type,
-                      propertyId: property.id,
-                      propertyTitle: property.name,
-                      adId,
-                    })
-                  }
-                />
+                {canManageAds(property) && (
+                  <AdStatusAndButton
+                    key={`${property.id}-${adRefreshKey}`}
+                    property={property}
+                    onOpenModal={(type, adId) =>
+                      setAdModal({
+                        type,
+                        propertyId: property.id,
+                        propertyTitle: property.name,
+                        adId,
+                      })
+                    }
+                  />
+                )}
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button

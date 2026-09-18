@@ -285,6 +285,13 @@ async function main() {
     },
   });
 
+  // 8. Mark platform setup as complete
+  await prisma.systemSettings.upsert({
+    where: { id: 'global' },
+    update: { setupComplete: true },
+    create: { id: 'global', setupComplete: true },
+  });
+
   console.log('🌱 PRD-enhanced Seed completed successfully!');
   console.log({
     admin: admin.email,

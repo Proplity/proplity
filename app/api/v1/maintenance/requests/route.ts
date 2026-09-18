@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { notifyUsers } from '@/lib/notifications';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -82,7 +83,23 @@ export const POST = withAuth(
 
       const request = await prisma.maintenanceRequest.create({
         data: { unitId, tenantId: session.sub, ...rest },
+        include: { unit: { include: { property: true } } },
       });
+
+      const recipients = [
+        request.unit?.property?.managerId,
+        request.unit?.property?.landlordId,
+      ].filter((id): id is string => Boolean(id) && id !== session.sub);
+
+      if (recipients.length > 0) {
+        await notifyUsers(recipients, {
+          type: 'MAINTENANCE_STATUS',
+          title: `New Maintenance Request: ${request.title}`,
+          body: `A new maintenance request was submitted for ${request.unit?.property?.name ?? 'your property'}.`,
+          link: `/dashboard/maintenance/${request.id}`,
+        });
+      }
+
       return NextResponse.json({ data: request }, { status: 201 });
     } catch (err) {
       return handleApiError(err);

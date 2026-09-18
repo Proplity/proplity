@@ -13,6 +13,7 @@ import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
 import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Invoice, Payment } from '@/lib/api/types';
 
@@ -49,6 +50,12 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: invoices, loading: invoicesLoading } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
+  const { open: openConversation } = useOpenConversation();
+
+  const messageManager = () => {
+    if (!lease) return;
+    openConversation({ type: 'LEASE_THREAD', leaseId: lease.id });
+  };
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
 
   // A PENDING lease (awaiting signature, before a manager activates it)
@@ -106,8 +113,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
             </div>
           </button>
           <button
-            onClick={() => onNavigate?.({ type: 'messages' })}
-            className="group flex items-center gap-3 rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50"
+            onClick={messageManager}
+            disabled={!lease}
+            className="group flex items-center gap-3 rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 group-hover:bg-blue-100">
               <MessageSquare className="h-5 w-5 text-blue-600" />
@@ -213,10 +221,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                   <p className="mb-1 text-sm text-gray-600">Property Manager</p>
                   <p className="font-medium">
                     Reach your property manager any time via{' '}
-                    <button
-                      onClick={() => onNavigate?.({ type: 'messages' })}
-                      className="text-blue-600 hover:underline"
-                    >
+                    <button onClick={messageManager} className="text-blue-600 hover:underline">
                       Messages
                     </button>
                     .

@@ -6,7 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
-import { notifyUser } from '@/lib/notifications';
+import { notifyUser, notifyUsers } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -124,6 +124,16 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           ? `A vendor has been assigned to your request "${request.title}".`
           : `Your request "${request.title}" has been updated.`,
       );
+
+      if (vendorId && vendorId !== session.sub) {
+        await notifyUser(vendorId, {
+          type: 'MAINTENANCE_STATUS',
+          title: `New Job Assigned: ${request.title}`,
+          body: `You have been assigned to maintenance request "${request.title}".`,
+          link: `/dashboard/vendor/jobs/${request.id}`,
+        });
+      }
+
       return NextResponse.json({ data: updated });
     }
 
@@ -182,6 +192,20 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           session.sub,
           `Your request "${request.title}" has been completed.`,
         );
+
+        const property = request.unit?.property;
+        const managersToNotify = [property?.managerId, property?.landlordId].filter(
+          (id): id is string => Boolean(id) && id !== session.sub,
+        );
+        if (managersToNotify.length > 0) {
+          await notifyUsers(managersToNotify, {
+            type: 'MAINTENANCE_STATUS',
+            title: `Maintenance Request Completed: ${request.title}`,
+            body: `Work on "${request.title}" has been completed by the vendor.`,
+            link: `/dashboard/maintenance/${request.id}`,
+          });
+        }
+
         return NextResponse.json({ data: updated });
       }
 

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Send, Search, Paperclip, Phone, Video, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations, useMessages, useSendMessage } from '@/hooks/useConversations';
 import type { Conversation } from '@/lib/api/types';
-
-interface MessagingPortalProps {
-  onBack?: () => void;
-}
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -49,8 +49,9 @@ function describe(conv: Conversation, selfId: string | undefined) {
   return { name, subtitle, others };
 }
 
-export function MessagingPortal({ onBack }: MessagingPortalProps) {
+export function MessagingPortal() {
   const auth = useAuth();
+  const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +61,17 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
     loading: conversationsLoading,
     refetch: refetchConversations,
   } = useConversations();
+
+  // A "Message X" button elsewhere in the app creates/reuses a conversation
+  // server-side, then lands here with ?c=<id> -- open it as soon as it
+  // shows up in the list (it may not be there yet on the very first
+  // render if this GET raced the POST that created it).
+  useEffect(() => {
+    const target = searchParams.get('c');
+    if (target && conversations.some((c) => c.id === target)) {
+      setSelectedId(target);
+    }
+  }, [searchParams, conversations]);
   const {
     data: messages,
     loading: messagesLoading,
@@ -99,11 +111,9 @@ export function MessagingPortal({ onBack }: MessagingPortalProps) {
       {/* Header */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center gap-4">
-          {onBack && (
-            <button onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100">
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          )}
+          <Link href="/dashboard" className="rounded-lg p-2 hover:bg-gray-100">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
           <div>
             <h1 className="text-xl font-bold">Messages</h1>
             <p className="text-sm text-gray-600">

@@ -141,6 +141,19 @@
   }
 
   /**
+  * Browsers give <button> a `default` (arrow) cursor, not `pointer` -- only
+  * <a href> gets pointer natively. Tailwind's preflight deliberately doesn't
+  * override this, so every clickable control needs it explicitly. Global
+  * rule here instead of a `cursor-pointer` utility on every button in the
+  * app; `:disabled`/`aria-disabled` are excluded so disabled controls keep
+  * showing they're inert.
+  */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
   */

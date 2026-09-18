@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -125,14 +126,36 @@ export const POST = withAuth(
 
       const data = { leaseId, maintenanceRequestId, userId, ...rest };
 
+      // Admin-configurable (Platform Settings, SystemSettings.
+      // autoCompleteMaintenanceOnInvoice): a MAINTENANCE invoice against a
+      // request auto-completes it in the same transaction, unless an
+      // operator has turned that off for vendors who invoice interim costs
+      // mid-job.
+      const shouldAutoComplete =
+        rest.type === 'MAINTENANCE' &&
+        !!maintenanceRequestId &&
+        (await getSystemSettings()).autoCompleteMaintenanceOnInvoice;
+
+      const createInvoice = () =>
+        shouldAutoComplete
+          ? prisma.$transaction(async (tx) => {
+              const invoice = await tx.invoice.create({ data });
+              await tx.maintenanceRequest.update({
+                where: { id: maintenanceRequestId! },
+                data: { status: 'COMPLETED' },
+              });
+              return invoice;
+            })
+          : prisma.invoice.create({ data });
+
       try {
-        const invoice = await prisma.invoice.create({ data });
+        const invoice = await createInvoice();
         return NextResponse.json({ data: invoice }, { status: 201 });
       } catch (err) {
         // invoiceNumber is dbgenerated (rule 11) -- never set by app code.
         // On the vanishingly rare uuid-derived collision, retry once.
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-          const invoice = await prisma.invoice.create({ data });
+          const invoice = await createInvoice();
           return NextResponse.json({ data: invoice }, { status: 201 });
         }
         throw err;

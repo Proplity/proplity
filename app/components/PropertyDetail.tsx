@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   MapPin,
@@ -32,7 +33,6 @@ import type { Application, Equipment, PropertyDetail as PropertyDetailData } fro
 
 interface PropertyDetailProps {
   propertyId: string;
-  onBack: () => void;
   onNavigate?: (page: any) => void;
 }
 
@@ -438,7 +438,7 @@ function ApplicationRow({
   );
 }
 
-export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetailProps) {
+export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) {
   const auth = useAuth();
   const { data: property, loading, refetch: refetchProperty } = useProperty(propertyId);
   const { data: leases } = useLeases();
@@ -455,13 +455,13 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
   if (!property) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back
-        </button>
+        </Link>
         <p className="text-gray-500">Property not found.</p>
       </div>
     );
@@ -519,13 +519,13 @@ export function PropertyDetail({ propertyId, onBack, onNavigate }: PropertyDetai
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back
-      </button>
+      </Link>
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
