@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useLeases';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
 import type { Lease, Violation } from '@/lib/api/types';
 
@@ -303,6 +304,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
   const { submit: submitNote, submitting: savingNote } = useCreateLeaseNote(leaseId);
   const { submit: submitTerms, submitting: savingTerms } = useUpdateLeaseTerms(leaseId);
   const { submit: submitStatus, submitting: savingStatus } = useUpdateLeaseStatus(leaseId);
+  const { open: openConversation } = useOpenConversation();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
   const [termsDraft, setTermsDraft] = useState({
@@ -807,6 +809,13 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 <Phone className="h-4 w-4" />
                 Call Tenant
               </a>
+              <button
+                onClick={() => openConversation({ type: 'LEASE_THREAD', leaseId })}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Message Tenant
+              </button>
               <a
                 href={`mailto:${tenant.email}`}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

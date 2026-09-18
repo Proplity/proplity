@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Send, Search, Paperclip, Phone, Video, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations, useMessages, useSendMessage } from '@/hooks/useConversations';
@@ -50,6 +51,7 @@ function describe(conv: Conversation, selfId: string | undefined) {
 
 export function MessagingPortal() {
   const auth = useAuth();
+  const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +61,17 @@ export function MessagingPortal() {
     loading: conversationsLoading,
     refetch: refetchConversations,
   } = useConversations();
+
+  // A "Message X" button elsewhere in the app creates/reuses a conversation
+  // server-side, then lands here with ?c=<id> -- open it as soon as it
+  // shows up in the list (it may not be there yet on the very first
+  // render if this GET raced the POST that created it).
+  useEffect(() => {
+    const target = searchParams.get('c');
+    if (target && conversations.some((c) => c.id === target)) {
+      setSelectedId(target);
+    }
+  }, [searchParams, conversations]);
   const {
     data: messages,
     loading: messagesLoading,

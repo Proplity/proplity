@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Logo } from './Logo';
+import { MarketingNav } from './MarketingNav';
 import {
   Mail,
   Phone,
@@ -111,71 +112,7 @@ export function ContactPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link href="/" className="focus:outline-none">
-            <Logo />
-          </Link>
-
-          <div className="hidden items-center gap-8 md:flex">
-            {/* Features dropdown */}
-            <div className="group relative">
-              <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-                Features
-                <svg
-                  className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180 group-hover:text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-                <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  {[
-                    { label: 'For Landlords', href: '/for-landlords' },
-                    { label: 'For Tenants', href: '/for-tenants' },
-                    {
-                      label: 'For Service Providers',
-                      href: '/for-vendors',
-                    },
-                  ].map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              How it Works
-            </Link>
-            <span className="border-b-2 border-blue-600 pb-0.5 text-sm font-semibold text-blue-600">
-              Contact Us
-            </span>
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              About Us
-            </Link>
-            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Pricing
-            </Link>
-          </div>
-
-          <Link
-            href="/login"
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Get Started
-          </Link>
-        </div>
-      </nav>
+      <MarketingNav ctaHref="/login" ctaLabel="Get Started" />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-blue-700 pt-14 pb-20 text-white">

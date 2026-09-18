@@ -123,8 +123,10 @@ Same as landlord, plus the day-to-day operational tools:
       platform-wide
 - [ ] Platform Settings — toggle platform-wide behavior (currently: whether
       a vendor invoice auto-completes its maintenance job)
-- [ ] Get notified about platform-wide events, from an admin-specific
-      notifications view
+- [ ] Open the admin-specific notifications view (bell + full page) —
+      **note**: nothing currently triggers a notification _to_ an admin, so
+      there's no in-app action that will make one appear yet; this checks
+      that the screen itself opens correctly, not a live notification
 - [ ] Change password from inside the admin panel (Settings)
 
 ## Cross-cutting things worth testing regardless of role
