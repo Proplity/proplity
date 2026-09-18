@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Phone,
@@ -22,12 +23,12 @@ import {
 } from '@/hooks/useLeases';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
 import type { Lease, Violation } from '@/lib/api/types';
 
 interface TenantDetailProps {
   leaseId: string;
-  onBack: () => void;
 }
 
 // Click-wrap e-signature: typed full legal name + timestamp + IP, not a
@@ -296,13 +297,14 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
   );
 }
 
-export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
+export function TenantDetail({ leaseId }: TenantDetailProps) {
   const { data: lease, loading, refetch: refetchLease } = useLease(leaseId);
   const { data: notes, refetch: refetchNotes } = useLeaseNotes(leaseId);
   const { data: allRequests } = useMaintenanceRequests();
   const { submit: submitNote, submitting: savingNote } = useCreateLeaseNote(leaseId);
   const { submit: submitTerms, submitting: savingTerms } = useUpdateLeaseTerms(leaseId);
   const { submit: submitStatus, submitting: savingStatus } = useUpdateLeaseStatus(leaseId);
+  const { open: openConversation } = useOpenConversation();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
   const [termsDraft, setTermsDraft] = useState({
@@ -319,13 +321,13 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
   if (!lease || !lease.tenant) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard/tenants"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Tenants
-        </button>
+        </Link>
         <p className="text-gray-500">Tenant not found.</p>
       </div>
     );
@@ -378,13 +380,13 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard/tenants"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Tenants
-      </button>
+      </Link>
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
@@ -807,6 +809,13 @@ export function TenantDetail({ leaseId, onBack }: TenantDetailProps) {
                 <Phone className="h-4 w-4" />
                 Call Tenant
               </a>
+              <button
+                onClick={() => openConversation({ type: 'LEASE_THREAD', leaseId })}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Message Tenant
+              </button>
               <a
                 href={`mailto:${tenant.email}`}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

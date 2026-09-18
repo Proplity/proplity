@@ -1,14 +1,31 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Login } from '../components/Auth/Login';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { setupRedirectEnabled } from '@/lib/setup';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
+
+  useEffect(() => {
+    if (!setupRedirectEnabled()) return;
+    let cancelled = false;
+    fetch('/api/v1/setup')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.setupComplete === false) {
+          router.replace('/setup');
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   return (
     <Login

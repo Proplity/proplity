@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Wrench,
@@ -14,10 +15,10 @@ import {
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
+import { useOpenConversation } from '@/hooks/useOpenConversation';
 
 interface VendorJobDetailProps {
   jobId: string;
-  onBack: () => void;
   onNavigate: (page: any) => void;
 }
 
@@ -56,8 +57,9 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
   return entries.reverse();
 }
 
-export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailProps) {
+export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
   const { data: job, loading, refetch } = useMaintenanceRequest(jobId);
+  const { open: openConversation } = useOpenConversation();
   const { submit: updateJob, submitting } = useUpdateMaintenanceRequest(jobId);
   const { data: accessCodes, loading: accessCodesLoading } = useAccessCodes(job?.unitId ?? null);
   const [notes, setNotes] = useState('');
@@ -70,13 +72,13 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
   if (!job) {
     return (
       <div className="p-6">
-        <button
-          onClick={onBack}
+        <Link
+          href="/dashboard"
           className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
           Back to Jobs
-        </button>
+        </Link>
         <p className="text-gray-500">Job not found.</p>
       </div>
     );
@@ -116,13 +118,13 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
 
   return (
     <div className="p-6">
-      <button
-        onClick={onBack}
+      <Link
+        href="/dashboard"
         className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-5 w-5" />
         Back to Jobs
-      </button>
+      </Link>
 
       {actionError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -318,7 +320,9 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
                   </div>
                 </div>
                 <button
-                  onClick={() => onNavigate({ type: 'messages' })}
+                  onClick={() =>
+                    openConversation({ type: 'MAINTENANCE_THREAD', maintenanceRequestId: job.id })
+                  }
                   className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   <MessageSquare className="mr-2 inline h-4 w-4" />
@@ -370,8 +374,7 @@ export function VendorJobDetail({ jobId, onBack, onNavigate }: VendorJobDetailPr
             <div className="rounded-lg border border-green-200 bg-green-50 p-6">
               <h3 className="mb-2 font-semibold text-green-900">Ready to Complete?</h3>
               <p className="mb-4 text-sm text-green-800">
-                Create your invoice for this job to get paid. Your property manager will mark the
-                job as officially completed.
+                Create your invoice for this job to get paid and close it out.
               </p>
               <button
                 onClick={() => onNavigate({ type: 'vendor-create-invoice', jobId: job.id })}

@@ -1,12 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ListProperty } from '../../../components/ListProperty';
 
 export default function Page() {
-  const router = useRouter();
   const auth = useAuth();
 
   // Same reasoning as app/dashboard/page.tsx -- don't guess 'manager' while
@@ -21,5 +19,5 @@ export default function Page() {
 
   const userRole = auth.user?.role === 'landlord' ? 'landlord' : 'manager';
 
-  return <ListProperty onBack={() => router.push('/dashboard')} userRole={userRole} />;
+  return <ListProperty userRole={userRole} />;
 }

@@ -1,4 +1,11 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
 import { Logo } from './Logo';
+import { MarketingNav } from './MarketingNav';
+import { WatchDemoModal } from './WatchDemoModal';
+import { useAuth } from '@/context/AuthContext';
 import {
   ArrowRight,
   Shield,
@@ -18,34 +25,10 @@ import {
   Bell,
 } from 'lucide-react';
 
-interface PricingPlan {
-  name: string;
-  price: string;
-  units: string;
-  features: string[];
-}
-
-export function LandingPage({
-  onGetStarted,
-  onSelectPlan,
-  onViewProperty,
-  onViewPricing,
-  onViewContact,
-  onViewAbout,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-}: {
-  onGetStarted: () => void;
-  onSelectPlan: (plan: PricingPlan) => void;
-  onViewProperty?: (propertyId: number) => void;
-  onViewPricing?: () => void;
-  onViewContact?: () => void;
-  onViewAbout?: () => void;
-  onViewLandlordPage: () => void;
-  onViewTenantPage: () => void;
-  onViewVendorPage: () => void;
-}) {
+export function LandingPage() {
+  const { user } = useAuth();
+  const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
   const features = [
     {
       icon: Bot,
@@ -114,94 +97,10 @@ export function LandingPage({
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          {/* Logo — always returns to landing page */}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.scrollTo(0, 0);
-            }}
-            className="focus:outline-none"
-          >
-            <Logo />
-          </a>
-
-          {/* Centre links */}
-          <div className="hidden items-center gap-8 md:flex">
-            {/* Features dropdown */}
-            <div className="group relative">
-              <button className="flex items-center gap-1 py-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-                Features
-                <svg
-                  className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180 group-hover:text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-                <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  {[
-                    { label: 'For Landlords', action: onViewLandlordPage },
-                    { label: 'For Tenants', action: onViewTenantPage },
-                    {
-                      label: 'For Service Providers',
-                      action: onViewVendorPage,
-                    },
-                  ].map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={item.action}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <a
-              href="#how-it-works"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              How it Works
-            </a>
-            <button
-              onClick={onViewContact}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              Contact Us
-            </button>
-            <button
-              onClick={onViewAbout}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              About Us
-            </button>
-            <button
-              onClick={onViewPricing}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              Pricing
-            </button>
-          </div>
-
-          {/* CTA */}
-          <button
-            onClick={onGetStarted}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Get Started
-          </button>
-        </div>
-      </nav>
+      <MarketingNav
+        ctaHref={user ? dashboardPath : '/login'}
+        ctaLabel={user ? 'Go to Dashboard' : 'Get Started'}
+      />
 
       {/* Hero Section */}
       <section className="bg-linear-to-br from-blue-50 via-white to-green-50 pt-20 pb-32">
@@ -223,13 +122,13 @@ export function LandingPage({
 
             {/* Property Search Bar */}
             <div className="mx-auto mb-8 max-w-3xl">
-              <div className="flex items-center gap-2 rounded-2xl bg-white p-2 shadow-2xl">
-                <div className="flex flex-1 items-center gap-2 px-4">
-                  <Search className="h-5 w-5 text-gray-400" />
+              <div className="flex flex-col gap-2 rounded-2xl bg-white p-2 shadow-2xl sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-2 px-4">
+                  <Search className="h-5 w-5 shrink-0 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search by location (e.g., Lekki, Victoria Island, Maitama...)"
-                    className="flex-1 py-3 text-gray-700 focus:outline-none"
+                    className="w-full min-w-0 py-3 text-gray-700 focus:outline-none"
                   />
                 </div>
                 <button
@@ -247,15 +146,19 @@ export function LandingPage({
               </p>
             </div>
 
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={onGetStarted}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-lg font-semibold text-white hover:bg-blue-700"
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href={user ? dashboardPath : '/login'}
+                className="flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-lg font-semibold text-white hover:bg-blue-700"
               >
-                Start Free Trial
+                {user ? 'Go to Dashboard' : 'Start Free Trial'}
                 <ArrowRight className="h-5 w-5" />
-              </button>
-              <button className="rounded-lg border-2 border-gray-300 px-8 py-4 text-lg font-semibold text-gray-700 hover:bg-gray-50">
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsDemoOpen(true)}
+                className="rounded-lg border-2 border-gray-300 px-8 py-4 text-lg font-semibold text-gray-700 hover:bg-gray-50"
+              >
                 Watch Demo
               </button>
             </div>
@@ -816,19 +719,13 @@ export function LandingPage({
                     <div>
                       <p className="text-2xl font-bold text-blue-600">{property.price}</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (onViewProperty) {
-                          onViewProperty(property.id);
-                        } else {
-                          onGetStarted();
-                        }
-                      }}
+                    <Link
+                      href={`/properties/${property.id}`}
                       className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
                     >
                       View Details
                       <ArrowRight className="h-4 w-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -836,13 +733,13 @@ export function LandingPage({
           </div>
 
           <div className="mt-12 text-center">
-            <button
-              onClick={onGetStarted}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-8 py-4 text-lg font-semibold text-white hover:from-blue-700 hover:to-green-700"
+            <Link
+              href={user ? '/dashboard/discover' : '/login'}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-8 py-4 text-lg font-semibold text-white hover:from-blue-700 hover:to-green-700"
             >
               Browse All Properties
               <ArrowRight className="h-5 w-5" />
-            </button>
+            </Link>
             <p className="mt-3 text-sm text-gray-600">
               Join free to view all available properties and apply online
             </p>
@@ -920,16 +817,16 @@ export function LandingPage({
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={() => onSelectPlan(plan)}
-                  className={`w-full rounded-lg py-3 font-semibold ${
+                <Link
+                  href={`/register?plan=${plan.name.toLowerCase()}`}
+                  className={`block w-full rounded-lg py-3 text-center font-semibold ${
                     plan.popular
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'border-2 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   Get Started
-                </button>
+                </Link>
               </div>
             ))}
           </div>
@@ -943,13 +840,13 @@ export function LandingPage({
           <p className="mb-8 text-xl text-blue-100">
             Join thousands of property managers already using Proplity
           </p>
-          <button
-            onClick={onGetStarted}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-blue-600 hover:bg-gray-100"
+          <Link
+            href={user ? dashboardPath : '/login'}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-blue-600 hover:bg-gray-100"
           >
-            Start Your Free Trial
+            {user ? 'Go to Dashboard' : 'Start Your Free Trial'}
             <ArrowRight className="h-5 w-5" />
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -979,9 +876,13 @@ export function LandingPage({
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white">
+                  <button
+                    type="button"
+                    onClick={() => setIsDemoOpen(true)}
+                    className="hover:text-white"
+                  >
                     Demo
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <a href="#" className="hover:text-white">
@@ -1041,6 +942,8 @@ export function LandingPage({
           </div>
         </div>
       </footer>
+
+      <WatchDemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
     </div>
   );
 }

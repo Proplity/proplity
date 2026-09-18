@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Logo } from './Logo';
 import {
   MapPin,
@@ -27,14 +29,6 @@ import { useProperty, useProperties } from '@/hooks/useProperties';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
-  onGoHome: () => void;
-  onGetStarted: () => void; // triggers login
-  onViewPricing: () => void;
-  onViewContact: () => void;
-  onViewAbout: () => void;
-  onViewLandlordPage: () => void;
-  onViewTenantPage: () => void;
-  onViewVendorPage: () => void;
 }
 
 /* ── Premium upgrade modal ── */
@@ -140,17 +134,8 @@ function LoginRequiredModal({
   );
 }
 
-export function PublicPropertyDetail({
-  propertyId,
-  onGoHome,
-  onGetStarted,
-  onViewPricing,
-  onViewContact,
-  onViewAbout,
-  onViewLandlordPage,
-  onViewTenantPage,
-  onViewVendorPage,
-}: PublicPropertyDetailProps) {
+export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) {
+  const router = useRouter();
   const { data: property, loading } = useProperty(propertyId);
   const { data: allProperties } = useProperties();
   const [activeImg, setActiveImg] = useState(0);
@@ -203,9 +188,9 @@ export function PublicPropertyDetail({
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <button onClick={onGoHome} className="focus:outline-none">
+          <Link href="/" className="focus:outline-none">
             <Logo />
-          </button>
+          </Link>
           <div className="hidden items-center gap-8 md:flex">
             <div className="group relative">
               <button className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -223,55 +208,43 @@ export function PublicPropertyDetail({
               <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
                 <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
                   {[
-                    { label: 'For Landlords', action: onViewLandlordPage },
-                    { label: 'For Tenants', action: onViewTenantPage },
+                    { label: 'For Landlords', href: '/for-landlords' },
+                    { label: 'For Tenants', href: '/for-tenants' },
                     {
                       label: 'For Service Providers',
-                      action: onViewVendorPage,
+                      href: '/for-vendors',
                     },
                   ].map((item) => (
-                    <button
+                    <Link
                       key={item.label}
-                      onClick={item.action}
+                      href={item.href}
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
                     >
                       {item.label}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
             </div>
-            <button
-              onClick={onGoHome}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               How it Works
-            </button>
-            <button
-              onClick={onViewContact}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Contact Us
-            </button>
-            <button
-              onClick={onViewAbout}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               About Us
-            </button>
-            <button
-              onClick={onViewPricing}
-              className="text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
+            </Link>
+            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               Pricing
-            </button>
+            </Link>
           </div>
-          <button
-            onClick={onGetStarted}
+          <Link
+            href="/login"
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
           >
             Get Started
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -535,12 +508,12 @@ export function PublicPropertyDetail({
                     <span className="text-sm font-bold text-blue-600">
                       {unit ? `₦${unit.rentAmount.toLocaleString()}` : 'Price on request'}
                     </span>
-                    <button
-                      onClick={onGetStarted}
+                    <Link
+                      href="/login"
                       className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
                     >
                       View Details <ArrowRight className="h-3 w-3" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -555,12 +528,12 @@ export function PublicPropertyDetail({
         <p className="mb-6 text-sm text-blue-200">
           Join thousands of property managers already using Proplity.
         </p>
-        <button
-          onClick={onGetStarted}
+        <Link
+          href="/login"
           className="rounded-xl bg-white px-7 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
         >
           Start Free Trial →
-        </button>
+        </Link>
       </section>
 
       {/* ── Footer ── */}
@@ -605,7 +578,7 @@ export function PublicPropertyDetail({
           onClose={() => setShowNeighModal(false)}
           onUpgrade={() => {
             setShowNeighModal(false);
-            onViewPricing();
+            router.push('/pricing');
           }}
         />
       )}
@@ -614,7 +587,7 @@ export function PublicPropertyDetail({
           onClose={() => setShowLoginModal(false)}
           onLogin={() => {
             setShowLoginModal(false);
-            onGetStarted();
+            router.push('/login');
           }}
           message={loginModalMsg}
         />

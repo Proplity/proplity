@@ -1,10 +1,10 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import { MessagingPortal } from '../../components/MessagingPortal';
 
 export default function Page() {
-  const router = useRouter();
-
-  return <MessagingPortal onBack={() => router.push('/dashboard')} />;
+  return (
+    <Suspense>
+      <MessagingPortal />
+    </Suspense>
+  );
 }
