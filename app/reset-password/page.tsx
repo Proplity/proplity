@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, Lock, AlertCircle } from 'lucide-react';
 import { LogoIcon } from '../components/Logo';
@@ -83,7 +84,13 @@ function ResetPasswordContent() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
-            <LogoIcon size={60} />
+            <Link
+              href="/"
+              className="inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-xl transition-transform hover:scale-105 active:scale-95"
+              aria-label="Back to home"
+            >
+              <LogoIcon size={60} />
+            </Link>
           </div>
           <h1 className="mb-2 text-3xl font-bold">Reset Your Password</h1>
           <p className="text-gray-600">Choose a new password for your account.</p>
