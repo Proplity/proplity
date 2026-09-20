@@ -194,7 +194,7 @@ Two things there are easy to trip over:
 - **OAuth / social login / Clerk / Kinde** — designed (see `auth-implementation-plan.md` §9–10) but not built. Design principle if built: OAuth only authenticates; our own `RefreshToken` + `setAuthCookies` still issues the session. Never auto-link accounts by unverified email (account-takeover vector). PKCE + `state` are mandatory.
 - **`Subscription` model** — exists in schema but is **not in the PRD**. Built from admin-UI mock evidence only. Confirm with product before building billing on it.
 - **Actually scheduling the Phase 8 background workers** — see "Known gaps" above.
-- **Automated test suite** — no Jest/Vitest/Playwright/Cypress anywhere, no CI. Every phase was verified manually via `curl` against the live dev server.
+- **Automated tests** — API: Vitest (`tests/`, `pnpm test`, run in CI). UI: Playwright (`tests/e2e/`, `pnpm test:e2e`) — smoke, per-role flows, responsive nav, landing featured-property popup. The E2E suite needs a seeded DB (`pnpm run db:seed2`) and a running app (`E2E_BASE_URL`); it isn't in CI yet.
 
 ---
 
