@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { LogoIcon } from '../Logo';
 import { useAuth } from '@/context/AuthContext';
@@ -552,7 +553,13 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
       <div className="w-full max-w-2xl">
         <div className="mb-7 text-center">
           <div className="mb-3 flex justify-center">
-            <LogoIcon size={52} />
+            <Link
+              href="/"
+              className="inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-xl transition-transform hover:scale-105 active:scale-95"
+              aria-label="Back to home"
+            >
+              <LogoIcon size={52} />
+            </Link>
           </div>
           <h1 className="mb-1 text-2xl font-bold">Create Your Account</h1>
           <p className="text-sm text-gray-500">
