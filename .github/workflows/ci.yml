@@ -111,6 +111,82 @@ jobs:
         env:
           TEST_SETUP_LOGS: '1'
 
+  # Real-browser UI tests (tests/e2e). Kept as its own job so a UI failure is
+  # visible without blocking the faster typecheck/integration jobs. Runs
+  # against a production build -- `next dev` compiles routes on demand and
+  # causes false timeouts under Playwright. A single worker because the specs
+  # share one database (e.g. the admin auto-complete toggle vs. the vendor
+  # invoice spec).
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: proplity_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/proplity_e2e?schema=public
+      JWT_SECRET: e2e_only_jwt_secret_do_not_use_in_production
+      CRON_SECRET: e2e_only_cron_secret_do_not_use_in_production
+      E2E_BASE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Migrate and seed the database
+        run: |
+          pnpm run db:migrate:deploy
+          pnpm run db:seed2
+
+      - name: Build
+        run: pnpm build
+
+      - name: Start the app
+        run: |
+          nohup pnpm start > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/login > /dev/null && exit 0
+            sleep 2
+          done
+          echo "App did not start in time" && cat app.log && exit 1
+
+      - name: Run Playwright tests
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+            app.log
+          retention-days: 7
+
   # Migrations and Vercel deploys used to live here, gated to main. Now that
   # main is the staging tier (see migrate-staging.yml) and prod is the real
   # production gate, both moved to their own dedicated, manually-triggered
