@@ -28,6 +28,31 @@ failing.
 
 ---
 
+## Visitor flow (not logged in)
+
+**1. Open the home page** and scroll to **Featured Properties Available for
+Rent**. These are the real, published listings on the platform (up to six,
+newest first) — not sample data.
+
+**2. Click anywhere on a property card** — a popup opens with the photo
+area, description, beds/baths/size, amenities, security/power/road scores,
+and rent. Nothing navigates yet.
+
+**3. Browse with the side arrows** — use the left/right arrows on either
+side of the popup (or the keyboard's ← / → keys) to step through the
+properties; the counter (e.g. _2 / 4_) shows where you are, and it wraps
+around at the ends. Press **Esc**, click **×**, or click outside to close.
+
+**4. Open the full listing** — click **View Details** in the popup, or the
+**View Details** button on the card itself (which skips the popup), to reach
+that property's own page.
+
+**5. Browse All Properties** — takes you to sign in (or, if you're already
+logged in, to your own property browser: _Discover_ for managers, _Browse_
+for tenants; admins go to their admin area).
+
+---
+
 ## Tenant flow
 
 **1. Log in** at `/login` with your email and password.
@@ -209,7 +234,8 @@ Create Invoice**.
 ## Admin flow
 
 **1. Log in** — admins land on `/admin`, a separate area from the tenant/
-landlord/manager/vendor dashboard.
+landlord/manager/vendor dashboard. If an admin opens a regular dashboard
+address (e.g. `/dashboard/discover`), they are sent back to `/admin`.
 
 **2. System Overview** — a bird's-eye view of the whole platform.
 

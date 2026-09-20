@@ -24,6 +24,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
+  // The dashboard chrome has no tab set for admins (they have their own
+  // /admin area), so rendering it for one crashes -- send them home instead.
+  if (pathname.startsWith('/dashboard') && payload.role === 'ADMIN') {
+    return NextResponse.redirect(new URL('/admin', req.url));
+  }
+
   return NextResponse.next();
 }
 

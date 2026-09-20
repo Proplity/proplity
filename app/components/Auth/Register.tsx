@@ -555,7 +555,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
           <div className="mb-3 flex justify-center">
             <Link
               href="/"
-              className="inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-xl transition-transform hover:scale-105 active:scale-95"
+              className="inline-flex rounded-xl transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-95"
               aria-label="Back to home"
             >
               <LogoIcon size={52} />

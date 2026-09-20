@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Logo } from './Logo';
 import { MarketingNav } from './MarketingNav';
 import { WatchDemoModal } from './WatchDemoModal';
+import { FEATURED_GRADIENTS, FeaturedPropertyModal, featuredFields } from './FeaturedPropertyModal';
+import { useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 import {
   ArrowRight,
@@ -29,6 +31,9 @@ export function LandingPage() {
   const { user } = useAuth();
   const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const { data: allProperties, loading: featuredLoading } = useProperties();
+  const featured = allProperties.slice(0, 6);
+  const [featuredIndex, setFeaturedIndex] = useState<number | null>(null);
   const features = [
     {
       icon: Bot,
@@ -579,162 +584,115 @@ export function LandingPage() {
             </p>
           </div>
 
+          {featuredLoading && <p className="text-center text-gray-500">Loading properties…</p>}
+          {!featuredLoading && featured.length === 0 && (
+            <p className="text-center text-gray-500">
+              No properties are listed right now — check back soon.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                id: 1,
-                title: '3 Bedroom Luxury Apartment',
-                location: 'Lekki Phase 1, Lagos',
-                price: '₦1,200,000/year',
-                bedrooms: 3,
-                bathrooms: 2,
-                sqft: '1,200 sq ft',
-                image: 'bg-linear-to-br from-blue-400 to-blue-600',
-                trustScore: 95,
-                features: ['24/7 Power', 'Borehole', 'Security', 'Parking'],
-              },
-              {
-                id: 2,
-                title: '2 Bedroom Modern Flat',
-                location: 'Maitama, Abuja',
-                price: '₦900,000/year',
-                bedrooms: 2,
-                bathrooms: 2,
-                sqft: '950 sq ft',
-                image: 'bg-linear-to-br from-green-400 to-green-600',
-                trustScore: 92,
-                features: ['Generator', 'Water Tank', 'Gated Estate'],
-              },
-              {
-                id: 3,
-                title: '4 Bedroom Duplex',
-                location: 'Ikeja GRA, Lagos',
-                price: '₦1,800,000/year',
-                bedrooms: 4,
-                bathrooms: 3,
-                sqft: '1,800 sq ft',
-                image: 'bg-linear-to-br from-purple-400 to-purple-600',
-                trustScore: 97,
-                features: ['Swimming Pool', 'Gym', 'Garden', '24/7 Power'],
-              },
-              {
-                id: 4,
-                title: 'Studio Apartment',
-                location: 'Victoria Island, Lagos',
-                price: '₦650,000/year',
-                bedrooms: 1,
-                bathrooms: 1,
-                sqft: '600 sq ft',
-                image: 'bg-linear-to-br from-orange-400 to-orange-600',
-                trustScore: 88,
-                features: ['Furnished', 'WiFi', 'Security'],
-              },
-              {
-                id: 5,
-                title: '3 Bedroom Penthouse',
-                location: 'Banana Island, Lagos',
-                price: '₦3,500,000/year',
-                bedrooms: 3,
-                bathrooms: 3,
-                sqft: '2,200 sq ft',
-                image: 'bg-linear-to-br from-pink-400 to-pink-600',
-                trustScore: 99,
-                features: ['Sea View', 'Private Lift', 'Balcony', 'Luxury'],
-              },
-              {
-                id: 6,
-                title: '2 Bedroom Bungalow',
-                location: 'Ajah, Lagos',
-                price: '₦750,000/year',
-                bedrooms: 2,
-                bathrooms: 2,
-                sqft: '1,000 sq ft',
-                image: 'bg-linear-to-br from-teal-400 to-teal-600',
-                trustScore: 90,
-                features: ['Garden', 'Parking', 'Quiet Area'],
-              },
-            ].map((property) => (
-              <div
-                key={property.id}
-                className="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-2xl"
-              >
-                {/* Property Image */}
-                <div className={`h-48 ${property.image} relative flex items-center justify-center`}>
-                  <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-semibold text-white">
-                    <Shield className="h-3 w-3" />
-                    AI Verified
+            {featured.map((property, index) => {
+              const card = featuredFields(property);
+              return (
+                <div
+                  key={property.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setFeaturedIndex(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setFeaturedIndex(index);
+                    }
+                  }}
+                  className="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  {/* Property Image */}
+                  <div
+                    className={`h-48 ${FEATURED_GRADIENTS[index % FEATURED_GRADIENTS.length]} relative flex items-center justify-center`}
+                  >
+                    {card.verified && (
+                      <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-semibold text-white">
+                        <Shield className="h-3 w-3" />
+                        AI Verified
+                      </div>
+                    )}
+                    {property.trustScore != null && (
+                      <div className="absolute top-3 right-3 rounded-full bg-white/90 px-3 py-1 backdrop-blur-sm">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                          <span className="text-xs font-bold text-green-600">
+                            {property.trustScore}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="rounded-lg bg-black/30 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                      360° View Available
+                    </div>
                   </div>
-                  <div className="absolute top-3 right-3 rounded-full bg-white/90 px-3 py-1 backdrop-blur-sm">
-                    <div className="flex items-center gap-1">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                        <span className="text-xs font-bold text-green-600">
-                          {property.trustScore}
+
+                  {/* Property Details */}
+                  <div className="p-5">
+                    <h3 className="mb-1 text-lg font-bold transition-colors group-hover:text-blue-600">
+                      {property.name}
+                    </h3>
+                    <div className="mb-3 flex items-center gap-1 text-sm text-gray-600">
+                      <MapPin className="h-4 w-4" />
+                      {property.address}, {property.city}
+                    </div>
+
+                    <div className="mb-4 flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <Home className="h-4 w-4" />
+                        {card.bedrooms} Bed
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        {card.bathrooms} Bath
+                      </div>
+                      {card.sqft && <div className="text-xs">{card.sqft}</div>}
+                    </div>
+
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {card.amenities.slice(0, 3).map((feature) => (
+                        <span
+                          key={feature}
+                          className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700"
+                        >
+                          {feature}
                         </span>
-                      </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="rounded-lg bg-black/30 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-                    360° View Available
-                  </div>
-                </div>
 
-                {/* Property Details */}
-                <div className="p-5">
-                  <div className="mb-3 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="mb-1 text-lg font-bold transition-colors group-hover:text-blue-600">
-                        {property.title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <MapPin className="h-4 w-4" />
-                        {property.location}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Home className="h-4 w-4" />
-                      {property.bedrooms} Bed
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {property.bathrooms} Bath
-                    </div>
-                    <div className="text-xs">{property.sqft}</div>
-                  </div>
-
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {property.features.slice(0, 3).map((feature, idx) => (
-                      <span
-                        key={idx}
-                        className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700"
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                      <p className="text-2xl font-bold text-blue-600">{card.price}</p>
+                      <Link
+                        href={`/properties/${property.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
                       >
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                    <div>
-                      <p className="text-2xl font-bold text-blue-600">{property.price}</p>
+                        View Details
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
                     </div>
-                    <Link
-                      href={`/properties/${property.id}`}
-                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
-                    >
-                      View Details
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {featuredIndex !== null && (
+            <FeaturedPropertyModal
+              properties={featured}
+              index={featuredIndex}
+              onIndexChange={setFeaturedIndex}
+              onClose={() => setFeaturedIndex(null)}
+            />
+          )}
 
           <div className="mt-12 text-center">
             <Link
-              href={user ? '/dashboard/discover' : '/login'}
+              href={user ? (user.role === 'admin' ? '/admin' : '/dashboard/discover') : '/login'}
               className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-8 py-4 text-lg font-semibold text-white hover:from-blue-700 hover:to-green-700"
             >
               Browse All Properties
