@@ -39,6 +39,12 @@ are configured for this environment before treating it as a defect.
       "For Vendors," About, Contact, Pricing pages
 - [ ] Look at a property listing — click into a property and see photos,
       details, price
+- [ ] Featured Properties on the homepage — click a card (a popup opens, the
+      page doesn't navigate), step through with the side arrows (or ← / →
+      keys), close with Esc / × / clicking outside, then click **View
+      Details** to reach the real property page. The card's own View Details
+      button should skip the popup. These are real published listings, not
+      sample data
 - [ ] Create an account — sign up as a new user
 - [ ] Verify email — click the link sent after signup, **or**, if you don't
       have it, use the "Didn't get a verification email? Resend it" link
@@ -116,6 +122,9 @@ Same as landlord, plus the day-to-day operational tools:
 ## Admin flows
 
 - [ ] System overview — a bird's-eye dashboard of the whole platform
+- [ ] Admins live in `/admin` — opening a regular dashboard address
+      (e.g. `/dashboard/discover`) or the homepage's "Browse All Properties"
+      should land on `/admin`, never an error page
 - [ ] Manage users — view/manage every account on the platform, across all
       roles
 - [ ] View reports

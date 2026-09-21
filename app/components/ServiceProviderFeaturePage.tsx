@@ -133,7 +133,7 @@ export function ServiceProviderFeaturePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <MarketingNav ctaHref="/register" ctaLabel="Get Started" />
+      <MarketingNav />
 
       {/* Hero */}
       <section className="bg-linear-to-br from-orange-50 via-white to-yellow-50 pt-20 pb-24">

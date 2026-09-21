@@ -102,10 +102,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <MarketingNav
-        ctaHref={user ? dashboardPath : '/login'}
-        ctaLabel={user ? 'Go to Dashboard' : 'Get Started'}
-      />
+      <MarketingNav />
 
       {/* Hero Section */}
       <section className="bg-linear-to-br from-blue-50 via-white to-green-50 pt-20 pb-32">
