@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { LogoIcon } from '../Logo';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -73,7 +74,13 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
-            <LogoIcon size={60} />
+            <Link
+              href="/"
+              className="inline-flex rounded-xl transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-95"
+              aria-label="Back to home"
+            >
+              <LogoIcon size={60} />
+            </Link>
           </div>
           <h1 className="mb-2 text-3xl font-bold">Forgot Password?</h1>
           <p className="text-gray-600">No worries, we'll send you reset instructions</p>

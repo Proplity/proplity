@@ -26,6 +26,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useProperty, useProperties } from '@/hooks/useProperties';
+import { useAuth } from '@/context/AuthContext';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
@@ -136,16 +137,29 @@ function LoginRequiredModal({
 
 export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { data: property, loading } = useProperty(propertyId);
   const { data: allProperties } = useProperties();
   const [activeImg, setActiveImg] = useState(0);
   const [showNeighModal, setShowNeighModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMsg, setLoginModalMsg] = useState('');
+  const [loginDestination, setLoginDestination] = useState('/dashboard');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
 
-  const requireLogin = (msg: string) => {
+  const dashboardHref = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login';
+
+  // Already signed in -- go straight to the real dashboard page instead of
+  // asking for a login that would just come straight back here anyway.
+  // Signed out -- ask to sign in, and actually come back to `destination`
+  // afterwards (via /login?from=), instead of always landing on /dashboard.
+  const goOrRequireLogin = (destination: string, msg: string) => {
+    if (user) {
+      router.push(destination);
+      return;
+    }
+    setLoginDestination(destination);
     setLoginModalMsg(msg);
     setShowLoginModal(true);
   };
@@ -240,10 +254,10 @@ export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) 
             </Link>
           </div>
           <Link
-            href="/login"
+            href={dashboardHref}
             className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
           >
-            Get Started
+            {user ? 'Go to Dashboard' : 'Get Started'}
           </Link>
         </div>
       </nav>
@@ -438,7 +452,12 @@ export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) 
 
               {/* CTA buttons */}
               <button
-                onClick={() => requireLogin('Please sign in to schedule a property inspection.')}
+                onClick={() =>
+                  goOrRequireLogin(
+                    `/dashboard/properties/${propertyId}/schedule-viewing`,
+                    'Please sign in to schedule a property inspection.',
+                  )
+                }
                 className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
               >
                 <Calendar className="h-4 w-4" />
@@ -446,7 +465,12 @@ export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) 
               </button>
 
               <button
-                onClick={() => requireLogin('Please sign in to apply for this property.')}
+                onClick={() =>
+                  goOrRequireLogin(
+                    `/dashboard/properties/${propertyId}/apply`,
+                    'Please sign in to apply for this property.',
+                  )
+                }
                 className="w-full rounded-xl border-2 border-blue-600 py-3 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
               >
                 Apply for this Property
@@ -587,7 +611,7 @@ export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) 
           onClose={() => setShowLoginModal(false)}
           onLogin={() => {
             setShowLoginModal(false);
-            router.push('/login');
+            router.push(`/login?from=${encodeURIComponent(loginDestination)}`);
           }}
           message={loginModalMsg}
         />

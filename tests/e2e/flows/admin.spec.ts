@@ -32,3 +32,16 @@ test('admin can see the platform-wide overview and manage users', async ({ page 
   await page.goto('/admin/settings');
   await expect(page.getByRole('heading', { name: 'Platform Settings' })).toBeVisible();
 });
+
+test('admin opening a tenant-style /dashboard route is sent to /admin, not a crash', async ({
+  page,
+}) => {
+  await loginAs(page, 'admin');
+  await page.goto('/dashboard/discover');
+  await expect(page).toHaveURL(/\/admin/);
+  await expect(page.getByText('Something went wrong')).toHaveCount(0);
+
+  await page.goto('/');
+  const browseAll = page.getByRole('link', { name: /Browse All Properties/ });
+  await expect(browseAll).toHaveAttribute('href', '/admin');
+});

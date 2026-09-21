@@ -112,7 +112,7 @@ export function ContactPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav ctaHref="/login" ctaLabel="Get Started" />
+      <MarketingNav />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-blue-700 pt-14 pb-20 text-white">

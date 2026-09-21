@@ -168,7 +168,7 @@ export function PricingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav ctaHref="/login" ctaLabel="Get Started" />
+      <MarketingNav />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-gray-900 pt-16 pb-20 text-white">
