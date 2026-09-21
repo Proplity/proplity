@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { Logo } from './Logo';
+import { useAuth } from '@/context/AuthContext';
 
 const FEATURE_LINKS = [
   { label: 'For Landlords', href: '/for-landlords' },
@@ -18,18 +19,21 @@ const NAV_LINKS = [
   { label: 'Pricing', href: '/pricing' },
 ];
 
-interface MarketingNavProps {
-  ctaHref: string;
-  ctaLabel: string;
-}
-
 // Shared header for every public marketing page (home, about, contact,
 // pricing, for-landlords/tenants/vendors). Previously each page hard-coded
 // its own copy of this nav with the link list hidden behind `md:flex` and
 // no mobile fallback, so on a phone every link except the logo and CTA was
 // unreachable. This version adds a real hamburger menu below md.
-export function MarketingNav({ ctaHref, ctaLabel }: MarketingNavProps) {
+//
+// The CTA is auth-aware by itself -- every page used to hard-code
+// ctaHref="/login", so an already-logged-in visitor on, say, /pricing saw
+// "Get Started" send them back to the login screen instead of straight to
+// their dashboard.
+export function MarketingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const ctaHref = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login';
+  const ctaLabel = user ? 'Go to Dashboard' : 'Get Started';
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">

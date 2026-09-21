@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { LogoIcon } from '../Logo';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
@@ -101,7 +102,13 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
-            <LogoIcon size={60} />
+            <Link
+              href="/"
+              className="inline-flex rounded-xl transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-95"
+              aria-label="Back to home"
+            >
+              <LogoIcon size={60} />
+            </Link>
           </div>
           <h1 className="mb-2 text-3xl font-bold">Welcome Back</h1>
           <p className="text-gray-600">Sign in to manage your properties</p>

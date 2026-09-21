@@ -75,7 +75,7 @@ export function TenantFeaturePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <MarketingNav ctaHref="/register" ctaLabel="Get Started" />
+      <MarketingNav />
 
       {/* Hero */}
       <section className="bg-linear-to-br from-green-50 via-white to-blue-50 pt-20 pb-24">

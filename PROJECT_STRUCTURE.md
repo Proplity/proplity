@@ -84,6 +84,7 @@ proplity/
 │   │   ├── 📁 figma/                        # ImageWithFallback.tsx
 │   │   ├── 📁 ui/                           # ~45 Radix UI + Tailwind design-system primitives (unchanged since project start)
 │   │   ├── 📄 AboutPage.tsx, ContactPage.tsx, PricingPage.tsx, LandingPage.tsx
+│   │   ├── 📄 FeaturedPropertyModal.tsx                                              # landing-page popup w/ prev/next arrows; real published listings (not sample data)
 │   │   ├── 📄 AdminDashboard.tsx, AdminBreakdownPage.tsx, AdminReports.tsx           # ✅ real data (Phase 9.6)
 │   │   ├── 📄 Dashboard.tsx, DashboardBreakdownPage.tsx                              # ✅ real data (Phase 9.3a/3b)
 │   │   ├── 📄 LandlordDashboard.tsx                                                  # ✅ real data (Phase 9.3b)
@@ -188,7 +189,7 @@ proplity/
 ├── 📄 next.config.mjs                       # serverExternalPackages workaround + conditional distDir for the test server
 ├── 📄 package.json
 ├── 📄 prisma.config.ts
-├── 📄 proxy.ts                              # Next 16's middleware.ts replacement — live edge auth guard for /dashboard, /admin
+├── 📄 proxy.ts                              # Next 16's middleware.ts replacement — live edge auth guard for /dashboard, /admin (admins are redirected from /dashboard/* to /admin)
 ├── 📄 tsconfig.json
 └── 📄 vitest.config.mts                     # Phase 10 test suite config (globalSetup, setupFiles, fileParallelism: false)
 ```
