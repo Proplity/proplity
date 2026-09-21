@@ -85,7 +85,7 @@ const VALUES = [
 export function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <MarketingNav ctaHref="/login" ctaLabel="Get Started" />
+      <MarketingNav />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-gray-950 pt-16 pb-24 text-white">
