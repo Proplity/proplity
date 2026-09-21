@@ -5,15 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Login } from '../components/Auth/Login';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
 import { setupRedirectEnabled } from '@/lib/setup';
-
-// Only ever a same-origin relative path we generated ourselves (e.g. from
-// PublicPropertyDetail's goOrRequireLogin) -- reject anything that could
-// send the browser off-site (a `//host` or `https://host` value smuggled
-// into the query string) before it's ever passed to router.push.
-function safeRedirect(from: string | null): string | null {
-  if (!from || !from.startsWith('/') || from.startsWith('//')) return null;
-  return from;
-}
+import { safeRedirect } from '@/lib/safeRedirect';
 
 function LoginContent() {
   const router = useRouter();
