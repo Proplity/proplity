@@ -1,3 +1,49 @@
+import crypto from 'crypto';
+
+// Off by default, same pattern as subscriptionsEnabled()/setupRedirectEnabled()
+// -- a real deployment never sets this. It gates both whether sendEmail()
+// below keeps anything in memory and whether GET/DELETE
+// /api/v1/dev/emails will serve it, so a stray env var typo can't leak
+// email bodies (which include live verification/reset tokens) on a real
+// deployment.
+export function emailInboxEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_EMAIL_INBOX_ENABLED === 'true';
+}
+
+export type SentEmailRecord = {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  sentAt: string;
+};
+
+// In-memory only -- this is a manual-testing convenience, not a mailbox.
+// Resets on every server restart, and (like console-transport itself) isn't
+// safe for multi-instance deployments; local/staging single-process use only.
+const MAX_RECORDS = 50;
+const sentEmails: SentEmailRecord[] = [];
+
+export function getRecentEmails(): SentEmailRecord[] {
+  return sentEmails;
+}
+
+export function clearRecentEmails() {
+  sentEmails.length = 0;
+}
+
+function recordEmail(to: string, subject: string, body: string) {
+  if (!emailInboxEnabled()) return;
+  sentEmails.unshift({
+    id: crypto.randomUUID(),
+    to,
+    subject,
+    body,
+    sentAt: new Date().toISOString(),
+  });
+  sentEmails.length = Math.min(sentEmails.length, MAX_RECORDS);
+}
+
 // Sends real email via Resend when RESEND_API_KEY is configured; falls back
 // to console-transport (logs instead of delivering) otherwise. Gated on the
 // key's presence, not NODE_ENV -- a production deploy without the key set
@@ -18,6 +64,8 @@ export async function sendEmail({
   subject: string;
   body: string;
 }) {
+  recordEmail(to, subject, body);
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     logToConsole(to, subject, body);

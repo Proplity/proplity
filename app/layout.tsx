@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from '@/app/components/ui/sonner';
+import { EmailInboxWidget } from '@/app/components/dev/EmailInboxWidget';
+import { emailInboxEnabled } from '@/lib/email';
 
 export const metadata: Metadata = {
   title: 'Proplity',
@@ -20,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>{children}</AuthProvider>
         <Toaster position="top-right" richColors closeButton />
+        {emailInboxEnabled() && <EmailInboxWidget />}
       </body>
     </html>
   );
