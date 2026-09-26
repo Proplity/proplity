@@ -4,6 +4,7 @@ import { PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -28,7 +29,11 @@ function mapPaymentMethod(channel: string | undefined): PaymentMethod {
 
 export async function POST(req: NextRequest) {
   try {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    // Falls back to the mock secret only when there's no real key and the
+    // mock is explicitly on -- see lib/payments/mockGateway.ts and
+    // app/dev/mock-checkout, the only caller that ever signs with it.
+    const secretKey =
+      process.env.PAYSTACK_SECRET_KEY || (paymentsMockEnabled() ? MOCK_PAYSTACK_SECRET : null);
     if (!secretKey)
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 503 });
 

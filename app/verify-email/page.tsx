@@ -72,7 +72,7 @@ function VerifyEmailContent() {
             <h2 className="mb-2 text-2xl font-bold">Account Activated</h2>
             <p className="mb-6 text-gray-600">Your account is verified and ready to use.</p>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/login')}
               className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
             >
               Sign In

@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   ArrowRight,
+  ArrowLeft,
   Calendar,
   Home,
   Wifi,
@@ -30,6 +31,7 @@ import { useAuth } from '@/context/AuthContext';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
+  hideNav?: boolean;
 }
 
 /* ── Premium upgrade modal ── */
@@ -135,7 +137,10 @@ function LoginRequiredModal({
   );
 }
 
-export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) {
+export function PublicPropertyDetail({
+  propertyId,
+  hideNav = false,
+}: PublicPropertyDetailProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { data: property, loading } = useProperty(propertyId);
@@ -199,68 +204,80 @@ export function PublicPropertyDetail({ propertyId }: PublicPropertyDetailProps) 
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link href="/" className="focus:outline-none">
-            <Logo />
-          </Link>
-          <div className="hidden items-center gap-8 md:flex">
-            <div className="group relative">
-              <button className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900">
-                Features
-                <svg
-                  className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
-                <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                  {[
-                    { label: 'For Landlords', href: '/for-landlords' },
-                    { label: 'For Tenants', href: '/for-tenants' },
-                    {
-                      label: 'For Service Providers',
-                      href: '/for-vendors',
-                    },
-                  ].map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+      {/* ── Nav (or in-dashboard header) ── */}
+      {!hideNav ? (
+        <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white shadow-sm">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+            <Link href="/" className="focus:outline-none">
+              <Logo />
+            </Link>
+            <div className="hidden items-center gap-8 md:flex">
+              <div className="group relative">
+                <button className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Features
+                  <svg
+                    className="h-4 w-4 text-gray-400 transition-transform group-hover:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute top-full left-0 hidden pt-2 group-hover:block">
+                  <div className="w-52 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
+                    {[
+                      { label: 'For Landlords', href: '/for-landlords' },
+                      { label: 'For Tenants', href: '/for-tenants' },
+                      {
+                        label: 'For Service Providers',
+                        href: '/for-vendors',
+                      },
+                    ].map((item) => (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
+              <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                How it Works
+              </Link>
+              <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                Contact Us
+              </Link>
+              <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                About Us
+              </Link>
+              <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                Pricing
+              </Link>
             </div>
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              How it Works
-            </Link>
-            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Contact Us
-            </Link>
-            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              About Us
-            </Link>
-            <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-              Pricing
+            <Link
+              href={dashboardHref}
+              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              {user ? 'Go to Dashboard' : 'Get Started'}
             </Link>
           </div>
+        </nav>
+      ) : (
+        <div className="mx-auto w-full max-w-7xl px-6 pt-4">
           <Link
-            href={dashboardHref}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            href="/dashboard/discover"
+            className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
           >
-            {user ? 'Go to Dashboard' : 'Get Started'}
+            <ArrowLeft className="h-4 w-4" />
+            Back to Browse Properties
           </Link>
         </div>
-      </nav>
+      )}
 
       {/* ── Photo gallery ── */}
       <section className="mx-auto w-full max-w-7xl px-6 pt-8 pb-4">
