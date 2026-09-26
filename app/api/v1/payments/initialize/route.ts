@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { appUrl } from '@/lib/appUrl';
+import { paymentsMockEnabled } from '@/lib/payments/mockGateway';
 
 const initializeSchema = z.object({ invoiceId: z.string() });
 
@@ -34,12 +36,30 @@ export const POST = withAuth(async (req, { session }) => {
     }
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (!secretKey) {
+
+    // No real key: either hand back our own fake checkout page (opt-in,
+    // see lib/payments/mockGateway.ts) or the same clean 503 as always --
+    // before touching anything else, same as the original short-circuit.
+    // Never both -- a real key always wins even if the mock flag was left
+    // on by mistake.
+    if (!secretKey && !paymentsMockEnabled()) {
       return NextResponse.json({ error: 'Payment provider not configured' }, { status: 503 });
     }
 
     const user = await prisma.user.findUnique({ where: { id: session.sub } });
     const reference = `PROP-${invoice.id.slice(0, 8)}-${Date.now()}`;
+
+    if (!secretKey) {
+      const mockUrl = new URL('/dev/mock-checkout', appUrl(''));
+      mockUrl.searchParams.set('reference', reference);
+      mockUrl.searchParams.set('invoiceId', invoice.id);
+      mockUrl.searchParams.set('amount', String(invoice.amount));
+      mockUrl.searchParams.set('email', user!.email);
+      return NextResponse.json(
+        { data: { authorizationUrl: mockUrl.toString(), reference } },
+        { status: 201 },
+      );
+    }
 
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
