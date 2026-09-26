@@ -23,6 +23,7 @@ const statusConfig = {
 type PaymentRecord = {
   id: string;
   period: string;
+  description: string;
   date: string;
   amount: number;
   method: string;
@@ -38,14 +39,21 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
   const records: PaymentRecord[] = [];
   for (const invoice of invoices) {
     if (invoice.status === 'CANCELLED') continue;
-    const period =
-      invoice.description ??
-      `${invoice.type} — ${new Date(invoice.dueDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    const dueDateObj = new Date(invoice.dueDate);
+    const period = isNaN(dueDateObj.getTime())
+      ? '—'
+      : dueDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const description =
+      invoice.description && invoice.description.trim().length > 0
+        ? invoice.description
+        : `${invoice.type.replace(/_/g, ' ')} Invoice`;
+
     if (invoice.payments.length > 0) {
       for (const payment of invoice.payments) {
         records.push({
           id: invoice.invoiceNumber,
           period,
+          description,
           date: new Date(payment.paidAt).toLocaleDateString(),
           amount: payment.amount,
           method: payment.paymentMethod.replace('_', ' '),
@@ -57,6 +65,7 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
       records.push({
         id: invoice.invoiceNumber,
         period,
+        description,
         date: new Date(invoice.dueDate).toLocaleDateString(),
         amount: invoice.amount,
         method: '—',
@@ -91,6 +100,7 @@ export function TenantPaymentHistory() {
     const matchSearch =
       p.id.toLowerCase().includes(search.toLowerCase()) ||
       p.period.toLowerCase().includes(search.toLowerCase()) ||
+      p.description.toLowerCase().includes(search.toLowerCase()) ||
       p.ref.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchSearch && matchStatus;
@@ -180,7 +190,7 @@ export function TenantPaymentHistory() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by ID, period, or reference..."
+            placeholder="Search by ID, description, period, or reference..."
             className="w-full rounded-lg border border-gray-300 py-2 pr-4 pl-9 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
         </div>
@@ -203,25 +213,28 @@ export function TenantPaymentHistory() {
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Invoice
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Period
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  Description
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Date
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Amount
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Method
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Reference
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
                   Status
                 </th>
               </tr>
@@ -232,17 +245,24 @@ export function TenantPaymentHistory() {
                 const Icon = cfg.icon;
                 return (
                   <tr key={`${payment.id}-${i}`} className="transition-colors hover:bg-gray-50">
-                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700">
+                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700 whitespace-nowrap">
                       {payment.id}
                     </td>
-                    <td className="px-5 py-4 font-medium text-gray-800">{payment.period}</td>
-                    <td className="px-5 py-4 text-gray-600">{payment.date}</td>
-                    <td className="px-5 py-4 font-semibold text-gray-900">
+                    <td className="px-5 py-4 text-xs font-medium text-gray-600 whitespace-nowrap">
+                      {payment.period}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-800 max-w-xs">
+                      <p className="line-clamp-2" title={payment.description}>
+                        {payment.description}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap">{payment.date}</td>
+                    <td className="px-5 py-4 font-semibold text-gray-900 whitespace-nowrap">
                       ₦{payment.amount.toLocaleString()}
                     </td>
-                    <td className="px-5 py-4 text-gray-600">{payment.method}</td>
-                    <td className="px-5 py-4 font-mono text-xs text-gray-500">{payment.ref}</td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap">{payment.method}</td>
+                    <td className="px-5 py-4 font-mono text-xs text-gray-500 whitespace-nowrap">{payment.ref}</td>
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.color}`}
                       >
@@ -255,7 +275,7 @@ export function TenantPaymentHistory() {
               })}
               {currentData.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400">
                     No payments found.
                   </td>
                 </tr>

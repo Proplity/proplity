@@ -139,6 +139,10 @@ jobs:
       JWT_SECRET: e2e_only_jwt_secret_do_not_use_in_production
       CRON_SECRET: e2e_only_cron_secret_do_not_use_in_production
       E2E_BASE_URL: http://localhost:3000
+      # No PAYSTACK_SECRET_KEY/RESEND_API_KEY here on purpose -- both dev-only
+      # testing tools below only ever activate when there's no real key.
+      NEXT_PUBLIC_EMAIL_INBOX_ENABLED: 'true'
+      NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED: 'true'
 
     steps:
       - uses: actions/checkout@v4
