@@ -97,19 +97,26 @@
 - **Actions:** Select issue category (Plumbing, Electrical, HVAC, Structural, Other), define urgency, enter issue description, attach photos, and specify access availability.
 - **Visual Capture:** `docs/screenshots/tenant_05_maintenance_request.png`
 
-### Step 2.6: Payment History & Invoicing
+### Step 2.6: Online Rent Payment via Paystack Gateway
+- **Location:** `/dashboard` → Paystack Checkout Modal → `/dashboard/payment-history`
+- **Flow Steps:**
+  1. **Initiating Payment from Resident Dashboard:** Tenant views the **Payment Information** card on the resident dashboard showing the upcoming rent invoice (₦150,000 for October 2026 rent, due in 5 days) alongside total outstanding balance (₦167,737.50). The tenant clicks the blue **"Pay Rent Online"** action button (`tenant_payment_01_initiate.png`).
+  2. **Paystack Hosted Checkout Gateway:** The application calls `/api/v1/payments/initialize` and opens the Paystack checkout modal. The modal displays the payment amount (₦150,000), tenant email (`tenant@proplity.com`), multi-channel payment options (Debit/Credit Card, Bank Transfer, USSD), and prefilled test credentials. Clicking **"Pay ₦150,000"** simulates instant payment completion (`tenant_payment_02_paystack_checkout.png`).
+  3. **Webhook Verification & Settlement Confirmation:** Paystack delivers the `charge.success` webhook which automatically settles the invoice in PostgreSQL. The tenant is redirected back to the payment ledger (`/dashboard/payment-history`) with a confirmation toast (*"Payment successful (test mode) — webhook delivered."*). The ledger updates total paid metrics (₦3,695,000 total paid, 67% on-time) and displays the new settled transaction row with a green `Paid` status badge and transaction reference (`tenant_payment_03_payment_success.png`).
+
+### Step 2.7: Payment History & Invoicing
 - **Location:** `/dashboard/payment-history`
 - **Actions:** Review past payment receipts with separate, dedicated **Period** (calendar billing cycle, e.g. Oct 2026) and **Description** (line-item details, repair parts, and notes) columns. Track status, method, and transaction references.
 - **Visual Capture:** `docs/screenshots/tenant_04_payment_history.png`
 
-### Step 2.7: Interactive In-App Messaging via UI
+### Step 2.8: Interactive In-App Messaging via UI
 - **Location:** `/dashboard/messages`
 - **Live Behavior:**
   1. **Conversation History:** Active conversation thread with manager Alex Vance displays previous chat history and timestamps (`tenant_07_messages.png`).
   2. **Typing Message:** User types in the input field: *"Hello Alex, I also wanted to check if there are any specific visitor parking regulations I should be aware of?"* (`tenant_msg_typing.png`).
   3. **Real-Time Delivery:** Clicking **Send** immediately renders the blue resident speech bubble with delivery timestamp (`tenant_msg_sent.png`).
 
-### Step 2.8: Notifications & Alerts Center
+### Step 2.9: Notifications & Alerts Center
 - **Location:** `/dashboard/notifications`
 - **Actions:** Review real-time system alerts including maintenance status transitions and payment confirmations.
 - **Visual Capture:** `docs/screenshots/tenant_08_notifications.png`
