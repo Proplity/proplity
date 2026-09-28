@@ -141,6 +141,10 @@ model Unit {
   // exists (e.g. showing "₦1,200,000/year" on a vacant listing).
   listedPaymentFrequency PaymentFrequency      @default(ANNUAL)
   depositAmount          Float?
+  // Advertised recurring service charge for a still-vacant unit, same cycle
+  // as rentAmount -- combines with it for a displayed "Total" but is billed
+  // as its own InvoiceType.SERVICE_CHARGE line, not merged into RENT.
+  serviceCharge          Float?                @default(0)
   status                 UnitStatus            @default(VACANT)
   mediaUrls              String[]
   amenities              String[]

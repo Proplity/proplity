@@ -15,6 +15,7 @@ export type Unit = {
   bathrooms: number;
   sqft: number | null;
   rentAmount: number;
+  serviceCharge: number | null;
   listedPaymentFrequency: string;
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   amenities: string[];
@@ -86,6 +87,7 @@ export type CreateUnitInput = {
   bedrooms: number;
   bathrooms: number;
   rentAmount: number;
+  serviceCharge?: number;
   listedPaymentFrequency?: string;
   depositAmount?: number;
   sqft?: number;
@@ -201,6 +203,7 @@ export type Lease = {
   startDate: string;
   endDate: string;
   rentAmount: number;
+  serviceCharge: number;
   paymentFrequency: string;
   deposit: number;
   status: string;
@@ -227,6 +230,7 @@ export type CreateLeaseInput = {
   startDate: string;
   endDate: string;
   rentAmount: number;
+  serviceCharge?: number;
   paymentFrequency?: string;
   deposit: number;
   gracePeriodDays?: number;
