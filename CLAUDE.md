@@ -123,6 +123,8 @@ DB column is `squareFeet`. API accepts and returns `sqft`. Alias at the serializ
 
 No application code generates it. It's `@unique`, so handle the (vanishingly rare) collision as a retry on insert conflict.
 
+Known cosmetic quirk: because this default is a raw `dbgenerated()` SQL string, Postgres re-normalizes its stored text slightly differently than the schema's literal string compares against. Every `prisma migrate dev --create-only` since this field existed re-emits a no-op `ALTER TABLE "Invoice" ALTER COLUMN "invoiceNumber" SET DEFAULT (...)` line restating the identical default. Harmless — don't mistake it for real drift when reviewing a new migration's diff.
+
 ### 12. `AccessLog` vs `AuditLog` — different tables, different purposes
 
 - `AccessLog` → gate events (grant/deny/expired attempt) on a specific `AccessCode`
@@ -190,7 +192,8 @@ Two things there are easy to trip over:
 - **Real email delivery** — `lib/email.ts` exists and works (console-transport: logs instead of sending), used by the Phase 7 tenant-invite flow. Swapping in a real provider (Resend/Postmark/SES) is a one-function change now that the interface exists. Separately, **self-registration still has no verification flow**: `register` sets `status: ACTIVE` directly and creates no `VerificationToken`. **When wiring real self-registration email: flip `register` to `PENDING_VERIFICATION` and relax the `login` 403 in the same commit**, or every new signup is locked out. (`app/api/v1/auth/verify-email/route.ts` already accepts an optional `password` alongside `token`, and `app/verify-email/page.tsx` already exists — both were built for the tenant-invite flow and are reusable here.)
 - **Redis blocklist** for instant session revocation — 15-min TTL bounds exposure; revisit only if instant kill becomes a product requirement.
 - **Real-time messaging** — v1 uses polling. WebSocket/SSE deferred.
-- **`SERVICE_CHARGE` invoice type** — removed; only `ASSOCIATION_FEE` is in PRD scope. Additive to re-add later if a real requirement appears.
+- **`SERVICE_CHARGE` invoice type** — ~~removed~~ **re-added 2026-09-28** (migration `20260928085653_add_service_charge`), no longer deferred. A real requirement appeared (UI/UX gap audit): `serviceCharge` now exists on `Unit` and `Lease`, generated as its own `InvoiceType.SERVICE_CHARGE` invoice line (initial + recurring via `lib/workers/rentInvoicer.ts`), never merged into `RENT`'s amount. `ASSOCIATION_FEE` remains separately in scope as before.
+- **Add Tenant form's "Agency Fee" field** — removed 2026-09-28 (with "Security Deposit"). Worth knowing for history: Agency Fee was never actually wired to anything — captured in form state, shown in the review summary, but never submitted to the API or backed by any schema field. If a real agency-fee requirement appears later, it needs a schema field from scratch, not just a form field restored.
 - **OAuth / social login / Clerk / Kinde** — designed (see `auth-implementation-plan.md` §9–10) but not built. Design principle if built: OAuth only authenticates; our own `RefreshToken` + `setAuthCookies` still issues the session. Never auto-link accounts by unverified email (account-takeover vector). PKCE + `state` are mandatory.
 - **`Subscription` model** — exists in schema but is **not in the PRD**. Built from admin-UI mock evidence only. Confirm with product before building billing on it.
 - **Actually scheduling the Phase 8 background workers** — see "Known gaps" above.
