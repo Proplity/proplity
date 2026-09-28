@@ -175,10 +175,19 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                   {balance > 0 ? 'Balance Due' : 'Paid'}
                 </span>
               </div>
-              <p className="mb-1 text-sm text-gray-600">Rent</p>
-              <p className="text-lg font-semibold">
-                ₦{lease.rentAmount.toLocaleString()}/{lease.paymentFrequency.toLowerCase()}
+              <p className="mb-1 text-sm text-gray-600">
+                {lease.serviceCharge > 0 ? 'Rent + Service Charge' : 'Rent'}
               </p>
+              <p className="text-lg font-semibold">
+                ₦{(lease.rentAmount + lease.serviceCharge).toLocaleString()}/
+                {lease.paymentFrequency.toLowerCase()}
+              </p>
+              {lease.serviceCharge > 0 && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                  ₦{lease.rentAmount.toLocaleString()} rent + ₦
+                  {lease.serviceCharge.toLocaleString()} service charge
+                </p>
+              )}
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-white p-6">

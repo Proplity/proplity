@@ -1,7 +1,7 @@
 # 📊 Proplity — Current Project & Codebase State
 
-> **Last Updated:** 2026-08-23
-> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration and Phase 10's automated test suite | Next: the Finding-4 punch list — see `docs/development-history/next-phase-analysis.md`
+> **Last Updated:** 2026-09-28
+> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration and Phase 10's automated test suite | Next: the Finding-4 punch list — see `docs/development-history/next-phase-analysis.md` — plus the UI/UX gap audit below, still in progress
 
 ---
 
@@ -166,6 +166,28 @@ pnpm exec tsx scripts/workers/rentInvoicer.ts
 # 6. Run the automated test suite (needs .env.test -- copy .env.test.example first)
 pnpm test
 ```
+
+---
+
+## 🩹 UI/UX Gap Audit (started 2026-09-28)
+
+A full pass over every role's flow (add/manage/acquire/renew properties) surfaced a punch list of dead-end buttons, missing nav entries, and one real focus-loss bug. Confirmed against the code (not guessed), then worked through incrementally — see [[proplity-uiux-gap-audit]] in this session's memory for the full evidence trail and agreed designs on the larger items.
+
+**Fixed so far:**
+
+- `Register.tsx` — the password input lost focus on every keystroke (a `PasswordField` sub-component was declared inside the parent's render body, giving React a new function identity — and therefore a remount — every render). Hoisted to module scope.
+- `AddTenantForm.tsx` — removed the "Security Deposit" and "Agency Fee" fields from the Lease Details step. Agency Fee was collected and shown in the review summary but never actually submitted anywhere (no backing schema field) — it did nothing. `Lease.deposit` (required, non-nullable) now always submits as `0`.
+- `ScheduleViewing.tsx` + `POST /api/v1/properties/[id]/viewings` — scheduling a tour used to redirect immediately with no confirmation; the step-3 "Viewing Scheduled!" screen existed in the code but was dead (nothing ever set `step` to 3). Wired it up, and added a confirmation email (console-transport, same `sendEmail()` pattern as the moderation-decision email) since the confirmation screen promises one.
+- **Admin property-approval discovery path** — added a "Properties" tab to `AdminChrome.tsx` and a new `/admin/properties` moderation queue page (status filter chips, defaults to Pending Review, search, links into the existing `PropertyDetail.tsx` approve/reject UI which was already built but unreachable). Also surfaced pending listings in `AdminDashboard.tsx`'s "Items Needing Attention" feed, clickable through to the queue. No new backend endpoint needed — `GET /api/v1/properties?scope=mine` already returns all properties for an ADMIN caller; only added `manager` to its `include` so the queue can show who submitted each listing.
+- **Service charge, re-added** (migration `20260928085653_add_service_charge`) — `serviceCharge` on `Unit` (advertised, defaults `0`) and `Lease` (contracted, non-nullable, defaults `0`), plus `InvoiceType.SERVICE_CHARGE` restored to the enum. Billed as its **own** invoice line (initial invoice at lease creation in `app/api/v1/leases/route.ts`, recurring via `lib/workers/rentInvoicer.ts`), never merged into the `RENT` invoice's amount. `ListProperty.tsx` and `AddTenantForm.tsx` both collect it and display a combined "Total per cycle"; `TenantDashboard.tsx`'s rent tile shows the combined total with a rent/service-charge breakdown underneath when non-zero.
+- **Multi-unit property listings** — `ListProperty.tsx`'s single hardcoded unit is now a repeatable list of unit cards (unit number/label, bedrooms, bathrooms, rent, service charge, sqft), with "+ Add Another Unit" and per-card remove. Submission creates the property once, then each unit via its own `createUnit` call (no bulk-create endpoint exists) — not atomic, so per-unit status (pending/creating/created/failed) is tracked and a "Retry Failed Units" action lets the manager recover from a partial failure without recreating the property.
+- **Tenant profile + application form rework** (migrations `20260928092021_tenant_profile_fields`, `20260928092131_tenant_year_of_birth`) — `User` extended with `previousLandlordPhone/Email`, `idDocumentUrl`, `yearOfBirth` (joining the already-existing but previously unsurfaced `emergencyContactName/Relationship/Phone`). New `lib/tenantProfile.ts` (`isTenantProfileComplete`/`missingTenantProfileFields`) defines the gate: phone, year of birth, emergency contact, and ID document are required; previous landlord is deliberately optional (a first-time renter may not have one). New `/dashboard/profile/complete` page (`CompleteProfileForm.tsx`) collects it once, reusing the same direct-to-Cloudinary upload flow (`lib/uploadClient.ts`, now also accepting a `'profile'` folder) the application form's old document step used. `/dashboard/properties/[id]/apply` now redirects to that page (with `?next=`) before rendering the form at all if the profile is incomplete. `PropertyApplicationForm.tsx` itself dropped from 4 steps to 3: Personal Info/References/Documents are gone (identity prefilled read-only from the profile; references and ID now live there too); Employment step lost Lease Duration and Number of Occupants (both removed per explicit request, not moved anywhere — lease terms are the manager's call in `AddTenantForm`, not the applicant's).
+
+**Confirmed, not yet built** (see the memory note for full file:line evidence and agreed designs):
+
+- "Renew Lease" (`TenantDetail.tsx`) is a dead `alert()` stub despite a working renewal API (`PATCH /api/v1/leases/[id]`).
+- A cluster of other dead `alert()` stub buttons across `ListProperty.tsx`, `TenantDetail.tsx`, `TenantDashboard.tsx`, `LandlordDashboard.tsx`, `AdminDashboard.tsx`.
+- Role-scoped "Properties" sidebar entry — admin's moderation queue is now built (see above); manager/landlord owned-portfolio list and tenant rental-history list still to do.
 
 ---
 

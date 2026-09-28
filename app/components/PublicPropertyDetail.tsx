@@ -69,7 +69,7 @@ function NeighbourhoodModal({
             'Priority customer support',
           ].map((f) => (
             <li key={f} className="flex items-center gap-3 text-sm text-gray-700">
-              <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-500" />
+              <CheckCircle className="h-5 w-5 shrink-0 text-green-500" />
               {f}
             </li>
           ))}
@@ -137,10 +137,7 @@ function LoginRequiredModal({
   );
 }
 
-export function PublicPropertyDetail({
-  propertyId,
-  hideNav = false,
-}: PublicPropertyDetailProps) {
+export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicPropertyDetailProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { data: property, loading } = useProperty(propertyId);
@@ -249,13 +246,19 @@ export function PublicPropertyDetail({
               <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
                 How it Works
               </Link>
-              <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+              <Link
+                href="/contact"
+                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
                 Contact Us
               </Link>
               <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
                 About Us
               </Link>
-              <Link href="/pricing" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+              <Link
+                href="/pricing"
+                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
                 Pricing
               </Link>
             </div>
@@ -381,7 +384,7 @@ export function PublicPropertyDetail({
                   const Icon = CheckCircle;
                   return (
                     <div key={label} className="flex items-center gap-2.5 text-sm text-gray-700">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
                         <Icon className="h-4 w-4 text-blue-600" />
                       </div>
                       {label}

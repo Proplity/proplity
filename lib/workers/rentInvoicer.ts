@@ -45,6 +45,25 @@ export async function runRentInvoicer(): Promise<{ created: number; leasesChecke
       },
     });
     created += 1;
+
+    // Same cycle as rent, billed as its own line (see CLAUDE.md) -- guarded
+    // by the same idempotency check pattern as RENT above, on its own type.
+    if (lease.serviceCharge > 0) {
+      const existingServiceCharge = await prisma.invoice.findFirst({
+        where: { leaseId: lease.id, type: 'SERVICE_CHARGE', dueDate: nextDueDate },
+      });
+      if (!existingServiceCharge) {
+        await prisma.invoice.create({
+          data: {
+            leaseId: lease.id,
+            type: 'SERVICE_CHARGE',
+            amount: lease.serviceCharge,
+            dueDate: nextDueDate,
+            description: 'Recurring service charge invoice',
+          },
+        });
+      }
+    }
   }
 
   return { created, leasesChecked: activeLeases.length };
