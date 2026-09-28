@@ -213,28 +213,28 @@ export function TenantPaymentHistory() {
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Invoice
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Period
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                   Description
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Date
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Amount
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Method
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Reference
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase whitespace-nowrap">
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Status
                 </th>
               </tr>
@@ -245,23 +245,25 @@ export function TenantPaymentHistory() {
                 const Icon = cfg.icon;
                 return (
                   <tr key={`${payment.id}-${i}`} className="transition-colors hover:bg-gray-50">
-                    <td className="px-5 py-4 font-mono text-xs font-medium text-gray-700 whitespace-nowrap">
+                    <td className="px-5 py-4 font-mono text-xs font-medium whitespace-nowrap text-gray-700">
                       {payment.id}
                     </td>
-                    <td className="px-5 py-4 text-xs font-medium text-gray-600 whitespace-nowrap">
+                    <td className="px-5 py-4 text-xs font-medium whitespace-nowrap text-gray-600">
                       {payment.period}
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-800 max-w-xs">
+                    <td className="max-w-xs px-5 py-4 text-sm text-gray-800">
                       <p className="line-clamp-2" title={payment.description}>
                         {payment.description}
                       </p>
                     </td>
-                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap">{payment.date}</td>
-                    <td className="px-5 py-4 font-semibold text-gray-900 whitespace-nowrap">
+                    <td className="px-5 py-4 whitespace-nowrap text-gray-600">{payment.date}</td>
+                    <td className="px-5 py-4 font-semibold whitespace-nowrap text-gray-900">
                       ₦{payment.amount.toLocaleString()}
                     </td>
-                    <td className="px-5 py-4 text-gray-600 whitespace-nowrap">{payment.method}</td>
-                    <td className="px-5 py-4 font-mono text-xs text-gray-500 whitespace-nowrap">{payment.ref}</td>
+                    <td className="px-5 py-4 whitespace-nowrap text-gray-600">{payment.method}</td>
+                    <td className="px-5 py-4 font-mono text-xs whitespace-nowrap text-gray-500">
+                      {payment.ref}
+                    </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.color}`}

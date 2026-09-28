@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import {
   BarChart3,
   Users,
+  Building2,
   FileText,
   Settings,
   SlidersHorizontal,
@@ -23,6 +24,7 @@ import {
 
 const TABS = [
   { href: '/admin', label: 'System Overview', icon: BarChart3 },
+  { href: '/admin/properties', label: 'Properties', icon: Building2 },
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/settings', label: 'Platform Settings', icon: SlidersHorizontal },
