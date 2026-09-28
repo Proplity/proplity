@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Calendar,
@@ -38,7 +37,6 @@ export function ScheduleViewing({
   propertyTitle,
   propertyAddress,
 }: ScheduleViewingProps) {
-  const router = useRouter();
   const backHref = `/dashboard/properties/${propertyId}`;
   const { submit, submitting, error } = useCreateViewing(propertyId);
   const [step, setStep] = useState(1);
@@ -73,12 +71,7 @@ export function ScheduleViewing({
         scheduledAt: scheduledAt.toISOString(),
         notes: formData.specialRequirements || undefined,
       });
-      // Matches the pre-existing behavior: the step===3 confirmation JSX
-      // below was already unreachable dead code (nothing ever set step to
-      // 3) -- preserved as-is rather than newly wiring it up, since that
-      // would change this form's navigation contract beyond this phase's
-      // scope of "make the submission real."
-      router.push(backHref);
+      setStep(3);
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -135,7 +128,7 @@ export function ScheduleViewing({
           </Link>
           <h1 className="mb-2 text-2xl font-bold">Schedule a Viewing</h1>
           <div className="flex items-start gap-2 text-gray-600">
-            <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0" />
+            <MapPin className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-medium">{propertyTitle}</p>
               <p className="text-sm">{propertyAddress}</p>
@@ -367,7 +360,7 @@ export function ScheduleViewing({
 
           {(formError || error) && (
             <div className="mt-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {formError || error}
             </div>
           )}
