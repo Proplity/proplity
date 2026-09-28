@@ -123,6 +123,8 @@ DB column is `squareFeet`. API accepts and returns `sqft`. Alias at the serializ
 
 No application code generates it. It's `@unique`, so handle the (vanishingly rare) collision as a retry on insert conflict.
 
+Known cosmetic quirk: because this default is a raw `dbgenerated()` SQL string, Postgres re-normalizes its stored text slightly differently than the schema's literal string compares against. Every `prisma migrate dev --create-only` since this field existed re-emits a no-op `ALTER TABLE "Invoice" ALTER COLUMN "invoiceNumber" SET DEFAULT (...)` line restating the identical default. Harmless — don't mistake it for real drift when reviewing a new migration's diff.
+
 ### 12. `AccessLog` vs `AuditLog` — different tables, different purposes
 
 - `AccessLog` → gate events (grant/deny/expired attempt) on a specific `AccessCode`
