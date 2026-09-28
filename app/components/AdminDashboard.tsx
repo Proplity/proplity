@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation';
 import {
   Users,
   Building2,
@@ -35,6 +36,7 @@ function isWithinDays(iso: string, days: number) {
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
+  const router = useRouter();
   const { data: users, loading: usersLoading } = useAdminUsers();
   const { data: properties, loading: propertiesLoading } = useMyProperties();
   const { data: invoices, loading: invoicesLoading } = useInvoices();
@@ -96,12 +98,21 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   // maintenance requests), replacing the mock's fabricated "System Issues"
   // (no error/incident-tracking model exists anywhere in the schema).
   const attentionItems = [
+    ...properties
+      .filter((p) => p.moderationStatus === 'PENDING_REVIEW')
+      .map((p) => ({
+        title: `Property awaiting review: ${p.name}`,
+        time: p.createdAt,
+        severity: 'high' as const,
+        href: '/admin/properties',
+      })),
     ...invoices
       .filter((i) => i.status === 'OVERDUE')
       .map((i) => ({
         title: `Invoice ${i.invoiceNumber} overdue`,
         time: i.dueDate,
         severity: 'high' as const,
+        href: undefined,
       })),
     ...maintenanceRequests
       .filter((r) => r.status === 'CANCELLED')
@@ -109,6 +120,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
         title: `Maintenance request cancelled: ${r.title}`,
         time: r.updatedAt,
         severity: 'medium' as const,
+        href: undefined,
       })),
   ]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -190,7 +202,11 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           </div>
           <div className="divide-y divide-gray-200">
             {attentionItems.map((issue, index) => (
-              <div key={index} className="p-4 hover:bg-gray-50">
+              <div
+                key={index}
+                onClick={issue.href ? () => router.push(issue.href!) : undefined}
+                className={`p-4 hover:bg-gray-50 ${issue.href ? 'cursor-pointer' : ''}`}
+              >
                 <div className="flex items-center gap-3">
                   {issue.severity === 'high' ? (
                     <AlertCircle className="h-5 w-5 text-red-600" />

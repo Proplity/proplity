@@ -73,6 +73,7 @@ const createLeaseSchema = z
     // Full amount for the payment cycle, per CLAUDE.md rule 5 -- never
     // multiplied by 12 or otherwise normalized here.
     rentAmount: z.number().positive(),
+    serviceCharge: z.number().nonnegative().optional(),
     paymentFrequency: z.nativeEnum(PaymentFrequency).optional(),
     deposit: z.number().nonnegative(),
     // Landlord/manager autonomy, deliberately unbounded -- no platform-
@@ -175,7 +176,9 @@ export const POST = withAuth(
       }
 
       // Initial RENT invoice created in the same transaction -- a lease
-      // shouldn't be able to exist with no corresponding first bill.
+      // shouldn't be able to exist with no corresponding first bill. Service
+      // charge is billed as its own InvoiceType.SERVICE_CHARGE line, not
+      // merged into the RENT invoice's amount (see CLAUDE.md).
       const result = await prisma.$transaction(async (tx) => {
         const lease = await tx.lease.create({ data: { unitId, tenantId: tenantId!, ...rest } });
         const invoice = await tx.invoice.create({
@@ -187,6 +190,17 @@ export const POST = withAuth(
             description: 'Initial rent invoice',
           },
         });
+        if (lease.serviceCharge > 0) {
+          await tx.invoice.create({
+            data: {
+              leaseId: lease.id,
+              type: 'SERVICE_CHARGE',
+              amount: lease.serviceCharge,
+              dueDate: lease.startDate,
+              description: 'Initial service charge invoice',
+            },
+          });
+        }
         return { lease, invoice };
       });
 

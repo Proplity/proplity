@@ -30,6 +30,47 @@ interface RegisterProps {
   onSwitchToLogin: () => void;
 }
 
+// Module-scope, not declared inside Register() -- a component defined inside
+// another component's body is a new function identity every render, which
+// makes React unmount/remount its <input> on every keystroke (losing focus
+// after each character typed).
+function PasswordField({
+  value,
+  onChange,
+  label,
+  show,
+  onToggle,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  show: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700">{label} *</label>
+      <div className="relative">
+        <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          className="w-full rounded-lg border border-gray-300 py-2.5 pr-10 pl-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const NIGERIAN_STATES = [
   'Abia',
   'Adamawa',
@@ -332,41 +373,6 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
     'w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
   const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
-  const PasswordField = ({
-    value,
-    onChange,
-    label,
-    show,
-    onToggle,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    label: string;
-    show: boolean;
-    onToggle: () => void;
-  }) => (
-    <div>
-      <label className={labelCls}>{label} *</label>
-      <div className="relative">
-        <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type={show ? 'text' : 'password'}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required
-          className="w-full rounded-lg border border-gray-300 py-2.5 pr-10 pl-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={onToggle}
-          className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-        >
-          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-  );
-
   const StateSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <div>
       <label className={labelCls}>State *</label>
@@ -580,7 +586,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
 
           {submitError && (
             <div className="mb-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {submitError}
             </div>
           )}
@@ -614,7 +620,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                         </div>
                       </div>
                       <span
-                        className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${badgeColor}`}
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${badgeColor}`}
                       >
                         {type.badge}
                       </span>
@@ -634,7 +640,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
             <div className="space-y-5">
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
-                  <KeyRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+                  <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                   <div>
                     <p className="text-sm font-semibold text-blue-800">
                       Landlord Invitation Code Required
@@ -687,7 +693,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                 {/* code feedback */}
                 {codeStatus === 'valid' && verifiedLandlord && (
                   <div className="mt-3 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
-                    <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
+                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                     <div>
                       <p className="text-sm font-semibold text-green-800">Code verified!</p>
                       <p className="mt-0.5 text-xs text-green-700">
@@ -702,7 +708,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                 )}
                 {codeStatus === 'invalid' && (
                   <div className="mt-3 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
                     <div>
                       <p className="text-sm font-semibold text-red-700">
                         Invalid or deactivated code
@@ -754,7 +760,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
               className="space-y-4"
             >
               <div className="mb-2 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
-                <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
+                <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
                 <p className="text-xs text-green-800">
                   Linked to <span className="font-semibold">{verifiedLandlord?.name}</span> · Code:{' '}
                   <span className="font-mono">{managerForm.landlordCode.toUpperCase()}</span>
@@ -1639,7 +1645,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
               </div>
 
               <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800">
-                <Star className="h-4 w-4 flex-shrink-0 text-orange-500" />
+                <Star className="h-4 w-4 shrink-0 text-orange-500" />
                 Complete profiles with a CAC number and bio get{' '}
                 <span className="ml-1 font-semibold">3× more job requests</span>.
               </div>

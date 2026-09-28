@@ -53,7 +53,11 @@ export function AddTenantForm() {
   useEffect(() => {
     if (vacantUnits.length === 1) {
       setSelectedUnitId(vacantUnits[0].id);
-      setLeaseDetails((s) => ({ ...s, rentAmount: String(vacantUnits[0].rentAmount) }));
+      setLeaseDetails((s) => ({
+        ...s,
+        rentAmount: String(vacantUnits[0].rentAmount),
+        serviceCharge: String(vacantUnits[0].serviceCharge ?? 0),
+      }));
     }
   }, [vacantUnits]);
 
@@ -71,9 +75,8 @@ export function AddTenantForm() {
     startDate: '',
     endDate: '',
     rentAmount: '',
+    serviceCharge: '',
     rentFrequency: 'yearly',
-    securityDeposit: '',
-    agencyFee: '',
     paymentDueDay: '1',
     gracePeriodDays: '7',
     lateFeeType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
@@ -120,7 +123,11 @@ export function AddTenantForm() {
         startDate: leaseDetails.startDate,
         endDate: leaseDetails.endDate,
         rentAmount: parseFloat(leaseDetails.rentAmount) || 0,
-        deposit: parseFloat(leaseDetails.securityDeposit) || 0,
+        serviceCharge: parseFloat(leaseDetails.serviceCharge) || 0,
+        // Security Deposit and Agency Fee inputs were removed from this form
+        // (the latter was never actually submitted anywhere -- dead form
+        // state). `deposit` is a required, non-nullable field on Lease.
+        deposit: 0,
         paymentFrequency: RENT_FREQUENCY_MAP[leaseDetails.rentFrequency] ?? 'ANNUAL',
         gracePeriodDays: parseInt(leaseDetails.gracePeriodDays, 10) || 0,
         lateFeeType: leaseDetails.lateFeeType,
@@ -368,7 +375,11 @@ export function AddTenantForm() {
                         key={unit.id}
                         onClick={() => {
                           setSelectedUnitId(unit.id);
-                          setLeaseDetails((s) => ({ ...s, rentAmount: String(unit.rentAmount) }));
+                          setLeaseDetails((s) => ({
+                            ...s,
+                            rentAmount: String(unit.rentAmount),
+                            serviceCharge: String(unit.serviceCharge ?? 0),
+                          }));
                         }}
                         className={`w-full rounded-lg border-2 p-3 text-left transition-all ${
                           selectedUnitId === unit.id
@@ -517,35 +528,32 @@ export function AddTenantForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Security Deposit (₦)
+                  Service Charge
                 </label>
-                <input
-                  value={leaseDetails.securityDeposit}
-                  onChange={(e) =>
-                    setLeaseDetails((s) => ({
-                      ...s,
-                      securityDeposit: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  placeholder="e.g. 850000"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={leaseDetails.serviceCharge}
+                    onChange={(e) =>
+                      setLeaseDetails((s) => ({
+                        ...s,
+                        serviceCharge: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-9 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 50000"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Agency Fee (₦)
-                </label>
-                <input
-                  value={leaseDetails.agencyFee}
-                  onChange={(e) =>
-                    setLeaseDetails((s) => ({
-                      ...s,
-                      agencyFee: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  placeholder="e.g. 85000"
-                />
+              <div className="flex flex-col justify-end">
+                <p className="text-sm text-gray-500">Total per cycle</p>
+                <p className="text-lg font-semibold">
+                  ₦
+                  {(
+                    (parseFloat(leaseDetails.rentAmount) || 0) +
+                    (parseFloat(leaseDetails.serviceCharge) || 0)
+                  ).toLocaleString()}
+                </p>
               </div>
             </div>
 
@@ -705,10 +713,10 @@ export function AddTenantForm() {
                 <span className="font-medium">
                   ₦{leaseDetails.rentAmount} / {leaseDetails.rentFrequency}
                 </span>
-                {leaseDetails.securityDeposit && (
+                {(parseFloat(leaseDetails.serviceCharge) || 0) > 0 && (
                   <>
-                    <span className="text-gray-500">Security Deposit</span>
-                    <span className="font-medium">₦{leaseDetails.securityDeposit}</span>
+                    <span className="text-gray-500">Service Charge</span>
+                    <span className="font-medium">₦{leaseDetails.serviceCharge}</span>
                   </>
                 )}
                 <span className="text-gray-500">Due Day</span>
@@ -737,7 +745,7 @@ export function AddTenantForm() {
 
       {(formError || error) && (
         <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {formError || error}
         </div>
       )}
