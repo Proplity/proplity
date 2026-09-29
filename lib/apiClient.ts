@@ -19,6 +19,7 @@ import type {
   CreateInvoiceInput,
   CreateLeaseInput,
   UpdateLeaseTermsInput,
+  RenewLeaseInput,
   CreateMaintenanceRequestInput,
   CreateMessageInput,
   CreatePropertyInput,
@@ -248,6 +249,8 @@ export const api = {
       apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, body),
     updateStatus: (id: string, status: string) =>
       apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { status }),
+    renew: (id: string, body: RenewLeaseInput) =>
+      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { renew: body }),
     sign: (id: string, fullName: string) =>
       apiClient.post<{ data: LeaseSignature }>(`/api/v1/leases/${id}/sign`, { fullName }),
     notes: {
