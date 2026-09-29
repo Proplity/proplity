@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { CreateLeaseInput, Lease, Note, UpdateLeaseTermsInput } from '@/lib/api/types';
+import type {
+  CreateLeaseInput,
+  Lease,
+  Note,
+  UpdateLeaseTermsInput,
+  RenewLeaseInput,
+} from '@/lib/api/types';
 
 export function useCreateLease() {
   return useApiSubmit((body: CreateLeaseInput) =>
@@ -22,6 +28,14 @@ export function useUpdateLeaseTerms(leaseId: string) {
 export function useUpdateLeaseStatus(leaseId: string) {
   return useApiSubmit((status: string) =>
     api.leases.updateStatus(leaseId, status).then((res) => res.data.data),
+  );
+}
+
+// Renews a lease: creates a new ACTIVE Lease row linked via renewedFromId
+// and expires the current one -- see the `renew` branch of leases/[id] PATCH.
+export function useRenewLease(leaseId: string) {
+  return useApiSubmit((body: RenewLeaseInput) =>
+    api.leases.renew(leaseId, body).then((res) => res.data.data),
   );
 }
 

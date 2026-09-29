@@ -246,6 +246,14 @@ export type UpdateLeaseTermsInput = {
   lateFeeFlatAmount?: number;
 };
 
+export type RenewLeaseInput = {
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  paymentFrequency?: string;
+  deposit: number;
+};
+
 export type Payment = {
   id: string;
   invoiceId: string;
