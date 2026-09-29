@@ -93,15 +93,15 @@
 - **Actions:** View high-resolution photo gallery, 360° virtual tour, specifications (4 Bed, 4 Bath, 2,800 sq ft), neighborhood intelligence scores, and rental booking/application card directly inside the dashboard.
 - **Visual Capture:** `docs/screenshots/tenant_dashboard_property_detail.png`
 
-### Step 2.4: Complete Rental Application Process (Steps 1 to 4)
+### Step 2.4: Complete Rental Application Process (Profile Gate + 3 Steps)
 
 - **Location:** `/dashboard/properties/[id]/apply`
 - **Flow Steps:**
   1. **Property Showcase:** View Eko Atlantic Penthouse inside dashboard (`tenant_dashboard_property_detail.png`).
-  2. **Personal Information:** Enter legal name, contact phone (+234 802 345 6789), email, date of birth, and nationality (`tenant_apply_02_step1_personal.png`).
-  3. **Employment & Financials:** Provide employer name (Chevron Nigeria), net monthly income (₦3,500,000), move-in date, and requested lease term (`tenant_apply_03_step2_employment.png`).
-  4. **References & Emergency Contacts:** Submit emergency contact details (Adeola Hayes, Sister) and previous landlord references (`tenant_apply_04_step3_references.png`).
-  5. **Document Verification & Terms:** Attach ID/proof of income and accept terms (`tenant_apply_05_step4_documents.png`).
+  2. **Complete-Profile Gate:** Tenants with an incomplete profile are redirected to `/dashboard/profile/complete` before the application form ever renders. Phone, year of birth, emergency contact (name/relationship/phone), and an ID document upload are required; previous landlord details are optional (`tenant_apply_00_complete_profile.png`).
+  3. **Step 1 — Applicant (read-only):** Name, email, phone, and year of birth are prefilled from the now-complete profile and shown read-only, with an "Edit" link back to the profile form instead of re-entering them (`tenant_apply_02_step1_personal.png`).
+  4. **Step 2 — Employment & Move-in:** Employment status, employer, job title, monthly income, employment duration, move-in date, and pets. Lease duration and number-of-occupants fields were removed — the lease term is set by the manager at tenancy creation, not requested from the applicant (`tenant_apply_03_step2_employment.png`).
+  5. **Step 3 — Review & Submit:** Reason for moving, additional notes, and the terms agreement. This step replaces the old separate References and Documents steps — references now live on the tenant profile and bank statement/proof of income/employment letter uploads were dropped entirely (`tenant_apply_04_step3_review.png`).
   6. **Submission Confirmation:** Form submitted successfully; application enters `PENDING` status for property manager evaluation (`tenant_apply_06_submitted_confirmation.png`).
 
 ### Step 2.5: Maintenance & Repair Request Submission
@@ -159,9 +159,10 @@
 - **Location:** `/dashboard/properties/new`
 - **Visual Capture:** `docs/screenshots/landlord_03_list_step1.png`
 
-### Step 3.4: Listing a Property (Step 2: Specifications & Pricing)
+### Step 3.4: Listing a Property (Step 2: Units, Specifications & Pricing)
 
 - **Location:** `/dashboard/properties/new` (Step 2)
+- **Actions:** Each unit is its own card (bedrooms, bathrooms, size, rent amount, service charge, rent frequency, and a computed "Total per cycle" line). Mixed-unit buildings — e.g. a mix of studios and 2-bedroom flats — are supported by clicking **+ Add Another Unit** to add independent unit cards, each submitted as its own `Unit` record. Submission is sequential per unit (no bulk-create endpoint), with per-unit status and a Retry option if any individual unit creation fails.
 - **Visual Capture:** `docs/screenshots/landlord_04_list_step2.png`
 
 ### Step 3.5: Listing a Property (Step 3: Media Upload & Submission)
@@ -204,6 +205,12 @@
   3. **Create Tenancy:** Manager links approved tenant Jordan Hayes to the vacant unit, configuring agreed rent and lease dates (`manager_review_03_create_tenancy.png`).
   4. **Tenancy Activation:** Tenancy created in `PENDING` status; manager clicks **Activate Lease** to formally mark unit as Occupied (`manager_review_04_activate_lease.png`).
 
+### Step 4.3b: Alternative Path — Standalone Add Tenant Wizard (Lease Details & Service Charge)
+
+- **Location:** `/dashboard/tenants/add` (Step 3: Lease Details)
+- **Actions:** Independently of the application-approval path above, a manager can add a tenant directly. The Lease Details step now carries a dedicated **Service Charge** field alongside Rent Amount, combined into a "Total per cycle" figure — billed as its own separate `SERVICE_CHARGE` invoice line, never merged into rent. The previous **Security Deposit** and **Agency Fee** fields were removed (the latter was already dead — collected but never submitted to the API).
+- **Visual Capture:** `docs/screenshots/manager_05_add_tenant_step3.png`
+
 ### Step 4.4: Maintenance Management & Vendor Dispatch
 
 - **Location:** `/dashboard/maintenance`
@@ -234,3 +241,9 @@
 - **Reports:** `docs/screenshots/admin_03_reports.png`
 - **Platform Settings:** `docs/screenshots/admin_04_settings.png`
 - **Notifications:** `docs/screenshots/admin_05_notifications.png`
+
+### Step 6.6: Properties Moderation Queue
+
+- **Location:** `/admin/properties`
+- **Actions:** New sidebar tab closing a previously-missing gap — admins land here to review newly listed properties (status filter chips: All/Pending Review/Approved/Rejected/Flagged, defaulting to Pending Review), search by name/address/manager, and open a property for approval. The System Overview dashboard's attention-items list now also links pending properties directly here.
+- **Visual Capture:** `docs/screenshots/admin_06_properties.png`
