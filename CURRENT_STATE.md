@@ -175,6 +175,7 @@ A full pass over every role's flow (add/manage/acquire/renew properties) surface
 
 **Fixed so far:**
 
+- **"Renew Lease" wired up** (`TenantDetail.tsx`) — the renewal backend was already fully built (`PATCH /api/v1/leases/[id]` with a `renew` payload creates a new `ACTIVE` lease linked via `renewedFromId` and expires the old one), but nothing called it. Added `api.leases.renew`, `useRenewLease`, and an inline form (new dates/rent/deposit, defaulting to a same-length term after the current lease ends) that replaces the old `alert()` stub and navigates to the new lease's detail page on success.
 - `Register.tsx` — the password input lost focus on every keystroke (a `PasswordField` sub-component was declared inside the parent's render body, giving React a new function identity — and therefore a remount — every render). Hoisted to module scope.
 - `AddTenantForm.tsx` — removed the "Security Deposit" and "Agency Fee" fields from the Lease Details step. Agency Fee was collected and shown in the review summary but never actually submitted anywhere (no backing schema field) — it did nothing. `Lease.deposit` (required, non-nullable) now always submits as `0`.
 - `ScheduleViewing.tsx` + `POST /api/v1/properties/[id]/viewings` — scheduling a tour used to redirect immediately with no confirmation; the step-3 "Viewing Scheduled!" screen existed in the code but was dead (nothing ever set `step` to 3). Wired it up, and added a confirmation email (console-transport, same `sendEmail()` pattern as the moderation-decision email) since the confirmation screen promises one.
@@ -187,8 +188,7 @@ A full pass over every role's flow (add/manage/acquire/renew properties) surface
 
 **Confirmed, not yet built** (see the memory note for full file:line evidence and agreed designs):
 
-- "Renew Lease" (`TenantDetail.tsx`) is a dead `alert()` stub despite a working renewal API (`PATCH /api/v1/leases/[id]`).
-- A cluster of other dead `alert()` stub buttons across `ListProperty.tsx`, `TenantDetail.tsx`, `TenantDashboard.tsx`, `LandlordDashboard.tsx`, `AdminDashboard.tsx`.
+- A cluster of other dead `alert()` stub buttons across `ListProperty.tsx` (media upload), `TenantDetail.tsx` (Send Notice, Send Invoice), `TenantDashboard.tsx` (auto-pay), `LandlordDashboard.tsx` (report export, review scheduling), `AdminDashboard.tsx` (Security/Database/System settings tiles).
 - Role-scoped "Properties" sidebar entry — admin's moderation queue is now built (see above); manager/landlord owned-portfolio list and tenant rental-history list still to do.
 
 ---

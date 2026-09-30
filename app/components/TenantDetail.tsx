@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Phone,
@@ -19,6 +20,7 @@ import {
   useCreateLeaseNote,
   useUpdateLeaseTerms,
   useUpdateLeaseStatus,
+  useRenewLease,
   useSignLease,
 } from '@/hooks/useLeases';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
@@ -298,12 +300,18 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
 }
 
 export function TenantDetail({ leaseId }: TenantDetailProps) {
+  const router = useRouter();
   const { data: lease, loading, refetch: refetchLease } = useLease(leaseId);
   const { data: notes, refetch: refetchNotes } = useLeaseNotes(leaseId);
   const { data: allRequests } = useMaintenanceRequests();
   const { submit: submitNote, submitting: savingNote } = useCreateLeaseNote(leaseId);
   const { submit: submitTerms, submitting: savingTerms } = useUpdateLeaseTerms(leaseId);
   const { submit: submitStatus, submitting: savingStatus } = useUpdateLeaseStatus(leaseId);
+  const {
+    submit: submitRenew,
+    submitting: savingRenew,
+    error: renewError,
+  } = useRenewLease(leaseId);
   const { open: openConversation } = useOpenConversation();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
@@ -312,6 +320,13 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     lateFeeType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
     lateFeePercentage: '0',
     lateFeeFlatAmount: '0',
+  });
+  const [renewingLease, setRenewingLease] = useState(false);
+  const [renewDraft, setRenewDraft] = useState({
+    startDate: '',
+    endDate: '',
+    rentAmount: '',
+    deposit: '',
   });
 
   if (loading) {
@@ -376,6 +391,45 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     });
     setEditingTerms(false);
     refetchLease();
+  };
+
+  // Renewal term defaults to a same-length term starting the day after the
+  // current lease ends -- editable before submitting, not just a guess.
+  const openRenewEditor = () => {
+    const currentEnd = new Date(lease.endDate);
+    const currentStart = new Date(lease.startDate);
+    const termMs = currentEnd.getTime() - currentStart.getTime();
+    const nextStart = new Date(currentEnd.getTime() + 24 * 60 * 60 * 1000);
+    const nextEnd = new Date(nextStart.getTime() + termMs);
+    const toInputDate = (d: Date) => d.toISOString().slice(0, 10);
+    setRenewDraft({
+      startDate: toInputDate(nextStart),
+      endDate: toInputDate(nextEnd),
+      rentAmount: String(lease.rentAmount),
+      deposit: String(lease.deposit),
+    });
+    setRenewingLease(true);
+  };
+
+  const handleRenew = async () => {
+    try {
+      const newLease = await submitRenew({
+        startDate: renewDraft.startDate,
+        endDate: renewDraft.endDate,
+        rentAmount: parseFloat(renewDraft.rentAmount) || 0,
+        deposit: parseFloat(renewDraft.deposit) || 0,
+      });
+      setRenewingLease(false);
+      // Renewal creates a NEW lease row (old one flips to EXPIRED) -- follow
+      // onto its detail page rather than showing this now-expired one.
+      if (newLease?.id) {
+        router.push(`/dashboard/tenants/${newLease.id}`);
+      } else {
+        refetchLease();
+      }
+    } catch {
+      // error surfaced below via renewError
+    }
   };
 
   return (
@@ -521,7 +575,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 </button>
               )}
               <button
-                onClick={() => alert('Lease renewal is not available yet.')}
+                onClick={openRenewEditor}
                 className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 Renew Lease
@@ -533,6 +587,72 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 Send Notice
               </button>
             </div>
+
+            {renewingLease && (
+              <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-800">Renew Lease</h3>
+                <p className="text-xs text-gray-500">
+                  Creates a new lease starting after the current one ends. The current lease is
+                  marked Expired once the new one is created.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">New Start Date</label>
+                    <input
+                      type="date"
+                      value={renewDraft.startDate}
+                      onChange={(e) => setRenewDraft((s) => ({ ...s, startDate: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">New End Date</label>
+                    <input
+                      type="date"
+                      value={renewDraft.endDate}
+                      onChange={(e) => setRenewDraft((s) => ({ ...s, endDate: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Rent Amount (₦)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={renewDraft.rentAmount}
+                      onChange={(e) => setRenewDraft((s) => ({ ...s, rentAmount: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Deposit (₦)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={renewDraft.deposit}
+                      onChange={(e) => setRenewDraft((s) => ({ ...s, deposit: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {renewError && <p className="text-sm text-red-600">{renewError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRenew}
+                    disabled={savingRenew}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingRenew ? 'Renewing…' : 'Confirm Renewal'}
+                  </button>
+                  <button
+                    onClick={() => setRenewingLease(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Late Fee & Grace Period */}
@@ -902,7 +1022,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             <h2 className="mb-3 font-semibold">Payment Reliability</h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
-                <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                 <span>
                   {lease.paymentReliability
                     ? `${lease.paymentReliability} payment history`
@@ -910,7 +1030,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
                 <span>{maintenanceRequests.length} maintenance request(s) on this unit</span>
               </li>
             </ul>
