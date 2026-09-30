@@ -3,6 +3,18 @@ import { prisma } from '@/lib/db';
 const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_ATTEMPTS = 5;
 
+// refresh/route.ts's traffic isn't credential-guessing (the secret being
+// protected is a 256-bit random refresh token -- volumetric brute force
+// isn't a realistic threat at any sane limit) -- it's a periodic background
+// call every authenticated tab makes on its own timer (useAuthRefresh.ts,
+// ~every 13 minutes) plus a reactive one on any 401. Multiple staff behind
+// one office/NAT IP, or several tabs each on their own timer, legitimately
+// exceeds 5 calls per 5 minutes from a single observed IP; MAX_ATTEMPTS was
+// tuned for login's actual brute-force surface (a guessable password), not
+// this. A much looser cap still meaningfully throttles abuse without
+// locking out ordinary multi-session usage from a shared IP.
+export const REFRESH_MAX_ATTEMPTS = 30;
+
 export type Reservation = { allowed: boolean; attemptId: string | null };
 
 // Atomically checks-and-reserves a rate-limit slot -- closes the race
@@ -26,7 +38,11 @@ export type Reservation = { allowed: boolean; attemptId: string | null };
 // forgot-password) or releaseAttempt(attemptId) once it's known the
 // request didn't need to count (e.g. login succeeded) -- see each route
 // for which applies.
-export async function reserveAttempt(identifier: string, userId?: string): Promise<Reservation> {
+export async function reserveAttempt(
+  identifier: string,
+  userId?: string,
+  maxAttempts: number = MAX_ATTEMPTS,
+): Promise<Reservation> {
   return prisma.$transaction(async (tx) => {
     // hashtext() maps the identifier string to the int4 pg_advisory_xact_lock
     // expects; the lock is released automatically when this transaction ends
@@ -37,7 +53,7 @@ export async function reserveAttempt(identifier: string, userId?: string): Promi
     const count = await tx.loginAttempt.count({
       where: { identifier, createdAt: { gt: since } },
     });
-    if (count >= MAX_ATTEMPTS) {
+    if (count >= maxAttempts) {
       return { allowed: false, attemptId: null };
     }
 

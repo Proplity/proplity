@@ -4,7 +4,12 @@ import { prisma } from '@/lib/db';
 import { signAccessToken } from '@/lib/auth/jwt';
 import { setAuthCookies, clearAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import {
+  reserveAttempt,
+  releaseAttempt,
+  getClientIp,
+  REFRESH_MAX_ATTEMPTS,
+} from '@/lib/auth/rateLimit';
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -20,7 +25,7 @@ export async function POST(req: NextRequest) {
   // (missing/invalid/expired/reused token, inactive account), matching
   // login's "only failures count" semantics.
   const identifier = `refresh:${getClientIp(req)}`;
-  const { allowed, attemptId } = await reserveAttempt(identifier);
+  const { allowed, attemptId } = await reserveAttempt(identifier, undefined, REFRESH_MAX_ATTEMPTS);
   if (!allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }

@@ -390,7 +390,11 @@ describe('auth: refresh rotation + reuse detection', () => {
     // suffix rather than splitting on ':' from the start.
     const ip = probe!.identifier.slice(0, probe!.identifier.length - suffix.length);
 
-    await fillRateLimit(`refresh:${ip}`, 5);
+    // refresh's own threshold (REFRESH_MAX_ATTEMPTS), not the shared
+    // MAX_ATTEMPTS=5 login/register/etc. use -- see lib/auth/rateLimit.ts's
+    // comment on why refresh needs a much looser cap (periodic background
+    // traffic from every authenticated tab, not credential-guessing).
+    await fillRateLimit(`refresh:${ip}`, 30);
     const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
     expect(res.status).toBe(429);
   });
