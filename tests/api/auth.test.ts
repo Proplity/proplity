@@ -8,7 +8,7 @@ import {
   fillRateLimit,
   FIXTURE_PASSWORD,
 } from '../helpers/fixtures';
-import { authCookie } from '../helpers/auth';
+import { authCookie, expiredAccessCookie } from '../helpers/auth';
 import { apiFetch, cookieHeaderFrom } from '../helpers/client';
 
 describe('auth: login / me / logout / CSRF', () => {
@@ -89,6 +89,35 @@ describe('auth: login / me / logout / CSRF', () => {
   it('rejects /me with no session cookie', async () => {
     const res = await apiFetch('/api/v1/auth/me');
     expect(res.status).toBe(401);
+  });
+
+  it('logout still revokes the refresh token when the access token has already expired', async () => {
+    const user = await createUser(Role.TENANT, { email: 'idle-logout@test.local' });
+
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'idle-logout@test.local', password: FIXTURE_PASSWORD },
+    });
+    expect(login.status).toBe(200);
+
+    const activeBefore = await testPrisma.refreshToken.count({
+      where: { userId: user.id, revokedAt: null },
+    });
+    expect(activeBefore).toBeGreaterThan(0);
+
+    // Simulate an idle tab: swap in an access_token that is validly signed
+    // but expired, exactly as a browser would present after 15+ minutes.
+    // The refresh_token cookie is deliberately omitted -- it's scoped to
+    // path=/api/v1/auth/refresh and a real browser would never send it here.
+    const cookie = await expiredAccessCookie(user.id, Role.TENANT);
+
+    const logout = await apiFetch('/api/v1/auth/logout', { method: 'POST', cookie });
+    expect(logout.status).toBe(200);
+
+    const activeAfter = await testPrisma.refreshToken.count({
+      where: { userId: user.id, revokedAt: null },
+    });
+    expect(activeAfter).toBe(0);
   });
 });
 
