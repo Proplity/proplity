@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { checkRateLimit, recordAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { Role, UserStatus, KycStatus } from '@prisma/client';
 
 const setupSchema = z.object({
@@ -59,12 +59,20 @@ export async function POST(req: NextRequest) {
   }
 
   const clientIp = getClientIp(req);
-  if (!(await checkRateLimit(`setup:${clientIp}`))) {
+  const identifier = `setup:${clientIp}`;
+
+  // Reserved before any work, atomically -- see reserveAttempt's own
+  // comment for why check-then-record separately raced. Released in the
+  // `finally` block below on every exit EXCEPT the two paths that counted
+  // toward the limit before this fix (bad setup token, duplicate email).
+  const { allowed, attemptId } = await reserveAttempt(identifier);
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Too many setup attempts from this IP. Please try again later.' },
       { status: 429 },
     );
   }
+  let keepReservation = false;
 
   try {
     const body = await req.json();
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
         crypto.timingSafeEqual(expectedBuf, providedBuf);
 
       if (!isValidToken) {
-        await recordAttempt(`setup:${clientIp}`);
+        keepReservation = true;
         return NextResponse.json(
           { error: 'Invalid or missing setup token. Check your server environment settings.' },
           { status: 401 },
@@ -113,7 +121,7 @@ export async function POST(req: NextRequest) {
     // Check duplicate email
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      await recordAttempt(`setup:${clientIp}`);
+      keepReservation = true;
       return NextResponse.json(
         { error: 'An account with this email address already exists' },
         { status: 409 },
@@ -203,5 +211,9 @@ export async function POST(req: NextRequest) {
       { error: 'An unexpected error occurred during setup. Please try again.' },
       { status: 500 },
     );
+  } finally {
+    if (!keepReservation) {
+      await releaseAttempt(attemptId);
+    }
   }
 }

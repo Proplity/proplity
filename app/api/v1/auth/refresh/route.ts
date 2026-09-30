@@ -4,14 +4,24 @@ import { prisma } from '@/lib/db';
 import { signAccessToken } from '@/lib/auth/jwt';
 import { setAuthCookies, clearAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
+import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
     return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 });
   }
 
-  if (!(await checkRateLimit(`refresh:${getClientIp(req)}`))) {
+  // Reserved before any work, atomically (see reserveAttempt's own
+  // comment). Previously this called the old checkRateLimit() but never
+  // recordAttempt() anywhere in this route -- no LoginAttempt row was ever
+  // created with a "refresh:" identifier, so the check always passed and
+  // rate limiting on this endpoint was silently dead in production.
+  // Released below on a successful refresh; kept on every failure path
+  // (missing/invalid/expired/reused token, inactive account), matching
+  // login's "only failures count" semantics.
+  const identifier = `refresh:${getClientIp(req)}`;
+  const { allowed, attemptId } = await reserveAttempt(identifier);
+  if (!allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
@@ -50,6 +60,8 @@ export async function POST(req: NextRequest) {
     await clearAuthCookies();
     return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
   }
+
+  await releaseAttempt(attemptId);
 
   const newRawRefreshToken = crypto.randomBytes(32).toString('hex');
   const newTokenHash = crypto.createHash('sha256').update(newRawRefreshToken).digest('hex');
