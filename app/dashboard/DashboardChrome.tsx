@@ -34,6 +34,12 @@ function getTabsForRole(role: Role) {
       return [
         { href: '/dashboard', label: 'Dashboard', icon: Home },
         {
+          href: '/dashboard/properties',
+          label: 'My Properties',
+          shortLabel: 'Properties',
+          icon: Building2,
+        },
+        {
           href: '/dashboard/discover',
           label: 'Discover Properties',
           shortLabel: 'Discover',
@@ -52,6 +58,7 @@ function getTabsForRole(role: Role) {
           shortLabel: 'Browse',
           icon: Search,
         },
+        { href: '/dashboard/rentals', label: 'My Rentals', icon: Building2 },
         {
           href: '/dashboard/payment-history',
           label: 'Payment History',
