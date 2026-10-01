@@ -119,7 +119,7 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
           {errorMessage && (
             <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <AlertCircle className="h-5 w-5 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
               {needsVerification && (

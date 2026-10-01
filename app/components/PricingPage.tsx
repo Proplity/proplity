@@ -252,7 +252,7 @@ export function PricingPage() {
               <ul className="mb-8 flex-1 space-y-3">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
-                    <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
                     {f}
                   </li>
                 ))}
@@ -343,7 +343,7 @@ export function PricingPage() {
                 <p className="mt-3 text-sm leading-relaxed text-gray-600">{t.text}</p>
                 <div className="mt-4 flex items-center gap-3">
                   <div
-                    className={`h-9 w-9 rounded-full ${t.color} flex flex-shrink-0 items-center justify-center`}
+                    className={`h-9 w-9 rounded-full ${t.color} flex shrink-0 items-center justify-center`}
                   >
                     <span className="text-xs font-bold text-white">{t.initials}</span>
                   </div>
