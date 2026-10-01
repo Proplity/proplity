@@ -67,7 +67,7 @@ export default function AdminSettingsPage() {
       <div className="rounded-lg border border-gray-200 bg-white p-6">
         <div className="flex items-start justify-between gap-6">
           <div className="flex gap-3">
-            <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
               <Wrench className="h-4.5 w-4.5 text-blue-600" />
             </div>
             <div>
