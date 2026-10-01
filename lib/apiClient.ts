@@ -5,6 +5,7 @@ import type {
   AdminUser,
   Announcement,
   Application,
+  AuditLog,
   AutoPayMandate,
   BankAccount,
   CheckoutSubscriptionInput,
@@ -300,6 +301,10 @@ export const api = {
     users: {
       list: (params?: { role?: string; limit?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+    },
+    auditLogs: {
+      list: (params?: { entityType?: string; limit?: number; page?: number }) =>
+        apiClient.get<Paginated<AuditLog>>('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
       get: () =>
