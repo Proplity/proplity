@@ -80,6 +80,8 @@ export type CreatePropertyInput = {
   type?: string;
   description?: string;
   imageUrl?: string;
+  video360Url?: string;
+  exteriorPhotoUrl?: string;
 };
 
 export type CreateUnitInput = {
