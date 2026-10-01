@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Home,
   DollarSign,
@@ -26,6 +27,9 @@ import {
   useCreateManagerCode,
   useSetManagerCodeStatus,
 } from '@/hooks/useManagerCodes';
+import { useCreateConversation } from '@/hooks/useConversations';
+import { api } from '@/lib/apiClient';
+import { toCsv } from '@/lib/csv';
 
 interface LandlordDashboardProps {
   onNavigate?: (page: any) => void;
@@ -113,6 +117,97 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
       occupancy: propertyUnits.length > 0 ? Math.round((occupied / propertyUnits.length) * 100) : 0,
     };
   });
+
+  // Financial summary CSV for "Download Report" -- built entirely from data
+  // already fetched for this dashboard (properties/units/invoices, all
+  // server-scoped to this landlord already), so no new backend endpoint is
+  // needed just to reshape it into rows and hand it back as a file.
+  const downloadReport = () => {
+    const rows = propertyRows.map(({ property, unitCount, occupied, occupancy, revenue }) => {
+      const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === property.id);
+      const propertyCollected = propertyInvoices
+        .flatMap((i) => i.payments)
+        .reduce((sum, p) => sum + p.amount, 0);
+      const propertyPending = propertyInvoices
+        .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
+        .reduce(
+          (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
+          0,
+        );
+      return {
+        Property: property.name,
+        Units: unitCount,
+        Occupied: occupied,
+        'Occupancy %': occupancy,
+        'Listed Rent (₦/cycle)': revenue,
+        'Collected (₦)': propertyCollected,
+        'Pending (₦)': propertyPending,
+      };
+    });
+    const csv = toCsv(rows, [
+      'Property',
+      'Units',
+      'Occupied',
+      'Occupancy %',
+      'Listed Rent (₦/cycle)',
+      'Collected (₦)',
+      'Pending (₦)',
+    ]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `proplity-financial-summary-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Distinct managers across this landlord's properties, for "Schedule
+  // Review" -- there's no meeting/appointment model anywhere in this
+  // codebase, so the real available action is starting a direct message
+  // with the manager to arrange one (same idea as every other "Message
+  // Manager" entry point, just without a lease/maintenance-request context
+  // to derive participants from -- see useCreateConversation's own comment).
+  const managers = Array.from(
+    new Map(
+      properties
+        .filter((p) => p.manager)
+        .map((p) => [p.manager!.id, { id: p.manager!.id, name: p.manager!.name }]),
+    ).values(),
+  );
+  const [schedulingReview, setSchedulingReview] = useState(false);
+  const [reviewManagerId, setReviewManagerId] = useState('');
+  const [reviewMessage, setReviewMessage] = useState(
+    "I'd like to schedule a review of my properties. What times work for you this week?",
+  );
+  const { submit: createConversation, submitting: sendingReviewRequest } = useCreateConversation();
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const openScheduleReview = () => {
+    setReviewManagerId(managers[0]?.id ?? '');
+    setReviewError(null);
+    setSchedulingReview(true);
+  };
+
+  const handleScheduleReview = async () => {
+    if (!reviewManagerId) return;
+    setReviewError(null);
+    try {
+      const conversation = await createConversation({
+        type: 'DIRECT',
+        title: 'Property Review',
+        participantIds: [reviewManagerId],
+      });
+      if (reviewMessage.trim()) {
+        await api.conversations.messages.create(conversation.id, { body: reviewMessage.trim() });
+      }
+      setSchedulingReview(false);
+      router.push(`/dashboard/messages?c=${conversation.id}`);
+    } catch {
+      setReviewError('Could not start the conversation. Please try again.');
+    }
+  };
 
   // Recent Activity: a real feed merged from payments, completed
   // maintenance, and newly-active leases -- replacing the mock's 4
@@ -340,20 +435,24 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <h3 className="mb-4 font-semibold">Owner Actions</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <button
-            onClick={() => alert('Report export is not available yet.')}
-            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
+            onClick={downloadReport}
+            disabled={properties.length === 0}
+            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download className="mb-2 h-5 w-5 text-blue-600" />
             <p className="text-sm font-medium">Download Report</p>
             <p className="text-xs text-gray-600">Financial summary</p>
           </button>
           <button
-            onClick={() => alert('Manager review scheduling is not available yet.')}
-            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
+            onClick={openScheduleReview}
+            disabled={managers.length === 0}
+            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Calendar className="mb-2 h-5 w-5 text-green-600" />
             <p className="text-sm font-medium">Schedule Review</p>
-            <p className="text-xs text-gray-600">With manager</p>
+            <p className="text-xs text-gray-600">
+              {managers.length === 0 ? 'No manager assigned yet' : 'With manager'}
+            </p>
           </button>
           <button
             onClick={() => onNavigate?.({ type: 'breakdown', breakdownType: 'rent' })}
@@ -372,6 +471,53 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <p className="text-xs text-gray-600">Expand portfolio</p>
           </button>
         </div>
+
+        {schedulingReview && (
+          <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-white p-4">
+            <h4 className="text-sm font-semibold">Schedule a Review</h4>
+            {managers.length > 1 && (
+              <div>
+                <label className="mb-1 block text-sm text-gray-600">Manager</label>
+                <select
+                  value={reviewManagerId}
+                  onChange={(e) => setReviewManagerId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Message</label>
+              <textarea
+                value={reviewMessage}
+                onChange={(e) => setReviewMessage(e.target.value)}
+                rows={2}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleScheduleReview}
+                disabled={sendingReviewRequest}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {sendingReviewRequest ? 'Sending…' : 'Send Request'}
+              </button>
+              <button
+                onClick={() => setSchedulingReview(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Manager Access — Code Management. No AccessCode-style model exists
@@ -403,7 +549,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         </div>
 
         <div className="flex items-start gap-3 border-b border-amber-100 bg-amber-50 p-4">
-          <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+          <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <p className="text-xs text-amber-800">
             <span className="font-semibold">How it works:</span> Generate a code and share it with
             the person you want to appoint as your Property Manager. They'll enter it during
@@ -419,7 +565,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               className={`flex items-center gap-4 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}
             >
               <div
-                className={`flex-shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
+                className={`shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
                   item.status === 'ACTIVE'
                     ? 'border-blue-200 bg-blue-50 text-blue-800'
                     : 'border-gray-200 bg-gray-100 text-gray-500 line-through'
@@ -459,7 +605,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 </p>
               </div>
 
-              <div className="flex flex-shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 {item.status === 'ACTIVE' && (
                   <button
                     onClick={() => copyCode(item.code)}
