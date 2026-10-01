@@ -179,6 +179,12 @@ export type Notice = {
   createdAt: string;
 };
 
+export type CreateNoticeInput = {
+  type: Notice['type'];
+  content?: string;
+  status?: Notice['status'];
+};
+
 export type Note = {
   id: string;
   leaseId: string | null;
@@ -305,7 +311,8 @@ export type CreateInvoiceInput = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE';
   amount: number;
   dueDate: string;
   description?: string;
