@@ -8,7 +8,7 @@ export function uploadsEnabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
 }
 
-export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile';
+export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile' | 'properties';
 
 export interface UploadedFile {
   name: string;

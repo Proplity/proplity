@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useCreateProperty } from '@/hooks/useProperties';
 import { api } from '@/lib/apiClient';
+import { uploadFile, uploadsEnabled, type UploadedFile } from '@/lib/uploadClient';
 
 interface ListPropertyProps {
   userRole: 'manager' | 'landlord';
@@ -83,10 +84,62 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     setUnits((u) => u.map((unit, i) => (i === index ? { ...unit, ...patch } : unit)));
 
   const [uploadedMedia, setUploadedMedia] = useState({
-    photos: [] as string[],
-    video360: false,
-    exteriorPhotos: false,
+    photos: [] as UploadedFile[],
+    video360: null as UploadedFile | null,
+    exteriorPhotos: [] as UploadedFile[],
   });
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadingExterior, setUploadingExterior] = useState(false);
+  const [mediaUploadError, setMediaUploadError] = useState<string | null>(null);
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingVideo(true);
+    try {
+      const uploaded = await uploadFile(file, 'properties');
+      setUploadedMedia((s) => ({ ...s, video360: uploaded }));
+    } catch {
+      setMediaUploadError('The video failed to upload. Please try again.');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const handlePhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesArray = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = '';
+    if (filesArray.length === 0 || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingPhotos(true);
+    try {
+      const uploaded = await Promise.all(filesArray.map((f) => uploadFile(f, 'properties')));
+      setUploadedMedia((s) => ({ ...s, photos: [...s.photos, ...uploaded] }));
+    } catch {
+      setMediaUploadError('One or more photos failed to upload. Please try again.');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleExteriorUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesArray = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = '';
+    if (filesArray.length === 0 || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingExterior(true);
+    try {
+      const uploaded = await Promise.all(filesArray.map((f) => uploadFile(f, 'properties')));
+      setUploadedMedia((s) => ({ ...s, exteriorPhotos: [...s.exteriorPhotos, ...uploaded] }));
+    } catch {
+      setMediaUploadError('One or more exterior photos failed to upload. Please try again.');
+    } finally {
+      setUploadingExterior(false);
+    }
+  };
 
   const totalSteps = 4;
 
@@ -207,6 +260,9 @@ export function ListProperty({ userRole }: ListPropertyProps) {
             formData.description || utilitiesNote
               ? `${formData.description}${utilitiesNote}`
               : undefined,
+          imageUrl: uploadedMedia.photos[0]?.url,
+          video360Url: uploadedMedia.video360?.url,
+          exteriorPhotoUrl: uploadedMedia.exteriorPhotos[0]?.url,
         });
         propertyId = property.id;
         setCreatedPropertyId(propertyId);
@@ -628,58 +684,93 @@ export function ListProperty({ userRole }: ListPropertyProps) {
 
             <h2 className="text-xl font-semibold">Media Upload</h2>
 
+            {!uploadsEnabled() && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  File upload isn&apos;t available in this environment yet. You can continue without
+                  media and add it later.
+                </span>
+              </div>
+            )}
+
+            {mediaUploadError && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{mediaUploadError}</span>
+              </div>
+            )}
+
             {/* 360° Video */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Video className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">360° Walkthrough Video *</h3>
               <p className="mb-4 text-sm text-gray-600">Required for review</p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Video
-              </button>
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingVideo ? 'Uploading…' : 'Upload Video'}
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  disabled={uploadingVideo}
+                  className="hidden"
+                />
+              </label>
               {uploadedMedia.video360 && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Video uploaded successfully</span>
+                  <span className="text-sm font-medium">
+                    {uploadedMedia.video360.name} uploaded successfully
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Room Photos */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Camera className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">Photos of Every Room *</h3>
               <p className="mb-4 text-sm text-gray-600">
                 Living room, bedrooms, kitchen, bathrooms, etc.
               </p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Photos
-              </button>
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingPhotos ? 'Uploading…' : 'Upload Photos'}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotosUpload}
+                  disabled={uploadingPhotos}
+                  className="hidden"
+                />
+              </label>
               <p className="mt-2 text-xs text-gray-500">
                 {uploadedMedia.photos.length} photos uploaded
               </p>
             </div>
 
             {/* Exterior Photos */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Home className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">Exterior Building View *</h3>
               <p className="mb-4 text-sm text-gray-600">Front view, compound, parking area</p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Photos
-              </button>
-              {uploadedMedia.exteriorPhotos && (
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingExterior ? 'Uploading…' : 'Upload Photos'}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleExteriorUpload}
+                  disabled={uploadingExterior}
+                  className="hidden"
+                />
+              </label>
+              {uploadedMedia.exteriorPhotos.length > 0 && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Photos uploaded successfully</span>
+                  <span className="text-sm font-medium">
+                    {uploadedMedia.exteriorPhotos.length} photo(s) uploaded successfully
+                  </span>
                 </div>
               )}
             </div>
@@ -690,20 +781,6 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                 can be published. Listings that don't pass review will be rejected.
               </p>
             </div>
-
-            {/* Mock upload for demo */}
-            <button
-              onClick={() => {
-                setUploadedMedia({
-                  photos: ['1', '2', '3'],
-                  video360: true,
-                  exteriorPhotos: true,
-                });
-              }}
-              className="w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 hover:bg-gray-200"
-            >
-              (Demo: Simulate Upload Complete)
-            </button>
           </div>
         )}
 
@@ -810,9 +887,18 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                   <div>
                     <h3 className="mb-1 font-semibold text-green-900">Media Status</h3>
                     <ul className="space-y-1 text-sm text-green-800">
-                      <li>✓ 360° walkthrough video uploaded</li>
-                      <li>✓ {uploadedMedia.photos.length} room photos uploaded</li>
-                      <li>✓ Exterior photos uploaded</li>
+                      <li>
+                        {uploadedMedia.video360 ? '✓' : '○'} 360° walkthrough video
+                        {uploadedMedia.video360 ? ' uploaded' : ' not uploaded'}
+                      </li>
+                      <li>
+                        {uploadedMedia.photos.length > 0 ? '✓' : '○'} {uploadedMedia.photos.length}{' '}
+                        room photo(s) uploaded
+                      </li>
+                      <li>
+                        {uploadedMedia.exteriorPhotos.length > 0 ? '✓' : '○'}{' '}
+                        {uploadedMedia.exteriorPhotos.length} exterior photo(s) uploaded
+                      </li>
                     </ul>
                   </div>
                 </div>
