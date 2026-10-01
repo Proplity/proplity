@@ -80,6 +80,8 @@ export type CreatePropertyInput = {
   type?: string;
   description?: string;
   imageUrl?: string;
+  video360Url?: string;
+  exteriorPhotoUrl?: string;
 };
 
 export type CreateUnitInput = {
@@ -175,6 +177,12 @@ export type Notice = {
   viewedAt: string | null;
   respondedAt: string | null;
   createdAt: string;
+};
+
+export type CreateNoticeInput = {
+  type: Notice['type'];
+  content?: string;
+  status?: Notice['status'];
 };
 
 export type Note = {
@@ -328,7 +336,8 @@ export type CreateInvoiceInput = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE';
   amount: number;
   dueDate: string;
   description?: string;

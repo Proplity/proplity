@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { appUrl } from '@/lib/appUrl';
 import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { checkRateLimit, recordAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { reserveAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
 
@@ -31,10 +31,12 @@ export async function POST(req: NextRequest) {
   const { email } = validated.data;
 
   const identifier = `${getClientIp(req)}:${email}`;
-  if (!(await checkRateLimit(identifier))) {
+  // reserveAttempt checks-and-records atomically (see its own comment) --
+  // this route always counts every request, so no release step is needed.
+  const { allowed } = await reserveAttempt(identifier);
+  if (!allowed) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
-  await recordAttempt(identifier);
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (user && user.status === 'PENDING_VERIFICATION') {
