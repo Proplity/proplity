@@ -5,8 +5,10 @@ import type {
   AdminUser,
   Announcement,
   Application,
+  AutoPayMandate,
   BankAccount,
   CheckoutSubscriptionInput,
+  CreateAutoPayMandateInput,
   ConditionReport,
   Conversation,
   CreateAccessCodeInput,
@@ -39,6 +41,7 @@ import type {
   CreateNoticeInput,
   Notification,
   Paginated,
+  PaymentAuthorization,
   Property,
   ReviewApplicationInput,
   Subscription,
@@ -330,6 +333,20 @@ export const api = {
           invoiceId,
         },
       ),
+    authorization: (leaseId: string) =>
+      apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
+        params: { leaseId },
+      }),
+    autopay: {
+      list: (leaseId: string) =>
+        apiClient.get<{ data: AutoPayMandate[] }>('/api/v1/payments/autopay', {
+          params: { leaseId },
+        }),
+      create: (body: CreateAutoPayMandateInput) =>
+        apiClient.post<{ data: AutoPayMandate }>('/api/v1/payments/autopay', body),
+      cancel: (id: string) =>
+        apiClient.delete<{ data: AutoPayMandate }>('/api/v1/payments/autopay', { params: { id } }),
+    },
   },
   uploads: {
     sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
