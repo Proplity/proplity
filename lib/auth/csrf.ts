@@ -6,7 +6,14 @@ export function validateCSRF(req: NextRequest): boolean {
 
   const origin = req.headers.get('origin');
   if (origin) {
-    return new URL(origin).host === host;
+    try {
+      return new URL(origin).host === host;
+    } catch {
+      // A malformed Origin should fail closed (403), not throw an
+      // unhandled 500 inside the route handler -- same as the Referer
+      // fallback below, which already guards this identical call.
+      return false;
+    }
   }
 
   // Fallback to Referer if Origin header is missing
