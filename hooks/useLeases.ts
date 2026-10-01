@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { CreateLeaseInput, Lease, Note, UpdateLeaseTermsInput } from '@/lib/api/types';
+import type {
+  CreateLeaseInput,
+  Lease,
+  Note,
+  UpdateLeaseTermsInput,
+  RenewLeaseInput,
+  CreateNoticeInput,
+} from '@/lib/api/types';
 
 export function useCreateLease() {
   return useApiSubmit((body: CreateLeaseInput) =>
@@ -22,6 +29,14 @@ export function useUpdateLeaseTerms(leaseId: string) {
 export function useUpdateLeaseStatus(leaseId: string) {
   return useApiSubmit((status: string) =>
     api.leases.updateStatus(leaseId, status).then((res) => res.data.data),
+  );
+}
+
+// Renews a lease: creates a new ACTIVE Lease row linked via renewedFromId
+// and expires the current one -- see the `renew` branch of leases/[id] PATCH.
+export function useRenewLease(leaseId: string) {
+  return useApiSubmit((body: RenewLeaseInput) =>
+    api.leases.renew(leaseId, body).then((res) => res.data.data),
   );
 }
 
@@ -158,5 +173,15 @@ export function useLeaseNotes(leaseId: string | null) {
 export function useCreateLeaseNote(leaseId: string) {
   return useApiSubmit((body: string) =>
     api.leases.notes.create(leaseId, body).then((res) => res.data.data),
+  );
+}
+
+// Drafts and immediately sends a formal lease notice (rent increase,
+// default, termination, etc.) -- the backend route also supports a DRAFT
+// status and a separate update step, but "Send Notice" from the tenant
+// console has no draft-review UI, so this always creates it pre-SENT.
+export function useCreateNotice(leaseId: string) {
+  return useApiSubmit((body: CreateNoticeInput) =>
+    api.leases.notices.create(leaseId, body).then((res) => res.data.data),
   );
 }
