@@ -35,6 +35,8 @@ import type {
   ManagerInviteCode,
   Message,
   Note,
+  Notice,
+  CreateNoticeInput,
   Notification,
   Paginated,
   Property,
@@ -257,6 +259,12 @@ export const api = {
       list: (leaseId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/leases/${leaseId}/notes`),
       create: (leaseId: string, body: string) =>
         apiClient.post<{ data: Note }>(`/api/v1/leases/${leaseId}/notes`, { body }),
+    },
+    notices: {
+      list: (leaseId: string) =>
+        apiClient.get<{ data: Notice[] }>(`/api/v1/leases/${leaseId}/notices`),
+      create: (leaseId: string, body: CreateNoticeInput) =>
+        apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
     },
   },
   invoices: {

@@ -7,6 +7,7 @@ import type {
   Note,
   UpdateLeaseTermsInput,
   RenewLeaseInput,
+  CreateNoticeInput,
 } from '@/lib/api/types';
 
 export function useCreateLease() {
@@ -172,5 +173,15 @@ export function useLeaseNotes(leaseId: string | null) {
 export function useCreateLeaseNote(leaseId: string) {
   return useApiSubmit((body: string) =>
     api.leases.notes.create(leaseId, body).then((res) => res.data.data),
+  );
+}
+
+// Drafts and immediately sends a formal lease notice (rent increase,
+// default, termination, etc.) -- the backend route also supports a DRAFT
+// status and a separate update step, but "Send Notice" from the tenant
+// console has no draft-review UI, so this always creates it pre-SENT.
+export function useCreateNotice(leaseId: string) {
+  return useApiSubmit((body: CreateNoticeInput) =>
+    api.leases.notices.create(leaseId, body).then((res) => res.data.data),
   );
 }
