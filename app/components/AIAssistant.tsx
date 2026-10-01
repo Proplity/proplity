@@ -94,7 +94,7 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
             className={`flex gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
           >
             <div
-              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                 msg.sender === 'ai' ? 'bg-blue-100' : 'bg-green-100'
               }`}
             >

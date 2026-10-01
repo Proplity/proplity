@@ -155,7 +155,7 @@ export function MessagingPortal() {
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`h-12 w-12 ${AVATAR_COLORS[index % AVATAR_COLORS.length]} flex flex-shrink-0 items-center justify-center rounded-full`}
+                      className={`h-12 w-12 ${AVATAR_COLORS[index % AVATAR_COLORS.length]} flex shrink-0 items-center justify-center rounded-full`}
                     >
                       <span className="font-semibold text-white">{initials(name)}</span>
                     </div>
@@ -174,7 +174,7 @@ export function MessagingPortal() {
                           {conv.lastMessage?.body ?? 'No messages yet'}
                         </p>
                         {conv.unreadCount > 0 && (
-                          <span className="ml-2 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
+                          <span className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                             {conv.unreadCount}
                           </span>
                         )}
