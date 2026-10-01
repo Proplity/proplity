@@ -21,10 +21,10 @@ export function signMockPayload(rawBody: string): string {
 
 // Shaped like a real Paystack `charge.success` webhook `data` object --
 // see docs/testing-guide.md's note on this mock for what's verified vs.
-// invented. Only the fields payments/webhook/route.ts actually reads
-// (reference, amount, channel, paid_at, metadata.invoiceId) are load-
-// bearing; the rest exists so the payload looks like the real thing to
-// anyone inspecting it, not because our own code consumes it.
+// invented. reference, amount, channel, paid_at, metadata.invoiceId, and
+// authorization.{authorization_code,reusable} are load-bearing (the latter
+// two feed payments/authorization/route.ts's auto-pay lookup); the rest
+// exists so the payload looks like the real thing to anyone inspecting it.
 export function buildMockChargePayload({
   reference,
   invoiceId,
@@ -78,7 +78,7 @@ export function buildMockChargePayload({
         bank: 'TEST BANK',
         country_code: 'NG',
         brand: 'visa',
-        reusable: false,
+        reusable: true,
         signature: `SIG_mock${reference.slice(-10)}`,
       },
       plan: null,

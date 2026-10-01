@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { getServerSession } from '@/lib/auth/session';
+import { getExpiredSession } from '@/lib/auth/session';
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -11,8 +11,13 @@ export async function POST(req: NextRequest) {
 
   // The refresh_token cookie is scoped to path=/api/v1/auth/refresh, so it is NOT
   // sent to this endpoint. Instead, read the access_token to identify the user
-  // and revoke all their active refresh tokens by userId.
-  const session = await getServerSession();
+  // and revoke all their active refresh tokens by userId. Deliberately tolerant
+  // of an EXPIRED access token here (getExpiredSession, not getServerSession) --
+  // an idle tab past 15 minutes must still revoke the DB-backed refresh token on
+  // logout, or the browser looks logged out while a stolen refresh token keeps
+  // working for up to 30 days. Signature is still fully verified; only the
+  // expiry check is relaxed, and only for this one cleanup purpose.
+  const session = await getExpiredSession();
 
   if (session) {
     await prisma.refreshToken

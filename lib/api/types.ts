@@ -80,6 +80,8 @@ export type CreatePropertyInput = {
   type?: string;
   description?: string;
   imageUrl?: string;
+  video360Url?: string;
+  exteriorPhotoUrl?: string;
 };
 
 export type CreateUnitInput = {
@@ -177,6 +179,12 @@ export type Notice = {
   createdAt: string;
 };
 
+export type CreateNoticeInput = {
+  type: Notice['type'];
+  content?: string;
+  status?: Notice['status'];
+};
+
 export type Note = {
   id: string;
   leaseId: string | null;
@@ -265,6 +273,31 @@ export type Payment = {
   notes: string | null;
 };
 
+export type AutoPayMandate = {
+  id: string;
+  leaseId: string;
+  provider: 'PAYSTACK' | 'FLUTTERWAVE' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
+  paymentMethodToken: string;
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+  nextChargeDate: string | null;
+  lastChargedAt: string | null;
+  createdAt: string;
+};
+
+export type CreateAutoPayMandateInput = {
+  leaseId: string;
+  paymentMethodToken: string;
+  provider?: string;
+  nextChargeDate?: string;
+};
+
+export type PaymentAuthorization = {
+  authorizationCode: string;
+  last4: string | null;
+  cardType: string | null;
+  bank: string | null;
+};
+
 export type Invoice = {
   id: string;
   invoiceNumber: string;
@@ -303,7 +336,8 @@ export type CreateInvoiceInput = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE';
   amount: number;
   dueDate: string;
   description?: string;
