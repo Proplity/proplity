@@ -424,6 +424,17 @@ export type AdminUser = {
   propertiesCount: number;
 };
 
+export type AuditLog = {
+  id: string;
+  actorId: string | null;
+  actor: { id: string; name: string; email: string } | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+};
+
 export type Subscription = {
   userId: string;
   tier: 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE';
