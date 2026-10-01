@@ -21,13 +21,15 @@ import {
   useUpdateLeaseTerms,
   useUpdateLeaseStatus,
   useRenewLease,
+  useCreateNotice,
   useSignLease,
 } from '@/hooks/useLeases';
+import { useCreateInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
-import type { Lease, Violation } from '@/lib/api/types';
+import type { Lease, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
 
 interface TenantDetailProps {
   leaseId: string;
@@ -312,6 +314,16 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     submitting: savingRenew,
     error: renewError,
   } = useRenewLease(leaseId);
+  const {
+    submit: submitNotice,
+    submitting: savingNotice,
+    error: noticeError,
+  } = useCreateNotice(leaseId);
+  const {
+    submit: submitInvoice,
+    submitting: savingInvoice,
+    error: invoiceError,
+  } = useCreateInvoice();
   const { open: openConversation } = useOpenConversation();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
@@ -327,6 +339,23 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     endDate: '',
     rentAmount: '',
     deposit: '',
+  });
+  const [sendingNotice, setSendingNotice] = useState(false);
+  const [noticeDraft, setNoticeDraft] = useState<{ type: Notice['type']; content: string }>({
+    type: 'PAYMENT_REMINDER',
+    content: '',
+  });
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [invoiceDraft, setInvoiceDraft] = useState<{
+    type: CreateInvoiceInput['type'];
+    amount: string;
+    dueDate: string;
+    description: string;
+  }>({
+    type: 'UTILITY',
+    amount: '',
+    dueDate: '',
+    description: '',
   });
 
   if (loading) {
@@ -429,6 +458,38 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       }
     } catch {
       // error surfaced below via renewError
+    }
+  };
+
+  const handleSendNotice = async () => {
+    try {
+      await submitNotice({
+        type: noticeDraft.type,
+        content: noticeDraft.content.trim() || undefined,
+        status: 'SENT',
+      });
+      setNoticeDraft({ type: 'PAYMENT_REMINDER', content: '' });
+      setSendingNotice(false);
+      refetchLease();
+    } catch {
+      // error surfaced below via noticeError
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    try {
+      await submitInvoice({
+        leaseId,
+        type: invoiceDraft.type,
+        amount: parseFloat(invoiceDraft.amount) || 0,
+        dueDate: invoiceDraft.dueDate,
+        description: invoiceDraft.description.trim() || undefined,
+      });
+      setInvoiceDraft({ type: 'UTILITY', amount: '', dueDate: '', description: '' });
+      setSendingInvoice(false);
+      refetchLease();
+    } catch {
+      // error surfaced below via invoiceError
     }
   };
 
@@ -581,7 +642,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 Renew Lease
               </button>
               <button
-                onClick={() => alert('Sending notices is not available yet.')}
+                onClick={() => setSendingNotice(true)}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Send Notice
@@ -646,6 +707,58 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                   </button>
                   <button
                     onClick={() => setRenewingLease(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {sendingNotice && (
+              <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-800">Send Notice</h3>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Notice Type</label>
+                  <select
+                    value={noticeDraft.type}
+                    onChange={(e) =>
+                      setNoticeDraft((s) => ({
+                        ...s,
+                        type: e.target.value as Notice['type'],
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="PAYMENT_REMINDER">Payment Reminder</option>
+                    <option value="RENT_INCREASE">Rent Increase</option>
+                    <option value="RENEWAL_OFFER">Renewal Offer</option>
+                    <option value="DEFAULT_NOTICE">Default Notice</option>
+                    <option value="EXPIRATION_ALERT">Expiration Alert</option>
+                    <option value="TERMINATION_NOTICE">Termination Notice</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Message</label>
+                  <textarea
+                    value={noticeDraft.content}
+                    onChange={(e) => setNoticeDraft((s) => ({ ...s, content: e.target.value }))}
+                    rows={3}
+                    placeholder="What does the tenant need to know?"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                {noticeError && <p className="text-sm text-red-600">{noticeError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSendNotice}
+                    disabled={savingNotice}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingNotice ? 'Sending…' : 'Send Notice'}
+                  </button>
+                  <button
+                    onClick={() => setSendingNotice(false)}
                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
@@ -963,13 +1076,86 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 WhatsApp
               </a>
               <button
-                onClick={() => alert('Sending an invoice from here is not available yet.')}
+                onClick={() => setSendingInvoice(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 <FileText className="h-4 w-4" />
                 Send Invoice
               </button>
             </div>
+
+            {sendingInvoice && (
+              <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-800">Send Invoice</h3>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Invoice Type</label>
+                  <select
+                    value={invoiceDraft.type}
+                    onChange={(e) =>
+                      setInvoiceDraft((s) => ({
+                        ...s,
+                        type: e.target.value as CreateInvoiceInput['type'],
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="UTILITY">Utility</option>
+                    <option value="LATE_FEE">Late Fee</option>
+                    <option value="ASSOCIATION_FEE">Association Fee</option>
+                    <option value="SECURITY_DEPOSIT">Security Deposit</option>
+                    <option value="SERVICE_CHARGE">Service Charge</option>
+                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="RENT">Rent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Amount (₦)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={invoiceDraft.amount}
+                    onChange={(e) => setInvoiceDraft((s) => ({ ...s, amount: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Due Date</label>
+                  <input
+                    type="date"
+                    value={invoiceDraft.dueDate}
+                    onChange={(e) => setInvoiceDraft((s) => ({ ...s, dueDate: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Description (optional)</label>
+                  <input
+                    type="text"
+                    value={invoiceDraft.description}
+                    onChange={(e) =>
+                      setInvoiceDraft((s) => ({ ...s, description: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                {invoiceError && <p className="text-sm text-red-600">{invoiceError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSendInvoice}
+                    disabled={savingInvoice || !invoiceDraft.amount || !invoiceDraft.dueDate}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingInvoice ? 'Sending…' : 'Send Invoice'}
+                  </button>
+                  <button
+                    onClick={() => setSendingInvoice(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Emergency Contact */}
