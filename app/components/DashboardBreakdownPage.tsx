@@ -344,7 +344,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                 <tr key={property.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
                         <Home className="h-4 w-4 text-blue-500" />
                       </div>
                       <p className="font-medium text-gray-800">{property.name}</p>
@@ -711,7 +711,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       {/* Hero Row */}
       <div className="flex items-center gap-6 rounded-xl border border-gray-200 bg-white p-6">
         <div
-          className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex flex-shrink-0 items-center justify-center`}
+          className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex shrink-0 items-center justify-center`}
         >
           <Icon className={`h-7 w-7 ${iconStyle.color}`} />
         </div>
@@ -834,7 +834,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                       <div key={m.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span
-                            className="h-3 w-3 flex-shrink-0 rounded-full"
+                            className="h-3 w-3 shrink-0 rounded-full"
                             style={{ background: m.fill }}
                           />
                           <span className="text-sm text-gray-700">{m.name}</span>
@@ -853,7 +853,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
               <h3 className="mb-1 font-semibold text-gray-900">Collection Status</h3>
               <p className="mb-4 text-xs text-gray-500">Collected vs. still pending · all time</p>
               <div className="flex items-center gap-6">
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <ResponsiveContainer width={160} height={160}>
                     <PieChart>
                       <Pie
@@ -886,7 +886,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                     <div key={s.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span
-                          className="h-3 w-3 flex-shrink-0 rounded-full"
+                          className="h-3 w-3 shrink-0 rounded-full"
                           style={{ background: s.fill }}
                         />
                         <span className="text-sm text-gray-700">{s.name}</span>

@@ -1,12 +1,32 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { PropertyApplicationForm } from '../../../../components/PropertyApplicationForm';
 import { useProperty } from '@/hooks/useProperties';
+import { useAuth } from '@/context/AuthContext';
+import { isTenantProfileComplete } from '@/lib/tenantProfile';
 
 export default function Page() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const auth = useAuth();
   const { data: property } = useProperty(id);
+
+  // Gate on the tenant profile being complete instead of asking for the
+  // same identity/vetting data again on every application -- see
+  // lib/tenantProfile.ts and CompleteProfileForm.tsx. auth.user resolves
+  // asynchronously (starts null), so this only fires once it's actually
+  // known to be incomplete -- never on the still-loading null state.
+  const profileIncomplete = !!auth.user && !isTenantProfileComplete(auth.user);
+  useEffect(() => {
+    if (profileIncomplete) {
+      router.replace(`/dashboard/profile/complete?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [profileIncomplete, pathname, router]);
+
+  if (profileIncomplete) return null;
 
   // Property has no price column (rent lives on Unit.rentAmount) -- show
   // the cheapest unit's rent, same convention as PropertyDiscovery's card.

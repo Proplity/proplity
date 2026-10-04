@@ -309,7 +309,7 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
 
               {(checkoutError || payError) && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   {checkoutError || payError}
                 </div>
               )}
@@ -380,7 +380,7 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
+                      <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
                       {feature}
                     </li>
                   ))}

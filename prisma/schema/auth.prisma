@@ -39,6 +39,15 @@ model User {
   emergencyContactName         String?
   emergencyContactRelationship String?
   emergencyContactPhone        String?
+  // Completed once via the tenant profile gate (required before applying
+  // to a property) and reused across every future application, instead of
+  // re-collecting it on the application form each time.
+  previousLandlordPhone        String?
+  previousLandlordEmail        String?
+  // Year only, not a full DOB -- PropertyApplicationForm used to ask for a
+  // full date of birth; the profile gate only needs an approximate age.
+  yearOfBirth                  Int?
+  idDocumentUrl                String?
   lastLoginAt                  DateTime?
   refreshTokens                RefreshToken[]
   verificationToken            VerificationToken?

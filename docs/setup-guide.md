@@ -127,6 +127,29 @@ This usually means the deployment itself isn't reachable yet, or is still
 being deployed/migrated. Confirm with your technical team that deployment
 has finished.
 
+## After setup: other configuration
+
+The wizard only creates the first administrator. A few other features depend
+on provider keys that your technical team sets in the deployment's
+environment (the complete list, with descriptions, is in `.env.example` and
+`DEPLOYMENT.md`). None of them stop the app from working — an unconfigured
+feature is simply reported as unavailable:
+
+- **Email** (`RESEND_API_KEY`, `EMAIL_FROM`) — verification links, password
+  resets, tenant invites and confirmations. Without a key, emails are only
+  written to the server log.
+- **File uploads** (the `CLOUDINARY_*` variables and
+  `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`) — maintenance photos, tenant ID
+  documents, property photos and video.
+- **Rent payments** (`PAYSTACK_SECRET_KEY`) — card checkout. For a test
+  environment only, `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED` provides a fake
+  checkout page; never turn it on where real users pay.
+- **Scheduled jobs** (`CRON_SECRET`) — the daily run that issues rent
+  invoices, flags overdue ones and expires access codes.
+- **Test-environment helpers** — `NEXT_PUBLIC_EMAIL_INBOX_ENABLED` shows
+  a "Sent Emails" panel so testers can open verification links without a real
+  inbox. Leave it off in production.
+
 ---
 
 _This document covers the one-time initial setup step only. For day-to-day

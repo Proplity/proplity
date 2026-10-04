@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
           where,
           skip,
           take,
-          include: { units: true },
+          // manager included so the admin moderation queue can show who
+          // submitted a listing without a second round-trip per property.
+          include: {
+            units: true,
+            manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
+          },
           orderBy: { createdAt: 'desc' },
         }),
         prisma.property.count({ where }),

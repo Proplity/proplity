@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Users,
   Building2,
@@ -35,6 +37,8 @@ function isWithinDays(iso: string, days: number) {
 }
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
+  const router = useRouter();
+  const [showDatabaseInfo, setShowDatabaseInfo] = useState(false);
   const { data: users, loading: usersLoading } = useAdminUsers();
   const { data: properties, loading: propertiesLoading } = useMyProperties();
   const { data: invoices, loading: invoicesLoading } = useInvoices();
@@ -96,12 +100,21 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   // maintenance requests), replacing the mock's fabricated "System Issues"
   // (no error/incident-tracking model exists anywhere in the schema).
   const attentionItems = [
+    ...properties
+      .filter((p) => p.moderationStatus === 'PENDING_REVIEW')
+      .map((p) => ({
+        title: `Property awaiting review: ${p.name}`,
+        time: p.createdAt,
+        severity: 'high' as const,
+        href: '/admin/properties',
+      })),
     ...invoices
       .filter((i) => i.status === 'OVERDUE')
       .map((i) => ({
         title: `Invoice ${i.invoiceNumber} overdue`,
         time: i.dueDate,
         severity: 'high' as const,
+        href: undefined,
       })),
     ...maintenanceRequests
       .filter((r) => r.status === 'CANCELLED')
@@ -109,6 +122,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
         title: `Maintenance request cancelled: ${r.title}`,
         time: r.updatedAt,
         severity: 'medium' as const,
+        href: undefined,
       })),
   ]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -190,7 +204,11 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           </div>
           <div className="divide-y divide-gray-200">
             {attentionItems.map((issue, index) => (
-              <div key={index} className="p-4 hover:bg-gray-50">
+              <div
+                key={index}
+                onClick={issue.href ? () => router.push(issue.href!) : undefined}
+                className={`p-4 hover:bg-gray-50 ${issue.href ? 'cursor-pointer' : ''}`}
+              >
                 <div className="flex items-center gap-3">
                   {issue.severity === 'high' ? (
                     <AlertCircle className="h-5 w-5 text-red-600" />
@@ -226,15 +244,15 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             <p className="text-xs text-gray-600">View all accounts</p>
           </button>
           <button
-            onClick={() => alert('Security settings are not built in this phase.')}
+            onClick={() => router.push('/admin/security')}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Shield className="mb-2 h-5 w-5 text-green-600" />
             <p className="text-sm font-medium">Security</p>
-            <p className="text-xs text-gray-600">Access control</p>
+            <p className="text-xs text-gray-600">Audit log</p>
           </button>
           <button
-            onClick={() => alert('Database management is not built in this phase.')}
+            onClick={() => setShowDatabaseInfo(true)}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Database className="mb-2 h-5 w-5 text-purple-600" />
@@ -242,7 +260,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             <p className="text-xs text-gray-600">Backups & logs</p>
           </button>
           <button
-            onClick={() => alert('System settings are not built in this phase.')}
+            onClick={() => router.push('/admin/settings')}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Settings className="mb-2 h-5 w-5 text-orange-600" />
@@ -250,6 +268,26 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             <p className="text-xs text-gray-600">System config</p>
           </button>
         </div>
+
+        {showDatabaseInfo && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+            <Database className="mt-0.5 h-5 w-5 shrink-0 text-purple-600" />
+            <div>
+              <p className="font-medium">No in-app database console</p>
+              <p className="mt-1 text-gray-600">
+                Backups, restores, and query logs for this platform&apos;s Postgres database are
+                managed at the hosting/infrastructure level, not from this dashboard — there is no
+                database-management feature to wire up here.
+              </p>
+              <button
+                onClick={() => setShowDatabaseInfo(false)}
+                className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Platform Growth */}

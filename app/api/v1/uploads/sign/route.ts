@@ -16,7 +16,7 @@ const signSchema = z.object({
   // auditable path (e.g. "maintenance-requests", "applications") rather
   // than a free-form string, so uploads can be found by kind in Cloudinary's
   // own console.
-  folder: z.enum(['maintenance-requests', 'applications']),
+  folder: z.enum(['maintenance-requests', 'applications', 'profile', 'properties']),
 });
 
 export const POST = withAuth(async (req) => {

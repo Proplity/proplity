@@ -72,7 +72,7 @@ function VerifyEmailContent() {
             <h2 className="mb-2 text-2xl font-bold">Account Activated</h2>
             <p className="mb-6 text-gray-600">Your account is verified and ready to use.</p>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/login')}
               className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
             >
               Sign In
@@ -106,7 +106,7 @@ function VerifyEmailContent() {
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
           {!token && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               This link is missing its verification token.
             </div>
           )}
@@ -144,7 +144,7 @@ function VerifyEmailContent() {
 
             {error && (
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 {error}
               </div>
             )}

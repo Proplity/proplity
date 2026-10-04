@@ -32,6 +32,7 @@ const createUnitSchema = z.object({
   rentAmount: z.number().positive(),
   listedPaymentFrequency: z.nativeEnum(PaymentFrequency).optional(),
   depositAmount: z.number().optional(),
+  serviceCharge: z.number().min(0).optional(),
   amenities: z.array(z.string()).optional(),
   mediaUrls: z.array(z.string()).optional(),
   sqft: z.number().int().optional(),

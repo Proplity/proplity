@@ -305,7 +305,7 @@ export function MaintenanceRequestForm() {
 
             {!uploadsEnabled() && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
                   Photo upload isn&apos;t available in this environment yet. You can still select
                   files below, but they won&apos;t be saved or sent with your request.
@@ -369,7 +369,7 @@ export function MaintenanceRequestForm() {
           {/* What happens next */}
           <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-blue-900">What happens next</p>
                 <p className="mt-1 text-xs text-blue-800">
@@ -382,7 +382,7 @@ export function MaintenanceRequestForm() {
 
           {(formError || error) && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {formError || error}
             </div>
           )}

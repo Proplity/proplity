@@ -80,9 +80,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       >
         <span className="text-sm font-medium text-gray-900">{q}</span>
         {open ? (
-          <ChevronUp className="h-4 w-4 flex-shrink-0 text-gray-400" />
+          <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" />
         ) : (
-          <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
         )}
       </button>
       {open && <p className="pb-4 text-sm leading-relaxed text-gray-600">{a}</p>}
@@ -293,7 +293,7 @@ export function ContactPage() {
                   href="mailto:hello@proplity.com"
                   className="group flex items-center gap-3 text-sm text-gray-700 transition-colors hover:text-blue-600"
                 >
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 transition-colors group-hover:bg-blue-100">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 transition-colors group-hover:bg-blue-100">
                     <Mail className="h-4 w-4 text-blue-600" />
                   </div>
                   hello@proplity.com
@@ -302,7 +302,7 @@ export function ContactPage() {
                   href="tel:+2341008007765489"
                   className="group flex items-center gap-3 text-sm text-gray-700 transition-colors hover:text-blue-600"
                 >
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 transition-colors group-hover:bg-blue-100">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 transition-colors group-hover:bg-blue-100">
                     <Phone className="h-4 w-4 text-blue-600" />
                   </div>
                   +234 130 800 PROPLITY

@@ -15,6 +15,7 @@ export type Unit = {
   bathrooms: number;
   sqft: number | null;
   rentAmount: number;
+  serviceCharge: number | null;
   listedPaymentFrequency: string;
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   amenities: string[];
@@ -79,6 +80,8 @@ export type CreatePropertyInput = {
   type?: string;
   description?: string;
   imageUrl?: string;
+  video360Url?: string;
+  exteriorPhotoUrl?: string;
 };
 
 export type CreateUnitInput = {
@@ -86,6 +89,7 @@ export type CreateUnitInput = {
   bedrooms: number;
   bathrooms: number;
   rentAmount: number;
+  serviceCharge?: number;
   listedPaymentFrequency?: string;
   depositAmount?: number;
   sqft?: number;
@@ -175,6 +179,12 @@ export type Notice = {
   createdAt: string;
 };
 
+export type CreateNoticeInput = {
+  type: Notice['type'];
+  content?: string;
+  status?: Notice['status'];
+};
+
 export type Note = {
   id: string;
   leaseId: string | null;
@@ -201,6 +211,7 @@ export type Lease = {
   startDate: string;
   endDate: string;
   rentAmount: number;
+  serviceCharge: number;
   paymentFrequency: string;
   deposit: number;
   status: string;
@@ -227,6 +238,7 @@ export type CreateLeaseInput = {
   startDate: string;
   endDate: string;
   rentAmount: number;
+  serviceCharge?: number;
   paymentFrequency?: string;
   deposit: number;
   gracePeriodDays?: number;
@@ -242,6 +254,14 @@ export type UpdateLeaseTermsInput = {
   lateFeeFlatAmount?: number;
 };
 
+export type RenewLeaseInput = {
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  paymentFrequency?: string;
+  deposit: number;
+};
+
 export type Payment = {
   id: string;
   invoiceId: string;
@@ -251,6 +271,31 @@ export type Payment = {
   transactionRef: string | null;
   paidAt: string;
   notes: string | null;
+};
+
+export type AutoPayMandate = {
+  id: string;
+  leaseId: string;
+  provider: 'PAYSTACK' | 'FLUTTERWAVE' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
+  paymentMethodToken: string;
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+  nextChargeDate: string | null;
+  lastChargedAt: string | null;
+  createdAt: string;
+};
+
+export type CreateAutoPayMandateInput = {
+  leaseId: string;
+  paymentMethodToken: string;
+  provider?: string;
+  nextChargeDate?: string;
+};
+
+export type PaymentAuthorization = {
+  authorizationCode: string;
+  last4: string | null;
+  cardType: string | null;
+  bank: string | null;
 };
 
 export type Invoice = {
@@ -291,7 +336,8 @@ export type CreateInvoiceInput = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE';
   amount: number;
   dueDate: string;
   description?: string;
@@ -376,6 +422,17 @@ export type AdminUser = {
   phoneNumber: string | null;
   createdAt: string;
   propertiesCount: number;
+};
+
+export type AuditLog = {
+  id: string;
+  actorId: string | null;
+  actor: { id: string; name: string; email: string } | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
 };
 
 export type Subscription = {

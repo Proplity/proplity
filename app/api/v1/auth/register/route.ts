@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { checkRateLimit, recordAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { sendEmail } from '@/lib/email';
 import { Role, UserStatus } from '@prisma/client';
 
@@ -27,12 +27,20 @@ export async function POST(req: NextRequest) {
   }
 
   const clientIp = getClientIp(req);
-  if (!(await checkRateLimit(`register:${clientIp}`))) {
+  const identifier = `register:${clientIp}`;
+
+  // Reserved before any work, atomically -- see reserveAttempt's own
+  // comment for why check-then-record separately raced. Released in the
+  // `finally` block below on every exit EXCEPT the duplicate-email path,
+  // which is the only one that counted toward the limit before this fix.
+  const { allowed, attemptId } = await reserveAttempt(identifier);
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Too many registration attempts. Please try again later.' },
       { status: 429 },
     );
   }
+  let keepReservation = false;
 
   try {
     const body = await req.json();
@@ -49,7 +57,7 @@ export async function POST(req: NextRequest) {
     // Check duplicate user
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      await recordAttempt(`register:${clientIp}`);
+      keepReservation = true;
       return NextResponse.json({ error: 'Email address is already registered' }, { status: 409 });
     }
 
@@ -151,5 +159,9 @@ export async function POST(req: NextRequest) {
     }
     console.error('Registration error:', err);
     return NextResponse.json({ error: 'Failed to process registration' }, { status: 500 });
+  } finally {
+    if (!keepReservation) {
+      await releaseAttempt(attemptId);
+    }
   }
 }
