@@ -1,5 +1,7 @@
 # Post-roadmap analysis: what's next after Phase 8
 
+> **Historical (2026-10-04).** This analysis proposed Phases 9 and 10, both since completed, and many "Finding 4" items have been resolved (self-registration verification, late fees, orphaned models, scheduled cron, uploads, rate limiting). For what is open today see `CLAUDE.md` "Known gaps" and `CURRENT_STATE.md`.
+
 **Date:** 2026-08-22. All 8 phases of `docs/development-history/domain-api-implementation-plan.md` are complete, committed, and live-tested (Phase 0-pre through Phase 8 — 34 API routes, 35 page routes, 5 background workers). This document is a fresh scan of the project's actual current state and a prioritized proposal for what comes next.
 
 ---
