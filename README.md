@@ -37,12 +37,13 @@ Third-party integrations are all optional locally — without keys the app logs 
 
 ## Where to read next
 
-| If you want…                                   | Read                                                   |
-| ---------------------------------------------- | ------------------------------------------------------ |
-| The authoritative rules, architecture, gotchas | [CLAUDE.md](CLAUDE.md)                                 |
-| What is built, what isn't, what's next         | [CURRENT_STATE.md](CURRENT_STATE.md)                   |
-| A tour of the directories                      | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)           |
-| First-time setup of a deployment               | [docs/setup-guide.md](docs/setup-guide.md)             |
-| How each role uses the app                     | [docs/flow-guide.md](docs/flow-guide.md)               |
-| The manual QA checklist and the test suites    | [docs/testing-guide.md](docs/testing-guide.md)         |
-| Why things were built the way they were        | [docs/development-history/](docs/development-history/) |
+| If you want…                                    | Read                                                   |
+| ----------------------------------------------- | ------------------------------------------------------ |
+| The authoritative rules, architecture, gotchas  | [CLAUDE.md](CLAUDE.md)                                 |
+| What is built, what isn't, what's next          | [CURRENT_STATE.md](CURRENT_STATE.md)                   |
+| A tour of the directories                       | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)           |
+| First-time setup of a deployment                | [docs/setup-guide.md](docs/setup-guide.md)             |
+| How each role uses the app                      | [docs/flow-guide.md](docs/flow-guide.md)               |
+| The manual QA checklist and the test suites     | [docs/testing-guide.md](docs/testing-guide.md)         |
+| What the product does today vs the original PRD | [docs/PRD-as-built.md](docs/PRD-as-built.md)           |
+| Why things were built the way they were         | [docs/development-history/](docs/development-history/) |

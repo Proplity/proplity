@@ -169,7 +169,8 @@ proplity/
 | `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                     |
 | `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                         |
 | `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`)                  |
-| `docs/PRD.md`                                                  | Product requirements                                                                          |
+| `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                        |
+| `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                  |
 | `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                    |
 | `docs/auth-implementation-plan.md`, `docs/auth-walkthrough.md` | Original auth design — **superseded**; see `CLAUDE.md` "Auth architecture"                    |
 | `docs/development-history/phases/*.md`                         | One write-up per completed phase/feature (domain API 0–10, notifications, wizard, gap audit…) |
