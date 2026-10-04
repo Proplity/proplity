@@ -94,6 +94,10 @@ model Lease {
   /// Renamed from `monthlyRent`, which was ambiguous once frequencies beyond
   /// MONTHLY were added — see prior schema review.
   rentAmount         Float
+  // Contracted recurring service charge, same cycle as rentAmount -- billed
+  // as its own InvoiceType.SERVICE_CHARGE line by the rent invoicer worker,
+  // not merged into the RENT invoice's amount.
+  serviceCharge      Float               @default(0)
   paymentFrequency   PaymentFrequency    @default(ANNUAL)
   deposit            Float
   gracePeriodDays    Int                 @default(7)

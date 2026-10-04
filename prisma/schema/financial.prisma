@@ -6,6 +6,12 @@ enum InvoiceType {
   LATE_FEE
   ASSOCIATION_FEE
   SUBSCRIPTION
+  // Re-added 2026-09-28 -- originally removed in migration
+  // 20260822172214_sync_schema_drift per CLAUDE.md ("only ASSOCIATION_FEE in
+  // PRD scope... additive to re-add later if a real requirement appears").
+  // A real requirement appeared (UI/UX gap audit): Unit/Lease.serviceCharge
+  // now generates its own invoice line, kept separate from RENT.
+  SERVICE_CHARGE
 }
 
 enum InvoiceStatus {

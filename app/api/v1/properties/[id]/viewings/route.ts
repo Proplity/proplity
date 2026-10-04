@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { sendEmail } from '@/lib/email';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,23 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const viewing = await prisma.propertyViewing.create({
       data: { propertyId: id, unitId, requestedById: session.sub, scheduledAt, notes },
     });
+
+    // ScheduleViewing.tsx's confirmation screen tells the visitor to "check
+    // your email for confirmation details" -- make that literally true,
+    // same console-transport sendEmail() pattern as moderation/tenant-invite.
+    const [requester, property] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.sub } }),
+      prisma.property.findUnique({ where: { id } }),
+    ]);
+    if (requester && property) {
+      await sendEmail({
+        to: requester.email,
+        subject: `Viewing confirmed: ${property.name}`,
+        body: `Hi ${requester.name},\n\nYour viewing of "${property.name}" (${property.address}) is confirmed for ${scheduledAt.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}.${
+          notes ? `\n\nYour notes: ${notes}` : ''
+        }\n\nPlease arrive a few minutes early and bring a valid ID.`,
+      });
+    }
 
     return NextResponse.json({ data: viewing }, { status: 201 });
   } catch (err) {

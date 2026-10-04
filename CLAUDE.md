@@ -8,20 +8,30 @@ Proplity is an AI-native rental/property management platform for the Nigerian ma
 
 ## Current state
 
-All 8 phases of the domain-API roadmap (`docs/development-history/domain-api-implementation-plan.md`) plus Phase 9 (frontend read-path hydration, `docs/development-history/next-phase-analysis.md` Finding 2) and Phase 10 (automated test suite, Finding 3) are **complete** — 36 API routes, 35 page routes, 5 background workers, 233 automated tests, all live-tested against the real dev server and seeded database. Full history in `docs/development-history/phases/*.md`, one doc per phase.
+All 8 phases of the domain-API roadmap (`docs/development-history/domain-api-implementation-plan.md`) plus Phase 9 (frontend read-path hydration, `docs/development-history/next-phase-analysis.md` Finding 2) and Phase 10 (automated test suite, Finding 3) are **complete**, and so is the post-roadmap work recorded under "Since the roadmap" below — 73 API routes, 48 page routes, 5 background workers (scheduled), 247 Vitest tests + 36 Playwright tests, 40 Prisma models, all live-tested against the real dev server and a real database. Full history in `docs/development-history/phases/*.md`, one doc per phase. Day-to-day state, counts and the changelog live in `CURRENT_STATE.md`.
 
-| Subsystem                                                                                                                    | Status                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Prisma schema (33 models, 8 modular files, 9 migrations)                                                                     | Done, migrated, seeded                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Auth API (`/api/v1/auth/*`, 11 routes)                                                                                       | Done — all known bugs from the pre-Phase-0 audit fixed. Includes password reset (`forgot-password`/`reset-password`), `resend-verification`, and `PATCH /me` (profile edit), added after the domain-API roadmap                                                                                                                                                                                                                         |
-| Domain APIs (properties, maintenance, leases, invoices/payments, access-codes, conversations, +vendors, +admin/users)        | Done — Phases 1–6, extended in Phase 9                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Background workers (rent invoicer, overdue flagger, maintenance dispatcher, access-code janitor, payment-reliability scorer) | Done — Phase 8, **scheduled** as of the deployment phase: `vercel.json` runs `/api/v1/cron/all` daily (Hobby-plan limits mean one job fans out to all 5 in dependency order). See `DEPLOYMENT.md` §4 and `docs/development-history/phases/domain-api-phase-8-background-workers.md`                                                                                                                                                     |
-| Paystack (checkout init, webhook, autopay)                                                                                   | Done, but `/payments/initialize`'s actual call to Paystack's API has never run against a real test-mode account — everything else is fully tested                                                                                                                                                                                                                                                                                       |
-| Email                                                                                                                        | Console-transport only (`lib/email.ts` logs instead of delivering) — real for the tenant-invite flow (Phase 7), not yet swapped for a real provider. Self-registration (`register`) still has no verification flow at all (separate, older gap, see "Deliberately deferred")                                                                                                                                                            |
-| Frontend UI (all 5 roles)                                                                                                    | Done — Phase 9. All 20 originally-catalogued mock-data dashboard/detail components now read real data via 10 hook files and a typed `api.*` client; 6 forms wired to real APIs (5 from Phase 7, `AddTenantForm`'s invite flow) plus the 20 hydrated for display. Only marketing/illustrative pages (`*FeaturePage.tsx`) and `AIAssistant.tsx` still touch `app/store/*` — deliberately out of scope, no real backing exists for either. |
-| Automated tests                                                                                                              | Done — Phase 10, extended since. Vitest, 233 tests across 13 files, `pnpm test`, run in CI on every PR. Real HTTP against a real spawned `next dev` server + a dedicated `proplity_test_db` (dropped/recreated per run) — see "Testing" below                                                                                                                                                                                           |
-| In-app notifications (bell, feed, toast, sound)                                                                              | Done, added after the domain-API roadmap. See `docs/development-history/phases/in-app-notifications.md`                                                                                                                                                                                                                                                                                                                                 |
-| First-run setup wizard (`/setup`, `POST /api/v1/setup`)                                                                      | Done, added after the domain-API roadmap. Bootstraps the first `ADMIN` on a fresh production database, then self-disables. See `docs/development-history/phases/first-run-setup-wizard.md`                                                                                                                                                                                                                                              |
+| Subsystem                                                                                                                                                                                        | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prisma schema (40 models, 10 files, 15 migrations)                                                                                                                                               | Done, migrated, seeded                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Auth API (`/api/v1/auth/*`, 10 routes)                                                                                                                                                           | Done. `login`, `logout`, `refresh`, `register`, `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `change-password`, `me` (GET + PATCH, incl. the tenant-profile fields). Hardened after an independent review (2026-09-30) — see "Auth architecture"                                                                                                                                                                                   |
+| Domain APIs (properties, maintenance, leases, invoices/payments, access-codes, conversations, vendors, applications, manager-codes, bank-accounts, notifications, subscriptions, uploads, admin) | Done — Phases 1–6, extended in Phase 9 and by the post-roadmap features below                                                                                                                                                                                                                                                                                                                                                                                     |
+| Background workers (rent invoicer, overdue flagger, maintenance dispatcher, access-code janitor, payment-reliability scorer)                                                                     | Done — Phase 8, **scheduled**: `vercel.json` runs `/api/v1/cron/all` daily (Hobby-plan limits mean one job fans out to all 5 in dependency order). See `DEPLOYMENT.md` §4 and `docs/development-history/phases/domain-api-phase-8-background-workers.md`. The rent invoicer also emits the recurring `SERVICE_CHARGE` invoice line                                                                                                                                |
+| Paystack (checkout init, webhook, autopay)                                                                                                                                                       | Done. `/payments/initialize`'s call to Paystack's live API has never run against a real test-mode account (no key provided) — everything else is tested, and a **mock gateway** (`NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED`, see below) exercises the real webhook path locally. Auto-pay: `AutoPayMandate` CRUD plus `GET /payments/authorization`, which derives a reusable card token from a past `charge.success` payload; **no cron actually charges mandates yet** |
+| Email                                                                                                                                                                                            | Real delivery via Resend when `RESEND_API_KEY` is set; otherwise console-transport (`lib/email.ts` logs instead of delivering). Self-registration now sends a verification email and starts the account as `PENDING_VERIFICATION`                                                                                                                                                                                                                                 |
+| File uploads                                                                                                                                                                                     | Direct-to-Cloudinary (`lib/uploadClient.ts` + `POST /api/v1/uploads/sign`), folders `maintenance-requests`, `applications`, `profile`, `properties`. Without Cloudinary env vars the UI shows a "not available" state instead of silently dropping files                                                                                                                                                                                                          |
+| Frontend UI (all 5 roles)                                                                                                                                                                        | Done — every dashboard/detail component reads real data via the hook files in `hooks/` and the typed `api.*` client; every form is wired to a real API. The UI/UX gap audit (2026-09-28 → 10-01) removed every dead `alert()` stub. Only marketing/illustrative pages (`*FeaturePage.tsx`) and `AIAssistant.tsx` still touch `app/store/*` — deliberately out of scope, no real backing exists for either.                                                        |
+| Automated tests                                                                                                                                                                                  | Done — Vitest: 247 tests across 15 files in `tests/api/` (`pnpm test`); Playwright: 36 tests in `tests/e2e/` (`pnpm test:e2e`). Both run in CI on every PR. See "Testing" below                                                                                                                                                                                                                                                                                   |
+| In-app notifications (bell, feed, toast, sound)                                                                                                                                                  | Done, added after the domain-API roadmap. See `docs/development-history/phases/in-app-notifications.md`                                                                                                                                                                                                                                                                                                                                                           |
+| First-run setup wizard (`/setup`, `POST /api/v1/setup`)                                                                                                                                          | Done, added after the domain-API roadmap. Bootstraps the first `ADMIN` on a fresh production database, then self-disables. See `docs/development-history/phases/first-run-setup-wizard.md`                                                                                                                                                                                                                                                                        |
+
+### Since the roadmap
+
+Chronological, each with a phase doc under `docs/development-history/phases/` (older items) or a changelog entry in `CURRENT_STATE.md`:
+
+- **Messaging wired end to end, mobile nav, Playwright suite, `docs/flow-guide.md`** — fixed the `useApiSubmit` stale-closure bug (see "Conventions").
+- **Tenant self-registration, in-dashboard property detail, payment-history separation, mock payment gateway, dev email inbox widget, role operational guide.**
+- **UI/UX gap audit (2026-09-28 → 10-01)** — service charge (`Unit`/`Lease.serviceCharge`, `InvoiceType.SERVICE_CHARGE`), multi-unit property listings, tenant profile gate + 3-step application, admin property-moderation queue, role-scoped "Properties" nav (manager "My Properties", tenant "My Rentals"), and every dead `alert()` stub wired: Renew Lease, Send Notice, Send Invoice, `ListProperty` media upload, tenant auto-pay, landlord report export / review scheduling, admin Security / Database / Settings tiles. See `docs/development-history/phases/ui-ux-gap-audit.md`.
+- **Auth hardening (2026-09-30)** — logout revocation for idle sessions, atomic rate limiting, last-hop client IP, CSRF Origin parsing. See `docs/auth-review-2026-09-30.md` and `docs/development-history/phases/auth-review-hardening.md`.
 
 Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
 
@@ -31,13 +41,17 @@ Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
 
 ```bash
 pnpm dev                          # dev server, localhost:3000
-pnpm exec tsc --noEmit            # type check
-pnpm build                        # production build
-pnpm exec tsx prisma/seed2.ts     # re-seed (enriched dataset)
-pnpm exec prisma migrate dev      # apply schema changes
-pnpm exec prisma generate         # regenerate client after schema edits
-pnpm test                         # run the automated test suite (see "Testing" below)
+pnpm typecheck                    # tsc --noEmit (CI runs this)
+pnpm format:check                 # prettier --check . (CI runs this; `pnpm format` to fix)
+pnpm build                        # production build (CI runs this)
+pnpm db:seed2                     # re-seed (enriched dataset); `pnpm db:seed` is the minimal one
+pnpm db:migrate                   # prisma migrate dev — apply schema changes locally
+pnpm db:generate                  # regenerate the Prisma client after schema edits
+pnpm test                         # Vitest API suite (see "Testing" below)
+pnpm test:e2e                     # Playwright UI suite (needs a seeded DB + running app)
 ```
+
+Before opening a PR, run `pnpm typecheck && pnpm format:check` — CI fails the whole PR on a single unformatted file, including generated ones (`docs/proplity-guide.html` is in `.prettierignore` for exactly that reason).
 
 Seeded dev accounts all use password `Password123!` — `admin@`, `manager@`, `landlord@`, `tenant@`, `vendor@proplity.com`.
 
@@ -123,6 +137,8 @@ DB column is `squareFeet`. API accepts and returns `sqft`. Alias at the serializ
 
 No application code generates it. It's `@unique`, so handle the (vanishingly rare) collision as a retry on insert conflict.
 
+Known cosmetic quirk: because this default is a raw `dbgenerated()` SQL string, Postgres re-normalizes its stored text slightly differently than the schema's literal string compares against. Every `prisma migrate dev --create-only` since this field existed re-emits a no-op `ALTER TABLE "Invoice" ALTER COLUMN "invoiceNumber" SET DEFAULT (...)` line restating the identical default. Harmless — don't mistake it for real drift when reviewing a new migration's diff.
+
 ### 12. `AccessLog` vs `AuditLog` — different tables, different purposes
 
 - `AccessLog` → gate events (grant/deny/expired attempt) on a specific `AccessCode`
@@ -132,27 +148,31 @@ No application code generates it. It's `@unique`, so handle the (vanishingly rar
 
 ## Auth architecture
 
-Access token (JWT, `jose`, 15 min, Edge-compatible) + opaque refresh token (32 random bytes, SHA-256 hashed in DB, 7 days).
+Access token (JWT, `jose`, 15 min, Edge-compatible) + opaque refresh token (32 random bytes, SHA-256 hashed in `RefreshToken`, with a `familyId` for rotation/reuse detection). The refresh token lives **30 days** when `rememberMe` is true (the login default) or **1 day** when false (`login/route.ts`); rotation inherits the old row's `expiresAt` rather than extending it, and the cookie's `maxAge` is set to the remaining lifetime.
 
 **Cookies** (`lib/auth/cookies.ts`):
 
 - `access_token` — `path=/`, HttpOnly, SameSite=Lax
 - `refresh_token` — `path=/api/v1/auth/refresh`, HttpOnly, SameSite=Lax
 
-Cookie deletion **must match path exactly** or the browser ignores it.
+Cookie deletion **must match path exactly** or the browser ignores it. Because of that path scoping, the refresh cookie is **never sent to `/logout`** — see "Logout" below.
 
 **Refresh rotation** (`/api/v1/auth/refresh`): atomic `updateMany` on `{ tokenHash, revokedAt: null, expiresAt: { gt: now } }`. If `count === 0` and the token exists with `revokedAt` set → **reuse detected** → revoke the entire `familyId`. This is the security-critical path; the atomicity is what prevents two concurrent refreshes both minting tokens. Don't refactor it into a read-then-write.
 
-**CSRF** (`lib/auth/csrf.ts`): Origin/Host match, `Referer` fallback, deny-by-default when both are missing. Applied to all mutating auth routes except `verify-email` (see rule 3).
+**Logout** (`/api/v1/auth/logout`): identifies whose refresh tokens to revoke by decoding `access_token` via `getExpiredSession()` — **not** `getServerSession()`. `verifyTokenAllowExpired()` (`lib/auth/jwt.ts`) accepts a signature-valid but _expired_ JWT, for this one cleanup purpose only, never for authorization. Using the strict helper silently skipped revocation for any tab idle past 15 minutes (browser looked logged out, the DB refresh token stayed valid). The expiry check is done with `err.code === 'ERR_JWT_EXPIRED'`, **not** `instanceof errors.JWTExpired` — Next.js can bundle `jose` into more than one module instance across the route-handler/library boundary and silently break `instanceof`.
 
-**Rate limiting** (`lib/auth/rateLimit.ts`): DB-backed via `LoginAttempt`, 5 attempts / 5 min. `getClientIp()` splits the `x-forwarded-for` proxy chain — note that header is client-suppliable behind a misconfigured proxy.
+**CSRF** (`lib/auth/csrf.ts`): Origin/Host match, `Referer` fallback, deny-by-default when both are missing; a malformed `Origin` header fails closed (403) rather than throwing. Applied to all mutating auth routes except `verify-email` and `reset-password` (see rule 3).
+
+**Rate limiting** (`lib/auth/rateLimit.ts`): DB-backed via `LoginAttempt`, **atomic** via `reserveAttempt(identifier, userId?, maxAttempts?)` / `releaseAttempt(attemptId)`. `reserveAttempt` takes a Postgres advisory lock scoped to the identifier (`pg_advisory_xact_lock(hashtext(identifier))`) inside a transaction, counts the window, and inserts the reservation in one atomic step — the old check-then-record pair let N concurrent requests all pass the count check before any had recorded. It is called **before** any slow work (bcrypt, DB writes, email). A route that shouldn't count a given outcome (e.g. a successful login) calls `releaseAttempt` to delete the reservation, which preserves each route's "only failures count" semantics. Limits: 5 attempts / 5 min by default; `refresh` uses `REFRESH_MAX_ATTEMPTS = 30` because it is a periodic background call from every authenticated tab, not a credential-guessing surface (the first version of the fix used 5 and broke the E2E suite under CI's shared IP). Used by `login`, `register`, `forgot-password`, `resend-verification`, `refresh` and `setup`. `getClientIp()` returns the **last** `x-forwarded-for` hop, not the first: each hop appends the IP it saw, so with a single trusted proxy (Vercel's edge) the last entry is what the trusted edge observed and the first is whatever the client sent. Don't switch it back to `[0]` — that made every per-IP limit bypassable.
 
 **Client refresh**: two mechanisms, both needed —
 
 - `hooks/useAuthRefresh.ts` — proactive timer, 13 min, re-checks `/me` before redirecting (prevents cross-tab logout races)
 - `lib/apiClient.ts` — reactive 401 interceptor with single-flight dedup (`refreshPromise`), catches what the timer misses when a tab is backgrounded and `setInterval` is throttled
 
----
+**Edge guard** (`proxy.ts`, Next 16's rename of `middleware.ts`): only inspects the short-lived `access_token` cookie for `/dashboard/*` and `/admin/*`. A request after 15+ minutes idle is bounced to `/?from=…`; `app/HomeLanding.tsx` waits for `AuthContext`'s silent refresh and then returns the user to `from` (validated by `lib/safeRedirect.ts`, same-origin relative paths only, shared with `/login`).
+
+**Registration**: `register` creates the user as `PENDING_VERIFICATION` with a 7-day `VerificationToken` and emails a link (`verify-email`); `login` 403s that status with a "verify your email" message and `resend-verification` re-sends. Self-registerable roles are `TENANT`, `LANDLORD`, `MANAGER`, `VENDOR` — **`ADMIN` can never be self-registered** (admins come from the `/setup` wizard or are provisioned out-of-band). A `MANAGER` sign-up must carry a valid, unredeemed landlord invite code (`ManagerInviteCode`, issued from the landlord dashboard; `GET /manager-codes/check` is a UX preview only — `register` re-validates and links it in the same transaction).
 
 ## Resolved (was "Known bugs — fix before Phase 1")
 
@@ -164,13 +184,16 @@ All fixed during the pages-separation phase — kept as a record, not a to-do: s
 
 Each of these was flagged during the phase that found it rather than silently guessed at, because building the wrong default would have been worse than leaving the gap open:
 
-- **`Unit.status` doesn't update when a lease is created or activated** (Phase 3) — a newly-tenanted unit stays `VACANT` in the data model. The exact state-transition rules (when to move to `OCCUPIED`, what happens on `TERMINATED`/`EXPIRED`) were never defined.
-- **`AccessCode` never auto-transitions to `USED`** (Phase 5) — the schema has a `USED` status but no flag distinguishing a single-use guest code from a deliberately reusable permanent one. Guessing either default risks breaking the other use case.
-- **Maintenance request image upload is display-only** (Phase 7) — no file-storage endpoint exists anywhere; `mediaUrls` is always submitted empty.
-- **`VendorCreateInvoice`'s submit never PATCHes the maintenance request to `COMPLETED`** (Phase 9.4) — it only creates the invoice, so a completed job can keep showing as open in stat counts until someone separately updates its status. Flagged during vendor-view hydration, left alone as outside that sub-phase's declared scope.
-- ~~**Background workers (Phase 8) are built and tested but not scheduled anywhere**~~ — **resolved.** `vercel.json` runs `/api/v1/cron/all` daily (Vercel's Hobby plan allows only 2 daily crons, fewer than the 5 workers, so one scheduled job fans out to all of them in dependency order). The route now accepts `GET` + `Authorization: Bearer` (what Vercel Cron sends) as well as the original `POST` + `x-cron-secret`. See `DEPLOYMENT.md` §4.
+- **Auto-pay never actually charges.** `AutoPayMandate` rows are created and cancelled for real (and `GET /payments/authorization` derives a reusable Paystack `authorization_code` from the tenant's own past `charge.success` payload — there is no card-entry UI, and building one is a PCI-scope decision), but no worker bills a mandate each cycle. `nextChargeDate`/`lastChargedAt` stay unset.
+- **`/payments/initialize`'s call to Paystack's live API has never run** against a real test-mode account — no key has been provided. The mock gateway covers everything downstream of it.
+- **No meeting/appointment model.** The landlord dashboard's "Schedule Review" starts a direct message to the property's manager instead; there is no calendar object behind it.
+- **`AuditLog` has one writer.** Only the first-run setup wizard writes to it, so `/admin/security` is a real viewer over a nearly-empty table. The "Database (backups & logs)" tile on the admin dashboard is an honest explanation that this is infrastructure-level, not an app feature — no backup/restore or query-log storage exists in the app.
+- **"Photos of Every Room" is a single column.** `Property` has `imageUrl`, `video360Url`, `exteriorPhotoUrl` only; the listing form accepts many room photos but persists the first as `imageUrl` and keeps the rest as a local count.
 - **Rent Invoicer advances one billing cycle per run**, not all overdue cycles at once — a lease several cycles behind catches up gradually across multiple runs. Deliberate, not a bug — see `docs/development-history/phases/domain-api-phase-8-background-workers.md`.
 - **`paymentReliabilityScorer.ts`'s scoring is a documented heuristic, not ML** — the PRD describes "late payment prediction" as an AI capability with no formula specified anywhere in the repo. The heuristic (on-time/late/missed ratio) is explicitly commented as a stand-in, not a finished feature.
+- **Admin notifications** — the screen is real, but no platform event currently triggers a notification _to_ an admin.
+
+**Resolved since the original list** (kept so nobody re-reports them): `Unit.status` now moves to `OCCUPIED` on lease activation and back to `VACANT` on termination/expiry (`leases/[id]/route.ts`); `AccessCode` auto-transitions to `USED` when `singleUse` (default true) — reusable gate codes set `singleUse: false`; maintenance photos upload for real via Cloudinary; `VendorCreateInvoice` completes the job automatically via the admin-controlled `autoCompleteMaintenanceOnInvoice` setting (`/admin/settings`); background workers are scheduled (`vercel.json` → `/api/v1/cron/all` daily; the route accepts `GET` + `Authorization: Bearer` as sent by Vercel Cron as well as `POST` + `x-cron-secret`).
 
 ---
 
@@ -181,39 +204,41 @@ See `DEPLOYMENT.md` — Vercel + GitHub Actions, env vars, cron, migrations.
 Two things there are easy to trip over:
 
 - **`DATABASE_URL`, `JWT_SECRET` and `CRON_SECRET` are needed at BUILD time**, not just runtime. `lib/db.ts`, `lib/auth/jwt.ts` and `lib/workers/auth.ts` each throw at module load when their secret is missing under `NODE_ENV=production`, and `next build` sets that. A missing one fails the build, not the request.
+- **Feature flags are `NEXT_PUBLIC_*`, so they are inlined at build time** — flipping `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED`, `NEXT_PUBLIC_EMAIL_INBOX_ENABLED`, `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED`, `NEXT_PUBLIC_SETUP_REDIRECT_ENABLED` or the `NEXT_PUBLIC_CLOUDINARY_*` pair in Vercel needs a redeploy, not a restart. `.env.example` documents every variable.
+- **Never enable the mock payment gateway or the dev email inbox on a real deployment.** `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED=true` only takes effect when `PAYSTACK_SECRET_KEY` is unset (a real key always wins), but `NEXT_PUBLIC_EMAIL_INBOX_ENABLED=true` exposes every sent email through unauthenticated `GET/DELETE /api/v1/dev/emails`.
 - **Never hardcode a base URL in an email.** Use `appUrl()` from `lib/appUrl.ts`; it resolves `NEXT_PUBLIC_APP_URL` → Vercel's own domain vars → localhost. Every outbound-email link used to be `http://localhost:3000`.
 
 ---
 
 ## Deliberately deferred
 
-- **Real email delivery** — `lib/email.ts` exists and works (console-transport: logs instead of sending), used by the Phase 7 tenant-invite flow. Swapping in a real provider (Resend/Postmark/SES) is a one-function change now that the interface exists. Separately, **self-registration still has no verification flow**: `register` sets `status: ACTIVE` directly and creates no `VerificationToken`. **When wiring real self-registration email: flip `register` to `PENDING_VERIFICATION` and relax the `login` 403 in the same commit**, or every new signup is locked out. (`app/api/v1/auth/verify-email/route.ts` already accepts an optional `password` alongside `token`, and `app/verify-email/page.tsx` already exists — both were built for the tenant-invite flow and are reusable here.)
-- **Redis blocklist** for instant session revocation — 15-min TTL bounds exposure; revisit only if instant kill becomes a product requirement.
-- **Real-time messaging** — v1 uses polling. WebSocket/SSE deferred.
-- **`SERVICE_CHARGE` invoice type** — removed; only `ASSOCIATION_FEE` is in PRD scope. Additive to re-add later if a real requirement appears.
-- **OAuth / social login / Clerk / Kinde** — designed (see `auth-implementation-plan.md` §9–10) but not built. Design principle if built: OAuth only authenticates; our own `RefreshToken` + `setAuthCookies` still issues the session. Never auto-link accounts by unverified email (account-takeover vector). PKCE + `state` are mandatory.
-- **`Subscription` model** — exists in schema but is **not in the PRD**. Built from admin-UI mock evidence only. Confirm with product before building billing on it.
-- **Actually scheduling the Phase 8 background workers** — see "Known gaps" above.
-- **Automated tests** — API: Vitest (`tests/`, `pnpm test`, run in CI). UI: Playwright (`tests/e2e/`, `pnpm test:e2e`) — smoke, per-role flows, responsive nav, landing featured-property popup. Runs in CI as the `E2E (Playwright)` job (production build, seeded Postgres, one worker). Locally it needs a seeded DB (`pnpm run db:seed2`) and a running app (`E2E_BASE_URL`).
+- **Real email delivery is built but only live when configured** — `lib/email.ts` sends via Resend when `RESEND_API_KEY` is set and falls back to console-transport otherwise. Self-registration verification, password reset, resend-verification and tenant invites all go through it.
+- **Redis blocklist** for instant session revocation — 15-min TTL bounds exposure; revisit only if instant kill becomes a product requirement. (Logout does revoke the DB refresh token, so a signed-out session can't be silently renewed.)
+- **Real-time messaging** — v1 uses polling (`useMessages`, 5 s). WebSocket/SSE deferred.
+- **`SERVICE_CHARGE` invoice type** — ~~removed~~ **re-added 2026-09-28** (migration `20260928085653_add_service_charge`): `serviceCharge` on `Unit` (advertised) and `Lease` (contracted), generated as its own `InvoiceType.SERVICE_CHARGE` invoice line (initial + recurring via `lib/workers/rentInvoicer.ts`), never merged into `RENT`'s amount. `ASSOCIATION_FEE` remains separately in scope as before.
+- **Add Tenant form's "Agency Fee" field** — removed 2026-09-28 (with "Security Deposit"). It was never wired to anything (captured in form state, never submitted, no schema field). If a real agency-fee requirement appears, it needs a schema field from scratch, not just a form field restored.
+- **Recurring auto-charge for `AutoPayMandate`** — see "Known gaps".
+- **OAuth / social login / Clerk / Kinde** — designed (see `docs/auth-implementation-plan.md` §9–10) but not built. Design principle if built: OAuth only authenticates; our own `RefreshToken` + `setAuthCookies` still issues the session. Never auto-link accounts by unverified email (account-takeover vector). PKCE + `state` are mandatory.
+- **`Subscription` model** — exists in schema but is **not in the PRD**. Built from admin-UI mock evidence only; checkout is behind `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED` and off by default. Confirm with product before building billing on it.
 
 ---
 
 ## Schema layout
 
-`prisma/schema/` — multi-file:
+`prisma/schema/` — multi-file, 40 models, 15 migrations:
 
-| File                   | Contents                                                                                                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `base.prisma`          | generator + datasource **only**, no models                                                                                                                             |
-| `auth.prisma`          | `User`, `VendorProfile`, `KycVerification`, `Note`, `Subscription`, `BankAccount`, `RefreshToken`, `VerificationToken`, `LoginAttempt`                                 |
-| `property.prisma`      | `Property`, `Unit`, `NeighbourhoodReport`, `PropertyViewing`, `PropertyReview`, `Announcement`, `Violation`, `Equipment`, `ConditionReport`, `AccessCode`, `AccessLog` |
-| `lease.prisma`         | `Lease`, `Notice`                                                                                                                                                      |
-| `operations.prisma`    | `MaintenanceCategory`, `MaintenanceRequest`, `MaintenanceSchedule`, `VendorRating`                                                                                     |
-| `financial.prisma`     | `Invoice`, `Payment`, `AutoPayMandate`                                                                                                                                 |
-| `communication.prisma` | `Conversation`, `ConversationParticipant`, `Message`                                                                                                                   |
-| `audit.prisma`         | `AuditLog`                                                                                                                                                             |
-| `notification.prisma`  | `Notification`                                                                                                                                                         |
-| `system.prisma`        | `SystemSettings` (singleton, `id = 'global'`) — guards the `/setup` first-run admin wizard                                                                             |
+| File                   | Contents                                                                                                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base.prisma`          | generator + datasource **only**, no models                                                                                                                                                                      |
+| `auth.prisma`          | `User` (incl. tenant-profile fields), `VendorProfile`, `KycVerification`, `Note`, `Subscription`, `ManagerInviteCode`, `BankAccount`, `RefreshToken`, `VerificationToken`, `PasswordResetToken`, `LoginAttempt` |
+| `property.prisma`      | `Property`, `AdCampaign`, `Unit`, `NeighbourhoodReport`, `PropertyViewing`, `PropertyReview`, `Announcement`, `Violation`, `Equipment`, `ConditionReport`, `AccessCode`, `AccessLog`                            |
+| `lease.prisma`         | `Lease`, `LeaseSignature`, `Notice`, `Application`                                                                                                                                                              |
+| `operations.prisma`    | `MaintenanceCategory`, `MaintenanceRequest`, `MaintenanceSchedule`, `VendorRating`                                                                                                                              |
+| `financial.prisma`     | `Invoice`, `Payment`, `AutoPayMandate`                                                                                                                                                                          |
+| `communication.prisma` | `Conversation`, `ConversationParticipant`, `Message`                                                                                                                                                            |
+| `audit.prisma`         | `AuditLog`                                                                                                                                                                                                      |
+| `notification.prisma`  | `Notification`                                                                                                                                                                                                  |
+| `system.prisma`        | `SystemSettings` (singleton, `id = 'global'`) — guards the `/setup` first-run admin wizard and holds platform toggles (`autoCompleteMaintenanceOnInvoice`)                                                      |
 
 Keep `base.prisma` config-only — new models go in a domain file.
 
@@ -222,8 +247,10 @@ Keep `base.prisma` config-only — new models go in a domain file.
 - `UnitStatus`: `VACANT | OCCUPIED | MAINTENANCE | RESERVED` (not `UNDER_MAINTENANCE`)
 - `LeaseStatus`: `PENDING | ACTIVE | EXPIRED | TERMINATED`
 - `NoticeType`: `RENEWAL_OFFER | RENT_INCREASE | DEFAULT_NOTICE | EXPIRATION_ALERT | PAYMENT_REMINDER | TERMINATION_NOTICE`
-- `InvoiceType`: `RENT | MAINTENANCE | SECURITY_DEPOSIT | UTILITY | LATE_FEE | ASSOCIATION_FEE | SUBSCRIPTION`
+- `InvoiceType`: `RENT | MAINTENANCE | SECURITY_DEPOSIT | UTILITY | LATE_FEE | ASSOCIATION_FEE | SUBSCRIPTION | SERVICE_CHARGE`
 - `MaintenanceStatus`: `SUBMITTED | IN_PROGRESS | SCHEDULED | COMPLETED | CANCELLED`
+- `AutoPayStatus`: `ACTIVE | PAUSED | CANCELLED`
+- `PaymentProvider`: `PAYSTACK | FLUTTERWAVE | BANK_TRANSFER | CASH | CHECK`
 
 Check the schema file before using an enum value — don't infer it from a plan doc.
 
@@ -244,11 +271,13 @@ Built in Phase 0, used by every domain route since:
 - `lib/api/validate.ts` — Zod wrapper, 400 with field errors
 - `lib/api/propertyAccess.ts` — `canManageProperty()` (ADMIN or the property's own manager/landlord) and `serializeUnit()` (`squareFeet` → `sqft`), reused across properties, leases, maintenance, and invoices
 
+Other shared modules worth knowing: `lib/uploadClient.ts` + `lib/cloudinary.ts` (signed direct-to-Cloudinary uploads), `lib/tenantProfile.ts` (the completeness gate for tenant applications), `lib/csv.ts` / `lib/xlsx.ts` (property/unit import-export), `lib/payments/mockGateway.ts` (local Paystack stand-in), `lib/notifications.ts` (`notifyUser`/`notifyUsers`), `lib/systemSettings.ts`, `lib/appUrl.ts`, `lib/safeRedirect.ts`.
+
 ---
 
 ## Testing
 
-`pnpm test` (Vitest, `tests/`) — 233 tests across 13 files, roughly one per domain. Run in CI against a `postgres:18` service container on every PR (`.github/workflows/ci.yml`). Full plan and rationale in `docs/development-history/phase-10-test-suite-plan.md`; per-sub-phase writeups in `docs/development-history/phases/domain-api-phase-10-*.md`.
+`pnpm test` (Vitest, `tests/api/`) — 247 tests across 15 files, roughly one per domain (`auth`, `properties`, `maintenance`, `leases`, `financial`, `access-control`, `communications`, `vendors-and-admin`, `deferred-flows`, `orphaned-models`, `csv-excel-import-export`, `e-signature`, `notifications`, `setup`, `health`). Run in CI against a `postgres:18` service container on every PR (`.github/workflows/ci.yml`: `Typecheck, format & build`, `Integration tests`, `E2E (Playwright)`). Full plan and rationale in `docs/development-history/phase-10-test-suite-plan.md`; per-sub-phase writeups in `docs/development-history/phases/domain-api-phase-10-*.md`.
 
 **Real HTTP against a real spawned server, not direct handler imports.** `getServerSession()` needs the Next.js request-scoped `AsyncLocalStorage` context, which doesn't exist if a route handler is imported and called directly — so `tests/setup/globalSetup.ts` spawns a real `next dev` process and every test hits it over `fetch` (`tests/helpers/client.ts`'s `apiFetch()`), the same way every phase's manual `curl` verification always has.
 
@@ -258,15 +287,21 @@ Built in Phase 0, used by every domain route since:
 
 **Fixtures** (`tests/helpers/fixtures.ts`) write directly via a test-side Prisma client (`tests/helpers/db.ts`'s `testPrisma`, separate from the app's `lib/db.ts` singleton), never through the API — keeps each test's assertions about the route actually under test. `resetDb()` truncates every table (discovered dynamically from `information_schema`, not a hardcoded list) once per test file's `beforeAll`.
 
-**Auth in tests**: `tests/helpers/auth.ts`'s `authCookie(userId, role)` mints a real JWT directly via the app's own `signAccessToken()`, bypassing login for every test file except `auth.test.ts` itself (where login is literally what's under test) — keeps other domains' tests fast and independent of the DB-backed login rate limiter.
+**Auth in tests**: `tests/helpers/auth.ts`'s `authCookie(userId, role)` mints a real JWT directly via the app's own `signAccessToken()`, bypassing login for every test file except `auth.test.ts` itself (where login is literally what's under test) — keeps other domains' tests fast and independent of the DB-backed login rate limiter. `expiredAccessCookie()` mints a validly-signed but already-expired token (used by the logout-revocation regression test), and `fillRateLimit` in `fixtures.ts` seeds `LoginAttempt` rows directly (note: a refresh-limit test must seed `REFRESH_MAX_ATTEMPTS`, not 5).
 
-**Known, deliberate gaps in coverage**: `/payments/initialize`'s actual call to Paystack's API (would be a live network call to an external service — matches the documented gap above) and any interactive browser behavior (no browser-automation tool available in this environment).
+**Playwright UI suite** (`tests/e2e/`, `pnpm test:e2e`) — 36 tests: `smoke/` (marketing, auth forms), `flows/` (per-role: tenant, landlord, vendor, admin; login; session restore after idle; featured-property popup; public-property CTA auth-awareness; the dev email-inbox widget; the mock payment round trip), `responsive/` (mobile tab bar). Runs in CI as its own job against a production build and a seeded Postgres, one worker. Locally it needs `pnpm db:seed2` and a running app (`E2E_BASE_URL`). **`MobileTabBar` shows only the first 3 tabs directly** (the rest fold into "More"), which `responsive/mobile-nav.spec.ts` asserts — when adding a role-scoped nav tab, put it after the existing primary three or update that test deliberately.
+
+**Known, deliberate gaps in coverage**: `/payments/initialize`'s actual call to Paystack's API (would be a live network call to an external service — matches the documented gap above), real Cloudinary uploads (not configured in dev/CI; the UI's "not available" fallback is what's exercised), and recurring auto-charging (not built).
 
 ---
 
 ## What's next
 
-All 6 domain-API phases, background workers, frontend hydration (Phase 9), and the automated test suite (Phase 10) are done. See `docs/development-history/next-phase-analysis.md` for the original prioritized proposal — only Finding 4 remains: a punch list of real Paystack test-mode key, real email provider, cron scheduling, and the `Unit.status`/`AccessCode.USED` gaps.
+All 8 domain-API phases, background workers, frontend hydration (Phase 9), the automated test suite (Phase 10) and the UI/UX gap audit are done. Open items:
+
+- **Finding 4 punch list** (`docs/development-history/next-phase-analysis.md`): a real Paystack test-mode key (to run `/payments/initialize` against the live API), and actually charging `AutoPayMandate`s on a schedule.
+- **A broader auth/security audit** beyond the 2026-09-30 review (`docs/auth-review-2026-09-30.md`), looking for further hardening.
+- Writing to `AuditLog` from the sensitive actions its schema comment lists (role changes, property transfers, invoice edits, admin overrides) — today only first-run setup writes to it.
 
 ---
 
@@ -277,6 +312,9 @@ All 6 domain-API phases, background workers, frontend hydration (Phase 9), and t
 - Soft-delete/archive over hard delete throughout (`isPublished = false`, `status = REVOKED`, `revokedAt`)
 - Prisma client is a singleton from `lib/db.ts` (`@prisma/adapter-pg` driver adapter) — don't instantiate `new PrismaClient()`
 - Currency is NGN; `lib/utils.ts` has `fmtNaira()`
+- **Write hooks go through `hooks/useApiSubmit.ts`** (`{ submit, submitting, error }`). `submit` is a plain per-render function on purpose: wrapping it in `useCallback(fn, [])` pinned whatever the hook closed over on first render and silently broke `useSendMessage(conversationId)` and `useCreateAdCampaign(propertyId)` once that id changed. Don't "optimise" it back.
+- **Replacing a dead button**: check whether a backend already exists first (it usually does — Renew Lease, Send Notice/Invoice, auto-pay were all fully built server-side). If none exists, show an honest explanation or the closest real action (e.g. Schedule Review → direct message); never fake success with a demo button.
+- Playwright selectors: this codebase's `<label>`s are plain siblings with no `htmlFor`, so `getByLabel(...)` silently waits out the full timeout — use type/placeholder/positional selectors.
 - Prefer explicit enums/relations over booleans for anything with more than two real states — this codebase has repeatedly upgraded booleans (`isUsed` → `AccessCodeStatus`, `isVerified` → `leaseId` FK)
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -230,7 +230,7 @@ export function AboutPage() {
               return (
                 <div key={item.title} className="flex gap-4">
                   <div
-                    className={`h-10 w-10 rounded-xl ${item.bg} mt-0.5 flex flex-shrink-0 items-center justify-center`}
+                    className={`h-10 w-10 rounded-xl ${item.bg} mt-0.5 flex shrink-0 items-center justify-center`}
                   >
                     <Icon className={`h-5 w-5 ${item.color}`} />
                   </div>
@@ -260,7 +260,7 @@ export function AboutPage() {
             <ul className="mb-8 space-y-4">
               {AI_FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-400" />
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" />
                   <span className="text-sm leading-relaxed text-gray-300">{f}</span>
                 </li>
               ))}

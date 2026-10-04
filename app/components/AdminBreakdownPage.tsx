@@ -274,7 +274,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
               <tr key={u.id} className="transition-colors hover:bg-gray-50">
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
                       <span className="text-xs font-semibold text-blue-700">
                         {u.name
                           .split(' ')
@@ -345,7 +345,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
               <tr key={p.id} className="transition-colors hover:bg-gray-50">
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-purple-50">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-50">
                       <Building2 className="h-4 w-4 text-purple-500" />
                     </div>
                     <p className="font-medium text-gray-800">{p.name}</p>
@@ -524,7 +524,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
 
       <div className="flex items-center gap-6 rounded-xl border border-gray-200 bg-white p-6">
         <div
-          className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex flex-shrink-0 items-center justify-center`}
+          className={`h-14 w-14 rounded-xl ${iconStyle.bg} flex shrink-0 items-center justify-center`}
         >
           <Icon className={`h-7 w-7 ${iconStyle.color}`} />
         </div>

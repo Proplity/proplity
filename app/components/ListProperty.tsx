@@ -15,13 +15,43 @@ import {
   Camera,
   Video,
   AlertCircle,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useCreateProperty } from '@/hooks/useProperties';
 import { api } from '@/lib/apiClient';
+import { uploadFile, uploadsEnabled, type UploadedFile } from '@/lib/uploadClient';
 
 interface ListPropertyProps {
   userRole: 'manager' | 'landlord';
 }
+
+type UnitFormData = {
+  unitNumber: string;
+  bedrooms: string;
+  bathrooms: string;
+  sqft: string;
+  rentAmount: string;
+  serviceCharge: string;
+  rentFrequency: string;
+};
+
+function makeUnit(unitNumber: string): UnitFormData {
+  return {
+    unitNumber,
+    bedrooms: '',
+    bathrooms: '',
+    sqft: '',
+    rentAmount: '',
+    serviceCharge: '',
+    rentFrequency: 'yearly',
+  };
+}
+
+// Per-unit creation status, so a partial failure (property created, but not
+// every unit) is recoverable -- the manager can retry just the failed units
+// instead of the whole submission, and the property is never rolled back.
+type UnitSubmitStatus = 'pending' | 'creating' | 'created' | 'failed';
 
 export function ListProperty({ userRole }: ListPropertyProps) {
   const router = useRouter();
@@ -33,6 +63,8 @@ export function ListProperty({ userRole }: ListPropertyProps) {
   const [submittingUnit, setSubmittingUnit] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitting = creatingProperty || submittingUnit;
+  const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
+  const [unitStatuses, setUnitStatuses] = useState<UnitSubmitStatus[]>([]);
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -40,21 +72,74 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     address: '',
     city: '',
     state: '',
-    bedrooms: '',
-    bathrooms: '',
-    sqft: '',
-    rentAmount: '',
-    rentFrequency: 'yearly',
     description: '',
     amenities: [] as string[],
     utilities: [] as string[],
   });
+  const [units, setUnits] = useState<UnitFormData[]>([makeUnit('1')]);
+
+  const addUnit = () => setUnits((u) => [...u, makeUnit(String(u.length + 1))]);
+  const removeUnit = (index: number) => setUnits((u) => u.filter((_, i) => i !== index));
+  const updateUnit = (index: number, patch: Partial<UnitFormData>) =>
+    setUnits((u) => u.map((unit, i) => (i === index ? { ...unit, ...patch } : unit)));
 
   const [uploadedMedia, setUploadedMedia] = useState({
-    photos: [] as string[],
-    video360: false,
-    exteriorPhotos: false,
+    photos: [] as UploadedFile[],
+    video360: null as UploadedFile | null,
+    exteriorPhotos: [] as UploadedFile[],
   });
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadingExterior, setUploadingExterior] = useState(false);
+  const [mediaUploadError, setMediaUploadError] = useState<string | null>(null);
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingVideo(true);
+    try {
+      const uploaded = await uploadFile(file, 'properties');
+      setUploadedMedia((s) => ({ ...s, video360: uploaded }));
+    } catch {
+      setMediaUploadError('The video failed to upload. Please try again.');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const handlePhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesArray = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = '';
+    if (filesArray.length === 0 || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingPhotos(true);
+    try {
+      const uploaded = await Promise.all(filesArray.map((f) => uploadFile(f, 'properties')));
+      setUploadedMedia((s) => ({ ...s, photos: [...s.photos, ...uploaded] }));
+    } catch {
+      setMediaUploadError('One or more photos failed to upload. Please try again.');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleExteriorUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesArray = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = '';
+    if (filesArray.length === 0 || !uploadsEnabled()) return;
+    setMediaUploadError(null);
+    setUploadingExterior(true);
+    try {
+      const uploaded = await Promise.all(filesArray.map((f) => uploadFile(f, 'properties')));
+      setUploadedMedia((s) => ({ ...s, exteriorPhotos: [...s.exteriorPhotos, ...uploaded] }));
+    } catch {
+      setMediaUploadError('One or more exterior photos failed to upload. Please try again.');
+    } finally {
+      setUploadingExterior(false);
+    }
+  };
 
   const totalSteps = 4;
 
@@ -117,6 +202,39 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     if (step > 1) setStep(step - 1);
   };
 
+  const unitPayload = (unit: UnitFormData) => ({
+    unitNumber: unit.unitNumber,
+    bedrooms: parseInt(unit.bedrooms, 10) || 0,
+    bathrooms: parseFloat(unit.bathrooms) || 0,
+    rentAmount: parseFloat(unit.rentAmount) || 0,
+    serviceCharge: parseFloat(unit.serviceCharge) || 0,
+    listedPaymentFrequency:
+      unit.rentFrequency === 'monthly' ? ('MONTHLY' as const) : ('ANNUAL' as const),
+    sqft: unit.sqft ? parseInt(unit.sqft, 10) : undefined,
+    amenities: formData.amenities.length > 0 ? formData.amenities : undefined,
+  });
+
+  // Creating N units is N separate API calls (no bulk-create endpoint) --
+  // not atomic. Runs sequentially so a manager can see exactly which unit
+  // failed rather than all-or-nothing; the property itself is never rolled
+  // back on a partial failure, since units 1..k already exist by then.
+  // Returns whether every unit in `indexes` succeeded, computed from local
+  // results rather than re-reading (possibly stale) React state.
+  const createUnitsSequentially = async (propertyId: string, indexes: number[]) => {
+    let allSucceeded = true;
+    for (const index of indexes) {
+      setUnitStatuses((s) => s.map((st, i) => (i === index ? 'creating' : st)));
+      try {
+        await api.properties.createUnit(propertyId, unitPayload(units[index]));
+        setUnitStatuses((s) => s.map((st, i) => (i === index ? 'created' : st)));
+      } catch {
+        setUnitStatuses((s) => s.map((st, i) => (i === index ? 'failed' : st)));
+        allSucceeded = false;
+      }
+    }
+    return allSucceeded;
+  };
+
   const handleSubmit = async () => {
     setSubmitError(null);
     try {
@@ -129,41 +247,83 @@ export function ListProperty({ userRole }: ListPropertyProps) {
         formData.utilities.length > 0
           ? `\n\nUtilities included: ${formData.utilities.join(', ')}`
           : '';
-      const property = await createProperty({
-        name: `${formData.propertyType || 'Property'} at ${formData.address}`,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        type: 'RESIDENTIAL',
-        description:
-          formData.description || utilitiesNote
-            ? `${formData.description}${utilitiesNote}`
-            : undefined,
-      });
+
+      let propertyId = createdPropertyId;
+      if (!propertyId) {
+        const property = await createProperty({
+          name: `${formData.propertyType || 'Property'} at ${formData.address}`,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          type: 'RESIDENTIAL',
+          description:
+            formData.description || utilitiesNote
+              ? `${formData.description}${utilitiesNote}`
+              : undefined,
+          imageUrl: uploadedMedia.photos[0]?.url,
+          video360Url: uploadedMedia.video360?.url,
+          exteriorPhotoUrl: uploadedMedia.exteriorPhotos[0]?.url,
+        });
+        propertyId = property.id;
+        setCreatedPropertyId(propertyId);
+        setUnitStatuses(units.map(() => 'pending'));
+      }
 
       setSubmittingUnit(true);
+      let allSucceeded = false;
       try {
-        await api.properties.createUnit(property.id, {
-          unitNumber: '1',
-          bedrooms: parseInt(formData.bedrooms, 10) || 0,
-          bathrooms: parseFloat(formData.bathrooms) || 0,
-          rentAmount: parseFloat(formData.rentAmount) || 0,
-          listedPaymentFrequency: formData.rentFrequency === 'monthly' ? 'MONTHLY' : 'ANNUAL',
-          sqft: formData.sqft ? parseInt(formData.sqft, 10) : undefined,
-          amenities: formData.amenities.length > 0 ? formData.amenities : undefined,
-        });
+        allSucceeded = await createUnitsSequentially(
+          propertyId,
+          units.map((_, i) => i),
+        );
       } finally {
         setSubmittingUnit(false);
       }
 
+      if (allSucceeded) {
+        alert(
+          'Property listing submitted for review! You will be notified by email once it is approved.',
+        );
+        router.push('/dashboard');
+      } else {
+        setSubmitError(
+          'The property was created, but one or more units failed. Retry the failed units below.',
+        );
+      }
+    } catch {
+      setSubmitError(propertyError ?? 'Failed to create the property listing.');
+    }
+  };
+
+  const handleRetryFailedUnits = async () => {
+    if (!createdPropertyId) return;
+    const failedIndexes = unitStatuses
+      .map((s, i) => (s === 'failed' ? i : -1))
+      .filter((i) => i >= 0);
+    if (failedIndexes.length === 0) return;
+    setSubmittingUnit(true);
+    let allSucceeded = false;
+    try {
+      allSucceeded = await createUnitsSequentially(createdPropertyId, failedIndexes);
+    } finally {
+      setSubmittingUnit(false);
+    }
+    // Only the previously-failed indexes were retried; every other unit was
+    // already 'created', so allSucceeded here means the whole set is done.
+    if (allSucceeded) {
+      setSubmitError(null);
       alert(
         'Property listing submitted for review! You will be notified by email once it is approved.',
       );
       router.push('/dashboard');
-    } catch {
-      setSubmitError(propertyError ?? 'Failed to create the unit for this listing.');
     }
   };
+
+  const allUnitsCreated =
+    createdPropertyId !== null &&
+    unitStatuses.length > 0 &&
+    unitStatuses.every((s) => s === 'created');
+  const anyUnitFailed = unitStatuses.some((s) => s === 'failed');
 
   const toggleArrayItem = (array: string[], item: string, setter: (val: any) => void) => {
     if (array.includes(item)) {
@@ -303,82 +463,149 @@ export function ListProperty({ userRole }: ListPropertyProps) {
           <div className="space-y-6">
             <h2 className="mb-4 text-xl font-semibold">Property Details</h2>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  <Bed className="mr-1 inline h-4 w-4" />
-                  Bedrooms *
-                </label>
-                <input
-                  type="number"
-                  value={formData.bedrooms}
-                  onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
-                  placeholder="e.g., 3"
-                  min="0"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
+            <div className="space-y-4">
+              {units.map((unit, index) => (
+                <div key={index} className="rounded-lg border border-gray-200 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">Unit {index + 1}</h3>
+                    {units.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeUnit(index)}
+                        className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  <Bath className="mr-1 inline h-4 w-4" />
-                  Bathrooms *
-                </label>
-                <input
-                  type="number"
-                  value={formData.bathrooms}
-                  onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
-                  placeholder="e.g., 2"
-                  min="0"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
+                  <div className="mb-4">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Unit Number/Label *
+                    </label>
+                    <input
+                      type="text"
+                      value={unit.unitNumber}
+                      onChange={(e) => updateUnit(index, { unitNumber: e.target.value })}
+                      placeholder="e.g., 3B"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  <Square className="mr-1 inline h-4 w-4" />
-                  Size (sq ft) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.sqft}
-                  onChange={(e) => setFormData({ ...formData, sqft: e.target.value })}
-                  placeholder="e.g., 1200"
-                  min="0"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <Bed className="mr-1 inline h-4 w-4" />
+                        Bedrooms *
+                      </label>
+                      <input
+                        type="number"
+                        value={unit.bedrooms}
+                        onChange={(e) => updateUnit(index, { bedrooms: e.target.value })}
+                        placeholder="e.g., 3"
+                        min="0"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  <DollarSign className="mr-1 inline h-4 w-4" />
-                  Rent Amount (₦) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.rentAmount}
-                  onChange={(e) => setFormData({ ...formData, rentAmount: e.target.value })}
-                  placeholder="e.g., 850000"
-                  min="0"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <Bath className="mr-1 inline h-4 w-4" />
+                        Bathrooms *
+                      </label>
+                      <input
+                        type="number"
+                        value={unit.bathrooms}
+                        onChange={(e) => updateUnit(index, { bathrooms: e.target.value })}
+                        placeholder="e.g., 2"
+                        min="0"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Rent Frequency *
-                </label>
-                <select
-                  value={formData.rentFrequency}
-                  onChange={(e) => setFormData({ ...formData, rentFrequency: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="yearly">Yearly</option>
-                  <option value="monthly">Monthly (Coming Soon)</option>
-                </select>
-              </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <Square className="mr-1 inline h-4 w-4" />
+                        Size (sq ft) *
+                      </label>
+                      <input
+                        type="number"
+                        value={unit.sqft}
+                        onChange={(e) => updateUnit(index, { sqft: e.target.value })}
+                        placeholder="e.g., 1200"
+                        min="0"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <DollarSign className="mr-1 inline h-4 w-4" />
+                        Rent Amount (₦) *
+                      </label>
+                      <input
+                        type="number"
+                        value={unit.rentAmount}
+                        onChange={(e) => updateUnit(index, { rentAmount: e.target.value })}
+                        placeholder="e.g., 850000"
+                        min="0"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        <DollarSign className="mr-1 inline h-4 w-4" />
+                        Service Charge (₦)
+                      </label>
+                      <input
+                        type="number"
+                        value={unit.serviceCharge}
+                        onChange={(e) => updateUnit(index, { serviceCharge: e.target.value })}
+                        placeholder="e.g., 50000"
+                        min="0"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        Rent Frequency *
+                      </label>
+                      <select
+                        value={unit.rentFrequency}
+                        onChange={(e) => updateUnit(index, { rentFrequency: e.target.value })}
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        <option value="yearly">Yearly</option>
+                        <option value="monthly">Monthly (Coming Soon)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {(parseFloat(unit.rentAmount) || 0) + (parseFloat(unit.serviceCharge) || 0) >
+                    0 && (
+                    <p className="mt-3 text-sm text-gray-600">
+                      Total per cycle: ₦
+                      {(
+                        (parseFloat(unit.rentAmount) || 0) + (parseFloat(unit.serviceCharge) || 0)
+                      ).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addUnit}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600"
+              >
+                <Plus className="h-4 w-4" />
+                Add Another Unit
+              </button>
             </div>
 
             <div>
@@ -457,58 +684,93 @@ export function ListProperty({ userRole }: ListPropertyProps) {
 
             <h2 className="text-xl font-semibold">Media Upload</h2>
 
+            {!uploadsEnabled() && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  File upload isn&apos;t available in this environment yet. You can continue without
+                  media and add it later.
+                </span>
+              </div>
+            )}
+
+            {mediaUploadError && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{mediaUploadError}</span>
+              </div>
+            )}
+
             {/* 360° Video */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Video className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">360° Walkthrough Video *</h3>
               <p className="mb-4 text-sm text-gray-600">Required for review</p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Video
-              </button>
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingVideo ? 'Uploading…' : 'Upload Video'}
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  disabled={uploadingVideo}
+                  className="hidden"
+                />
+              </label>
               {uploadedMedia.video360 && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Video uploaded successfully</span>
+                  <span className="text-sm font-medium">
+                    {uploadedMedia.video360.name} uploaded successfully
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Room Photos */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Camera className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">Photos of Every Room *</h3>
               <p className="mb-4 text-sm text-gray-600">
                 Living room, bedrooms, kitchen, bathrooms, etc.
               </p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Photos
-              </button>
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingPhotos ? 'Uploading…' : 'Upload Photos'}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotosUpload}
+                  disabled={uploadingPhotos}
+                  className="hidden"
+                />
+              </label>
               <p className="mt-2 text-xs text-gray-500">
                 {uploadedMedia.photos.length} photos uploaded
               </p>
             </div>
 
             {/* Exterior Photos */}
-            <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Home className="mx-auto mb-3 h-12 w-12 text-gray-400" />
               <h3 className="mb-1 font-semibold">Exterior Building View *</h3>
               <p className="mb-4 text-sm text-gray-600">Front view, compound, parking area</p>
-              <button
-                onClick={() => alert('Media upload is not available yet.')}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
-                Upload Photos
-              </button>
-              {uploadedMedia.exteriorPhotos && (
+              <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
+                {uploadingExterior ? 'Uploading…' : 'Upload Photos'}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleExteriorUpload}
+                  disabled={uploadingExterior}
+                  className="hidden"
+                />
+              </label>
+              {uploadedMedia.exteriorPhotos.length > 0 && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Photos uploaded successfully</span>
+                  <span className="text-sm font-medium">
+                    {uploadedMedia.exteriorPhotos.length} photo(s) uploaded successfully
+                  </span>
                 </div>
               )}
             </div>
@@ -519,20 +781,6 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                 can be published. Listings that don't pass review will be rejected.
               </p>
             </div>
-
-            {/* Mock upload for demo */}
-            <button
-              onClick={() => {
-                setUploadedMedia({
-                  photos: ['1', '2', '3'],
-                  video360: true,
-                  exteriorPhotos: true,
-                });
-              }}
-              className="w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 hover:bg-gray-200"
-            >
-              (Demo: Simulate Upload Complete)
-            </button>
           </div>
         )}
 
@@ -556,28 +804,66 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Bedrooms</p>
-                  <p className="font-semibold">{formData.bedrooms || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Bathrooms</p>
-                  <p className="font-semibold">{formData.bathrooms || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Size</p>
-                  <p className="font-semibold">
-                    {formData.sqft ? `${formData.sqft} sq ft` : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Rent</p>
-                  <p className="font-semibold text-green-600">
-                    {formData.rentAmount
-                      ? `₦${parseInt(formData.rentAmount).toLocaleString()}/${formData.rentFrequency}`
-                      : 'Not specified'}
-                  </p>
+                  <p className="text-sm text-gray-600">Units</p>
+                  <p className="font-semibold">{units.length}</p>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                {units.map((unit, index) => {
+                  const status = unitStatuses[index];
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-lg border border-gray-200 p-3 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          Unit {unit.unitNumber || index + 1} — {unit.bedrooms || '?'} bed,{' '}
+                          {unit.bathrooms || '?'} bath
+                        </p>
+                        <p className="text-gray-600">
+                          ₦
+                          {(
+                            (parseFloat(unit.rentAmount) || 0) +
+                            (parseFloat(unit.serviceCharge) || 0)
+                          ).toLocaleString()}
+                          /{unit.rentFrequency}
+                          {(parseFloat(unit.serviceCharge) || 0) > 0
+                            ? ` (incl. ₦${parseFloat(unit.serviceCharge).toLocaleString()} service charge)`
+                            : ''}
+                        </p>
+                      </div>
+                      {status && (
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            status === 'created'
+                              ? 'bg-green-100 text-green-700'
+                              : status === 'failed'
+                                ? 'bg-red-100 text-red-700'
+                                : status === 'creating'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {anyUnitFailed && (
+                <button
+                  type="button"
+                  onClick={handleRetryFailedUnits}
+                  disabled={submitting}
+                  className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {submitting ? 'Retrying…' : 'Retry Failed Units'}
+                </button>
+              )}
 
               {formData.amenities.length > 0 && (
                 <div>
@@ -597,13 +883,22 @@ export function ListProperty({ userRole }: ListPropertyProps) {
 
               <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" />
+                  <CheckCircle className="mt-0.5 h-6 w-6 shrink-0 text-green-600" />
                   <div>
                     <h3 className="mb-1 font-semibold text-green-900">Media Status</h3>
                     <ul className="space-y-1 text-sm text-green-800">
-                      <li>✓ 360° walkthrough video uploaded</li>
-                      <li>✓ {uploadedMedia.photos.length} room photos uploaded</li>
-                      <li>✓ Exterior photos uploaded</li>
+                      <li>
+                        {uploadedMedia.video360 ? '✓' : '○'} 360° walkthrough video
+                        {uploadedMedia.video360 ? ' uploaded' : ' not uploaded'}
+                      </li>
+                      <li>
+                        {uploadedMedia.photos.length > 0 ? '✓' : '○'} {uploadedMedia.photos.length}{' '}
+                        room photo(s) uploaded
+                      </li>
+                      <li>
+                        {uploadedMedia.exteriorPhotos.length > 0 ? '✓' : '○'}{' '}
+                        {uploadedMedia.exteriorPhotos.length} exterior photo(s) uploaded
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -641,7 +936,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || allUnitsCreated}
               className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload className="h-5 w-5" />
@@ -652,7 +947,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
 
         {submitError && (
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             {submitError}
           </div>
         )}

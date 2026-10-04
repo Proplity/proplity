@@ -13,6 +13,13 @@ export interface User {
   status: string;
   phoneNumber?: string | null;
   bio?: string | null;
+  yearOfBirth?: number | null;
+  emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
+  emergencyContactPhone?: string | null;
+  previousLandlordPhone?: string | null;
+  previousLandlordEmail?: string | null;
+  idDocumentUrl?: string | null;
   lastLoginAt?: string;
   createdAt?: string;
 }

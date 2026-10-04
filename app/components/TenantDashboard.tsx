@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   DollarSign,
   Home,
@@ -8,12 +9,20 @@ import {
   Key,
   FileText,
   MessageSquare,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
 import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
+import {
+  useAutoPayMandates,
+  usePaymentAuthorization,
+  useCreateAutoPayMandate,
+  useCancelAutoPayMandate,
+} from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Invoice, Payment } from '@/lib/api/types';
 
@@ -57,6 +66,42 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     openConversation({ type: 'LEASE_THREAD', leaseId: lease.id });
   };
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+
+  const {
+    data: autoPayMandates,
+    loading: autoPayLoading,
+    refetch: refetchAutoPay,
+  } = useAutoPayMandates(lease?.id ?? null);
+  const activeMandate = autoPayMandates[0] ?? null;
+  const { data: authorization } = usePaymentAuthorization(lease?.id ?? null);
+  const [settingUpAutoPay, setSettingUpAutoPay] = useState(false);
+  const {
+    submit: createMandate,
+    submitting: creatingMandate,
+    error: mandateError,
+  } = useCreateAutoPayMandate();
+  const { submit: cancelMandate, submitting: cancellingMandate } = useCancelAutoPayMandate();
+
+  const handleSetupAutoPay = async () => {
+    if (!lease || !authorization) return;
+    try {
+      await createMandate({
+        leaseId: lease.id,
+        paymentMethodToken: authorization.authorizationCode,
+        provider: 'PAYSTACK',
+      });
+      setSettingUpAutoPay(false);
+      refetchAutoPay();
+    } catch {
+      // error surfaced below via mandateError
+    }
+  };
+
+  const handleCancelAutoPay = async () => {
+    if (!activeMandate) return;
+    await cancelMandate(activeMandate.id);
+    refetchAutoPay();
+  };
 
   // A PENDING lease (awaiting signature, before a manager activates it)
   // never shows up via useActiveLease -- fetched separately just to surface
@@ -175,10 +220,19 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                   {balance > 0 ? 'Balance Due' : 'Paid'}
                 </span>
               </div>
-              <p className="mb-1 text-sm text-gray-600">Rent</p>
-              <p className="text-lg font-semibold">
-                ₦{lease.rentAmount.toLocaleString()}/{lease.paymentFrequency.toLowerCase()}
+              <p className="mb-1 text-sm text-gray-600">
+                {lease.serviceCharge > 0 ? 'Rent + Service Charge' : 'Rent'}
               </p>
+              <p className="text-lg font-semibold">
+                ₦{(lease.rentAmount + lease.serviceCharge).toLocaleString()}/
+                {lease.paymentFrequency.toLowerCase()}
+              </p>
+              {lease.serviceCharge > 0 && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                  ₦{lease.rentAmount.toLocaleString()} rent + ₦
+                  {lease.serviceCharge.toLocaleString()} service charge
+                </p>
+              )}
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -270,12 +324,78 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                         : 'No Balance Due'}
                   </button>
                   {payError && <p className="text-sm text-red-600">{payError}</p>}
-                  <button
-                    onClick={() => alert('Auto-pay setup is not available yet.')}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Setup Auto-Pay
-                  </button>
+
+                  {activeMandate ? (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                      <div className="flex items-center gap-2 text-green-800">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-medium">
+                          Auto-pay is active
+                          {authorization?.last4 ? ` (card ending ${authorization.last4})` : ''}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleCancelAutoPay}
+                        disabled={cancellingMandate}
+                        className="mt-2 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {cancellingMandate ? 'Cancelling…' : 'Cancel Auto-Pay'}
+                      </button>
+                    </div>
+                  ) : !settingUpAutoPay ? (
+                    <button
+                      onClick={() => setSettingUpAutoPay(true)}
+                      disabled={autoPayLoading}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Setup Auto-Pay
+                    </button>
+                  ) : (
+                    <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+                      {authorization ? (
+                        <>
+                          <p className="text-sm text-gray-700">
+                            Auto-pay each rent invoice using the card you last paid with
+                            {authorization.last4 ? ` (ending ${authorization.last4}` : ''}
+                            {authorization.bank ? `, ${authorization.bank}` : ''}
+                            {authorization.last4 ? ')' : ''}?
+                          </p>
+                          {mandateError && <p className="text-sm text-red-600">{mandateError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSetupAutoPay}
+                              disabled={creatingMandate}
+                              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {creatingMandate ? 'Setting up…' : 'Enable Auto-Pay'}
+                            </button>
+                            <button
+                              onClick={() => setSettingUpAutoPay(false)}
+                              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2 text-sm text-gray-700">
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            <span>
+                              No saved card yet. Pay one rent invoice online with a card first —
+                              auto-pay reuses that same card for future charges.
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setSettingUpAutoPay(false)}
+                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            Close
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-gray-200 pt-4">
