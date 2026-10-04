@@ -1,5 +1,7 @@
 # Proplity Platform — Development Progress Tracker
 
+> **Historical (2026-10-04).** Snapshot from 2026-08-17, when full-stack API integration was still pending. Everything listed as pending here has since been delivered; current status is in `CURRENT_STATE.md`.
+
 Last Updated: 2026-08-17
 
 ---

@@ -33,7 +33,7 @@ after the legitimate user believes they've logged out. This is the exact scenari
 an attacker with an out-of-band copy of the credential) that server-side revocability exists to
 defend against, and it's the one path where it doesn't fire.
 
-**Fix direction:** Logout needs a way to identify the user that doesn't depend on a *currently valid*
+**Fix direction:** Logout needs a way to identify the user that doesn't depend on a _currently valid_
 access token — e.g. a function that extracts `sub` from an expired-but-signature-valid JWT (verify
 signature only, skip expiry) for this one cleanup purpose, never for authorization decisions. Never
 silently no-op the revocation step just because the access token happened to already expire.
@@ -42,9 +42,9 @@ silently no-op the revocation step just because the access token happened to alr
 
 **File:** `lib/auth/rateLimit.ts`, used by `login`, `register`, and `forgot-password`
 
-**Issue:** `checkRateLimit(identifier)` runs a `prisma.loginAttempt.count()` *before* the slow async
+**Issue:** `checkRateLimit(identifier)` runs a `prisma.loginAttempt.count()` _before_ the slow async
 work in each route (bcrypt compare, DB writes, `sendEmail`); `recordAttempt()` only commits a new row
-*after*, and only on the failure path. Nothing serializes the read and the later write across
+_after_, and only on the failure path. Nothing serializes the read and the later write across
 concurrent requests sharing the same identifier.
 
 **Scenario:** N concurrent login (or register, or forgot-password) requests with the same
@@ -53,7 +53,7 @@ all N can pass the 5-attempt check in the same window, regardless of the configu
 being the backing store fixes durability (survives a restart, works across serverless instances) but
 does not fix this ordering problem — it's the identical bug class the AlEemaan/Octalve Edu auth
 review found and fixed (`docs/auth-review-2026-09-29.md` in that project), just against a DB table
-instead of an in-memory `Map`. Notably, `refresh/route.ts`'s own token-rotation logic *does* get this
+instead of an in-memory `Map`. Notably, `refresh/route.ts`'s own token-rotation logic _does_ get this
 right elsewhere in this same codebase (`updateMany` with a conditional `WHERE revokedAt: null` — an
 atomic check-and-update in one round trip) — the technique needed to fix this is already proven
 correct here, just not applied to the rate limiter.
@@ -98,7 +98,7 @@ fail-closed `403`. Small, but inconsistent within the same function.
   change** (`prisma.refreshToken.updateMany({ userId, revokedAt: null }, { revokedAt: new Date() })`
   inside the same transaction as the password update). This is precisely the
   `revokeUserSessions()`-on-credential-change pattern AlEemaan's own plan flagged as designed but
-  never wired up anywhere — worth copying the *trigger point* into AlEemaan/Octalve Edu's own
+  never wired up anywhere — worth copying the _trigger point_ into AlEemaan/Octalve Edu's own
   password-change flow once it's built (not the code directly — neither project has a refresh-token
   table).
 - **Enumeration-safe forgot-password** — identical response regardless of whether the account exists,
@@ -122,6 +122,6 @@ reads the one session cookie it always has direct access to and deletes the one 
 is no "which token can I actually reach from this route" indirection problem to get wrong, by
 construction. The refresh-cookie path-scoping that causes finding #1 is a genuinely reasonable idea in
 isolation (reduce a long-lived credential's exposure) — it just doesn't compose safely with "logout
-needs to identify the user," and that combination is worth remembering as a reason *not* to introduce
+needs to identify the user," and that combination is worth remembering as a reason _not_ to introduce
 a second, narrower-scoped credential into either project's own auth later without checking every route
 that needs to read it.

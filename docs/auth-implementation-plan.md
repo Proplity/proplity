@@ -1,5 +1,7 @@
 # In-House Authentication Plan — Next.js App Router (Revised)
 
+> **Superseded (2026-10-04).** This is the original design record and is kept for history only. The implementation has since changed in ways that matter: rate limiting is now atomic (`reserveAttempt` / `releaseAttempt` under a Postgres advisory lock, replacing `checkRateLimit` / `recordAttempt`), refresh lifetime is 30 days with `rememberMe` or 1 day without (not 7), `getClientIp()` uses the last `X-Forwarded-For` hop, logout uses `getExpiredSession()` so an idle session still revokes its refresh token, self-registration starts as `PENDING_VERIFICATION`, and routes live under `/api/v1/auth/*`. The current reference is `CLAUDE.md` "Auth architecture"; the review behind the latest changes is `docs/auth-review-2026-09-30.md`.
+
 This supersedes the original draft. Every item below was identified as a gap or bug across four rounds of review and has a concrete fix baked in. Sections marked **⚠ Known limitation** are deliberate, documented trade-offs rather than oversights.
 
 ---
