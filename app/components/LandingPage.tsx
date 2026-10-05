@@ -821,6 +821,11 @@ export function LandingPage() {
               <h4 className="mb-4 font-semibold text-white">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li>
+                  <Link href="/proplity-guide" className="hover:text-white text-blue-400 font-medium">
+                    Platform Role Guide (100+ Screenshots)
+                  </Link>
+                </li>
+                <li>
                   <a href="#" className="hover:text-white">
                     Features
                   </a>
