@@ -9,6 +9,7 @@
 Proplity is an all-in-one property management platform built for the Nigerian real estate market. It connects four groups of people — **Tenants**, **Landlords**, **Property Managers**, and **Service Providers (Vendors)** — under one roof, with an **Admin** overseeing the entire platform.
 
 Think of it like a digital office building:
+
 - A **Tenant** is the person renting a flat.
 - A **Landlord** owns the building and tracks their portfolio.
 - A **Property Manager** is the landlord's trusted representative who handles day-to-day operations.
@@ -21,29 +22,29 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ## Quick Reference: Login Accounts
 
-| Role | Email | Password | What They Do |
-|:---|:---|:---|:---|
-| **Visitor (Public)** | _(no login needed)_ | N/A | Browse listings, view properties |
-| **Tenant** | `tenant@proplity.com` | `Password123!` | Pay rent, report repairs, view lease |
-| **Landlord** | `landlord@proplity.com` | `Password123!` | Manage portfolio, track revenue |
-| **Property Manager** | `manager@proplity.com` | `Password123!` | Run daily operations for landlords |
-| **Vendor** | `vendor@proplity.com` | `Password123!` | Complete repair jobs, submit invoices |
-| **Admin** | `admin@proplity.com` | `Password123!` | Platform governance and oversight |
+| Role                 | Email                   | Password       | What They Do                          |
+| :------------------- | :---------------------- | :------------- | :------------------------------------ |
+| **Visitor (Public)** | _(no login needed)_     | N/A            | Browse listings, view properties      |
+| **Tenant**           | `tenant@proplity.com`   | `Password123!` | Pay rent, report repairs, view lease  |
+| **Landlord**         | `landlord@proplity.com` | `Password123!` | Manage portfolio, track revenue       |
+| **Property Manager** | `manager@proplity.com`  | `Password123!` | Run daily operations for landlords    |
+| **Vendor**           | `vendor@proplity.com`   | `Password123!` | Complete repair jobs, submit invoices |
+| **Admin**            | `admin@proplity.com`    | `Password123!` | Platform governance and oversight     |
 
 ---
 
 ## Before You Begin: Important Notes
 
-| Feature | Works? | Notes |
-|:---|:---|:---|
-| Browsing properties | ✅ Yes | No setup needed |
-| Login / Registration | ✅ Yes | Works immediately |
-| Maintenance requests | ✅ Yes | All workflows work |
-| Messaging | ✅ Yes | Real-time messages |
-| Email delivery | ⚙️ Config needed | Without a key, emails are logged in-app |
-| File/Photo uploads | ⚙️ Config needed | Cloudinary key needed |
-| Rent payments (Paystack) | ⚙️ Config needed | Use mock gateway for testing |
-| Subscription billing | 🔒 Coming soon | Marked "Coming Soon" in the UI |
+| Feature                  | Works?           | Notes                                   |
+| :----------------------- | :--------------- | :-------------------------------------- |
+| Browsing properties      | ✅ Yes           | No setup needed                         |
+| Login / Registration     | ✅ Yes           | Works immediately                       |
+| Maintenance requests     | ✅ Yes           | All workflows work                      |
+| Messaging                | ✅ Yes           | Real-time messages                      |
+| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app |
+| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                   |
+| Rent payments (Paystack) | ⚙️ Config needed | Use mock gateway for testing            |
+| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI          |
 
 ---
 
@@ -67,13 +68,12 @@ A simple form asking for the name, email, and password for the first admin user.
 
 ![Setup 01 Setup Page Mobile](screenshots/setup_01_setup_page_mobile.png)
 
-
 > ⚠️ **If you see a redirect to login instead of the setup form**, the platform was already set up. The super admin already exists. See: `docs/screenshots/setup_01b_setup_complete.png`
 
 ![Setup 01B Setup Complete](screenshots/setup_01b_setup_complete.png)
 
-
 **Step-by-step:**
+
 1. Open `http://yourdomain.com/setup` (or `http://localhost:3000/setup` locally)
 2. Fill in: **Full Name**, **Email Address**, **Password** (use a strong password)
 3. Click **Create Admin Account**
@@ -95,11 +95,13 @@ A simple form asking for the name, email, and password for the first admin user.
 The very first thing anyone sees when they visit Proplity. It showcases real properties available for rent across Nigerian cities.
 
 **What you see:**
+
 - A large hero banner with "Get Started" / "Browse Properties" buttons
 - A "How it works" section (step-by-step for tenants and landlords)
 - "Featured Properties" cards pulled from the live database
 
 **Screenshots:**
+
 - Desktop (full page): `docs/screenshots/visitor_01_homepage_desktop.png`
 
 ![Visitor 01 Homepage Desktop](screenshots/visitor_01_homepage_desktop.png)
@@ -124,8 +126,8 @@ The very first thing anyone sees when they visit Proplity. It showcases real pro
 
 ![Visitor 01 Homepage Mobile](screenshots/visitor_01_homepage_mobile.png)
 
-
 **Navigation:**
+
 - **Get Started** → registration page
 - **Browse Properties** → prompts sign-in
 - Click any property card → opens a quick-preview popup (see Step 1.2)
@@ -138,6 +140,7 @@ The very first thing anyone sees when they visit Proplity. It showcases real pro
 When you click a property card on the homepage, a **modal** (pop-up overlay) appears. It lets you quickly preview a property's key details without navigating away from the homepage.
 
 **What you see inside:**
+
 - Property photos with left/right arrows to slide through
 - Bedrooms, bathrooms, and size
 - Monthly rent
@@ -146,6 +149,7 @@ When you click a property card on the homepage, a **modal** (pop-up overlay) app
 - A **"View Details"** button to open the full listing
 
 **Screenshots:**
+
 - Modal open (first property): `docs/screenshots/visitor_02_property_modal_desktop.png`
 
 ![Visitor 02 Property Modal Desktop](screenshots/visitor_02_property_modal_desktop.png)
@@ -158,7 +162,6 @@ When you click a property card on the homepage, a **modal** (pop-up overlay) app
 
 ![Visitor 02 Property Modal](screenshots/visitor_02_property_modal.png)
 
-
 **Controls:** Use ← → arrows to slide · Press **Esc** or click outside to close · Click **View Details** to go to full page
 
 ---
@@ -169,6 +172,7 @@ When you click a property card on the homepage, a **modal** (pop-up overlay) app
 The complete page for a single rental property. Everything a prospective tenant needs to decide if they want to apply.
 
 **What you see:**
+
 - High-resolution photo gallery
 - Property name, location (area + city), and rent price
 - Full description from the landlord/manager
@@ -177,6 +181,7 @@ The complete page for a single rental property. Everything a prospective tenant 
 - **Schedule a Viewing** and **Apply for this Property** buttons
 
 **Screenshots:**
+
 - Desktop (top): `docs/screenshots/visitor_03_property_detail_desktop.png`
 
 ![Visitor 03 Property Detail Desktop](screenshots/visitor_03_property_detail_desktop.png)
@@ -197,7 +202,6 @@ The complete page for a single rental property. Everything a prospective tenant 
 
 ![Visitor 03 Property Detail](screenshots/visitor_03_property_detail.png)
 
-
 > **Cross-reference:** When a logged-in tenant views this page, "Apply" becomes fully active → see Section 2, Step 2.6.
 
 ---
@@ -208,12 +212,14 @@ The complete page for a single rental property. Everything a prospective tenant 
 The sign-in page for all registered users.
 
 **What you see:**
+
 - Email and password fields
 - **"Remember me"** checkbox (30-day session vs 1-day)
 - Demo login buttons (test environments only — auto-fill credentials)
 - Links to **Forgot Password** and **Resend Verification Email**
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/visitor_04_login_desktop.png`
 
 ![Visitor 04 Login Desktop](screenshots/visitor_04_login_desktop.png)
@@ -230,8 +236,8 @@ The sign-in page for all registered users.
 
 ![Visitor 04 Login](screenshots/visitor_04_login.png)
 
-
 **After login, each role goes to:**
+
 - Tenant / Landlord / Manager / Vendor → `/dashboard`
 - Admin → `/admin`
 
@@ -245,12 +251,14 @@ The sign-in page for all registered users.
 Where new users create their Proplity account. First step is picking your account type.
 
 **Step 1 — Role Selection (4 options):**
+
 1. **Tenant** — "I'm looking for a place to rent"
 2. **Landlord** — "I own properties I want to rent out"
-3. **Property Manager** — "I manage properties for a landlord" *(needs landlord invitation code)*
+3. **Property Manager** — "I manage properties for a landlord" _(needs landlord invitation code)_
 4. **Service Provider** — "I provide repair/maintenance services"
 
 **Screenshots (role cards):**
+
 - Desktop: `docs/screenshots/visitor_05_register_roles_desktop.png`
 
 ![Visitor 05 Register Roles Desktop](screenshots/visitor_05_register_roles_desktop.png)
@@ -263,8 +271,8 @@ Where new users create their Proplity account. First step is picking your accoun
 
 ![Visitor 05 Signup](screenshots/visitor_05_signup.png)
 
-
 **Step 2 — Fill in Your Details (Tenant example):**
+
 - Full legal name, email, Nigerian phone number
 - State of residence, occupation, employer
 - Password (must have uppercase, number, and symbol)
@@ -273,14 +281,15 @@ Where new users create their Proplity account. First step is picking your accoun
 
 ![Visitor 06 Register Tenant Form Desktop](screenshots/visitor_06_register_tenant_form_desktop.png)
 
-
 **After submitting:**
+
 - Verification email sent to your inbox
 - You see a "Please verify your email" notice
 - You cannot log in until you click the link
 - Use "Resend Verification" if you don't receive it
 
 **Full registration flow screenshots:**
+
 - Role selection: `tenant_reg_01_select_role.png`
 - Form filled: `tenant_reg_02_form.png`
 - Verification notice: `tenant_reg_03_notice.png`
@@ -295,12 +304,14 @@ Where new users create their Proplity account. First step is picking your accoun
 If a user forgets their password, this page enables them to initiate a secure recovery workflow.
 
 **What you see:**
+
 - Registered email address input field
 - "Send Reset Link" button
 - "Back to Login" navigation link
 - Built-in anti-enumeration security (generic response prevents user account harvesting)
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/visitor_07_forgot_password_desktop.png`
 
 ![Visitor 07 Forgot Password Desktop](screenshots/visitor_07_forgot_password_desktop.png)
@@ -309,8 +320,8 @@ If a user forgets their password, this page enables them to initiate a secure re
 
 ![Visitor 07 Forgot Password Mobile](screenshots/visitor_07_forgot_password_mobile.png)
 
-
 **Step-by-step:**
+
 1. Navigate to `/forgot-password` (or click "Forgot password?" on the login page)
 2. Enter your registered account email
 3. Click **Send Reset Link**
@@ -323,13 +334,13 @@ If a user forgets their password, this page enables them to initiate a secure re
 
 These pages explain the platform to prospective users. No login needed.
 
-| Page | URL | What it contains |
-|:---|:---|:---|
-| About | `/about` | Platform story and team |
-| For Landlords | `/for-landlords` | Features for property owners |
-| For Tenants | `/for-tenants` | Features for renters |
-| For Vendors | `/for-vendors` | Features for service providers |
-| Pricing | `/pricing` | Subscription plans (Coming Soon) |
+| Page          | URL              | What it contains                 |
+| :------------ | :--------------- | :------------------------------- |
+| About         | `/about`         | Platform story and team          |
+| For Landlords | `/for-landlords` | Features for property owners     |
+| For Tenants   | `/for-tenants`   | Features for renters             |
+| For Vendors   | `/for-vendors`   | Features for service providers   |
+| Pricing       | `/pricing`       | Subscription plans (Coming Soon) |
 
 ---
 
@@ -345,6 +356,7 @@ These pages explain the platform to prospective users. No login needed.
 After logging in, you land on your personal dashboard — the command centre showing everything important at a glance.
 
 **What you see:**
+
 - **Current Property card** — your unit address, floor, lease link
 - **Payment panel** — outstanding rent invoice with "Pay Now" button
 - **Quick Actions** — 3 shortcut buttons:
@@ -356,6 +368,7 @@ After logging in, you land on your personal dashboard — the command centre sho
 - **AI Assistant** — a chat widget for property questions
 
 **Screenshots:**
+
 - Desktop (top): `docs/screenshots/tenant_01_dashboard_desktop.png`
 
 ![Tenant 01 Dashboard Desktop](screenshots/tenant_01_dashboard_desktop.png)
@@ -372,7 +385,6 @@ After logging in, you land on your personal dashboard — the command centre sho
 
 ![Tenant 01 Dashboard](screenshots/tenant_01_dashboard.png)
 
-
 ---
 
 ## Step 2.2 — My Lease / Rentals
@@ -381,6 +393,7 @@ After logging in, you land on your personal dashboard — the command centre sho
 Shows all lease agreements on your account — current and past.
 
 **What you see:**
+
 - Active lease card: property name, unit, monthly rent, lease dates
 - Lease status badge: ACTIVE / EXPIRED / PENDING SIGNATURE
 - **Sign Lease** button (if awaiting your digital signature)
@@ -389,7 +402,6 @@ Shows all lease agreements on your account — current and past.
 **Screenshot:** `docs/screenshots/tenant_02_my_lease_desktop.png`
 
 ![Tenant 02 My Lease Desktop](screenshots/tenant_02_my_lease_desktop.png)
-
 
 > 💡 **Tip:** "PENDING SIGNATURE" means a lease is ready for you but you haven't signed yet. Click the card, review the terms, and sign digitally — no printing needed!
 
@@ -401,6 +413,7 @@ Shows all lease agreements on your account — current and past.
 Rent is paid directly through Proplity using Paystack. Monthly invoices are generated automatically — you just click to pay.
 
 **How to pay:**
+
 1. On your dashboard, look for the outstanding invoice in the Payment Panel
 2. Click **Pay Now** → a modal shows the exact amount due
 3. Click **Proceed to Payment** → redirected to Paystack checkout
@@ -409,6 +422,7 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 6. Redirected back to Proplity with "Payment Successful" confirmation
 
 **Screenshots:**
+
 - Pay Now modal: `docs/screenshots/tenant_03_pay_rent_modal_desktop.png`
 
 ![Tenant 03 Pay Rent Modal Desktop](screenshots/tenant_03_pay_rent_modal_desktop.png)
@@ -433,7 +447,6 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 
 ![Tenant 04 Payment History](screenshots/tenant_04_payment_history.png)
 
-
 ---
 
 ## Step 2.4 — Browse Properties
@@ -442,11 +455,13 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 Browse all published rental properties — useful when you want to move or find a new home.
 
 **What you see:**
+
 - Grid of property cards with photo, name, location, beds/baths, rent
 - Search and filter options at the top
 - **"Details"** button on each card
 
 **Screenshots:**
+
 - Desktop grid: `docs/screenshots/tenant_02_browse_properties_desktop.png`
 
 ![Tenant 02 Browse Properties Desktop](screenshots/tenant_02_browse_properties_desktop.png)
@@ -454,7 +469,6 @@ Browse all published rental properties — useful when you want to move or find 
 - Legacy: `docs/screenshots/tenant_02_browse.png`
 
 ![Tenant 02 Browse](screenshots/tenant_02_browse.png)
-
 
 ---
 
@@ -464,6 +478,7 @@ Browse all published rental properties — useful when you want to move or find 
 Same as the visitor view, but with **Apply** and **Schedule Viewing** buttons fully active.
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/tenant_03_property_detail_desktop.png`
 
 ![Tenant 03 Property Detail Desktop](screenshots/tenant_03_property_detail_desktop.png)
@@ -480,7 +495,6 @@ Same as the visitor view, but with **Apply** and **Schedule Viewing** buttons fu
 
 ![Tenant Apply 01 Property](screenshots/tenant_apply_01_property.png)
 
-
 ---
 
 ## Step 2.6 — Schedule a Viewing (Book Inspection)
@@ -489,6 +503,7 @@ Same as the visitor view, but with **Apply** and **Schedule Viewing** buttons fu
 Before applying, you can request to physically visit a property. The manager confirms a time.
 
 **Steps:**
+
 1. On a property detail page, click **Schedule Viewing**
 2. A modal appears with a date picker and time slot
 3. Pick your preferred date and time
@@ -497,6 +512,7 @@ Before applying, you can request to physically visit a property. The manager con
 6. Confirmation email is sent to you
 
 **Screenshots:**
+
 - Viewing modal (desktop): `docs/screenshots/tenant_04_schedule_viewing_desktop.png`
 
 ![Tenant 04 Schedule Viewing Desktop](screenshots/tenant_04_schedule_viewing_desktop.png)
@@ -509,7 +525,6 @@ Before applying, you can request to physically visit a property. The manager con
 
 ![Tenant 03 Schedule Viewing](screenshots/tenant_03_schedule_viewing.png)
 
-
 ---
 
 ## Step 2.7 — Apply for a Property (3-Step Application)
@@ -520,6 +535,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 > ⚠️ **Your profile must be complete before applying.** If key details are missing (year of birth, occupation, ID), the system redirects you to complete your profile first.
 
 **Step 0 — Complete Profile (if required):**
+
 - Screenshot: `docs/screenshots/tenant_apply_00_complete_profile.png`
 
 ![Tenant Apply 00 Complete Profile](screenshots/tenant_apply_00_complete_profile.png)
@@ -527,6 +543,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 - Fill in: employment, year of birth, emergency contact, ID document
 
 **Step 1 — Personal Information:**
+
 - Screenshot: `docs/screenshots/tenant_apply_02_step1_personal.png`
 
 ![Tenant Apply 02 Step1 Personal](screenshots/tenant_apply_02_step1_personal.png)
@@ -534,6 +551,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 - Your name and contact details (pre-filled from profile)
 
 **Step 2 — Employment & Financial Info:**
+
 - Screenshot: `docs/screenshots/tenant_apply_03_step2_employment.png`
 
 ![Tenant Apply 03 Step2 Employment](screenshots/tenant_apply_03_step2_employment.png)
@@ -541,6 +559,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 - Employer, job title, monthly income (helps manager assess affordability)
 
 **Step 3 — Review & Submit:**
+
 - Screenshot: `docs/screenshots/tenant_apply_04_step3_review.png`
 
 ![Tenant Apply 04 Step3 Review](screenshots/tenant_apply_04_step3_review.png)
@@ -548,6 +567,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 - Review everything, then click **Submit Application**
 
 **After submission:**
+
 - Screenshot: `docs/screenshots/tenant_apply_06_submitted_confirmation.png`
 
 ![Tenant Apply 06 Submitted Confirmation](screenshots/tenant_apply_06_submitted_confirmation.png)
@@ -565,6 +585,7 @@ A formal 3-step online application form that a tenant fills in to apply for a re
 Something broken? Use this form to report it. The manager assigns a tradesperson (vendor) to fix it.
 
 **How to submit:**
+
 1. Click **Request Repair** from your dashboard
 2. Fill in the form:
    - **Category:** Plumbing / Electrical / HVAC / Structural / Other
@@ -577,6 +598,7 @@ Something broken? Use this form to report it. The manager assigns a tradesperson
 4. Your request appears in "Track a Maintenance Request" on your dashboard
 
 **Screenshots:**
+
 - Maintenance list: `docs/screenshots/tenant_04_maintenance_list_desktop.png`
 
 ![Tenant 04 Maintenance List Desktop](screenshots/tenant_04_maintenance_list_desktop.png)
@@ -593,7 +615,6 @@ Something broken? Use this form to report it. The manager assigns a tradesperson
 
 ![Tenant 05 Maintenance Request](screenshots/tenant_05_maintenance_request.png)
 
-
 > **Cross-reference:** Manager sees this in their Maintenance Board → Section 4, Step 4.7
 
 ---
@@ -604,6 +625,7 @@ Something broken? Use this form to report it. The manager assigns a tradesperson
 A built-in messaging system connecting you directly with your property manager (and landlord). One conversation thread per tenancy — created automatically the first time you message.
 
 **How to use:**
+
 1. Click **Messages** in sidebar or **Message Manager** quick action on dashboard
 2. The conversation thread opens
 3. Type your message at the bottom
@@ -611,6 +633,7 @@ A built-in messaging system connecting you directly with your property manager (
 5. Manager sees your message in real time
 
 **Screenshots:**
+
 - Inbox: `docs/screenshots/tenant_07_messages.png`
 
 ![Tenant 07 Messages](screenshots/tenant_07_messages.png)
@@ -623,7 +646,6 @@ A built-in messaging system connecting you directly with your property manager (
 
 ![Tenant Msg Sent](screenshots/tenant_msg_sent.png)
 
-
 ---
 
 ## Step 2.10 — Notifications
@@ -634,6 +656,7 @@ A notification centre — keeps you informed about new invoices, maintenance upd
 **How to access:** Click the 🔔 bell icon (top-right) or navigate from sidebar.
 
 **Types of notifications:**
+
 - 💰 "Your rent invoice for November is ready"
 - ✅ "Your maintenance request has been assigned"
 - 📄 "Your lease renewal is ready for signing"
@@ -643,7 +666,6 @@ A notification centre — keeps you informed about new invoices, maintenance upd
 
 ![Tenant 08 Notifications](screenshots/tenant_08_notifications.png)
 
-
 ---
 
 ## Step 2.11 — Lease Documents
@@ -652,6 +674,7 @@ A notification centre — keeps you informed about new invoices, maintenance upd
 View your lease agreements, digital signatures, addenda, and notices from your landlord or property manager.
 
 **Screenshots:**
+
 - Lease documents: `docs/screenshots/tenant_08_lease_documents_desktop.png`
 
 ![Tenant 08 Lease Documents Desktop](screenshots/tenant_08_lease_documents_desktop.png)
@@ -659,7 +682,6 @@ View your lease agreements, digital signatures, addenda, and notices from your l
 - Active lease breakdown: `docs/screenshots/tenant_07_lease_details_desktop.png`
 
 ![Tenant 07 Lease Details Desktop](screenshots/tenant_07_lease_details_desktop.png)
-
 
 ---
 
@@ -669,6 +691,7 @@ View your lease agreements, digital signatures, addenda, and notices from your l
 An integrated AI chat assistant designed to answer tenant inquiries, explain Nigerian tenancy laws, draft maintenance issue descriptions, and clarify rent payment questions.
 
 **What you see:**
+
 - Chat interface with interactive prompt suggestions
 - AI responses referencing real platform data and tenancy terms
 - Direct link to initiate repair requests from AI suggestions
@@ -676,7 +699,6 @@ An integrated AI chat assistant designed to answer tenant inquiries, explain Nig
 **Screenshot:** `docs/screenshots/tenant_06_ai_chat_desktop.png`
 
 ![Tenant 06 Ai Chat Desktop](screenshots/tenant_06_ai_chat_desktop.png)
-
 
 ---
 
@@ -692,12 +714,14 @@ An integrated AI chat assistant designed to answer tenant inquiries, explain Nig
 The bird's-eye view of the entire property portfolio — how many properties, how many tenants, revenue summary.
 
 **What you see:**
+
 - Portfolio summary: total properties, total units, occupied vs. vacant
 - Revenue summary: monthly income vs expenses
 - Recent activity feed
 - Quick links to all sections
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/landlord_01_dashboard_desktop.png`
 
 ![Landlord 01 Dashboard Desktop](screenshots/landlord_01_dashboard_desktop.png)
@@ -710,7 +734,6 @@ The bird's-eye view of the entire property portfolio — how many properties, ho
 
 ![Landlord 01 Portfolio](screenshots/landlord_01_portfolio.png)
 
-
 ---
 
 ## Step 3.2 — My Properties (Portfolio View)
@@ -719,6 +742,7 @@ The bird's-eye view of the entire property portfolio — how many properties, ho
 A full list of all properties the landlord owns and has listed on Proplity, with occupancy status.
 
 **Screenshots:**
+
 - Desktop list: `docs/screenshots/landlord_02_properties_desktop.png`
 
 ![Landlord 02 Properties Desktop](screenshots/landlord_02_properties_desktop.png)
@@ -731,7 +755,6 @@ A full list of all properties the landlord owns and has listed on Proplity, with
 
 ![Landlord 02 Property Detail](screenshots/landlord_02_property_detail.png)
 
-
 ---
 
 ## Step 3.3 — List a New Property (3-Step Wizard)
@@ -740,6 +763,7 @@ A full list of all properties the landlord owns and has listed on Proplity, with
 How to add a new rental property to the platform so tenants can find and apply for it.
 
 **Step 1 — Basic Information:**
+
 - Property name, type (Flat, House, Commercial)
 - Full address: street, area, city, state
 - Description text
@@ -748,8 +772,8 @@ How to add a new rental property to the platform so tenants can find and apply f
 
 ![Landlord 03 List Step1](screenshots/landlord_03_list_step1.png)
 
-
 **Step 2 — Units & Amenities:**
+
 - Number of units (if block of flats)
 - Bedrooms, bathrooms, rent per unit
 - Optional service charge
@@ -758,8 +782,8 @@ How to add a new rental property to the platform so tenants can find and apply f
 
 ![Landlord 04 List Step2](screenshots/landlord_04_list_step2.png)
 
-
 **Step 3 — Photos & Publish:**
+
 - Upload property photos and video walkthrough
 - Preview your listing
 - Click **Publish** to go live
@@ -767,8 +791,8 @@ How to add a new rental property to the platform so tenants can find and apply f
 
 ![Landlord 05 List Step3](screenshots/landlord_05_list_step3.png)
 
-
 **Additional screenshots:**
+
 - Add property form (desktop): `docs/screenshots/landlord_03_add_property_desktop.png`
 
 ![Landlord 03 Add Property Desktop](screenshots/landlord_03_add_property_desktop.png)
@@ -776,7 +800,6 @@ How to add a new rental property to the platform so tenants can find and apply f
 - Unit management view: `docs/screenshots/landlord_04_unit_management_desktop.png`
 
 ![Landlord 04 Unit Management Desktop](screenshots/landlord_04_unit_management_desktop.png)
-
 
 ---
 
@@ -788,6 +811,7 @@ A page showing all tenants currently renting across all your properties.
 **What you see:** Tenant name, unit, lease dates, payment status. Click any row for full details.
 
 **Screenshots:**
+
 - Tenant list: `docs/screenshots/landlord_06_tenants.png`
 
 ![Landlord 06 Tenants](screenshots/landlord_06_tenants.png)
@@ -795,7 +819,6 @@ A page showing all tenants currently renting across all your properties.
 - Tenant detail: `docs/screenshots/landlord_06_tenant_details_desktop.png`
 
 ![Landlord 06 Tenant Details Desktop](screenshots/landlord_06_tenant_details_desktop.png)
-
 
 ---
 
@@ -808,7 +831,6 @@ All rental applications submitted to the landlord's properties — monitor who i
 
 ![Landlord 05 Applicant Screening Desktop](screenshots/landlord_05_applicant_screening_desktop.png)
 
-
 > **Cross-reference:** The Property Manager handles approving/rejecting → Section 4, Step 4.6
 
 ---
@@ -819,6 +841,7 @@ All rental applications submitted to the landlord's properties — monitor who i
 Overview of the landlord's financial position — rent collected, outstanding payments, expenses.
 
 **Screenshots:**
+
 - Financial dashboard: `docs/screenshots/landlord_07_financial_summary_desktop.png`
 
 ![Landlord 07 Financial Summary Desktop](screenshots/landlord_07_financial_summary_desktop.png)
@@ -826,7 +849,6 @@ Overview of the landlord's financial position — rent collected, outstanding pa
 - Maintenance costs: `docs/screenshots/landlord_07_maintenance.png`
 
 ![Landlord 07 Maintenance](screenshots/landlord_07_maintenance.png)
-
 
 ---
 
@@ -836,6 +858,7 @@ Overview of the landlord's financial position — rent collected, outstanding pa
 Landlords generate special codes and share them with people they want to appoint as Property Managers. A manager needs this code when registering — it links them to your account.
 
 **How it works:**
+
 1. Navigate to the Manager Codes section
 2. Click **Generate New Code**
 3. Share the code with the person you want as manager (WhatsApp, email, etc.)
@@ -858,11 +881,13 @@ Landlords generate special codes and share them with people they want to appoint
 The most information-dense dashboard in the platform. Shows everything the manager needs to run daily operations.
 
 **What you see:**
+
 - Stats: properties managed, active tenants, open maintenance tickets, pending applications
 - Recent activity feed
 - Quick access to all sections
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/manager_01_dashboard_desktop.png`
 
 ![Manager 01 Dashboard Desktop](screenshots/manager_01_dashboard_desktop.png)
@@ -883,7 +908,6 @@ The most information-dense dashboard in the platform. Shows everything the manag
 
 ![Manager 01 Dashboard](screenshots/manager_01_dashboard.png)
 
-
 ---
 
 ## Step 4.2 — Properties List (Manager's View)
@@ -892,6 +916,7 @@ The most information-dense dashboard in the platform. Shows everything the manag
 All properties the manager is responsible for, with occupancy status and key metrics.
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/manager_02_properties_list_desktop.png`
 
 ![Manager 02 Properties List Desktop](screenshots/manager_02_properties_list_desktop.png)
@@ -899,7 +924,6 @@ All properties the manager is responsible for, with occupancy status and key met
 - Legacy: `docs/screenshots/manager_02_discover.png`
 
 ![Manager 02 Discover](screenshots/manager_02_discover.png)
-
 
 ---
 
@@ -909,11 +933,13 @@ All properties the manager is responsible for, with occupancy status and key met
 Detailed view of a single property — all units, who's in them, vacancy status, and ability to edit property details.
 
 **What you can do:**
+
 - See all units (occupied / vacant)
 - Click a unit to see its history
 - Edit property info and amenities
 
 **Screenshots:**
+
 - Property detail: `docs/screenshots/manager_04_property_detail_desktop.png`
 
 ![Manager 04 Property Detail Desktop](screenshots/manager_04_property_detail_desktop.png)
@@ -921,7 +947,6 @@ Detailed view of a single property — all units, who's in them, vacancy status,
 - Add property modal: `docs/screenshots/manager_03_add_property_modal_desktop.png`
 
 ![Manager 03 Add Property Modal Desktop](screenshots/manager_03_add_property_modal_desktop.png)
-
 
 ---
 
@@ -931,6 +956,7 @@ Detailed view of a single property — all units, who's in them, vacancy status,
 When a unit is ready, the manager can directly invite a tenant via email, bypassing the online application process.
 
 **Step 1 — Select Unit & Tenant:**
+
 - Choose property and unit
 - Enter tenant's email (they receive an invitation)
 - Set monthly rent and any service charge
@@ -938,8 +964,8 @@ When a unit is ready, the manager can directly invite a tenant via email, bypass
 
 ![Manager 03 Add Tenant Step1](screenshots/manager_03_add_tenant_step1.png)
 
-
 **Step 2 — Configure the Lease:**
+
 - Set start and end dates
 - Payment schedule (monthly, quarterly)
 - Special terms
@@ -947,19 +973,17 @@ When a unit is ready, the manager can directly invite a tenant via email, bypass
 
 ![Manager 04 Add Tenant Step2](screenshots/manager_04_add_tenant_step2.png)
 
-
 **Step 3 — Review & Send:**
+
 - Review all terms
 - Click **Send Invite** — tenant gets an email to accept and set a password
 - Screenshot: `docs/screenshots/manager_05_add_tenant_step3.png`
 
 ![Manager 05 Add Tenant Step3](screenshots/manager_05_add_tenant_step3.png)
 
-
 **Modal view:** `docs/screenshots/manager_06_add_tenant_modal_desktop.png`
 
 ![Manager 06 Add Tenant Modal Desktop](screenshots/manager_06_add_tenant_modal_desktop.png)
-
 
 ---
 
@@ -969,12 +993,14 @@ When a unit is ready, the manager can directly invite a tenant via email, bypass
 Full list of all current and past tenants. Where daily tenant management happens.
 
 **What you can do:**
+
 - View profiles, payment history, lease details
 - Send invoices manually
 - Record payments
 - Issue lease renewal or termination notices
 
 **Screenshots:**
+
 - Tenant list: `docs/screenshots/manager_05_tenants_list_desktop.png`
 
 ![Manager 05 Tenants List Desktop](screenshots/manager_05_tenants_list_desktop.png)
@@ -982,7 +1008,6 @@ Full list of all current and past tenants. Where daily tenant management happens
 - Legacy: `docs/screenshots/manager_06_tenants_list.png`
 
 ![Manager 06 Tenants List](screenshots/manager_06_tenants_list.png)
-
 
 ---
 
@@ -992,32 +1017,32 @@ Full list of all current and past tenants. Where daily tenant management happens
 When a tenant applies online, it lands in the manager's queue. The manager reviews, approves or rejects, creates the lease, and activates it.
 
 **Stage 1 — Review Pending Applications:**
+
 - View tenant profile, employment info, ID document
 - Screenshot: `docs/screenshots/manager_review_01_pending_applications.png`
 
 ![Manager Review 01 Pending Applications](screenshots/manager_review_01_pending_applications.png)
 
-
 **Stage 2 — Approve the Application:**
+
 - Click "Approve" to accept the tenant
 - Screenshot: `docs/screenshots/manager_review_02_application_approved.png`
 
 ![Manager Review 02 Application Approved](screenshots/manager_review_02_application_approved.png)
 
-
 **Stage 3 — Create the Tenancy:**
+
 - Set lease dates, rent, service charge
 - Screenshot: `docs/screenshots/manager_review_03_create_tenancy.png`
 
 ![Manager Review 03 Create Tenancy](screenshots/manager_review_03_create_tenancy.png)
 
-
 **Stage 4 — Activate the Lease:**
+
 - Send for e-signatures from both parties. Once both sign, lease activates.
 - Screenshot: `docs/screenshots/manager_review_04_activate_lease.png`
 
 ![Manager Review 04 Activate Lease](screenshots/manager_review_04_activate_lease.png)
-
 
 > **Cross-reference:** Tenant signs the lease → Section 2, Step 2.2
 
@@ -1029,12 +1054,14 @@ When a tenant applies online, it lands in the manager's queue. The manager revie
 The manager's maintenance control centre — a Kanban-style board (like Trello) showing all repair requests organised by status.
 
 **Kanban columns:**
+
 - **New** — freshly submitted, not yet assigned
 - **In Progress** — vendor assigned, work underway
 - **Resolved** — work done, awaiting tenant confirmation
 - **Closed** — fully done
 
 **How the manager uses it:**
+
 1. New ticket appears in "New" column
 2. Manager reviews and clicks **Assign Vendor**
 3. Select the right vendor from the dropdown (e.g., plumber for water issue)
@@ -1042,6 +1069,7 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 5. Status moves through the board as work progresses
 
 **Screenshots:**
+
 - Kanban board (desktop): `docs/screenshots/manager_07_maintenance_desktop.png`
 
 ![Manager 07 Maintenance Desktop](screenshots/manager_07_maintenance_desktop.png)
@@ -1053,7 +1081,6 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 - Legacy: `docs/screenshots/manager_07_maintenance.png`
 
 ![Manager 07 Maintenance](screenshots/manager_07_maintenance.png)
-
 
 > **Cross-reference:** Vendor sees their assigned jobs → Section 5, Step 5.1
 
@@ -1068,7 +1095,6 @@ All financial activity across the manager's properties — rent collected, outst
 
 ![Manager 09 Financials Desktop](screenshots/manager_09_financials_desktop.png)
 
-
 ---
 
 ## Step 4.9 — Messages (Manager)
@@ -1079,7 +1105,6 @@ The manager's messaging inbox — shows conversations with all tenants and the l
 **Screenshot:** `docs/screenshots/manager_08_messages.png`
 
 ![Manager 08 Messages](screenshots/manager_08_messages.png)
-
 
 ---
 
@@ -1093,7 +1118,6 @@ A built-in AI chat assistant for property management questions, drafting notices
 **Screenshot:** `docs/screenshots/manager_10_ai_assistant_desktop.png`
 
 ![Manager 10 Ai Assistant Desktop](screenshots/manager_10_ai_assistant_desktop.png)
-
 
 ---
 
@@ -1109,11 +1133,13 @@ A built-in AI chat assistant for property management questions, drafting notices
 Home screen showing all maintenance jobs assigned to this vendor.
 
 **What you see:**
+
 - Job cards: property address, tenant name, problem description, urgency level
 - Job status: New / In Progress / Completed
 - Total jobs completed, invoices submitted
 
 **Screenshots:**
+
 - Desktop: `docs/screenshots/vendor_01_dashboard_desktop.png`
 
 ![Vendor 01 Dashboard Desktop](screenshots/vendor_01_dashboard_desktop.png)
@@ -1126,7 +1152,6 @@ Home screen showing all maintenance jobs assigned to this vendor.
 
 ![Vendor 01 Dashboard](screenshots/vendor_01_dashboard.png)
 
-
 ---
 
 ## Step 5.2 — Job Detail View
@@ -1135,6 +1160,7 @@ Home screen showing all maintenance jobs assigned to this vendor.
 Full details of a single maintenance job — what needs fixing, where, when, and any photos from the tenant.
 
 **What you see:**
+
 - Full problem description
 - Tenant photos of the issue
 - Property address and unit number
@@ -1143,6 +1169,7 @@ Full details of a single maintenance job — what needs fixing, where, when, and
 - **Update Status** button (move job from In Progress → Completed)
 
 **Screenshots:**
+
 - Job detail: `docs/screenshots/vendor_02_job_detail_desktop.png`
 
 ![Vendor 02 Job Detail Desktop](screenshots/vendor_02_job_detail_desktop.png)
@@ -1159,7 +1186,6 @@ Full details of a single maintenance job — what needs fixing, where, when, and
 
 ![Vendor 02 Job Detail](screenshots/vendor_02_job_detail.png)
 
-
 ---
 
 ## Step 5.3 — Submit an Invoice
@@ -1168,6 +1194,7 @@ Full details of a single maintenance job — what needs fixing, where, when, and
 After completing a job, the vendor submits an itemised invoice to the manager for payment.
 
 **Steps:**
+
 1. Open a completed job
 2. Click **Create Invoice** or **Submit Invoice**
 3. Add line items (e.g., "Labour – 3 hours", "Replacement pipe fitting")
@@ -1177,7 +1204,6 @@ After completing a job, the vendor submits an itemised invoice to the manager fo
 **Screenshot:** `docs/screenshots/vendor_03_create_invoice.png`
 
 ![Vendor 03 Create Invoice](screenshots/vendor_03_create_invoice.png)
-
 
 ---
 
@@ -1189,7 +1215,6 @@ Direct messaging with the property manager — for clarifying job details, reque
 **Screenshot:** `docs/screenshots/vendor_04_messages.png`
 
 ![Vendor 04 Messages](screenshots/vendor_04_messages.png)
-
 
 ---
 
@@ -1207,6 +1232,7 @@ Direct messaging with the property manager — for clarifying job details, reque
 Platform-wide statistics and health — the admin sees everything from one screen.
 
 **What you see:**
+
 - Total users, active tenants, listed properties, transactions
 - System health indicators
 - Recent platform events
@@ -1216,7 +1242,6 @@ Platform-wide statistics and health — the admin sees everything from one scree
 
 ![Admin 01 Overview](screenshots/admin_01_overview.png)
 
-
 ---
 
 ## Step 6.2 — User Management
@@ -1225,6 +1250,7 @@ Platform-wide statistics and health — the admin sees everything from one scree
 A searchable table of every registered user on the platform. The admin can manage any account.
 
 **What the admin can do:**
+
 - Search by name, email, or role
 - View a user's full profile and activity history
 - Suspend or re-activate an account
@@ -1234,7 +1260,6 @@ A searchable table of every registered user on the platform. The admin can manag
 
 ![Admin 02 Users](screenshots/admin_02_users.png)
 
-
 ---
 
 ## Step 6.3 — Properties Moderation Queue
@@ -1243,6 +1268,7 @@ A searchable table of every registered user on the platform. The admin can manag
 Every new property listing from a landlord goes through admin review before publishing publicly.
 
 **Admin action:**
+
 - Review listing details and photos
 - **Approve** → goes live on the platform
 - **Reject** → listing hidden, landlord notified with a reason
@@ -1250,7 +1276,6 @@ Every new property listing from a landlord goes through admin review before publ
 **Screenshot:** `docs/screenshots/admin_06_properties.png`
 
 ![Admin 06 Properties](screenshots/admin_06_properties.png)
-
 
 ---
 
@@ -1263,7 +1288,6 @@ Platform-wide reporting — properties listed, active tenants, revenue, maintena
 
 ![Admin 03 Reports](screenshots/admin_03_reports.png)
 
-
 ---
 
 ## Step 6.5 — Security & Audit Logs
@@ -1272,6 +1296,7 @@ Platform-wide reporting — properties listed, active tenants, revenue, maintena
 A chronological log of every significant action on the platform — used for security investigations.
 
 **What you see:**
+
 - Timestamp, user email, role
 - Action taken (e.g., "Updated Lease #123", "Failed login from IP 102.89.x.x")
 - IP address
@@ -1279,7 +1304,6 @@ A chronological log of every significant action on the platform — used for sec
 **Screenshot:** `docs/screenshots/admin_05_notifications.png`
 
 ![Admin 05 Notifications](screenshots/admin_05_notifications.png)
-
 
 ---
 
@@ -1291,7 +1315,6 @@ System-wide configuration — feature toggles, payment settings, email template 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
 ![Admin 04 Settings](screenshots/admin_04_settings.png)
-
 
 ---
 
@@ -1332,16 +1355,16 @@ TENANT                          MANAGER                         SYSTEM
 
 Proplity works on all screen sizes:
 
-| Breakpoint | Width | Device |
-|:---|:---|:---|
-| **Desktop** | 1400px | Monitor / workstation |
-| **Laptop** | 1280px | Standard laptop |
-| **Tablet** | 768px | iPad (portrait) |
-| **Mobile** | 390px | iPhone 14 / smartphone |
+| Breakpoint  | Width  | Device                 |
+| :---------- | :----- | :--------------------- |
+| **Desktop** | 1400px | Monitor / workstation  |
+| **Laptop**  | 1280px | Standard laptop        |
+| **Tablet**  | 768px  | iPad (portrait)        |
+| **Mobile**  | 390px  | iPhone 14 / smartphone |
 
 Multi-resolution screenshots captured for:
 Homepage, Login, Registration, Property detail, Tenant dashboard, Schedule viewing modal, Manager dashboard (desktop + tablet + mobile), Vendor dashboard.
 
 ---
 
-*Generated: 2026-10-04 · Proplity v0.1.0 · Screenshots at 1400×900 desktop unless labelled*
+_Generated: 2026-10-04 · Proplity v0.1.0 · Screenshots at 1400×900 desktop unless labelled_
