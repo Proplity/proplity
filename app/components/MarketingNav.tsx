@@ -14,6 +14,7 @@ const FEATURE_LINKS = [
 
 const NAV_LINKS = [
   { label: 'How it Works', href: '/#how-it-works' },
+  { label: 'Platform Guide', href: '/proplity-guide' },
   { label: 'Contact Us', href: '/contact' },
   { label: 'About Us', href: '/about' },
   { label: 'Pricing', href: '/pricing' },
