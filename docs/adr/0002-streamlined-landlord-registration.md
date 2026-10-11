@@ -1,7 +1,7 @@
 # 0002 — Landlord Registration Excludes Upfront Banking and Property Creation
 
 Status: Accepted
-Decided by: Abdullah Jamiu · Date: 2026-10-10
+Decided by: roji-tech · Date: 2026-10-10
 Recorded: 2026-10-10
 
 ## Context

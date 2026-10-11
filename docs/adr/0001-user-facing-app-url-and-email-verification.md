@@ -1,7 +1,7 @@
 # 0001 — User-Facing APP_URL for Emails and Web Links
 
 Status: Accepted
-Decided by: Abdullah Jamiu · Date: 2026-10-10
+Decided by: roji-tech · Date: 2026-10-10
 Recorded: 2026-10-10
 
 ## Context
