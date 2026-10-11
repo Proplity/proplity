@@ -33,10 +33,10 @@ Replace provider-shaped file references with a `StoredFile` table and one audite
 ## 3. Unified Verification & Quality Gates
 
 - [x] `pnpm typecheck`
-- [ ] `pnpm format:check`
-- [ ] `pnpm build`
-- [ ] Full API suite
-- [ ] Playwright (profile completion, maintenance request flows)
+- [x] `pnpm format:check`
+- [x] `pnpm build`
+- [x] Full API suite: 279 / 279 pass
+- [x] Playwright (tenant maintenance request, landlord, vendor flows) on a production build, :3022, `STORAGE_PROVIDER=local`: 4 / 4 pass
 
 ## 4. Notes
 
