@@ -18,25 +18,51 @@ const POLL_INTERVAL_MS = 4000;
 // copy-pasting the raw email text.
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
 
+function normalizeEmailLink(urlStr: string): string {
+  try {
+    const parsed = new URL(urlStr);
+    if (typeof window !== 'undefined') {
+      // If the link points to localhost or a different host, adopt the active browser origin
+      if (
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.host !== window.location.host
+      ) {
+        parsed.protocol = window.location.protocol;
+        parsed.host = window.location.host;
+      }
+    }
+    // Ensure the link opens the frontend page, not an API route
+    if (parsed.pathname.includes('/verify-email')) {
+      parsed.pathname = '/verify-email';
+    } else if (parsed.pathname.includes('/reset-password')) {
+      parsed.pathname = '/reset-password';
+    }
+    return parsed.toString();
+  } catch {
+    return urlStr;
+  }
+}
+
 function Linkified({ text }: { text: string }) {
   const parts = text.split(URL_PATTERN);
   return (
     <>
-      {parts.map((part, i) =>
-        URL_PATTERN.test(part) ? (
+      {parts.map((part, i) => {
+        if (!URL_PATTERN.test(part)) return <span key={i}>{part}</span>;
+        const normalized = normalizeEmailLink(part);
+        return (
           <a
             key={i}
-            href={part}
+            href={normalized}
             target="_blank"
             rel="noopener noreferrer"
-            className="break-all text-blue-600 underline hover:text-blue-800"
+            className="font-medium break-all text-blue-600 underline hover:text-blue-800"
           >
-            {part}
+            {normalized}
           </a>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
+        );
+      })}
     </>
   );
 }

@@ -1,7 +1,7 @@
 # 📊 Proplity — Current Project & Codebase State
 
-> **Last Updated:** 2026-10-04
-> **Status:** Full domain-API roadmap complete (Phase 0-pre through Phase 8), plus Phase 9 frontend read-path hydration and Phase 10's automated test suite | The UI/UX gap audit below is complete (all dead `alert()` stubs wired or honestly explained); next up is the Finding-4 punch list — see `docs/development-history/next-phase-analysis.md`
+> **Last Updated:** 2026-10-11
+> **Status:** Full domain-API roadmap complete | UI/UX gap audit complete | Registration UX modernization on `feature/registration-ux-and-e2e` (ADR-0001 to 0006, task 0001, awaiting PR); open problems tracked in `docs/issues/issues.md`.
 
 ---
 
@@ -17,7 +17,7 @@
 | **Paystack Integration**      |   **Built**   | Checkout init, HMAC-SHA512 webhook, auto-pay mandates + reusable-authorization lookup. Webhook live-tested (self-signed key) and exercised end to end by the mock gateway (`NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED`, `/dev/mock-checkout`). `/payments/initialize`'s call to Paystack's live API has never run — no real test-mode key yet. No cron charges auto-pay mandates yet.                                                     |
 | **Email**                     |   **Built**   | Resend delivery when `RESEND_API_KEY` is set, console-transport otherwise (plus an opt-in in-app "Sent Emails" widget for testers). Used by self-registration verification, password reset, resend-verification, tenant invites, viewing confirmations and moderation outcomes.                                                                                                                                                   |
 | **File uploads**              |   **Built**   | Signed direct-to-Cloudinary uploads (`maintenance-requests`, `applications`, `profile`, `properties` folders); "not available" fallback UI when unconfigured.                                                                                                                                                                                                                                                                     |
-| **Automated Tests**           |   **100%**    | Vitest: 247 tests across 15 files in `tests/api/` (`pnpm test`), real HTTP against a spawned `next dev` + a dedicated `proplity_test_db`. Playwright: 36 tests in `tests/e2e/` (`pnpm test:e2e`) — smoke, per-role flows, session restore, mock payment, responsive nav. Both run in CI on every PR (`Typecheck, format & build`, `Integration tests`, `E2E (Playwright)`).                                                       |
+| **Automated Tests**           |   **100%**    | Vitest: 250 tests across 15 files in `tests/api/` (`pnpm test`), real HTTP against a spawned `next dev` + a dedicated `proplity_test_db`. Playwright: 51 tests in `tests/e2e/` (`pnpm test:e2e`) — smoke, per-role flows, session restore, mock payment, responsive nav. Both run in CI on every PR (`Typecheck, format & build`, `Integration tests`, `E2E (Playwright)`).                                                       |
 
 ---
 
@@ -96,11 +96,11 @@ Five idempotent workers, each with real logic against the schema, invoked from `
 
 ### 6. 🧪 Automated Tests (`tests/`) — **100% COMPLETE**
 
-- **Vitest — 247 tests across 15 files** (`tests/api/`: `auth`, `properties`, `maintenance`, `leases`, `financial`, `access-control`, `communications`, `vendors-and-admin`, `deferred-flows`, `orphaned-models`, `csv-excel-import-export`, `e-signature`, `notifications`, `setup`, `health`). Run with `pnpm test`.
+- **Vitest — 250 tests across 15 files** (`tests/api/`: `auth`, `properties`, `maintenance`, `leases`, `financial`, `access-control`, `communications`, `vendors-and-admin`, `deferred-flows`, `orphaned-models`, `csv-excel-import-export`, `e-signature`, `notifications`, `setup`, `health`). Run with `pnpm test`.
 - **Architecture**: real HTTP (`fetch`) against a real spawned `next dev` server, not direct handler imports — `getServerSession()` needs a real Next.js request context. `tests/setup/globalSetup.ts` drops and recreates a dedicated `proplity_test_db` and runs `prisma migrate deploy` before spawning the server, once per run. Configure via `.env.test` (gitignored; template `.env.test.example`) — never the same database as `.env`.
 - **A real Next 16 constraint worked around**: one `next dev` per `distDir` — the test server sets `NEXT_TEST_DIST_DIR=.next-test` so it runs alongside a developer's own `pnpm dev`.
 - **Fixtures** (`tests/helpers/fixtures.ts`) write directly via a test-only Prisma client, never through the API; `resetDb()` truncates every table per file, discovered dynamically. `authCookie(userId, role)` mints a real JWT bypassing login; `expiredAccessCookie()` mints an expired one for the logout-revocation test; `fillRateLimit` seeds `LoginAttempt` rows directly.
-- **Playwright — 36 tests** (`tests/e2e/`, `pnpm test:e2e`): `smoke/` (marketing, auth forms), `flows/` (tenant, landlord, vendor, admin, login, session restore, featured properties, public-property CTA auth-awareness, dev email widget, mock payment), `responsive/` (mobile tab bar).
+- **Playwright — 51 tests** (`tests/e2e/`, `pnpm test:e2e`): `smoke/` (marketing, auth forms), `flows/` (tenant, landlord, vendor, admin, login, session restore, featured properties, public-property CTA auth-awareness, dev email widget, mock payment), `responsive/` (mobile tab bar).
 - **CI** (`.github/workflows/ci.yml`): three jobs on every push/PR to `dev`, `main` or `prod` — `Typecheck, format & build`, `Integration tests` (`postgres:18` service container), `E2E (Playwright)` (production build + seeded Postgres, one worker).
 - **Deliberately not covered**: `/payments/initialize`'s live Paystack call, real Cloudinary uploads, and recurring auto-charging (not built).
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Home,
   DollarSign,
@@ -17,8 +19,10 @@ import {
   CheckCircle,
   Clock,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
+import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
@@ -54,13 +58,31 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   const { submit: createCode, submitting: creatingCode } = useCreateManagerCode();
   const { submit: setCodeStatus } = useSetManagerCodeStatus();
   const [copied, setCopied] = useState<string | null>(null);
+  const { data: bankAccounts, loading: bankLoading } = useBankAccounts();
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [showInviteForm, setShowInviteForm] = useState(false);
 
   const generateCode = async () => {
     try {
       await createCode();
       refetchCodes();
+      toast.success('Manager access code generated!');
     } catch {
-      // error is rare/transient here; the button simply stays clickable again
+      toast.error('Failed to generate code');
+    }
+  };
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    try {
+      await createCode({ email: inviteEmail.trim() });
+      refetchCodes();
+      toast.success(`Invitation email sent to ${inviteEmail.trim()}!`);
+      setInviteEmail('');
+      setShowInviteForm(false);
+    } catch {
+      toast.error('Failed to send manager invitation');
     }
   };
 
@@ -248,6 +270,49 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <h1 className="mb-1 text-2xl font-semibold">Landlord Portfolio</h1>
         <p className="text-gray-600">Overview of your property investments</p>
       </div>
+
+      {/* Sticky Setup & Profile Completion Prompt for Landlords */}
+      {!loading &&
+        !bankLoading &&
+        (properties.length === 0 || (bankAccounts ?? []).length === 0) && (
+          <div className="sticky top-4 z-20 flex flex-col items-start justify-between gap-4 rounded-xl border border-blue-200 bg-linear-to-r from-blue-50 via-white to-blue-50 p-5 shadow-sm sm:flex-row sm:items-center">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Complete Your Landlord Setup
+                </h2>
+                <p className="mt-0.5 text-xs text-gray-600">
+                  {(bankAccounts ?? []).length === 0 && properties.length === 0
+                    ? 'To start collecting rents and managing tenancies, add your payout bank account in Settings and list your first rental property.'
+                    : (bankAccounts ?? []).length === 0
+                      ? 'Add your payout bank account in Settings so rent can be paid out to you.'
+                      : 'List your first rental property to start managing tenancies.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex w-full shrink-0 items-center gap-2.5 sm:w-auto">
+              {(bankAccounts ?? []).length === 0 && (
+                <Link
+                  href="/dashboard/settings"
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:flex-none"
+                >
+                  Add Bank Details
+                </Link>
+              )}
+              {properties.length === 0 && (
+                <Link
+                  href="/dashboard/properties/new"
+                  className="flex-1 rounded-lg bg-blue-600 px-3.5 py-2 text-center text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 sm:flex-none"
+                >
+                  List First Property
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
@@ -525,7 +590,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           different concept from the gate AccessCode model) -- stays local
           demo state, same as it was pre-hydration. */}
       <div className="rounded-xl border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 p-6">
+        <div className="flex flex-col justify-between gap-4 border-b border-gray-200 p-6 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
               <KeyRound className="h-5 w-5 text-blue-600" />
@@ -533,20 +598,65 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <div>
               <h2 className="font-semibold text-gray-900">Manager Access Codes</h2>
               <p className="mt-0.5 text-xs text-gray-500">
-                Share a code with your Property Manager during their registration to link them to
-                your portfolio.
+                Invite or generate a code for your Property Manager to link them to your portfolio.
               </p>
             </div>
           </div>
-          <button
-            onClick={generateCode}
-            disabled={creatingCode}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            {creatingCode ? 'Generating…' : 'Generate New Code'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowInviteForm((v) => !v)}
+              className="flex items-center gap-1.5 rounded-lg border border-blue-600 px-3.5 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
+            >
+              <Mail className="h-4 w-4" />
+              {showInviteForm ? 'Close' : 'Invite via Email'}
+            </button>
+            <button
+              onClick={generateCode}
+              disabled={creatingCode}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {creatingCode ? 'Generating…' : 'Quick Code'}
+            </button>
+          </div>
         </div>
+
+        {showInviteForm && (
+          <form onSubmit={handleSendInvite} className="border-b border-blue-100 bg-blue-50/60 p-4">
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  required
+                  placeholder="Enter manager's email (e.g. manager@example.com)"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingCode || !inviteEmail.trim()}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              >
+                {creatingCode ? 'Sending Invite…' : 'Send Invite'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowInviteForm(false)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-blue-700">
+              The manager will receive an email with their code and a direct link to register. In
+              development, open the &ldquo;Sent Emails&rdquo; widget in the bottom-right corner to
+              test the link.
+            </p>
+          </form>
+        )}
 
         <div className="flex items-start gap-3 border-b border-amber-100 bg-amber-50 p-4">
           <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />

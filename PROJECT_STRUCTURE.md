@@ -21,7 +21,7 @@ graph TD
     Postgres[("🐘 PostgreSQL — 40 models, 10 schema files, 15 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 5 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (247 tests) + Playwright (36 tests)"]
+    Tests["🧪 Vitest (250 tests) + Playwright (51 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -131,8 +131,8 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 api/                              # 15 Vitest files — 247 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 36 tests (pnpm test:e2e)
+│   ├── 📁 api/                              # 15 Vitest files — 250 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 51 tests (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget
@@ -169,6 +169,9 @@ proplity/
 | `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                     |
 | `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                         |
 | `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`)                  |
+| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                    |
+| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                        |
+| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                      |
 | `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                        |
 | `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                  |
 | `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                    |
