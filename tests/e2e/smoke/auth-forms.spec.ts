@@ -19,11 +19,11 @@ test('login page renders and requires email + password', async ({ page }) => {
 
 test('login page links to register and forgot password', async ({ page }) => {
   await page.goto('/login');
-  await page.getByRole('button', { name: /sign up for free/i }).click();
+  await page.getByRole('link', { name: /sign up for free/i }).click();
   await expect(page).toHaveURL(/\/register/);
 
   await page.goto('/login');
-  await page.getByRole('button', { name: /forgot password/i }).click();
+  await page.getByRole('link', { name: /forgot password/i }).click();
   await expect(page).toHaveURL(/\/forgot-password/);
 });
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { LogoIcon } from '../Logo';
@@ -27,7 +27,10 @@ import {
 } from 'lucide-react';
 
 interface RegisterProps {
-  onSwitchToLogin: () => void;
+  onSwitchToLogin?: () => void;
+  loginHref?: string;
+  initialRole?: string;
+  initialCode?: string;
 }
 
 // Module-scope, not declared inside Register() -- a component defined inside
@@ -175,9 +178,22 @@ interface VendorForm extends BaseForm {
   bio: string;
 }
 
-export function Register({ onSwitchToLogin }: RegisterProps) {
-  const [step, setStep] = useState(1);
-  const [userType, setUserType] = useState<UserType>('');
+export function Register({
+  onSwitchToLogin,
+  loginHref = '/login',
+  initialRole,
+  initialCode,
+}: RegisterProps) {
+  const normalizedInitialRole: UserType =
+    initialRole === 'manager' ||
+    initialRole === 'landlord' ||
+    initialRole === 'tenant' ||
+    initialRole === 'vendor'
+      ? initialRole
+      : '';
+
+  const [step, setStep] = useState(normalizedInitialRole ? 2 : 1);
+  const [userType, setUserType] = useState<UserType>(normalizedInitialRole);
 
   // --- Manager state ---
   const [managerForm, setManagerForm] = useState<ManagerForm>({
@@ -189,7 +205,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
     confirmPassword: '',
     state: '',
     agreeToTerms: false,
-    landlordCode: '',
+    landlordCode: initialCode || '',
     companyName: '',
     yearsExperience: '',
     propertiesManaged: '',
@@ -261,7 +277,6 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
   // step labels per role
   const getSteps = () => {
     if (userType === 'manager') return ['Account Type', 'Landlord Code', 'Your Details'];
-    if (userType === 'landlord') return ['Account Type', 'Your Details', 'Property & Banking'];
     if (userType === 'vendor') return ['Account Type', 'Your Details', 'Business Info'];
     return ['Account Type', 'Your Details'];
   };
@@ -273,12 +288,12 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
     setStep(2);
   };
 
-  const verifyLandlordCode = async () => {
+  const verifyLandlordCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? managerForm.landlordCode).trim();
+    if (!code) return;
     setCodeStatus('checking');
     try {
-      const res = await fetch(
-        `/api/v1/manager-codes/check?code=${encodeURIComponent(managerForm.landlordCode.trim())}`,
-      );
+      const res = await fetch(`/api/v1/manager-codes/check?code=${encodeURIComponent(code)}`);
       const body = await res.json();
       if (res.ok && body.valid) {
         setCodeStatus('valid');
@@ -292,6 +307,16 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
       setVerifiedLandlord(null);
     }
   };
+
+  // Runs once, for a ?code= invite link. Deliberately not re-run when the
+  // field is edited afterwards (that would re-verify the ORIGINAL code and
+  // show it as valid for text the user has since changed).
+  useEffect(() => {
+    if (initialCode && initialCode.trim()) {
+      verifyLandlordCode(initialCode.trim());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { register } = useAuth();
 
@@ -542,12 +567,19 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
               We've sent a verification link to <strong>{registeredEmail}</strong>. Click it to
               activate your account, then sign in.
             </p>
-            <button
+            <Link
+              href={loginHref}
               onClick={onSwitchToLogin}
-              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+              className="block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white hover:bg-blue-700"
             >
               Go to Sign In
-            </button>
+            </Link>
+            {process.env.NODE_ENV !== 'production' && (
+              <p className="mt-4 text-xs text-gray-500">
+                Testing locally? Check your terminal console or open the floating &ldquo;Sent
+                Emails&rdquo; widget in the bottom-right corner to access your activation link.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -575,9 +607,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                 ? 'Enter your landlord invitation code'
                 : userType === 'vendor' && step === 3
                   ? 'Tell us about your services'
-                  : userType === 'landlord' && step === 3
-                    ? 'Property & banking details'
-                    : 'Complete your profile'}
+                  : 'Complete your profile'}
           </p>
         </div>
 
@@ -682,13 +712,33 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={verifyLandlordCode}
+                    onClick={() => verifyLandlordCode()}
                     disabled={!managerForm.landlordCode.trim() || codeStatus === 'checking'}
                     className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                   >
                     {codeStatus === 'checking' ? 'Verifying...' : 'Verify Code'}
                   </button>
                 </div>
+
+                {process.env.NODE_ENV !== 'production' && (
+                  <div className="mt-2.5 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs text-blue-800">
+                    <span>
+                      Testing as manager? Use demo invite code:{' '}
+                      <strong className="font-mono font-semibold">DEMO-CODE</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManagerForm((f) => ({ ...f, landlordCode: 'DEMO-CODE' }));
+                        setCodeStatus('idle');
+                        setVerifiedLandlord(null);
+                      }}
+                      className="font-semibold text-blue-700 underline hover:text-blue-900"
+                    >
+                      Fill Code
+                    </button>
+                  </div>
+                )}
 
                 {/* code feedback */}
                 {codeStatus === 'valid' && verifiedLandlord && (
@@ -965,7 +1015,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                setStep(3);
+                handleSubmit();
               }}
               className="space-y-4"
             >
@@ -1073,12 +1123,11 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>NIN (National ID No.) *</label>
+                  <label className={labelCls}>NIN (National ID No.)</label>
                   <div className="relative">
                     <Shield className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
-                      required
                       value={landlordForm.nin}
                       onChange={(e) =>
                         setLandlordForm({
@@ -1086,7 +1135,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                           nin: e.target.value,
                         })
                       }
-                      placeholder="12345678901"
+                      placeholder="Optional (11 digits)"
                       maxLength={11}
                       className={inputIconCls}
                     />
@@ -1109,130 +1158,13 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                 onToggle={() => setShowConfirmPassword((p) => !p)}
               />
 
-              <NavButtons onBack={() => setStep(1)} isSubmit nextLabel="Next: Property & Banking" />
-            </form>
-          )}
-
-          {/* Landlord — Step 3: Property & banking */}
-          {userType === 'landlord' && step === 3 && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-              }}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Total Properties Owned *</label>
-                  <select
-                    required
-                    value={landlordForm.totalProperties}
-                    onChange={(e) =>
-                      setLandlordForm({
-                        ...landlordForm,
-                        totalProperties: e.target.value,
-                      })
-                    }
-                    className={inputCls}
-                  >
-                    <option value="">Select</option>
-                    {['1', '2–5', '6–10', '11–20', '20+'].map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <StateSelect
-                  value={landlordForm.state}
-                  onChange={(v) => setLandlordForm({ ...landlordForm, state: v })}
-                />
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                  <Shield className="h-4 w-4 text-blue-500" /> Payout Bank Account
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>Bank Name *</label>
-                    <select
-                      required
-                      value={landlordForm.bankName}
-                      onChange={(e) =>
-                        setLandlordForm({
-                          ...landlordForm,
-                          bankName: e.target.value,
-                        })
-                      }
-                      className={inputCls}
-                    >
-                      <option value="">Select bank</option>
-                      {[
-                        'Access Bank',
-                        'First Bank',
-                        'GTBank',
-                        'Zenith Bank',
-                        'UBA',
-                        'FCMB',
-                        'Fidelity Bank',
-                        'Stanbic IBTC',
-                        'Sterling Bank',
-                        'Union Bank',
-                        'Wema Bank',
-                        'Polaris Bank',
-                        'Other',
-                      ].map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Account Number *</label>
-                    <input
-                      type="text"
-                      required
-                      value={landlordForm.accountNumber}
-                      onChange={(e) =>
-                        setLandlordForm({
-                          ...landlordForm,
-                          accountNumber: e.target.value,
-                        })
-                      }
-                      placeholder="10-digit account number"
-                      maxLength={10}
-                      className={inputCls}
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <label className={labelCls}>Account Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={landlordForm.accountName}
-                    onChange={(e) =>
-                      setLandlordForm({
-                        ...landlordForm,
-                        accountName: e.target.value,
-                      })
-                    }
-                    placeholder="Name as it appears on the account"
-                    className={inputCls}
-                  />
-                </div>
-              </div>
-
               <TermsCheckbox
                 checked={landlordForm.agreeToTerms}
                 onChange={(v) => setLandlordForm({ ...landlordForm, agreeToTerms: v })}
               />
 
               <NavButtons
-                onBack={() => setStep(2)}
+                onBack={() => setStep(1)}
                 isSubmit
                 nextDisabled={submitting}
                 nextLabel={submitting ? 'Creating Account…' : 'Create Account'}
@@ -1667,12 +1599,13 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
           <div className="mt-5 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <button
+              <Link
+                href={loginHref}
                 onClick={onSwitchToLogin}
                 className="font-medium text-blue-600 hover:text-blue-700"
               >
                 Sign in
-              </button>
+              </Link>
             </p>
           </div>
         </div>

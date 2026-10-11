@@ -19,6 +19,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      // The real package throws outside a Next.js server bundle.
+      'server-only': path.resolve(__dirname, 'tests/setup/serverOnlyStub.ts'),
     },
   },
 });

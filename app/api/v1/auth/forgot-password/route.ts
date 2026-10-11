@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { emailSchema, findUserByEmail } from '@/lib/auth/email';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { appUrl } from '@/lib/appUrl';
@@ -9,7 +10,7 @@ import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
 });
 
 // Always responds 200 with the same generic message regardless of whether
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserByEmail(email);
   if (user) {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: user.email,
       subject: 'Reset your Proplity password',
-      body: `Hi ${user.name},\n\nWe received a request to reset your Proplity password. Click the link below to choose a new one:\n\n${appUrl(`/reset-password?token=${rawToken}`)}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
+      body: `Hi ${user.name},\n\nWe received a request to reset your Proplity password. Click the link below to choose a new one:\n\n${appUrl(`/reset-password?token=${rawToken}`, req)}\n\nThis link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
     });
   }
 

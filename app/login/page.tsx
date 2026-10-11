@@ -44,8 +44,6 @@ function LoginContent() {
         }
         router.push(role === 'admin' ? '/admin' : '/dashboard');
       }}
-      onSwitchToRegister={() => router.push('/register')}
-      onForgotPassword={() => router.push('/forgot-password')}
     />
   );
 }
