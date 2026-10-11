@@ -63,8 +63,8 @@ Eliminate tester friction in user onboarding by streamlining landlord signup (no
 - [x] Production build with `NEXT_PUBLIC_EMAIL_INBOX_ENABLED=true`
 - [x] Playwright registration spec (5 tests, serial, `--workers=1`) passes against a production build on :3022 and a throwaway database (`proplity_e2e_tmp`)
 - [x] Verified email links on a non-default port (3022) in dev and in a production build with `NEXT_PUBLIC_APP_URL=…:3099` hardcoded in `.env`; forged `X-Forwarded-Host` returns 403
-- [ ] Capture/update screenshots in `docs/screenshots` and `public/screenshots`
-- [ ] Update `app/proplity-guide` content for the 2-step landlord signup
+- [x] Capture/update screenshots in `docs/screenshots` and `public/screenshots` (`scripts/capture-guide-screenshots.mjs`: registration for 3 roles, verification, manager invite, login, password reset)
+- [x] Update `app/proplity-guide` content (Start Here paths, 1.7–1.10 account flows, cross-links) and `docs/proplity-step-by-step-role-guide.md` (steps 1.8–1.11)
 
 ### Module F: Documentation
 
