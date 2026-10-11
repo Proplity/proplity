@@ -3,7 +3,9 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { getStorage } from '@/lib/storage';
-import { isPrivateRef, privateRefOwnerId } from '@/lib/privateRef';
+import { isCloudinaryRef, isPrivateRef, privateRefOwnerId } from '@/lib/privateRef';
+import { readPrivateFile } from '@/lib/storage/files';
+import { ALLOWED_PROXY_TYPES } from '@/lib/uploadPolicy';
 
 // Turns a stored private-file reference (User.idDocumentUrl) into a
 // short-lived signed download link, after checking the caller may see it.
@@ -59,12 +61,28 @@ export const GET = withAuth(async (req, { session }) => {
         { status: 503 },
       );
     }
-    const url = storage.privateDownloadUrl(ref);
-    if (!url) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const res = NextResponse.redirect(url, 302);
-    res.headers.set('Cache-Control', 'private, no-store');
-    return res;
+    // Cloudinary: redirect to a short-lived signed link.
+    if (isCloudinaryRef(ref)) {
+      const url = storage.mode === 'direct' ? storage.privateDownloadUrl(ref) : null;
+      if (!url) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const res = NextResponse.redirect(url, 302);
+      res.headers.set('Cache-Control', 'private, no-store');
+      return res;
+    }
+
+    // Every other provider: stream through the gateway.
+    const file = await readPrivateFile(ref);
+    if (!file) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const safe = (ALLOWED_PROXY_TYPES as readonly string[]).includes(file.contentType);
+    return new NextResponse(file.stream, {
+      headers: {
+        'Content-Type': safe ? file.contentType : 'application/octet-stream',
+        'Content-Disposition': safe ? 'inline' : 'attachment',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, no-store',
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

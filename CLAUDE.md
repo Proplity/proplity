@@ -315,6 +315,7 @@ All 8 domain-API phases, background workers, frontend hydration (Phase 9), the a
 
 ## Conventions
 
+- **Uploads** — go through `getStorage()` (`lib/storage/`, provider chosen by `STORAGE_PROVIDER`, no fallback). Never store a provider URL for ID/application documents: private folders return a `cldp:`/`stor:private:` reference read only via `GET /api/v1/uploads/private`. New upload folder ⇒ add it to `FOLDER_ACCESS` (`lib/privateRef.ts`) and `FOLDER_ROLES` (`lib/uploadPolicy.ts`). See ADR-0007/0008/0009.
 - **Emails** — validate inbound addresses with `emailSchema` and look users up with `findUserByEmail()` (`lib/auth/email.ts`); never `findUnique({ where: { email } })` on user input.
 - **Links in emails** — always `appUrl(path, req)` from `lib/appUrl.ts`; never build a URL from `req.headers.host` yourself (ADR-0005).
 

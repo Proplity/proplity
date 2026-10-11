@@ -119,6 +119,25 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 // Domain-grouped typed methods, built on the same apiClient instance (and
 // therefore the same 401-refresh interceptor above) -- kept minimal to what
 // Phase 7's forms actually call, not a full mirror of every domain route.
+export type SignedUploadPlan =
+  | {
+      mode: 'direct';
+      provider: string;
+      cloudName: string;
+      apiKey: string;
+      timestamp: number;
+      signature: string;
+      folder: string;
+      type?: 'authenticated';
+    }
+  | {
+      mode: 'proxy';
+      provider: string;
+      uploadUrl: string;
+      folder: string;
+      access: 'private' | 'public';
+    };
+
 export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
@@ -356,14 +375,7 @@ export const api = {
   uploads: {
     sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
       apiClient.post<{
-        data: {
-          cloudName: string;
-          apiKey: string;
-          timestamp: number;
-          signature: string;
-          folder: string;
-          type?: 'authenticated';
-        };
+        data: SignedUploadPlan;
       }>('/api/v1/uploads/sign', { folder }),
   },
   subscriptions: {

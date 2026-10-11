@@ -14,6 +14,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0006](0006-emails-are-case-insensitive-and-stored-lowercase.md)                | Emails are normalised to lowercase and looked up case-insensitively                       | Proposed | 2026-10-11 | roji-tech (pending) |
 | [0007](0007-identity-documents-are-private-cloudinary-assets.md)                | Identity and application documents are private assets behind an authorised, expiring link | Proposed | 2026-10-11 | roji-tech (pending) |
 | [0008](0008-private-uploads-are-namespaced-by-owner-behind-a-storage-driver.md) | Private uploads are namespaced by owner, behind a storage-driver interface                | Proposed | 2026-10-11 | roji-tech (pending) |
+| [0009](0009-uploads-support-several-storage-providers-through-one-gateway.md)   | Uploads support several storage providers through one gateway                             | Proposed | 2026-10-11 | roji-tech (pending) |
 
 ---
 

@@ -1,13 +1,6 @@
+import 'server-only';
 import crypto from 'crypto';
 import { parsePrivateRef } from './privateRef';
-
-export {
-  PRIVATE_FOLDERS,
-  isPrivateFolder,
-  isPrivateRef,
-  makePrivateRef,
-  parsePrivateRef,
-} from './privateRef';
 
 // Whether real file uploads are configured. Checked server-side (this file)
 // before signing, and mirrored client-side by
