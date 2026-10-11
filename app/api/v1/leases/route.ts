@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { emailSchema, findUserByEmail } from '@/lib/auth/email';
 import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import crypto from 'crypto';
@@ -65,7 +66,7 @@ const createLeaseSchema = z
     // resolved server-side so callers (e.g. AddTenantForm) don't need to
     // know in advance whether the tenant already has an account.
     tenantId: z.string().optional(),
-    tenantEmail: z.string().email().optional(),
+    tenantEmail: emailSchema.optional(),
     tenantName: z.string().optional(),
     tenantPhone: z.string().optional(),
     startDate: z.coerce.date(),
@@ -131,7 +132,7 @@ export const POST = withAuth(
         // their own password. login already 403s PENDING_VERIFICATION
         // accounts, so nothing else needs to change to keep them out until
         // they verify.
-        const existing = await prisma.user.findUnique({ where: { email: tenantEmail! } });
+        const existing = await findUserByEmail(tenantEmail!);
         if (existing) {
           if (existing.role !== 'TENANT') {
             return NextResponse.json(
@@ -167,7 +168,7 @@ export const POST = withAuth(
           await sendEmail({
             to: newTenant.email,
             subject: 'You have been added as a tenant on Proplity',
-            body: `Hi ${newTenant.name},\n\nYou've been added as a tenant on Proplity. Set your password and activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`)}\n\nThis link expires in 7 days.`,
+            body: `Hi ${newTenant.name},\n\nYou've been added as a tenant on Proplity. Set your password and activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`, req)}\n\nThis link expires in 7 days.`,
           });
 
           tenantId = newTenant.id;

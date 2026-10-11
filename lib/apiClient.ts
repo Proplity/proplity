@@ -378,7 +378,11 @@ export const api = {
   },
   managerCodes: {
     list: () => apiClient.get<{ data: ManagerInviteCode[] }>('/api/v1/manager-codes'),
-    create: () => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes'),
+    create: (body?: { email?: string }) =>
+      apiClient.post<{ data: ManagerInviteCode; invitedEmail?: string }>(
+        '/api/v1/manager-codes',
+        body,
+      ),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
     redeem: (code: string) =>
