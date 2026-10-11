@@ -1,7 +1,7 @@
 # 0004 — Native Next.js Link Components Over Imperative Navigation for User Navigation
 
 Status: Accepted
-Decided by: Abdullah Jamiu · Date: 2026-10-10
+Decided by: roji-tech · Date: 2026-10-10
 Recorded: 2026-10-10
 
 ## Context
