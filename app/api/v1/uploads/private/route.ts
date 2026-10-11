@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
-import { cloudinaryEnabled, isPrivateRef, privateDownloadUrl } from '@/lib/cloudinary';
+import { getStorage } from '@/lib/storage';
+import { isPrivateRef, privateRefOwnerId } from '@/lib/privateRef';
 
 // Turns a stored private-file reference (User.idDocumentUrl) into a
 // short-lived signed download link, after checking the caller may see it.
@@ -20,10 +21,17 @@ export const GET = withAuth(async (req, { session }) => {
       return NextResponse.json({ error: 'A valid file reference is required' }, { status: 400 });
     }
 
-    const owner = await prisma.user.findFirst({
-      where: { idDocumentUrl: ref },
-      select: { id: true },
-    });
+    // The reference names its owner (uploads are namespaced <folder>/<userId>/),
+    // and that user must actually have it on their profile. Looking up by the
+    // embedded id, not "whoever stores this string", stops anyone claiming
+    // someone else's reference by saving it on their own profile (ISS-034).
+    const ownerId = privateRefOwnerId(ref);
+    const owner = ownerId
+      ? await prisma.user.findFirst({
+          where: { id: ownerId, idDocumentUrl: ref },
+          select: { id: true },
+        })
+      : null;
     if (!owner) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     let allowed = owner.id === session.sub || session.role === 'ADMIN';
@@ -44,13 +52,14 @@ export const GET = withAuth(async (req, { session }) => {
     }
     if (!allowed) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    if (!cloudinaryEnabled()) {
+    const storage = getStorage();
+    if (!storage.isConfigured()) {
       return NextResponse.json(
         { error: 'File storage is not configured on this deployment' },
         { status: 503 },
       );
     }
-    const url = privateDownloadUrl(ref);
+    const url = storage.privateDownloadUrl(ref);
     if (!url) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const res = NextResponse.redirect(url, 302);

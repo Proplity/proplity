@@ -5,9 +5,16 @@ import { createUser, createProperty, createUnit, createLease } from '../helpers/
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 import { privateDownloadUrl } from '../../lib/cloudinary';
-import { makePrivateRef, parsePrivateRef, isPrivateRef } from '../../lib/privateRef';
+import {
+  makePrivateRef,
+  parsePrivateRef,
+  isPrivateRef,
+  privateRefOwnerId,
+} from '../../lib/privateRef';
+import { getStorage } from '../../lib/storage';
 
-const REF = makePrivateRef('image', 'profile/abc123xyz', 'pdf');
+const REF_PATH = 'profile/abc123xyz';
+const REF = makePrivateRef('image', REF_PATH, 'pdf');
 
 describe('private refs', () => {
   it('round-trips image refs with a format and keeps raw extensions in the public id', () => {
@@ -27,6 +34,44 @@ describe('private refs', () => {
     expect(parsePrivateRef('cldp:bogus/abc')).toBeNull();
     expect(parsePrivateRef('cldp:image/../etc/passwd')).toBeNull();
     expect(isPrivateRef('https://example.com')).toBe(false);
+  });
+});
+
+describe('storage driver', () => {
+  it('namespaces private uploads by owner and leaves public folders alone', () => {
+    const saved = { ...process.env };
+    try {
+      process.env.CLOUDINARY_CLOUD_NAME = 'democloud';
+      process.env.CLOUDINARY_API_KEY = 'key123';
+      process.env.CLOUDINARY_API_SECRET = 'secret456';
+      const storage = getStorage();
+      expect(storage.name).toBe('cloudinary');
+      const priv = storage.signUpload('profile', 'user-1');
+      expect(priv.folder).toBe('profile/user-1');
+      expect(priv.type).toBe('authenticated');
+      const pub = storage.signUpload('properties', 'user-1');
+      expect(pub.folder).toBe('properties');
+      expect(pub.type).toBeUndefined();
+    } finally {
+      process.env = saved;
+    }
+  });
+
+  it('refuses an unknown STORAGE_PROVIDER instead of silently falling back', () => {
+    const saved = process.env.STORAGE_PROVIDER;
+    process.env.STORAGE_PROVIDER = 's4';
+    try {
+      expect(() => getStorage()).toThrow(/Unknown STORAGE_PROVIDER/);
+    } finally {
+      if (saved === undefined) delete process.env.STORAGE_PROVIDER;
+      else process.env.STORAGE_PROVIDER = saved;
+    }
+  });
+
+  it('reads the owner id out of a reference', () => {
+    expect(privateRefOwnerId(makePrivateRef('image', 'profile/u-9/f', 'png'))).toBe('u-9');
+    expect(privateRefOwnerId(REF)).toBeNull(); // profile/abc123xyz has no owner segment
+    expect(privateRefOwnerId('cldp:image/properties/u-9/f.png')).toBeNull();
   });
 });
 
@@ -79,6 +124,7 @@ describe('uploads: sign is role-gated per folder', () => {
 
 describe('uploads: GET /uploads/private authorisation', () => {
   let ownerId: string;
+  let ownerRef: string;
   let ownerCookie: string;
   let strangerCookie: string;
   let landlordCookie: string;
@@ -89,7 +135,8 @@ describe('uploads: GET /uploads/private authorisation', () => {
     await resetDb();
     const owner = await createUser(Role.TENANT);
     ownerId = owner.id;
-    await testPrisma.user.update({ where: { id: owner.id }, data: { idDocumentUrl: REF } });
+    ownerRef = makePrivateRef('image', `profile/${owner.id}/doc1`, 'pdf');
+    await testPrisma.user.update({ where: { id: owner.id }, data: { idDocumentUrl: ownerRef } });
     const landlord = await createUser(Role.LANDLORD);
     const otherLandlord = await createUser(Role.LANDLORD);
     const stranger = await createUser(Role.TENANT);
@@ -105,7 +152,7 @@ describe('uploads: GET /uploads/private authorisation', () => {
     adminCookie = await authCookie(admin.id, admin.role);
   });
 
-  const get = (cookie?: string, ref: string = REF) =>
+  const get = (cookie?: string, ref: string = ownerRef) =>
     apiFetch(`/api/v1/uploads/private?ref=${encodeURIComponent(ref)}`, { cookie });
 
   it('401s without a session', async () => {
@@ -125,6 +172,26 @@ describe('uploads: GET /uploads/private authorisation', () => {
     expect((await get(adminCookie, makePrivateRef('image', 'profile/nope', 'png'))).status).toBe(
       404,
     );
+  });
+
+  it('404s a reference whose embedded owner does not hold it, even if another user stored it', async () => {
+    const forged = makePrivateRef('image', `profile/${ownerId}/other-file`, 'pdf');
+    expect((await get(ownerCookie, forged)).status).toBe(404);
+    expect((await get(adminCookie, forged)).status).toBe(404);
+  });
+
+  it('PATCH /auth/me refuses a private reference that belongs to another user, accepts your own', async () => {
+    const mine = await createUser(Role.TENANT);
+    const cookie = await authCookie(mine.id, mine.role);
+    const patch = (idDocumentUrl: string) =>
+      apiFetch('/api/v1/auth/me', { method: 'PATCH', cookie, body: { idDocumentUrl } });
+
+    expect((await patch(ownerRef)).status).toBe(400);
+    expect((await patch(makePrivateRef('image', `profile/${mine.id}/mine`, 'png'))).status).toBe(
+      200,
+    );
+    // Non-reference strings (filename fallback / legacy URL) are untouched.
+    expect((await patch('passport.png')).status).toBe(200);
   });
 
   it('lets the owner, their landlord and an admin through to the storage step', async () => {
