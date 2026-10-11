@@ -32,7 +32,16 @@ const cache = new Map<string, StorageDriver>();
  * and no silent fallback: an unknown name, or "local" in production, throws.
  */
 export function getStorage(): StorageDriver {
-  const name = (process.env.STORAGE_PROVIDER || 'cloudinary').toLowerCase() as StorageProviderName;
+  return getStorageByName(process.env.STORAGE_PROVIDER || 'cloudinary');
+}
+
+/**
+ * A specific provider by name. The gateway uses this to read a file from the
+ * provider recorded on its StoredFile row, which may differ from the active
+ * one after STORAGE_PROVIDER was changed.
+ */
+export function getStorageByName(rawName: string): StorageDriver {
+  const name = rawName.toLowerCase() as StorageProviderName;
   const factory = FACTORIES[name];
   if (!factory) {
     throw new Error(

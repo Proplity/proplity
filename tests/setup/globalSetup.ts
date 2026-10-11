@@ -2,7 +2,7 @@ import path from 'path';
 import { spawn, execSync, ChildProcess } from 'child_process';
 import { Client } from 'pg';
 import dotenv from 'dotenv';
-import { TEST_PORT, TEST_BASE_URL } from './constants';
+import { TEST_PORT, TEST_BASE_URL, TEST_STORAGE_PATH } from './constants';
 
 const envPath = path.resolve(process.cwd(), '.env.test');
 const parsedEnv = dotenv.config({ path: envPath }).parsed;
@@ -68,6 +68,9 @@ export default async function globalSetup() {
     ...parsedEnv,
     PORT: String(TEST_PORT),
     NEXT_TEST_DIST_DIR: '.next-test',
+    // Uploads go to disk in tests, whatever .env.test says about Cloudinary.
+    STORAGE_PROVIDER: 'local',
+    LOCAL_STORAGE_PATH: TEST_STORAGE_PATH,
   };
   const server: ChildProcess = spawn('pnpm', ['exec', 'next', 'dev'], {
     cwd: process.cwd(),

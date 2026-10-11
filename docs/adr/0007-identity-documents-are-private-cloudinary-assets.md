@@ -1,7 +1,8 @@
 # 0007 — Identity and application documents are private assets behind an authorised, expiring link
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
+Status: Superseded
+Superseded by: 0010
+Decided by: roji-tech · Date: 2026-10-11
 Recorded: 2026-10-11
 
 ## Context

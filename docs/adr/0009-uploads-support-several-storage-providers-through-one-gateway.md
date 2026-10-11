@@ -1,7 +1,8 @@
 # 0009 — Uploads support several storage providers through one gateway
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
+Status: Superseded
+Superseded by: 0010
+Decided by: roji-tech · Date: 2026-10-11
 Recorded: 2026-10-11
 <!-- Extends ADR-0008, which introduced the StorageDriver interface with Cloudinary only. -->
 

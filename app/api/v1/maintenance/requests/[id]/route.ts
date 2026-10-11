@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
+import { handleFileError } from '@/lib/api/fileErrors';
 import { z } from 'zod';
 import { MaintenancePriority, MaintenanceStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -101,6 +103,8 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       finalCost,
       vendorNotes,
     } = validated.data;
+
+    await assertOwnsFileUrls([completionProofUrl], session.sub, 'maintenance-requests');
 
     const canManage = canManageProperty(session, request.unit.property);
     const isTriage =
@@ -236,6 +240,6 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     return NextResponse.json({ error: 'No valid update provided' }, { status: 400 });
   } catch (err) {
-    return handleApiError(err);
+    return handleFileError(err);
   }
 });
