@@ -5,7 +5,7 @@ _Last updated 2026-10-11. How to use it, the severity rubric and the row templat
 ## Priority queue (open items, most urgent first)
 
 1. ISS-001 Host-derived email links — fixed on branch (PR #38), pending merge
-2. ISS-031 Tenant ID documents are permanent public URLs
+2. ISS-031 Tenant ID documents are permanent public URLs — fixed on `fix/private-uploads`; legacy rows need re-upload/backfill
 3. ISS-003 Staging registration deadlock for managers (no invite code visible)
 4. ISS-010 Paystack live charge call never exercised
 5. ISS-011 Auto-pay mandates are never charged
