@@ -1,44 +1,33 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Role } from '@prisma/client';
 import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
 import { getStorage } from '@/lib/storage';
-import { Role } from '@prisma/client';
+import { accessForFolder } from '@/lib/privateRef';
+import { FOLDER_ROLES, UPLOAD_FOLDERS } from '@/lib/uploadPolicy';
 
-// Signs a direct-to-Cloudinary upload for the calling user -- the file
-// itself never passes through our server. Any authenticated role may
-// request a signature; ownership of what the resulting URL gets attached
-// to (a maintenance request, an application) is enforced by the route that
-// receives that URL afterward, same as every other upload-adjacent field
-// in this API.
-const signSchema = z.object({
-  // Cloudinary folder the upload lands in -- callers pass a stable, human-
-  // auditable path (e.g. "maintenance-requests", "applications") rather
-  // than a free-form string, so uploads can be found by kind in Cloudinary's
-  // own console.
-  folder: z.enum(['maintenance-requests', 'applications', 'profile', 'properties']),
-});
-
-// Who may upload into each folder (ISS-032). A tenant cannot write into the
-// property-listing folder, a vendor cannot write into identity documents, etc.
-const FOLDER_ROLES: Record<z.infer<typeof signSchema>['folder'], Role[]> = {
-  'maintenance-requests': [Role.TENANT, Role.MANAGER, Role.LANDLORD, Role.VENDOR],
-  applications: [Role.TENANT],
-  profile: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR],
-  properties: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
-};
+// Tells the browser how to upload for the active storage provider.
+//   direct  (Cloudinary): returns a signature; the browser uploads straight
+//           to the provider and the file never passes through our server.
+//   proxy   (S3, R2, MinIO, Supabase, ImageKit, Vercel Blob, local): returns
+//           the URL of our own upload endpoint, which checks role, size and
+//           type before storing.
+// Ownership of what the resulting URL gets attached to (a maintenance
+// request, an application) is enforced by the route that receives it.
+const signSchema = z.object({ folder: z.enum(UPLOAD_FOLDERS) });
 
 export const POST = withAuth(async (req, { session }) => {
-  const storage = getStorage();
-  if (!storage.isConfigured()) {
-    return NextResponse.json(
-      { error: 'File uploads are not configured on this deployment' },
-      { status: 503 },
-    );
-  }
-
   try {
+    const storage = getStorage();
+    if (!storage.isConfigured()) {
+      return NextResponse.json(
+        { error: 'File uploads are not configured on this deployment' },
+        { status: 503 },
+      );
+    }
+
     const validated = await validateBody(req, signSchema);
     if (!validated.success) return validated.response;
     const { folder } = validated.data;
@@ -47,7 +36,19 @@ export const POST = withAuth(async (req, { session }) => {
       return NextResponse.json({ error: 'Not allowed to upload to this folder' }, { status: 403 });
     }
 
-    return NextResponse.json({ data: storage.signUpload(folder, session.sub) });
+    const access = accessForFolder(folder);
+    if (storage.mode === 'direct') {
+      return NextResponse.json({ data: storage.signUpload(folder, session.sub, access) });
+    }
+    return NextResponse.json({
+      data: {
+        mode: 'proxy',
+        provider: storage.name,
+        uploadUrl: '/api/v1/uploads/file',
+        folder,
+        access,
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

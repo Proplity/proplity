@@ -46,10 +46,11 @@ describe('storage driver', () => {
       process.env.CLOUDINARY_API_SECRET = 'secret456';
       const storage = getStorage();
       expect(storage.name).toBe('cloudinary');
-      const priv = storage.signUpload('profile', 'user-1');
+      if (storage.mode !== 'direct') throw new Error('expected a direct driver');
+      const priv = storage.signUpload('profile', 'user-1', 'private');
       expect(priv.folder).toBe('profile/user-1');
       expect(priv.type).toBe('authenticated');
-      const pub = storage.signUpload('properties', 'user-1');
+      const pub = storage.signUpload('properties', 'user-1', 'public');
       expect(pub.folder).toBe('properties');
       expect(pub.type).toBeUndefined();
     } finally {

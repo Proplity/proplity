@@ -1,12 +1,15 @@
 import { api } from './apiClient';
 import { makePrivateRef, type UploadFolder } from './privateRef';
 
-// Client-side mirror of lib/cloudinary.ts's cloudinaryEnabled() -- the
-// server is still the real gate (POST /api/v1/uploads/sign 503s if unset),
-// this just lets the UI show "not available" instead of a button that
-// always fails.
+// Client-side mirror of the server's storage check -- the server is still the
+// real gate (POST /api/v1/uploads/sign 503s if storage is unconfigured), this
+// just lets the UI show "not available" instead of a button that always
+// fails. NEXT_PUBLIC_STORAGE_ENABLED covers the non-Cloudinary providers.
 export function uploadsEnabled(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+  return Boolean(
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    process.env.NEXT_PUBLIC_STORAGE_ENABLED === 'true',
+  );
 }
 
 export type { UploadFolder };
@@ -16,13 +19,27 @@ export interface UploadedFile {
   url: string;
 }
 
-// Signs with our own API, then uploads directly to Cloudinary from the
-// browser -- the file itself never passes through our server/serverless
-// function (avoids the body-size limits and cost of proxying it).
+// Asks the server how to upload for the active storage provider, then either
+// uploads straight to the provider (Cloudinary: the file never passes through
+// our server) or posts it to our own upload endpoint (every other provider).
 export async function uploadFile(file: File, folder: UploadFolder): Promise<UploadedFile> {
   const signRes = await api.uploads.sign(folder);
-  const { cloudName, apiKey, timestamp, signature, type, folder: signedFolder } = signRes.data.data;
+  const plan = signRes.data.data;
 
+  if (plan.mode === 'proxy') {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('folder', folder);
+    const res = await fetch(plan.uploadUrl, { method: 'POST', body, credentials: 'same-origin' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? 'Upload failed');
+    }
+    const { data } = await res.json();
+    return { name: data.name ?? file.name, url: data.url };
+  }
+
+  const { cloudName, apiKey, timestamp, signature, type, folder: signedFolder } = plan;
   const formData = new FormData();
   formData.append('file', file);
   formData.append('api_key', apiKey);
@@ -36,10 +53,7 @@ export async function uploadFile(file: File, folder: UploadFolder): Promise<Uplo
     method: 'POST',
     body: formData,
   });
-
-  if (!uploadRes.ok) {
-    throw new Error('Upload failed');
-  }
+  if (!uploadRes.ok) throw new Error('Upload failed');
 
   const data = await uploadRes.json();
   // Authenticated (private) assets have no usable public URL: keep an opaque

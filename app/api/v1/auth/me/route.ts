@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { deleteStoredFile } from '@/lib/storage/files';
 import { isPrivateRef, privateRefOwnerId } from '@/lib/privateRef';
 import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/session';
@@ -133,11 +134,25 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
+  // Remember a private file that is about to be replaced so it can be removed.
+  const replacing =
+    validated.data.idDocumentUrl !== undefined
+      ? await prisma.user.findUnique({
+          where: { id: session.sub },
+          select: { idDocumentUrl: true },
+        })
+      : null;
+
   const user = await prisma.user.update({
     where: { id: session.sub },
     data: validated.data,
     select: PROFILE_SELECT,
   });
+
+  const oldRef = replacing?.idDocumentUrl;
+  if (oldRef && isPrivateRef(oldRef) && oldRef !== validated.data.idDocumentUrl) {
+    await deleteStoredFile(oldRef); // best effort, never fails the request
+  }
 
   return NextResponse.json({ user: serialize(user) });
 }
