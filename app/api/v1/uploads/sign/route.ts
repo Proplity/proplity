@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
-import { cloudinaryEnabled, signUploadParams } from '@/lib/cloudinary';
+import { cloudinaryEnabled, signUploadParams, isPrivateFolder } from '@/lib/cloudinary';
+import { Role } from '@prisma/client';
 
 // Signs a direct-to-Cloudinary upload for the calling user -- the file
 // itself never passes through our server. Any authenticated role may
@@ -19,7 +20,16 @@ const signSchema = z.object({
   folder: z.enum(['maintenance-requests', 'applications', 'profile', 'properties']),
 });
 
-export const POST = withAuth(async (req) => {
+// Who may upload into each folder (ISS-032). A tenant cannot write into the
+// property-listing folder, a vendor cannot write into identity documents, etc.
+const FOLDER_ROLES: Record<z.infer<typeof signSchema>['folder'], Role[]> = {
+  'maintenance-requests': [Role.TENANT, Role.MANAGER, Role.LANDLORD, Role.VENDOR],
+  applications: [Role.TENANT],
+  profile: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR],
+  properties: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
+};
+
+export const POST = withAuth(async (req, { session }) => {
   if (!cloudinaryEnabled()) {
     return NextResponse.json(
       { error: 'File uploads are not configured on this deployment' },
@@ -32,8 +42,15 @@ export const POST = withAuth(async (req) => {
     if (!validated.success) return validated.response;
     const { folder } = validated.data;
 
+    if (!FOLDER_ROLES[folder].includes(session.role as Role)) {
+      return NextResponse.json({ error: 'Not allowed to upload to this folder' }, { status: 403 });
+    }
+
     const timestamp = Math.round(Date.now() / 1000);
-    const signature = signUploadParams({ folder, timestamp });
+    // Identity/application files are stored as authenticated assets: the plain
+    // delivery URL does not work, see lib/cloudinary.ts (ISS-031).
+    const type = isPrivateFolder(folder) ? 'authenticated' : undefined;
+    const signature = signUploadParams({ folder, timestamp, ...(type ? { type } : {}) });
 
     return NextResponse.json({
       data: {
@@ -42,6 +59,7 @@ export const POST = withAuth(async (req) => {
         timestamp,
         signature,
         folder,
+        ...(type ? { type } : {}),
       },
     });
   } catch (err) {

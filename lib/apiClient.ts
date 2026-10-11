@@ -356,7 +356,13 @@ export const api = {
   uploads: {
     sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
       apiClient.post<{
-        data: { cloudName: string; apiKey: string; timestamp: number; signature: string };
+        data: {
+          cloudName: string;
+          apiKey: string;
+          timestamp: number;
+          signature: string;
+          type?: 'authenticated';
+        };
       }>('/api/v1/uploads/sign', { folder }),
   },
   subscriptions: {
