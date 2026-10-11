@@ -4,12 +4,13 @@ _Last updated 2026-10-11. How to use it, the severity rubric and the row templat
 
 ## Priority queue (open items, most urgent first)
 
-1. ISS-001 Host-derived email links (password-reset poisoning) — fixed on branch, pending merge
-2. ISS-003 Staging registration deadlock for managers (no invite code visible)
-3. ISS-006 Rate-limit counters shared by CI/E2E parallelism
+1. ISS-001 Host-derived email links — fixed on branch (PR #38), pending merge
+2. ISS-031 Tenant ID documents are permanent public URLs
+3. ISS-003 Staging registration deadlock for managers (no invite code visible)
 4. ISS-010 Paystack live charge call never exercised
 5. ISS-011 Auto-pay mandates are never charged
-6. ISS-020 Case-only duplicate accounts already in the database
+6. ISS-032 Upload signing has no per-folder role check
+7. ISS-020 Case-only duplicate accounts already in the database
 
 ---
 
@@ -52,13 +53,16 @@ _Last updated 2026-10-11. How to use it, the severity rubric and the row templat
 
 ## Data integrity & authorisation
 
-| ID      | Title                                          | Cat.           | Pri | Likelihood | Status    | Live on prod? | Where                                             | Notes                                                              |
-| ------- | ---------------------------------------------- | -------------- | --- | ---------- | --------- | ------------- | ------------------------------------------------- | ------------------------------------------------------------------ |
-| ISS-013 | `Property.trustScore` is never computed        | Data integrity | P2  | Certain    | Confirmed | Yes           | `prisma/schema/property.prisma`                   | Defaults to 100; UI "trust" filters therefore meaningless.         |
-| ISS-014 | Only 3 media slots persist for a listing       | Data integrity | P2  | Certain    | Confirmed | Yes           | `Property.imageUrl/video360Url/exteriorPhotoUrl`  | Extra room photos are uploaded then dropped.                       |
-| ISS-015 | `AuditLog` has a single writer (setup wizard)  | Authorisation  | P2  | Certain    | Confirmed | Yes           | `/admin/security`                                 | Sensitive actions (moderation, role/user changes) are not audited. |
-| ISS-016 | Neighbourhood report has no create/update path | Data integrity | P2  | Certain    | Confirmed | Yes           | `properties/[id]/neighbourhood-report` (GET only) | Data only exists via seed.                                         |
-| ISS-025 | Duplicate-listing fields unused                | Data integrity | P3  | Certain    | Confirmed | Yes           | `listingHash`, `mergedIntoId`                     | Schema only; no detection logic.                                   |
+| ID      | Title                                                              | Cat.                    | Pri | Likelihood | Status              | Live on prod? | Where                                                                                      | Notes                                                                                                                                                                                                                                                                                               |
+| ------- | ------------------------------------------------------------------ | ----------------------- | --- | ---------- | ------------------- | ------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ISS-013 | `Property.trustScore` is never computed                            | Data integrity          | P2  | Certain    | Confirmed           | Yes           | `prisma/schema/property.prisma`                                                            | Defaults to 100; UI "trust" filters therefore meaningless.                                                                                                                                                                                                                                          |
+| ISS-014 | Only 3 media slots persist for a listing                           | Data integrity          | P2  | Certain    | Confirmed           | Yes           | `Property.imageUrl/video360Url/exteriorPhotoUrl`                                           | Extra room photos are uploaded then dropped.                                                                                                                                                                                                                                                        |
+| ISS-015 | `AuditLog` has a single writer (setup wizard)                      | Authorisation           | P2  | Certain    | Confirmed           | Yes           | `/admin/security`                                                                          | Sensitive actions (moderation, role/user changes) are not audited.                                                                                                                                                                                                                                  |
+| ISS-016 | Neighbourhood report has no create/update path                     | Data integrity          | P2  | Certain    | Confirmed           | Yes           | `properties/[id]/neighbourhood-report` (GET only)                                          | Data only exists via seed.                                                                                                                                                                                                                                                                          |
+| ISS-031 | Tenant ID documents are stored as permanent public Cloudinary URLs | Data exposure / Uploads | P1  | Likely     | Confirmed (by code) | Yes           | `lib/uploadClient.ts` (`/auto/upload`, `secure_url`), `uploads/sign`, `User.idDocumentUrl` | Anyone holding the URL can fetch a government ID; the URL is returned by `GET /auth/me` and stored forever. Use Cloudinary `type=authenticated` + short-lived signed delivery URLs for `profile`/`applications` folders. Guide: `out/certificate_or_file_access/` (token handling, expiring links). |
+| ISS-032 | Any authenticated role can sign an upload to any folder            | Authorisation / Uploads | P2  | Likely     | Suspected           | Yes           | `app/api/v1/uploads/sign/route.ts`                                                         | Comment says "any authenticated role may" sign; no per-folder role check, size or type limit is enforced at signing.                                                                                                                                                                                |
+| ISS-033 | Lease/notice `documentUrl` is an unvalidated string                | Data integrity          | P2  | Possible   | Suspected           | Yes           | `leases/[id]/notices/route.ts:50`                                                          | Accepts any string (incl. `javascript:`/off-site URLs) that the UI may render as a link. Validate as https URL on the allowed host.                                                                                                                                                                 |
+| ISS-025 | Duplicate-listing fields unused                                    | Data integrity          | P3  | Certain    | Confirmed           | Yes           | `listingHash`, `mergedIntoId`                                                              | Schema only; no detection logic.                                                                                                                                                                                                                                                                    |
 
 ## UI / UX
 
@@ -81,6 +85,10 @@ _Last updated 2026-10-11. How to use it, the severity rubric and the row templat
 ## Verified during the registration task (2026-10-11)
 
 - A production build with `.env` hardcoding `NEXT_PUBLIC_APP_URL=http://localhost:3099`, served on port 3022, produced `http://localhost:3022/…` links (loopback request origin fallback). A dev server on 3022 did the same. A forged `X-Forwarded-Host` was rejected by the CSRF check (403). → ISS-001 verified.
+
+## Reference material
+
+- `out/certificate_or_file_access/` (git-ignored; written for an LMS certificate product, not Proplity). Not directly applicable (Proplity has logins), but the sections on expiring/single-use tokens, constant-response + rate-limited forms, public verification endpoints and PDF trust map onto ISS-031 (sensitive documents), the e-signed lease PDFs, and the public property "Verified" badge. Re-read before building any document download or public verification feature.
 
 ## Areas still to search (leads, not yet issues)
 
