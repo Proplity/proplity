@@ -1,21 +1,16 @@
 import 'server-only';
 import crypto from 'node:crypto';
-import type {
-  ProxyStorageDriver,
-  StorageAccess,
-  StorageGetResult,
-  StoragePutOptions,
-  StoragePutResult,
-} from '../types';
+import type { FileLocator, StorageDriver, StorageGetResult } from '../types';
+import { cleanFileName } from '../keys';
 
 /**
  * ImageKit via its REST API. NOT yet verified against a real ImageKit
  * account: the signed private-URL scheme (HMAC-SHA1 over URL + expiry) is
  * written from the documentation and must be tried once before relying on it.
  */
-export class ImageKitStorageDriver implements ProxyStorageDriver {
+export class ImageKitStorageDriver implements StorageDriver {
   readonly name = 'imagekit';
-  readonly mode = 'proxy' as const;
+  readonly upload = 'proxy' as const;
 
   private cfg() {
     return {
@@ -34,65 +29,43 @@ export class ImageKitStorageDriver implements ProxyStorageDriver {
     return `Basic ${Buffer.from(`${this.cfg().privateKey}:`).toString('base64')}`;
   }
 
-  async put(
-    key: string,
-    data: Buffer | Uint8Array | ReadableStream<Uint8Array>,
-    options: StoragePutOptions,
-  ): Promise<StoragePutResult> {
+  makeKey = ({
+    access,
+    folder,
+    ownerId,
+    fileId,
+    fileName,
+  }: Parameters<StorageDriver['makeKey']>[0]) =>
+    `${access}/${folder}/${ownerId}/${fileId}-${cleanFileName(fileName)}`;
+
+  async put(loc: FileLocator, data: Uint8Array, contentType: string): Promise<void> {
     if (!this.isConfigured())
       throw new Error('STORAGE_NOT_CONFIGURED: ImageKit credentials missing');
-
-    let bytes: Uint8Array;
-    if (data instanceof Uint8Array) {
-      bytes = data as unknown as Uint8Array;
-    } else {
-      const chunks: Uint8Array[] = [];
-      const reader = data.getReader();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) chunks.push(value);
-      }
-      bytes = Buffer.concat(chunks) as unknown as Uint8Array;
-    }
-
-    const slash = key.lastIndexOf('/');
-    const folder = slash > 0 ? `/${key.slice(0, slash)}` : '/';
-    const fileName = key.slice(slash + 1);
-
+    const slash = loc.key.lastIndexOf('/');
+    const fileName = loc.key.slice(slash + 1);
     const form = new FormData();
-    form.append(
-      'file',
-      new Blob([bytes as unknown as BlobPart], { type: options.contentType }),
-      fileName,
-    );
+    form.append('file', new Blob([data as unknown as BlobPart], { type: contentType }), fileName);
     form.append('fileName', fileName);
-    form.append('folder', folder);
+    form.append('folder', `/${loc.key.slice(0, slash)}`);
     form.append('useUniqueFileName', 'false');
-    form.append('isPrivateFile', options.access === 'private' ? 'true' : 'false');
-
+    form.append('isPrivateFile', loc.access === 'private' ? 'true' : 'false');
     const res = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
       method: 'POST',
       headers: { Authorization: this.auth() },
       body: form,
     });
-    const body = (await res.json()) as { url?: string; size?: number; message?: string };
-    if (!res.ok) throw new Error(`ImageKit upload failed: ${body.message || res.statusText}`);
-
-    return {
-      pathname: key,
-      contentType: options.contentType,
-      size: body.size ?? bytes.byteLength,
-      url: options.access === 'public' ? body.url : undefined,
-    };
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(`ImageKit upload failed: ${body.message || res.statusText}`);
+    }
   }
 
-  async get(key: string, options: { access: StorageAccess }): Promise<StorageGetResult | null> {
+  async read(loc: FileLocator): Promise<StorageGetResult | null> {
     if (!this.isConfigured())
       throw new Error('STORAGE_NOT_CONFIGURED: ImageKit credentials missing');
     const { urlEndpoint, privateKey } = this.cfg();
-    let url = `${urlEndpoint}/${key}`;
-    if (options.access === 'private') {
+    let url = `${urlEndpoint}/${loc.key}`;
+    if (loc.access === 'private') {
       const expire = Math.floor(Date.now() / 1000) + 300;
       const signature = crypto
         .createHmac('sha1', privateKey)
@@ -113,12 +86,12 @@ export class ImageKitStorageDriver implements ProxyStorageDriver {
     }
   }
 
-  async delete(key: string): Promise<void> {
+  async remove(loc: FileLocator): Promise<void> {
     if (!this.isConfigured()) return;
     await fetch('https://api.imagekit.io/v1/files/batch/deleteByFilePaths', {
       method: 'POST',
       headers: { Authorization: this.auth(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filePaths: [`/${key}`] }),
+      body: JSON.stringify({ filePaths: [`/${loc.key}`] }),
     });
   }
 }

@@ -5,31 +5,35 @@ import path from 'node:path';
 import { LocalStorageDriver } from '../../lib/storage/providers/local';
 import { S3CompatibleStorageDriver } from '../../lib/storage/providers/s3';
 import { cloudinaryDriver } from '../../lib/storage/providers/cloudinary';
-import {
-  isSafeKey,
-  makeStoredRef,
-  parseStoredRef,
-  privateRefOwnerId,
-  isPrivateRef,
-} from '../../lib/privateRef';
+import { getStorage, getStorageByName } from '../../lib/storage';
+import { fileUrl, parseFileUrl, FOLDER_ACCESS } from '../../lib/fileRef';
 
 const bytes = (text: string) => new TextEncoder().encode(text);
 const text = async (stream: ReadableStream<Uint8Array>) => new Response(stream).text();
+const ID = '0b0e3d6e-5a52-4a52-9a64-0d5d2f4d9d11';
 
-describe('stored refs and keys', () => {
-  it('round-trips a stored ref and reads its owner', () => {
-    const ref = makeStoredRef('profile/user-7/170-abc-id.pdf');
-    expect(parseStoredRef(ref)).toEqual({ key: 'profile/user-7/170-abc-id.pdf' });
-    expect(privateRefOwnerId(ref)).toBe('user-7');
-    expect(isPrivateRef(ref)).toBe(true);
+describe('file URLs', () => {
+  it('round-trips a gateway URL and rejects everything else', () => {
+    expect(parseFileUrl(fileUrl(ID))).toBe(ID);
+    expect(parseFileUrl(fileUrl(ID.toUpperCase()))).toBe(ID);
+    for (const bad of [
+      '',
+      'passport.png',
+      `/api/v1/files/${ID}/extra`,
+      `/api/v1/files/${ID}?x=1`,
+      `https://evil.example/api/v1/files/${ID}`,
+      '/api/v1/files/not-a-uuid',
+    ]) {
+      expect(parseFileUrl(bad)).toBeNull();
+    }
+    expect(parseFileUrl(null)).toBeNull();
   });
 
-  it('rejects unsafe keys', () => {
-    for (const bad of ['', '/abs', 'a/../b', 'a//b', 'a\\b', '../x', 'a/./b']) {
-      expect(isSafeKey(bad)).toBe(false);
-    }
-    expect(parseStoredRef('stor:private:profile/../../etc/passwd')).toBeNull();
-    expect(privateRefOwnerId('stor:private:properties/u/x.png')).toBeNull();
+  it('makes every upload folder choose private or public, with maintenance photos private', () => {
+    expect(FOLDER_ACCESS['maintenance-requests']).toBe('private');
+    expect(FOLDER_ACCESS.profile).toBe('private');
+    expect(FOLDER_ACCESS.applications).toBe('private');
+    expect(FOLDER_ACCESS.properties).toBe('public');
   });
 });
 
@@ -40,131 +44,230 @@ describe('LocalStorageDriver', () => {
   });
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-  it('puts, gets and deletes', async () => {
-    const driver = new LocalStorageDriver(dir);
-    await driver.put('private/profile/u1/a.txt', bytes('secret'), {
+  const loc = (key: string) => ({ key, access: 'private' as const });
+
+  it('builds owner-namespaced keys under the access directory', () => {
+    const key = new LocalStorageDriver(dir).makeKey({
+      folder: 'profile',
+      ownerId: 'u1',
+      fileId: 'f1',
+      fileName: 'My ID.PDF',
       access: 'private',
-      contentType: 'text/plain',
     });
-    const got = await driver.get('private/profile/u1/a.txt', { access: 'private' });
+    expect(key).toBe('private/profile/u1/f1-my-id.pdf');
+  });
+
+  it('puts, reads and removes', async () => {
+    const driver = new LocalStorageDriver(dir);
+    const l = loc('private/profile/u1/a.txt');
+    await driver.put(l, bytes('secret'), 'text/plain');
+    const got = await driver.read(l);
     expect(got?.contentType).toBe('text/plain');
     expect(got?.size).toBe(6);
     expect(await text(got!.stream)).toBe('secret');
-
-    // The same logical key in the public namespace is a different file.
-    expect(await driver.get('public/profile/u1/a.txt', { access: 'public' })).toBeNull();
-
-    await driver.delete('private/profile/u1/a.txt', { access: 'private' });
-    expect(await driver.get('private/profile/u1/a.txt', { access: 'private' })).toBeNull();
+    await driver.remove(l);
+    expect(await driver.read(l)).toBeNull();
   });
 
   it('refuses path traversal', async () => {
     const driver = new LocalStorageDriver(dir);
-    await expect(
-      driver.put('../../escape.txt', bytes('x'), { access: 'private', contentType: 'text/plain' }),
-    ).rejects.toThrow(/traversal/);
+    await expect(driver.put(loc('../../escape.txt'), bytes('x'), 'text/plain')).rejects.toThrow(
+      /traversal/,
+    );
   });
 });
 
-describe('S3CompatibleStorageDriver (fake client)', () => {
-  const make = (send: (c: unknown) => Promise<unknown>, extra = {}) =>
-    new S3CompatibleStorageDriver(
-      {
-        name: 's3',
-        bucket: 'b',
-        accessKeyId: 'k',
-        secretAccessKey: 's',
-        publicUrlBase: 'https://cdn.example.com/',
-        ...extra,
-      },
-      { send },
-    );
-
-  it('reports configuration and sends a PutObject with key, type and body', async () => {
-    const send = vi.fn().mockResolvedValue({});
-    const driver = make(send);
-    expect(driver.isConfigured()).toBe(true);
-    const res = await driver.put('public/properties/u/a.png', bytes('png'), {
-      access: 'public',
-      contentType: 'image/png',
-    });
-    const input = (send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
-    expect(input).toMatchObject({
-      Bucket: 'b',
-      Key: 'public/properties/u/a.png',
-      ContentType: 'image/png',
-    });
-    expect(res.url).toBe('https://cdn.example.com/public/properties/u/a.png');
+describe('S3CompatibleStorageDriver (fake client and presigner)', () => {
+  const presign = vi.fn(async (_c: unknown, cmd: unknown, o: { expiresIn: number }) => {
+    const input = (cmd as { input: Record<string, unknown> }).input;
+    return `https://signed.example/${input.Key}?ttl=${o.expiresIn}`;
   });
+  const make = (
+    send: (c: unknown) => Promise<unknown> = vi.fn().mockResolvedValue({}),
+    extra = {},
+  ) =>
+    new S3CompatibleStorageDriver(
+      { name: 's3', bucket: 'b', accessKeyId: 'k', secretAccessKey: 's', ...extra },
+      { send },
+      presign,
+    );
+  const l = { key: 'private/profile/u/f-id.pdf', access: 'private' as const };
 
-  it('gives no direct URL for private objects', async () => {
-    const driver = make(vi.fn().mockResolvedValue({}));
-    const res = await driver.put('private/profile/u/a.pdf', bytes('x'), {
-      access: 'private',
+  it('uploads directly with a presigned PUT that pins the content type', async () => {
+    const driver = make();
+    expect(driver.upload).toBe('direct');
+    const plan = await driver.prepareDirectUpload({
+      key: l.key,
       contentType: 'application/pdf',
     });
-    expect(res.url).toBeUndefined();
-  });
-
-  it('treats NoSuchKey as missing and rethrows other errors', async () => {
-    const missing = make(
-      vi.fn().mockRejectedValue(Object.assign(new Error('x'), { name: 'NoSuchKey' })),
-    );
-    expect(await missing.get('k', { access: 'private' })).toBeNull();
-    const broken = make(vi.fn().mockRejectedValue(new Error('boom')));
-    await expect(broken.get('k', { access: 'private' })).rejects.toThrow('boom');
-  });
-
-  it('is unconfigured without credentials', () => {
-    const driver = new S3CompatibleStorageDriver({
-      name: 's3',
-      bucket: '',
-      accessKeyId: '',
-      secretAccessKey: '',
+    expect(plan).toEqual({
+      kind: 'put',
+      url: `https://signed.example/${l.key}?ttl=300`,
+      headers: { 'Content-Type': 'application/pdf' },
     });
-    expect(driver.isConfigured()).toBe(false);
+  });
+
+  it('verifies an upload with HeadObject and reports a missing object as null', async () => {
+    const ok = make(
+      vi.fn().mockResolvedValue({ ContentLength: 42, ContentType: 'application/pdf' }),
+    );
+    expect(await ok.verifyUpload(l)).toEqual({ size: 42, contentType: 'application/pdf' });
+    const missing = make(
+      vi.fn().mockRejectedValue(Object.assign(new Error('x'), { name: 'NotFound' })),
+    );
+    expect(await missing.verifyUpload(l)).toBeNull();
+    const broken = make(vi.fn().mockRejectedValue(new Error('boom')));
+    await expect(broken.verifyUpload(l)).rejects.toThrow('boom');
+  });
+
+  it('reads through a presigned GET, or a public base URL for public objects', async () => {
+    const driver = make();
+    const url = await driver.signedUrl(l, {
+      ttlSeconds: 120,
+      fileName: 'id.pdf',
+      contentType: 'application/pdf',
+    });
+    expect(url).toBe(`https://signed.example/${l.key}?ttl=120`);
+
+    const cdn = make(undefined, { publicUrlBase: 'https://cdn.example.com/' });
+    const pub = await cdn.signedUrl(
+      { key: 'public/properties/u/f.png', access: 'public' },
+      { ttlSeconds: 60, fileName: 'f.png', contentType: 'image/png' },
+    );
+    expect(pub).toBe('https://cdn.example.com/public/properties/u/f.png');
+    // Private objects never use the public base.
+    const priv = await cdn.signedUrl(l, {
+      ttlSeconds: 60,
+      fileName: 'id.pdf',
+      contentType: 'application/pdf',
+    });
+    expect(priv).toContain('signed.example');
+  });
+
+  it('removes with DeleteObject and reports configuration', async () => {
+    const send = vi.fn().mockResolvedValue({});
+    await make(send).remove(l);
+    expect((send.mock.calls[0][0] as { input: { Key: string } }).input.Key).toBe(l.key);
+    expect(make().isConfigured()).toBe(true);
+    expect(
+      new S3CompatibleStorageDriver({
+        name: 's3',
+        bucket: '',
+        accessKeyId: '',
+        secretAccessKey: '',
+      }).isConfigured(),
+    ).toBe(false);
   });
 });
 
-describe('cloudinary deleteRef', () => {
-  it('posts a signed destroy request for the authenticated asset', async () => {
-    const saved = { ...process.env };
+describe('cloudinaryDriver', () => {
+  const saved = { ...process.env };
+  beforeAll(() => {
+    process.env.CLOUDINARY_CLOUD_NAME = 'demo';
+    process.env.CLOUDINARY_API_KEY = 'key';
+    process.env.CLOUDINARY_API_SECRET = 'secret';
+  });
+  afterAll(() => {
+    process.env = saved;
+  });
+
+  it('fixes the public_id, type and allowed formats inside the signature', () => {
+    const key = cloudinaryDriver.makeKey({
+      folder: 'profile',
+      ownerId: 'u1',
+      fileId: 'f1',
+      fileName: 'x.pdf',
+      access: 'private',
+    });
+    expect(key).toBe('profile/u1/f1');
+    const plan = cloudinaryDriver.prepareDirectUpload!({
+      key,
+      access: 'private',
+      folder: 'profile',
+      contentType: 'application/pdf',
+    }) as { kind: string; url: string; fields: Record<string, string> };
+    expect(plan.kind).toBe('form-post');
+    expect(plan.url).toBe('https://api.cloudinary.com/v1_1/demo/auto/upload');
+    expect(plan.fields).toMatchObject({ public_id: key, type: 'authenticated', api_key: 'key' });
+    expect(plan.fields.allowed_formats).not.toContain('mp4');
+    expect(plan.fields.signature).toMatch(/^[0-9a-f]{40}$/);
+    expect(JSON.stringify(plan)).not.toContain('secret');
+
+    const video = cloudinaryDriver.prepareDirectUpload!({
+      key: 'properties/u1/f2',
+      access: 'public',
+      folder: 'properties',
+      contentType: 'video/mp4',
+    }) as { fields: Record<string, string> };
+    expect(video.fields.allowed_formats).toContain('mp4');
+    expect(video.fields.type).toBe('upload');
+  });
+
+  it('accepts only resource types and formats the signature allowed', async () => {
+    const loc = { key: 'profile/u1/f1', access: 'private' as const };
+    expect(
+      await cloudinaryDriver.verifyUpload!(loc, {
+        resource_type: 'image',
+        format: 'PDF',
+        bytes: 9,
+      }),
+    ).toEqual({
+      size: 9,
+      meta: { resourceType: 'image', format: 'pdf' },
+    });
+    expect(
+      await cloudinaryDriver.verifyUpload!(loc, { resource_type: 'raw', format: 'exe' }),
+    ).toBeNull();
+    expect(
+      await cloudinaryDriver.verifyUpload!(loc, { resource_type: 'zip', format: 'png' }),
+    ).toBeNull();
+  });
+
+  it('builds a signed expiring download URL for private assets and a plain URL for public ones', async () => {
+    const priv = await cloudinaryDriver.signedUrl!(
+      { key: 'profile/u1/f1', access: 'private', meta: { resourceType: 'image', format: 'pdf' } },
+      { ttlSeconds: 120, fileName: 'id.pdf', contentType: 'application/pdf' },
+    );
+    const url = new URL(priv!);
+    expect(url.origin + url.pathname).toBe('https://api.cloudinary.com/v1_1/demo/image/download');
+    expect(url.searchParams.get('type')).toBe('authenticated');
+    expect(url.searchParams.get('signature')).toMatch(/^[0-9a-f]{40}$/);
+    expect(
+      Number(url.searchParams.get('expires_at')) - Number(url.searchParams.get('timestamp')),
+    ).toBe(120);
+    expect(url.search).not.toContain('secret');
+
+    const pub = await cloudinaryDriver.signedUrl!(
+      { key: 'properties/u1/f2', access: 'public', meta: { resourceType: 'image', format: 'png' } },
+      { ttlSeconds: 60, fileName: 'f.png', contentType: 'image/png' },
+    );
+    expect(pub).toBe('https://res.cloudinary.com/demo/image/upload/properties/u1/f2.png');
+  });
+
+  it('posts a signed destroy request', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}'));
     vi.stubGlobal('fetch', fetchMock);
     try {
-      process.env.CLOUDINARY_CLOUD_NAME = 'demo';
-      process.env.CLOUDINARY_API_KEY = 'key';
-      process.env.CLOUDINARY_API_SECRET = 'secret';
-      if (cloudinaryDriver.mode !== 'direct') throw new Error('expected direct');
-      await cloudinaryDriver.deleteRef('cldp:image/profile/u1/file.pdf');
+      await cloudinaryDriver.remove({
+        key: 'profile/u1/f1',
+        access: 'private',
+        meta: { resourceType: 'image' },
+      });
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://api.cloudinary.com/v1_1/demo/image/destroy');
       const body = new URLSearchParams(String(init.body));
-      expect(body.get('public_id')).toBe('profile/u1/file');
+      expect(body.get('public_id')).toBe('profile/u1/f1');
       expect(body.get('type')).toBe('authenticated');
-      expect(body.get('signature')).toMatch(/^[0-9a-f]{40}$/);
       expect(String(init.body)).not.toContain('secret');
     } finally {
       vi.unstubAllGlobals();
-      process.env = saved;
     }
   });
 });
 
-describe('getStorage and file helpers (local provider)', () => {
-  let dir: string;
-  beforeAll(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'proplity-files-'));
+describe('provider selection', () => {
+  it('selects by name, caches, and rejects unknown or production-local', () => {
     vi.stubEnv('STORAGE_PROVIDER', 'local');
-    vi.stubEnv('LOCAL_STORAGE_PATH', dir);
-  });
-  afterAll(() => {
-    vi.unstubAllEnvs();
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it('selects providers by name and rejects unknown or production-local', async () => {
-    const { getStorage } = await import('../../lib/storage');
     expect(getStorage().name).toBe('local');
     for (const [name, expected] of [
       ['s3', 's3'],
@@ -175,48 +278,13 @@ describe('getStorage and file helpers (local provider)', () => {
       ['vercel-blob', 'vercel-blob'],
       ['cloudinary', 'cloudinary'],
     ] as const) {
-      vi.stubEnv('STORAGE_PROVIDER', name);
-      expect(getStorage().name).toBe(expected);
+      expect(getStorageByName(name).name).toBe(expected);
     }
-    vi.stubEnv('STORAGE_PROVIDER', 's4');
-    expect(() => getStorage()).toThrow(/Unknown STORAGE_PROVIDER/);
-    vi.stubEnv('STORAGE_PROVIDER', 'local');
+    vi.stubEnv('STORAGE_PROVIDER', '');
+    expect(getStorage().name).toBe('cloudinary'); // default
+    expect(() => getStorageByName('s4')).toThrow(/Unknown STORAGE_PROVIDER/);
     vi.stubEnv('NODE_ENV', 'production');
-    expect(() => getStorage()).toThrow(/development only/);
-    vi.stubEnv('NODE_ENV', 'test');
-  });
-
-  it('stores private and public uploads under owner folders and serves them back', async () => {
-    const { storeUpload, readPrivateFile, readPublicFile, deleteStoredFile } =
-      await import('../../lib/storage/files');
-    const priv = await storeUpload({
-      folder: 'profile',
-      userId: 'u-1',
-      fileName: 'My ID.pdf',
-      contentType: 'application/pdf',
-      data: bytes('%PDF'),
-    });
-    expect(priv.url.startsWith('stor:private:profile/u-1/')).toBe(true);
-    expect(privateRefOwnerId(priv.url)).toBe('u-1');
-    expect(await text((await readPrivateFile(priv.url))!.stream)).toBe('%PDF');
-
-    const pub = await storeUpload({
-      folder: 'properties',
-      userId: 'u-1',
-      fileName: 'house.png',
-      contentType: 'image/png',
-      data: bytes('png'),
-    });
-    expect(pub.url.startsWith('/api/v1/uploads/public?key=properties%2Fu-1%2F')).toBe(true);
-    const publicKey = decodeURIComponent(pub.url.split('key=')[1]);
-    expect(await text((await readPublicFile(publicKey))!.stream)).toBe('png');
-
-    // The public reader cannot reach a private file, even with its key.
-    const privateKey = priv.url.replace('stor:private:', '');
-    expect(await readPublicFile(privateKey)).toBeNull();
-
-    await deleteStoredFile(priv.url);
-    expect(await readPrivateFile(priv.url)).toBeNull();
-    await expect(deleteStoredFile('not-a-ref')).resolves.toBeUndefined();
+    expect(() => getStorageByName('local')).toThrow(/development only/);
+    vi.unstubAllEnvs();
   });
 });

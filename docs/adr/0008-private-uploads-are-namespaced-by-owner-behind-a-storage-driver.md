@@ -1,7 +1,8 @@
 # 0008 — Private uploads are namespaced by owner, behind a storage-driver interface
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
+Status: Superseded
+Superseded by: 0010
+Decided by: roji-tech · Date: 2026-10-11
 Recorded: 2026-10-11
 <!-- Refines ADR-0007; does not supersede it. -->
 

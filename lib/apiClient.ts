@@ -119,24 +119,10 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 // Domain-grouped typed methods, built on the same apiClient instance (and
 // therefore the same 401-refresh interceptor above) -- kept minimal to what
 // Phase 7's forms actually call, not a full mirror of every domain route.
-export type SignedUploadPlan =
-  | {
-      mode: 'direct';
-      provider: string;
-      cloudName: string;
-      apiKey: string;
-      timestamp: number;
-      signature: string;
-      folder: string;
-      type?: 'authenticated';
-    }
-  | {
-      mode: 'proxy';
-      provider: string;
-      uploadUrl: string;
-      folder: string;
-      access: 'private' | 'public';
-    };
+export type UploadPlan =
+  | { mode: 'proxy'; uploadUrl: string; fileId: string }
+  | { mode: 'direct'; kind: 'form-post'; url: string; fields: Record<string, string> }
+  | { mode: 'direct'; kind: 'put'; url: string; headers: Record<string, string> };
 
 export const api = {
   properties: {
@@ -373,10 +359,21 @@ export const api = {
     },
   },
   uploads: {
-    sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
-      apiClient.post<{
-        data: SignedUploadPlan;
-      }>('/api/v1/uploads/sign', { folder }),
+    sign: (body: {
+      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+      fileName: string;
+      contentType: string;
+      size: number;
+    }) =>
+      apiClient.post<{ data: { file: { id: string; url: string }; plan: UploadPlan } }>(
+        '/api/v1/uploads/sign',
+        body,
+      ),
+    complete: (body: { fileId: string; claimed?: Record<string, unknown> }) =>
+      apiClient.post<{ data: { id: string; url: string; name: string } }>(
+        '/api/v1/uploads/complete',
+        body,
+      ),
   },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),

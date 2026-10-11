@@ -1,16 +1,11 @@
 import 'server-only';
 import { get, put, del } from '@vercel/blob';
-import type {
-  ProxyStorageDriver,
-  StorageAccess,
-  StorageGetResult,
-  StoragePutOptions,
-  StoragePutResult,
-} from '../types';
+import type { FileLocator, StorageDriver, StorageGetResult } from '../types';
+import { cleanFileName } from '../keys';
 
-export class VercelBlobStorageDriver implements ProxyStorageDriver {
+export class VercelBlobStorageDriver implements StorageDriver {
   readonly name = 'vercel-blob';
-  readonly mode = 'proxy' as const;
+  readonly upload = 'proxy' as const;
 
   isConfigured(): boolean {
     return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -22,28 +17,27 @@ export class VercelBlobStorageDriver implements ProxyStorageDriver {
     return token;
   }
 
-  async put(
-    key: string,
-    data: Buffer | Uint8Array | ReadableStream<Uint8Array>,
-    options: StoragePutOptions,
-  ): Promise<StoragePutResult> {
-    const blob = await put(key, data instanceof Uint8Array ? Buffer.from(data) : data, {
-      access: options.access,
+  makeKey = ({
+    access,
+    folder,
+    ownerId,
+    fileId,
+    fileName,
+  }: Parameters<StorageDriver['makeKey']>[0]) =>
+    `${access}/${folder}/${ownerId}/${fileId}-${cleanFileName(fileName)}`;
+
+  async put(loc: FileLocator, data: Uint8Array, contentType: string): Promise<void> {
+    await put(loc.key, Buffer.from(data), {
+      access: loc.access,
       token: this.token(),
-      contentType: options.contentType,
+      contentType,
       addRandomSuffix: false,
     });
-    return {
-      pathname: blob.pathname,
-      contentType: options.contentType,
-      size: data instanceof Uint8Array ? data.byteLength : 0,
-      url: options.access === 'public' ? blob.url : undefined,
-    };
   }
 
-  async get(key: string, options: { access: StorageAccess }): Promise<StorageGetResult | null> {
+  async read(loc: FileLocator): Promise<StorageGetResult | null> {
     try {
-      const result = await get(key, { access: options.access, token: this.token() });
+      const result = await get(loc.key, { access: loc.access, token: this.token() });
       if (!result || result.statusCode !== 200) return null;
       return {
         stream: result.stream,
@@ -55,7 +49,7 @@ export class VercelBlobStorageDriver implements ProxyStorageDriver {
     }
   }
 
-  async delete(key: string): Promise<void> {
-    await del(key, { token: this.token() });
+  async remove(loc: FileLocator): Promise<void> {
+    await del(loc.key, { token: this.token() });
   }
 }

@@ -2,18 +2,13 @@ import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import type {
-  ProxyStorageDriver,
-  StorageAccess,
-  StorageGetResult,
-  StoragePutOptions,
-  StoragePutResult,
-} from '../types';
+import type { FileLocator, StorageDriver, StorageGetResult } from '../types';
+import { cleanFileName } from '../keys';
 
 /** Disk storage for development only (refused in production by getStorage()). */
-export class LocalStorageDriver implements ProxyStorageDriver {
+export class LocalStorageDriver implements StorageDriver {
   readonly name = 'local';
-  readonly mode = 'proxy' as const;
+  readonly upload = 'proxy' as const;
   private readonly basePath: string;
 
   constructor(basePath?: string) {
@@ -25,9 +20,16 @@ export class LocalStorageDriver implements ProxyStorageDriver {
     return true;
   }
 
-  // Keys arrive already namespaced (`private/…` / `public/…`, see
-  // lib/storage/files.ts), so the access flag needs no directory of its own.
-  private resolveSafePath(key: string): string {
+  makeKey = ({
+    access,
+    folder,
+    ownerId,
+    fileId,
+    fileName,
+  }: Parameters<StorageDriver['makeKey']>[0]) =>
+    `${access}/${folder}/${ownerId}/${fileId}-${cleanFileName(fileName)}`;
+
+  private resolve(key: string): string {
     const root = path.resolve(this.basePath);
     const target = path.resolve(root, key);
     if (!target.startsWith(root + path.sep)) {
@@ -36,41 +38,19 @@ export class LocalStorageDriver implements ProxyStorageDriver {
     return target;
   }
 
-  async put(
-    key: string,
-    data: Buffer | Uint8Array | ReadableStream<Uint8Array>,
-    options: StoragePutOptions,
-  ): Promise<StoragePutResult> {
-    const target = this.resolveSafePath(key);
+  async put(loc: FileLocator, data: Uint8Array, contentType: string): Promise<void> {
+    const target = this.resolve(loc.key);
     await fs.promises.mkdir(path.dirname(target), { recursive: true });
-
-    let size: number;
-    if (data instanceof Uint8Array) {
-      await fs.promises.writeFile(target, data as unknown as Uint8Array);
-      size = data.byteLength;
-    } else {
-      const node = Readable.fromWeb(data as import('node:stream/web').ReadableStream);
-      await new Promise<void>((resolve, reject) => {
-        const out = fs.createWriteStream(target);
-        node
-          .pipe(out)
-          .on('finish', () => resolve())
-          .on('error', reject);
-        node.on('error', reject);
-      });
-      size = (await fs.promises.stat(target)).size;
-    }
-
+    await fs.promises.writeFile(target, data);
     await fs.promises.writeFile(
       `${target}.meta.json`,
-      JSON.stringify({ contentType: options.contentType, size }),
+      JSON.stringify({ contentType, size: data.byteLength }),
       'utf-8',
     );
-    return { pathname: key, contentType: options.contentType, size };
   }
 
-  async get(key: string, _options: { access: StorageAccess }): Promise<StorageGetResult | null> {
-    const target = this.resolveSafePath(key);
+  async read(loc: FileLocator): Promise<StorageGetResult | null> {
+    const target = this.resolve(loc.key);
     let stat: fs.Stats;
     try {
       stat = await fs.promises.stat(target);
@@ -91,8 +71,8 @@ export class LocalStorageDriver implements ProxyStorageDriver {
     };
   }
 
-  async delete(key: string, _options?: { access: StorageAccess }): Promise<void> {
-    const target = this.resolveSafePath(key);
+  async remove(loc: FileLocator): Promise<void> {
+    const target = this.resolve(loc.key);
     await fs.promises.rm(target, { force: true });
     await fs.promises.rm(`${target}.meta.json`, { force: true });
   }
