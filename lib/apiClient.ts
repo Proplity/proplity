@@ -356,7 +356,13 @@ export const api = {
   uploads: {
     sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
       apiClient.post<{
-        data: { cloudName: string; apiKey: string; timestamp: number; signature: string };
+        data: {
+          cloudName: string;
+          apiKey: string;
+          timestamp: number;
+          signature: string;
+          type?: 'authenticated';
+        };
       }>('/api/v1/uploads/sign', { folder }),
   },
   subscriptions: {
@@ -378,7 +384,11 @@ export const api = {
   },
   managerCodes: {
     list: () => apiClient.get<{ data: ManagerInviteCode[] }>('/api/v1/manager-codes'),
-    create: () => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes'),
+    create: (body?: { email?: string }) =>
+      apiClient.post<{ data: ManagerInviteCode; invitedEmail?: string }>(
+        '/api/v1/manager-codes',
+        body,
+      ),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
     redeem: (code: string) =>

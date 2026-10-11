@@ -71,6 +71,7 @@ async function main() {
   await prisma.lease.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.property.deleteMany();
+  await prisma.managerInviteCode.deleteMany();
   await prisma.bankAccount.deleteMany();
   await prisma.vendorProfile.deleteMany();
   await prisma.user.deleteMany();
@@ -120,6 +121,16 @@ async function main() {
       status: UserStatus.ACTIVE,
       phoneNumber: '+2348033334444',
       kycStatus: KycStatus.VERIFIED,
+    },
+  });
+
+  await prisma.managerInviteCode.upsert({
+    where: { code: 'DEMO-CODE' },
+    update: { status: 'ACTIVE', linkedManagerId: null, linkedAt: null },
+    create: {
+      code: 'DEMO-CODE',
+      landlordId: landlord.id,
+      status: 'ACTIVE',
     },
   });
 

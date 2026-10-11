@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 
 interface LoginProps {
   onLogin: (role: string) => void;
-  onSwitchToRegister: () => void;
-  onForgotPassword: () => void;
+  onSwitchToRegister?: () => void;
+  onForgotPassword?: () => void;
 }
 
 const DEMO_ACCOUNTS: Record<string, { email: string; password: string }> = {
@@ -190,13 +190,13 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
                 />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
-              <button
-                type="button"
+              <Link
+                href="/forgot-password"
                 onClick={onForgotPassword}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {/* Always-visible resend link -- not gated behind a failed
@@ -290,12 +290,13 @@ export function Login({ onLogin, onSwitchToRegister, onForgotPassword }: LoginPr
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <button
+              <Link
+                href="/register"
                 onClick={onSwitchToRegister}
                 className="font-medium text-blue-600 hover:text-blue-700"
               >
                 Sign up for free
-              </button>
+              </Link>
             </p>
           </div>
         </div>

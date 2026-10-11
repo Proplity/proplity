@@ -12,6 +12,8 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
+    "prettier": "prettier --write .",
+    "prettier:check": "prettier --check .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",

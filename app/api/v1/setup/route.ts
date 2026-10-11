@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { findUserByEmail } from '@/lib/auth/email';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check duplicate email
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       keepReservation = true;
       return NextResponse.json(

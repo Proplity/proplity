@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { emailSchema, findUserByEmail } from '@/lib/auth/email';
 import { appUrl } from '@/lib/appUrl';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -10,7 +11,7 @@ import { sendEmail } from '@/lib/email';
 import { Role, UserStatus } from '@prisma/client';
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(6),
   name: z.string().min(1),
   role: z.string().optional(),
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     const { email, password, name, role: inputRole, landlordCode } = parsed.data;
 
     // Check duplicate user
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await findUserByEmail(email);
     if (existing) {
       keepReservation = true;
       return NextResponse.json({ error: 'Email address is already registered' }, { status: 409 });
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: user.email,
       subject: 'Verify your Proplity account',
-      body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`)}\n\nThis link expires in 7 days.`,
+      body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`, req)}\n\nThis link expires in 7 days.`,
     });
 
     // No session is established here -- the account is PENDING_VERIFICATION
