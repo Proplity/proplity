@@ -1,53 +1,65 @@
 import { api } from './apiClient';
-import { makePrivateRef } from './privateRef';
+import type { UploadFolder } from './fileRef';
 
-// Client-side mirror of lib/cloudinary.ts's cloudinaryEnabled() -- the
-// server is still the real gate (POST /api/v1/uploads/sign 503s if unset),
-// this just lets the UI show "not available" instead of a button that
-// always fails.
+// Client-side mirror of the server's storage check -- the server is still the
+// real gate (POST /api/v1/uploads/sign 503s if storage is unconfigured), this
+// just lets the UI show "not available" instead of a button that always
+// fails. NEXT_PUBLIC_STORAGE_ENABLED covers providers other than Cloudinary.
 export function uploadsEnabled(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+  return Boolean(
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    process.env.NEXT_PUBLIC_STORAGE_ENABLED === 'true',
+  );
 }
 
-export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+export type { UploadFolder };
 
 export interface UploadedFile {
   name: string;
+  /** Gateway URL (`/api/v1/files/<id>`) -- store this on the record. */
   url: string;
 }
 
-// Signs with our own API, then uploads directly to Cloudinary from the
-// browser -- the file itself never passes through our server/serverless
-// function (avoids the body-size limits and cost of proxying it).
+async function failure(res: Response, fallback: string): Promise<never> {
+  const body = await res.json().catch(() => ({}));
+  throw new Error(body?.error ?? fallback);
+}
+
+// 1. Ask the server to register the file and say how to upload it.
+// 2. Upload: straight to the provider (Cloudinary form POST / S3 presigned
+//    PUT), or through our own endpoint for the other providers.
+// 3. Direct uploads: tell the server it finished so it can verify the file.
 export async function uploadFile(file: File, folder: UploadFolder): Promise<UploadedFile> {
-  const signRes = await api.uploads.sign(folder);
-  const { cloudName, apiKey, timestamp, signature, type } = signRes.data.data;
-
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('api_key', apiKey);
-  formData.append('timestamp', String(timestamp));
-  formData.append('signature', signature);
-  formData.append('folder', folder);
-  if (type) formData.append('type', type);
-
-  const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-    method: 'POST',
-    body: formData,
+  const signRes = await api.uploads.sign({
+    folder,
+    fileName: file.name,
+    contentType: file.type,
+    size: file.size,
   });
+  const { file: registered, plan } = signRes.data.data;
 
-  if (!uploadRes.ok) {
-    throw new Error('Upload failed');
+  if (plan.mode === 'proxy') {
+    const body = new FormData();
+    body.append('fileId', plan.fileId);
+    body.append('file', file);
+    const res = await fetch(plan.uploadUrl, { method: 'POST', body, credentials: 'same-origin' });
+    if (!res.ok) await failure(res, 'Upload failed');
+    return { name: file.name, url: registered.url };
   }
 
-  const data = await uploadRes.json();
-  // Authenticated (private) assets have no usable public URL: keep an opaque
-  // reference that /api/v1/uploads/private turns into a short-lived link.
-  if (type === 'authenticated') {
-    return {
-      name: file.name,
-      url: makePrivateRef(data.resource_type, data.public_id, data.format),
-    };
+  let claimed: Record<string, unknown> = {};
+  if (plan.kind === 'form-post') {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(plan.fields)) form.append(k, v);
+    form.append('file', file);
+    const res = await fetch(plan.url, { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Upload failed');
+    claimed = await res.json();
+  } else {
+    const res = await fetch(plan.url, { method: 'PUT', headers: plan.headers, body: file });
+    if (!res.ok) throw new Error('Upload failed');
   }
-  return { name: file.name, url: data.secure_url };
+
+  await api.uploads.complete({ fileId: registered.id, claimed });
+  return { name: file.name, url: registered.url };
 }
