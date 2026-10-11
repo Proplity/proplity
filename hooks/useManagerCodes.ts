@@ -30,7 +30,9 @@ export function useManagerCodes() {
 }
 
 export function useCreateManagerCode() {
-  return useApiSubmit(() => api.managerCodes.create().then((res) => res.data.data));
+  return useApiSubmit((body?: { email?: string }) =>
+    api.managerCodes.create(body).then((res) => res.data.data),
+  );
 }
 
 export function useSetManagerCodeStatus() {

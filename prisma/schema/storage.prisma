@@ -1,0 +1,41 @@
+// One row per uploaded file, whichever storage provider holds it. Model
+// fields that "have a file" (User.idDocumentUrl, MaintenanceRequest.mediaUrls,
+// Property.imageUrl, ...) keep a plain string: the gateway URL
+// `/api/v1/files/<id>`. The gateway resolves the row to a provider + key, so
+// switching provider never strands a file and access is decided in one place.
+//
+// PENDING rows are created when an upload is signed and become READY once
+// the upload is confirmed; stale PENDING rows are cleaned up by the daily
+// storage janitor.
+
+enum StoredFileStatus {
+  PENDING
+  READY
+  DELETED
+}
+
+model StoredFile {
+  id           String           @id @default(uuid())
+  ownerId      String
+  owner        User             @relation("UploadedFiles", fields: [ownerId], references: [id])
+  // Upload folder ("profile", "maintenance-requests", ...), see FOLDER_ACCESS.
+  folder       String
+  // "private" | "public" -- fixed at upload time from the folder.
+  access       String
+  provider     String
+  // Object key (S3-style) or Cloudinary public_id; unique per provider.
+  key          String
+  originalName String
+  contentType  String?
+  size         Int?
+  status       StoredFileStatus @default(PENDING)
+  // Provider-specific extras, e.g. Cloudinary { resourceType, format }.
+  meta         Json?
+  createdAt    DateTime         @default(now())
+  readyAt      DateTime?
+  deletedAt    DateTime?
+
+  @@unique([provider, key])
+  @@index([ownerId, folder])
+  @@index([status, createdAt])
+}

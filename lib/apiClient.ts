@@ -119,6 +119,11 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 // Domain-grouped typed methods, built on the same apiClient instance (and
 // therefore the same 401-refresh interceptor above) -- kept minimal to what
 // Phase 7's forms actually call, not a full mirror of every domain route.
+export type UploadPlan =
+  | { mode: 'proxy'; uploadUrl: string; fileId: string }
+  | { mode: 'direct'; kind: 'form-post'; url: string; fields: Record<string, string> }
+  | { mode: 'direct'; kind: 'put'; url: string; headers: Record<string, string> };
+
 export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
@@ -354,10 +359,21 @@ export const api = {
     },
   },
   uploads: {
-    sign: (folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties') =>
-      apiClient.post<{
-        data: { cloudName: string; apiKey: string; timestamp: number; signature: string };
-      }>('/api/v1/uploads/sign', { folder }),
+    sign: (body: {
+      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+      fileName: string;
+      contentType: string;
+      size: number;
+    }) =>
+      apiClient.post<{ data: { file: { id: string; url: string }; plan: UploadPlan } }>(
+        '/api/v1/uploads/sign',
+        body,
+      ),
+    complete: (body: { fileId: string; claimed?: Record<string, unknown> }) =>
+      apiClient.post<{ data: { id: string; url: string; name: string } }>(
+        '/api/v1/uploads/complete',
+        body,
+      ),
   },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
@@ -378,7 +394,11 @@ export const api = {
   },
   managerCodes: {
     list: () => apiClient.get<{ data: ManagerInviteCode[] }>('/api/v1/manager-codes'),
-    create: () => apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes'),
+    create: (body?: { email?: string }) =>
+      apiClient.post<{ data: ManagerInviteCode; invitedEmail?: string }>(
+        '/api/v1/manager-codes',
+        body,
+      ),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
     redeem: (code: string) =>

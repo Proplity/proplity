@@ -3,3 +3,6 @@
 // relying on env vars crossing the globalSetup/worker process boundary.
 export const TEST_PORT = 3101;
 export const TEST_BASE_URL = `http://localhost:${TEST_PORT}`;
+
+// Disk location for the test server's local storage provider (STORAGE_PROVIDER=local).
+export const TEST_STORAGE_PATH = '/tmp/proplity-test-storage';

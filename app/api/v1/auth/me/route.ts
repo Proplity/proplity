@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertOwnsFileUrls, deleteFileByUrl, FileError } from '@/lib/storage/service';
+import { parseFileUrl } from '@/lib/fileRef';
 import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/session';
 import { validateCSRF } from '@/lib/auth/csrf';
@@ -117,15 +119,41 @@ export async function PATCH(req: NextRequest) {
   const validated = await validateBody(req, updateProfileSchema);
   if (!validated.success) return validated.response;
 
+  // A gateway file URL must be a READY profile file uploaded by this very
+  // user; attaching someone else's would grant read access to it (ISS-034).
+  // Plain strings -- the filename fallback and legacy values -- are untouched.
+  try {
+    await assertOwnsFileUrls([validated.data.idDocumentUrl], session.sub, 'profile');
+  } catch (err) {
+    if (err instanceof FileError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
+
   if (Object.keys(validated.data).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
+
+  // Remember a private file that is about to be replaced so it can be removed.
+  const replacing =
+    validated.data.idDocumentUrl !== undefined
+      ? await prisma.user.findUnique({
+          where: { id: session.sub },
+          select: { idDocumentUrl: true },
+        })
+      : null;
 
   const user = await prisma.user.update({
     where: { id: session.sub },
     data: validated.data,
     select: PROFILE_SELECT,
   });
+
+  const oldUrl = replacing?.idDocumentUrl;
+  if (oldUrl && parseFileUrl(oldUrl) && oldUrl !== validated.data.idDocumentUrl) {
+    await deleteFileByUrl(oldUrl, session.sub); // best effort, never fails the request
+  }
 
   return NextResponse.json({ user: serialize(user) });
 }

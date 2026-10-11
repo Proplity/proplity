@@ -27,3 +27,4 @@ install.log
 /blob-report
 /playwright/.cache
 .env*
+/.local-storage

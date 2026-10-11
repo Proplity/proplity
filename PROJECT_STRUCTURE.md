@@ -15,13 +15,13 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 24 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 73 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 76 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 40 models, 10 schema files, 15 migrations")]
+    Postgres[("🐘 PostgreSQL — 41 models, 11 schema files, 16 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 5 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (247 tests) + Playwright (36 tests)"]
+    Tests["🧪 Vitest (250 tests) + Playwright (51 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/, properties/ (moderation queue), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 73 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 76 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings,
@@ -83,7 +83,7 @@ proplity/
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
 │   │   ├── 📁 conversations/, notifications/ # +[id]/messages; +[id], mark-all-read
-│   │   ├── 📁 vendors/, uploads/sign        # Vendor reputation list; Cloudinary signature
+│   │   ├── 📁 vendors/, uploads/, files/[id] # Vendor reputation list; upload sign/file/complete; the file gateway (ADR-0010)
 │   │   ├── 📁 admin/                        # users, settings, audit-logs
 │   │   ├── 📁 dev/                          # emails (inbox widget feed), mock-checkout/complete — both gated by env flags
 │   │   └── 📁 cron/[job]/                   # rent-invoicer … and "all" (the scheduled fan-out)
@@ -117,7 +117,8 @@ proplity/
 │
 ├── 📁 lib/
 │   ├── 📄 apiClient.ts                      # Axios + 401 refresh interceptor (single-flight) + typed api.* client
-│   ├── 📄 db.ts, email.ts (Resend or console), cloudinary.ts, uploadClient.ts, csv.ts, xlsx.ts, utils.ts
+│   ├── 📄 db.ts, email.ts (Resend or console), cloudinary.ts, uploadClient.ts, fileRef.ts, uploadPolicy.ts, csv.ts, xlsx.ts, utils.ts
+│   ├── 📁 storage/                          # StorageDriver interface, service.ts (StoredFile rules), providers/ (cloudinary, s3-compatible, local, imagekit, vercel-blob)
 │   ├── 📄 notifications.ts, notificationSound.ts, subscriptions.ts, systemSettings.ts, setup.ts, appUrl.ts, safeRedirect.ts
 │   ├── 📄 tenantProfile.ts                  # isTenantProfileComplete() — the profile-gate rule
 │   ├── 📁 api/                              # withAuth, validate, errors, pagination, propertyAccess, types
@@ -131,8 +132,8 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 api/                              # 15 Vitest files — 247 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 36 tests (pnpm test:e2e)
+│   ├── 📁 api/                              # 15 Vitest files — 250 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 51 tests (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget
@@ -140,8 +141,8 @@ proplity/
 │       └── 📁 helpers/auth.ts
 │
 ├── 📁 prisma/
-│   ├── 📁 schema/                           # 10 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit) — 40 models
-│   ├── 📁 migrations/                       # 15 migrations, latest: 20260928092131_tenant_year_of_birth
+│   ├── 📁 schema/                           # 10 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit) — 41 models
+│   ├── 📁 migrations/                       # 16 migrations, latest: 20260928092131_tenant_year_of_birth
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below
@@ -169,6 +170,9 @@ proplity/
 | `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                     |
 | `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                         |
 | `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`)                  |
+| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                    |
+| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                        |
+| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                      |
 | `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                        |
 | `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                  |
 | `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                    |
