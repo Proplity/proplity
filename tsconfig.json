@@ -31,5 +31,5 @@
     ".next-test/dev/types/**/*.ts",
     ".next-test/dev/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "out"]
 }

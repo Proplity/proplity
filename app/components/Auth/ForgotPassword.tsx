@@ -4,10 +4,10 @@ import { LogoIcon } from '../Logo';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ForgotPasswordProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-export function ForgotPassword({ onBack }: ForgotPasswordProps) {
+export function ForgotPassword({ onBack }: ForgotPasswordProps = {}) {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -56,12 +56,13 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
             <p className="mb-6 text-sm text-gray-500">
               Didn't receive the email? Check your spam folder or try again.
             </p>
-            <button
+            <Link
+              href="/login"
               onClick={onBack}
-              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+              className="block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white hover:bg-blue-700"
             >
               Back to Sign In
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -121,14 +122,14 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
             </button>
 
             {/* Back Button */}
-            <button
-              type="button"
+            <Link
+              href="/login"
               onClick={onBack}
               className="flex w-full items-center justify-center gap-2 text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Sign In
-            </button>
+            </Link>
           </form>
         </div>
       </div>

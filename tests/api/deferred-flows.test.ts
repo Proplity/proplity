@@ -138,6 +138,32 @@ describe('manager-codes: generate, toggle, redeem', () => {
     expect(res.status).toBe(403);
   });
 
+  it('rejects a malformed invite email without creating a code', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await apiFetch('/api/v1/manager-codes', {
+      method: 'POST',
+      cookie,
+      body: { email: 'not-an-email' },
+    });
+    expect(res.status).toBe(400);
+    expect(await testPrisma.managerInviteCode.count({ where: { landlordId: landlord.id } })).toBe(
+      0,
+    );
+  });
+
+  it('an invite with a valid email creates a code and echoes the normalised address', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await apiFetch('/api/v1/manager-codes', {
+      method: 'POST',
+      cookie,
+      body: { email: 'New.Manager@Test.Local' },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.invitedEmail).toBe('new.manager@test.local');
+  });
+
   it('a landlord generates a code in the LLD-XXXX-XX shape, and can toggle it inactive', async () => {
     const landlord = await createUser(Role.LANDLORD);
     const cookie = await authCookie(landlord.id, landlord.role);
