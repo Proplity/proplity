@@ -70,7 +70,7 @@ Eliminate tester friction in user onboarding by streamlining landlord signup (no
 
 - [x] Issue register `docs/issues/` (README, `issues.md`, `template.md`) — keep it updated in the same pass a problem is found
 
-- [x] ADRs 0001–0004: Decided by Abdullah Jamiu; ADRs 0005–0006 added as Proposed
+- [x] ADRs 0001–0004: Decided by roji-tech; ADRs 0005–0006 added as Proposed
 - [x] Phase doc corrected to match what was verified
 - [ ] `CLAUDE.md`, `CURRENT_STATE.md`, `PROJECT_STRUCTURE.md`: link `docs/adr/` and `docs/tasks/`, record the changes
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isPrivateRef, privateRefOwnerId } from '@/lib/privateRef';
 import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/session';
 import { validateCSRF } from '@/lib/auth/csrf';
@@ -116,6 +117,17 @@ export async function PATCH(req: NextRequest) {
 
   const validated = await validateBody(req, updateProfileSchema);
   if (!validated.success) return validated.response;
+
+  // A private-file reference names the user it was uploaded for; refuse one
+  // that belongs to somebody else (ISS-034). Plain strings -- the filename
+  // fallback and legacy public URLs -- are unaffected.
+  const docRef = validated.data.idDocumentUrl;
+  if (docRef && isPrivateRef(docRef) && privateRefOwnerId(docRef) !== session.sub) {
+    return NextResponse.json(
+      { error: 'That file was not uploaded by your account' },
+      { status: 400 },
+    );
+  }
 
   if (Object.keys(validated.data).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

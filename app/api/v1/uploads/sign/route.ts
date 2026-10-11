@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
-import { cloudinaryEnabled, signUploadParams, isPrivateFolder } from '@/lib/cloudinary';
+import { getStorage } from '@/lib/storage';
 import { Role } from '@prisma/client';
 
 // Signs a direct-to-Cloudinary upload for the calling user -- the file
@@ -30,7 +30,8 @@ const FOLDER_ROLES: Record<z.infer<typeof signSchema>['folder'], Role[]> = {
 };
 
 export const POST = withAuth(async (req, { session }) => {
-  if (!cloudinaryEnabled()) {
+  const storage = getStorage();
+  if (!storage.isConfigured()) {
     return NextResponse.json(
       { error: 'File uploads are not configured on this deployment' },
       { status: 503 },
@@ -46,22 +47,7 @@ export const POST = withAuth(async (req, { session }) => {
       return NextResponse.json({ error: 'Not allowed to upload to this folder' }, { status: 403 });
     }
 
-    const timestamp = Math.round(Date.now() / 1000);
-    // Identity/application files are stored as authenticated assets: the plain
-    // delivery URL does not work, see lib/cloudinary.ts (ISS-031).
-    const type = isPrivateFolder(folder) ? 'authenticated' : undefined;
-    const signature = signUploadParams({ folder, timestamp, ...(type ? { type } : {}) });
-
-    return NextResponse.json({
-      data: {
-        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-        apiKey: process.env.CLOUDINARY_API_KEY,
-        timestamp,
-        signature,
-        folder,
-        ...(type ? { type } : {}),
-      },
-    });
+    return NextResponse.json({ data: storage.signUpload(folder, session.sub) });
   } catch (err) {
     return handleApiError(err);
   }

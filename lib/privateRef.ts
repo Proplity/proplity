@@ -1,6 +1,8 @@
 // Client-safe (no Node crypto) helpers for private Cloudinary asset references.
 // Server-only signing lives in lib/cloudinary.ts.
 
+export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+
 export const PRIVATE_FOLDERS = ['profile', 'applications'] as const;
 
 export function isPrivateFolder(folder: string): boolean {
@@ -36,4 +38,21 @@ export function parsePrivateRef(
     return { resourceType, publicId: path.slice(0, dot), format: path.slice(dot + 1) };
   }
   return { resourceType, publicId: path };
+}
+
+/** Folder that holds one user's private files: `profile/<userId>`. */
+export function privateFolderFor(folder: string, userId: string): string {
+  return `${folder}/${userId}`;
+}
+
+/**
+ * The user id a private reference was uploaded for (the second path
+ * segment of its public id), or null for refs not in that shape.
+ */
+export function privateRefOwnerId(ref: string): string | null {
+  const parsed = parsePrivateRef(ref);
+  if (!parsed) return null;
+  const [folder, owner, ...file] = parsed.publicId.split('/');
+  // <folder>/<ownerId>/<file...> -- a bare <folder>/<file> has no owner.
+  return folder && isPrivateFolder(folder) && owner && file.length > 0 ? owner : null;
 }

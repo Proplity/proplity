@@ -1,5 +1,5 @@
 import { api } from './apiClient';
-import { makePrivateRef } from './privateRef';
+import { makePrivateRef, type UploadFolder } from './privateRef';
 
 // Client-side mirror of lib/cloudinary.ts's cloudinaryEnabled() -- the
 // server is still the real gate (POST /api/v1/uploads/sign 503s if unset),
@@ -9,7 +9,7 @@ export function uploadsEnabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
 }
 
-export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+export type { UploadFolder };
 
 export interface UploadedFile {
   name: string;
@@ -21,14 +21,15 @@ export interface UploadedFile {
 // function (avoids the body-size limits and cost of proxying it).
 export async function uploadFile(file: File, folder: UploadFolder): Promise<UploadedFile> {
   const signRes = await api.uploads.sign(folder);
-  const { cloudName, apiKey, timestamp, signature, type } = signRes.data.data;
+  const { cloudName, apiKey, timestamp, signature, type, folder: signedFolder } = signRes.data.data;
 
   const formData = new FormData();
   formData.append('file', file);
   formData.append('api_key', apiKey);
   formData.append('timestamp', String(timestamp));
   formData.append('signature', signature);
-  formData.append('folder', folder);
+  // The server decides the final folder (private ones are namespaced by owner).
+  formData.append('folder', signedFolder);
   if (type) formData.append('type', type);
 
   const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {

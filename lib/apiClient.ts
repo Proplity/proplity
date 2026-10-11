@@ -361,6 +361,7 @@ export const api = {
           apiKey: string;
           timestamp: number;
           signature: string;
+          folder: string;
           type?: 'authenticated';
         };
       }>('/api/v1/uploads/sign', { folder }),
