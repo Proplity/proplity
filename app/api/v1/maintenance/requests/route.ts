@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
+import { handleFileError } from '@/lib/api/fileErrors';
 import { z } from 'zod';
 import { MaintenancePriority, MaintenanceStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -70,6 +72,7 @@ export const POST = withAuth(
       const validated = await validateBody(req, createRequestSchema);
       if (!validated.success) return validated.response;
       const { unitId, ...rest } = validated.data;
+      await assertOwnsFileUrls(rest.mediaUrls ?? [], session.sub, 'maintenance-requests');
 
       const activeLease = await prisma.lease.findFirst({
         where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
@@ -102,7 +105,7 @@ export const POST = withAuth(
 
       return NextResponse.json({ data: request }, { status: 201 });
     } catch (err) {
-      return handleApiError(err);
+      return handleFileError(err);
     }
   },
   { roles: ['TENANT'] },

@@ -8,10 +8,11 @@
 
 ## Active & Sequential Milestone Register
 
-| #   | Task ID                                                 | Milestone Title                                                     | Status          | Started                 | Ended | PR / Branch                       |
-| --- | ------------------------------------------------------- | ------------------------------------------------------------------- | --------------- | ----------------------- | ----- | --------------------------------- |
-| 1   | [TASK-0001](0001-registration-flow-refactor-and-e2e.md) | Registration Flow Refactoring, Native Links, Email URLs & E2E Tests | [/] In Progress | 2026-10-10 20:30:00 UTC | —     | `feature/registration-ux-and-e2e` |
-| 2   | [TASK-0002](0002-private-document-uploads.md)           | Private Document Uploads (ISS-031 / ISS-032)                        | [/] In Progress | 2026-10-11 12:00:00 UTC | —     | `fix/private-uploads`             |
+| #   | Task ID                                                          | Milestone Title                                                     | Status          | Started                 | Ended | PR / Branch                       |
+| --- | ---------------------------------------------------------------- | ------------------------------------------------------------------- | --------------- | ----------------------- | ----- | --------------------------------- |
+| 1   | [TASK-0001](0001-registration-flow-refactor-and-e2e.md)          | Registration Flow Refactoring, Native Links, Email URLs & E2E Tests | [/] In Progress | 2026-10-10 20:30:00 UTC | —     | `feature/registration-ux-and-e2e` |
+| 2   | [TASK-0002](0002-private-document-uploads.md)                    | Private Document Uploads (ISS-031 / ISS-032)                        | [/] In Progress | 2026-10-11 12:00:00 UTC | —     | `fix/private-uploads`             |
+| 3   | [TASK-0003](0003-owner-namespaced-uploads-and-storage-driver.md) | Owner-namespaced Uploads and Storage Driver (ISS-034)               | [/] In Progress | 2026-10-11 14:00:00 UTC | —     | `feat/storage-owner-prefix`       |
 
 ---
 

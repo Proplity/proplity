@@ -1,7 +1,7 @@
 # 0005 — Email links never derive their origin from the request host in production
 
 Status: Proposed
-Decided by: Abdullah Jamiu (pending acceptance) · Date: 2026-10-11
+Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
 Recorded: 2026-10-11
 <!-- Refines ADR-0001 (which names NEXT_PUBLIC_APP_URL the canonical origin); does not supersede it. -->
 
