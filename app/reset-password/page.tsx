@@ -67,12 +67,12 @@ function ResetPasswordContent() {
               Your password has been updated. You've been signed out everywhere else for security —
               sign back in with your new password.
             </p>
-            <button
-              onClick={() => router.push('/login')}
-              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+            <Link
+              href="/login"
+              className="block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white hover:bg-blue-700"
             >
               Sign In
-            </button>
+            </Link>
           </div>
         </div>
       </div>

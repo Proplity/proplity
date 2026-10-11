@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { LogoIcon } from '../components/Logo';
@@ -148,13 +149,13 @@ export function SetupWizardForm({ requiresToken }: SetupWizardFormProps) {
             </p>
           </div>
 
-          <button
-            onClick={() => router.push('/login')}
+          <Link
+            href="/login"
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-500"
           >
             <span>Proceed to Login</span>
             <ArrowRight className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       </div>
     );

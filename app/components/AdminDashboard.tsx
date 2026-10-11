@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Users,
@@ -243,14 +244,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             <p className="text-sm font-medium">User Management</p>
             <p className="text-xs text-gray-600">View all accounts</p>
           </button>
-          <button
-            onClick={() => router.push('/admin/security')}
-            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
+          <Link
+            href="/admin/security"
+            className="block rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Shield className="mb-2 h-5 w-5 text-green-600" />
             <p className="text-sm font-medium">Security</p>
             <p className="text-xs text-gray-600">Audit log</p>
-          </button>
+          </Link>
           <button
             onClick={() => setShowDatabaseInfo(true)}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
@@ -259,14 +260,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
             <p className="text-sm font-medium">Database</p>
             <p className="text-xs text-gray-600">Backups & logs</p>
           </button>
-          <button
-            onClick={() => router.push('/admin/settings')}
-            className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
+          <Link
+            href="/admin/settings"
+            className="block rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md"
           >
             <Settings className="mb-2 h-5 w-5 text-orange-600" />
             <p className="text-sm font-medium">Settings</p>
             <p className="text-xs text-gray-600">System config</p>
-          </button>
+          </Link>
         </div>
 
         {showDatabaseInfo && (

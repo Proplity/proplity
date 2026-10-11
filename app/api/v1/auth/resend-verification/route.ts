@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { emailSchema, findUserByEmail } from '@/lib/auth/email';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { appUrl } from '@/lib/appUrl';
@@ -9,7 +10,7 @@ import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
 
 const resendSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
 });
 
 // Same generic-response shape as forgot-password, for the same reason: not
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserByEmail(email);
   if (user && user.status === 'PENDING_VERIFICATION') {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: user.email,
       subject: 'Verify your Proplity account',
-      body: `Hi ${user.name},\n\nHere's a fresh link to verify your email address and activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`)}\n\nThis link expires in 7 days.`,
+      body: `Hi ${user.name},\n\nHere's a fresh link to verify your email address and activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`, req)}\n\nThis link expires in 7 days.`,
     });
   }
 

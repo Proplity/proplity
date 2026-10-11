@@ -1,4 +1,5 @@
 import { api } from './apiClient';
+import { makePrivateRef } from './privateRef';
 
 // Client-side mirror of lib/cloudinary.ts's cloudinaryEnabled() -- the
 // server is still the real gate (POST /api/v1/uploads/sign 503s if unset),
@@ -20,7 +21,7 @@ export interface UploadedFile {
 // function (avoids the body-size limits and cost of proxying it).
 export async function uploadFile(file: File, folder: UploadFolder): Promise<UploadedFile> {
   const signRes = await api.uploads.sign(folder);
-  const { cloudName, apiKey, timestamp, signature } = signRes.data.data;
+  const { cloudName, apiKey, timestamp, signature, type } = signRes.data.data;
 
   const formData = new FormData();
   formData.append('file', file);
@@ -28,6 +29,7 @@ export async function uploadFile(file: File, folder: UploadFolder): Promise<Uplo
   formData.append('timestamp', String(timestamp));
   formData.append('signature', signature);
   formData.append('folder', folder);
+  if (type) formData.append('type', type);
 
   const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
     method: 'POST',
@@ -39,5 +41,13 @@ export async function uploadFile(file: File, folder: UploadFolder): Promise<Uplo
   }
 
   const data = await uploadRes.json();
+  // Authenticated (private) assets have no usable public URL: keep an opaque
+  // reference that /api/v1/uploads/private turns into a short-lived link.
+  if (type === 'authenticated') {
+    return {
+      name: file.name,
+      url: makePrivateRef(data.resource_type, data.public_id, data.format),
+    };
+  }
   return { name: file.name, url: data.secure_url };
 }
