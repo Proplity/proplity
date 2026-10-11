@@ -344,6 +344,64 @@ These pages explain the platform to prospective users. No login needed.
 
 ---
 
+## Step 1.8 — Registering for Each Role (Start Here)
+
+Follow your path: **Tenant / Landlord / Service Provider:** create account → verify email → sign in → your role's section. **Property Manager:** get a landlord invitation (Step 1.10) → register → verify email → sign in. Email addresses are not case-sensitive. Landlords register in two steps; banking and properties are added later from the dashboard banner.
+
+![Role selection](screenshots/reg_01_role_selection.png)
+
+![Tenant form](screenshots/reg_02_tenant_form.png)
+
+![Tenant check your email](screenshots/reg_03_tenant_check_email.png)
+
+![Landlord form (two steps)](screenshots/reg_07_landlord_form_two_steps.png)
+
+![Landlord check your email](screenshots/reg_08_landlord_check_email.png)
+
+![Landlord setup banner](screenshots/reg_09_landlord_dashboard_setup_banner.png)
+
+![Service provider form](screenshots/reg_10_vendor_form.png)
+
+**Stuck?** No email: check spam, use "Resend verification email" on the sign-in error. Too many attempts: wait five minutes.
+
+**Next:** Step 1.9.
+
+## Step 1.9 — Verifying Your Email
+
+The link opens `/verify-email`; press **Activate Account**, then sign in. In test environments the **Sent Emails** panel replaces a real inbox.
+
+![Sent emails panel](screenshots/reg_04_email_inbox_widget.png)
+
+![Verify page](screenshots/reg_05_verify_email_page.png)
+
+![Account activated](screenshots/reg_06_account_activated.png)
+
+**Next:** sign in (Step 1.4), then your role's section.
+
+## Step 1.10 — Inviting a Property Manager
+
+Landlord: dashboard → **Manager Access Codes** → **Invite via Email**. The manager receives a one-use code and a link to `/register?role=manager&code=…` with the code already verified (5 invitations per 5 minutes; codes can be deactivated). **Quick Code** generates a code to hand over personally.
+
+![Invite form](screenshots/invite_01_landlord_access_codes.png)
+
+![Invitation sent](screenshots/invite_02_invite_sent.png)
+
+![Invitation email](screenshots/invite_03_invite_email.png)
+
+![Registration with code verified](screenshots/invite_04_register_prefilled_code.png)
+
+**Next:** the manager verifies their email (Step 1.9), signs in and follows Section 4.
+
+## Step 1.11 — Password Reset
+
+`/forgot-password` → enter email → follow the emailed link to `/reset-password`. The confirmation is identical whether or not the account exists.
+
+![Forgot password](screenshots/auth_02_forgot_password.png)
+
+![Reset link sent](screenshots/auth_03_forgot_password_sent.png)
+
+---
+
 # 🏠 SECTION 2: TENANT FLOW
 
 > **Login:** `tenant@proplity.com` / `Password123!`
