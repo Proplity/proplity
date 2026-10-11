@@ -135,6 +135,26 @@ describe('auth: register', () => {
     expect(res.status).toBe(403);
   });
 
+  it('treats emails case-insensitively: mixed-case sign-up is stored lowercase and any casing logs in', async () => {
+    const reg = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: { email: 'MixedCase@Test.Local', password: 'somepassword', name: 'Mixed Case' },
+    });
+    expect(reg.status).toBe(200);
+    const stored = await testPrisma.user.findFirst({ where: { name: 'Mixed Case' } });
+    expect(stored?.email).toBe('mixedcase@test.local');
+
+    await testPrisma.user.update({
+      where: { id: stored!.id },
+      data: { status: UserStatus.ACTIVE },
+    });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'MIXEDCASE@test.local', password: 'somepassword' },
+    });
+    expect(login.status).toBe(200);
+  });
+
   it('rejects an invalid payload', async () => {
     const res = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
@@ -285,7 +305,12 @@ describe('auth: register', () => {
     for (let i = 0; i < 5; i++) {
       const dup = await apiFetch('/api/v1/auth/register', {
         method: 'POST',
-        body: { email, password: 'somepassword', name: 'Dup Test' },
+        // Alternate casing: a case-only variant is still a duplicate.
+        body: {
+          email: i % 2 ? email.toUpperCase() : email,
+          password: 'somepassword',
+          name: 'Dup Test',
+        },
       });
       expect(dup.status).toBe(409);
     }

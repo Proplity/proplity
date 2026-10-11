@@ -84,6 +84,7 @@ model User {
   notifications                Notification[]
   createdAt                    DateTime                  @default(now())
   updatedAt                    DateTime                  @updatedAt
+  storedFiles                  StoredFile[]              @relation("UploadedFiles")
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
