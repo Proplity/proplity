@@ -374,6 +374,18 @@ export function Register({
       name,
       role: userType,
       landlordCode: userType === 'manager' ? managerForm.landlordCode : undefined,
+      vendor:
+        userType === 'vendor'
+          ? {
+              businessName: vendorForm.businessName.trim() || name,
+              serviceCategory:
+                vendorForm.serviceCategory === 'Other'
+                  ? vendorForm.otherCategory.trim() || undefined
+                  : vendorForm.serviceCategory || undefined,
+              coverageStates: vendorForm.coverageStates,
+              cacNumber: vendorForm.cacNumber.trim() || undefined,
+            }
+          : undefined,
     });
     setSubmitting(false);
 
