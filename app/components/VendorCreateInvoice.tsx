@@ -2,8 +2,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, DollarSign, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
-import { mockInvoiceJobDetails, mockInvoiceVendorInfo as vendorInfo } from '../store/mockData';
 import { useCreateInvoice } from '@/hooks/useInvoices';
+import { useMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
+import { useBankAccounts } from '@/hooks/useBankAccounts';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 interface VendorCreateInvoiceProps {
   jobId: string;
@@ -12,34 +15,22 @@ interface VendorCreateInvoiceProps {
 export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
   const router = useRouter();
   const { submit, submitting, error } = useCreateInvoice();
+  const { user } = useAuth();
+  const { data: job, loading: jobLoading, error: jobError } = useMaintenanceRequest(jobId);
+  const { data: bankAccounts } = useBankAccounts();
+  const bank = bankAccounts.find((b) => b.isDefault) ?? bankAccounts[0];
+  const [notes, setNotes] = useState('');
+  // Starts with one blank row: the vendor itemises their own work (ISS-044).
   const [lineItems, setLineItems] = useState([
-    {
-      id: 1,
-      description: 'Labor Cost',
-      quantity: 4,
-      rate: 3000,
-      amount: 12000,
-    },
-    {
-      id: 2,
-      description: 'PVC Pipe (2m)',
-      quantity: 1,
-      rate: 3000,
-      amount: 3000,
-    },
-    {
-      id: 3,
-      description: 'Pipe Fittings',
-      quantity: 2,
-      rate: 750,
-      amount: 1500,
-    },
+    { id: 1, description: '', quantity: 1, rate: 0, amount: 0 },
   ]);
-
-  const jobDetails = {
-    ...mockInvoiceJobDetails,
-    jobId,
-  };
+  const completedOn = job?.completedAt
+    ? new Date(job.completedAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Not marked complete yet';
 
   const addLineItem = () => {
     setLineItems([
@@ -71,6 +62,8 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
   const tax = subtotal * 0.075; // 7.5% VAT
   const total = subtotal + tax;
 
+  const canSubmit = lineItems.some((item) => item.description.trim() && item.amount > 0);
+
   const handleSubmit = async () => {
     // Invoice has a single amount + one description string, no line-item
     // breakdown in the schema -- the itemized rows are summed into amount
@@ -82,6 +75,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
           `${item.description} — ${item.quantity} x ₦${item.rate.toLocaleString()} = ₦${item.amount.toLocaleString()}`,
       )
       .join('\n');
+    const fullDescription = notes.trim() ? `${description}\n\nNotes: ${notes.trim()}` : description;
 
     try {
       await submit({
@@ -89,9 +83,9 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         type: 'MAINTENANCE',
         amount: total,
         dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        description,
+        description: fullDescription,
       });
-      alert('Invoice submitted successfully! Payment will be processed within 48 hours.');
+      toast.success('Invoice submitted. The property manager will review it.');
       router.push('/dashboard');
     } catch {
       // error state is already surfaced via the hook's `error`
@@ -137,11 +131,9 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
             <div>
               <p className="mb-2 text-sm font-semibold text-gray-600">FROM</p>
               <div className="space-y-1 text-sm">
-                <p className="font-semibold">{vendorInfo.name}</p>
-                <p className="text-gray-600">{vendorInfo.address}</p>
-                <p className="text-gray-600">{vendorInfo.phone}</p>
-                <p className="text-gray-600">{vendorInfo.email}</p>
-                <p className="text-gray-600">RC: {vendorInfo.businessId}</p>
+                <p className="font-semibold">{user?.name}</p>
+                {user?.phoneNumber && <p className="text-gray-600">{user.phoneNumber}</p>}
+                <p className="text-gray-600">{user?.email}</p>
               </div>
             </div>
 
@@ -149,8 +141,8 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
             <div>
               <p className="mb-2 text-sm font-semibold text-gray-600">BILL TO</p>
               <div className="space-y-1 text-sm">
-                <p className="font-semibold">{jobDetails.propertyManager}</p>
-                <p className="text-gray-600">{jobDetails.property}</p>
+                <p className="font-semibold">{job?.unit?.property?.name ?? '—'}</p>
+                {job?.unit && <p className="text-gray-600">Unit {job.unit.unitNumber}</p>}
               </div>
             </div>
           </div>
@@ -160,9 +152,11 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="mb-1 text-sm font-semibold text-blue-900">Job Details</p>
           <p className="text-sm text-blue-800">
-            {jobDetails.jobTitle} • Job #{jobDetails.jobId}
+            {jobLoading ? 'Loading job…' : (job?.title ?? 'Job not found')} • Job #
+            {jobId.slice(0, 8)}
           </p>
-          <p className="text-sm text-blue-800">Completed: {jobDetails.completedDate}</p>
+          <p className="text-sm text-blue-800">Completed: {completedOn}</p>
+          {jobError && <p className="mt-1 text-sm text-red-700">{jobError}</p>}
         </div>
 
         {/* Line Items */}
@@ -267,30 +261,39 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         {/* Payment Details */}
         <div className="mb-8 rounded-lg bg-gray-50 p-4">
           <p className="mb-3 text-sm font-semibold">Payment Details</p>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600">Bank Name</p>
-              <p className="font-medium">{vendorInfo.bankName}</p>
+          {bank ? (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Bank Name</p>
+                <p className="font-medium">{bank.bankName}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Account Name</p>
+                <p className="font-medium">{bank.accountName}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Account Number</p>
+                <p className="font-medium">{bank.accountNumber}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Payment Terms</p>
+                <p className="font-medium">Due upon receipt</p>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-600">Account Name</p>
-              <p className="font-medium">{vendorInfo.accountName}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Account Number</p>
-              <p className="font-medium">{vendorInfo.accountNumber}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Payment Terms</p>
-              <p className="font-medium">Due upon receipt</p>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-gray-600">
+              No bank account is saved on your profile yet. Add payment instructions in the notes
+              below so the property manager knows where to pay.
+            </p>
+          )}
         </div>
 
         {/* Notes */}
         <div className="mb-8">
           <label className="mb-2 block text-sm font-semibold">Additional Notes</label>
           <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             placeholder="Add any additional notes or payment instructions..."
             rows={3}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -308,7 +311,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !canSubmit}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-5 w-5" />
@@ -325,8 +328,8 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         {/* Info */}
         <div className="mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <p className="text-sm text-yellow-800">
-            <strong>Note:</strong> Once submitted, this invoice will be reviewed and payment will be
-            processed within 48 hours to your registered bank account.
+            <strong>Note:</strong> Once submitted, the property manager can review this invoice
+            under their invoices.
           </p>
         </div>
       </div>
