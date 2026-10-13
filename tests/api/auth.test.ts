@@ -296,6 +296,24 @@ describe('auth: register', () => {
     expect(reuse.status).toBe(400);
   });
 
+  // ISS-006: a burst of sign-ups from one address used to queue on the rate
+  // limiter's advisory lock and hit Prisma's 5 s transaction timeout, which
+  // surfaced as a 500. Each caller must get an answer (200 or 429), never a 500.
+  it('answers a burst of simultaneous registrations from one IP without a 500', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        apiFetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'x-forwarded-for': '203.0.113.77' },
+          body: { email: `burst${i}@test.local`, password: 'somepassword', name: `Burst ${i}` },
+        }),
+      ),
+    );
+    const statuses = results.map((r) => r.status);
+    expect(statuses.every((s) => s === 200 || s === 429)).toBe(true);
+    expect(statuses.filter((s) => s === 200).length).toBeGreaterThanOrEqual(1);
+  });
+
   // Deliberately last in this describe block -- exhausts register's
   // IP-scoped rate-limit budget, which would otherwise 429 every
   // subsequent registration test that shares this describe's beforeAll.
