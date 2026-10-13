@@ -692,3 +692,58 @@ export type AdminDashboardSummary = {
     href: string | null;
   }[];
 };
+
+// GET /admin/reports?from=YYYY-MM&to=YYYY-MM (ISS-049). Series are keyed by
+// UTC month ('YYYY-MM'); months with no activity are absent.
+export type AdminReportsSummary = {
+  totals: {
+    collected: number;
+    paymentCount: number;
+    avgTransactionValue: number;
+    pending: number;
+    invoiceCount: number;
+    cancelledInvoices: number;
+  };
+  series: {
+    billed: Record<string, number>;
+    collected: Record<string, number>;
+    newUsers: Record<string, Record<string, number>>;
+    maintenanceCreated: Record<string, number>;
+    maintenanceResolved: Record<string, number>;
+  };
+  revenueByType: { type: string; amount: number }[];
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    type: string;
+    tenant: string | null;
+    property: string | null;
+  }[];
+  users: {
+    total: number;
+    byRole: Record<string, number>;
+    statusByRole: Record<string, { active: number; pending: number; other: number }>;
+  };
+  maintenance: {
+    total: number;
+    completed: number;
+    open: number;
+    highPriorityOpen: number;
+    avgResolutionDays: number;
+  };
+  properties: {
+    total: number;
+    approved: number;
+    byType: Record<string, number>;
+    byState: {
+      state: string;
+      total: number;
+      approved: number;
+      pending: number;
+      avgRent: number;
+      occupancy: number;
+    }[];
+  };
+  units: { total: number; occupied: number; avgOccupancy: number; avgRent: number };
+};

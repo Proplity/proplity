@@ -30,6 +30,7 @@ import type {
   CreateViewingInput,
   OwnerDashboardSummary,
   AdminDashboardSummary,
+  AdminReportsSummary,
   PropertyViewing,
   LinkedLandlord,
   CreateViolationInput,
@@ -322,6 +323,8 @@ export const api = {
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
     summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
+    reports: (params: { from: string; to: string }) =>
+      apiClient.get<{ data: AdminReportsSummary }>('/api/v1/admin/reports', { params }),
     vendors: {
       verify: (userId: string, body: { status: 'VERIFIED' | 'REJECTED'; note?: string }) =>
         apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),

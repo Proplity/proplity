@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
-import type { AdminDashboardSummary, OwnerDashboardSummary } from '@/lib/api/types';
+import type {
+  AdminDashboardSummary,
+  AdminReportsSummary,
+  OwnerDashboardSummary,
+} from '@/lib/api/types';
 
 // Server-computed totals for the dashboards (ISS-049): correct at any data
 // size, unlike summing the first page of a list in the browser.
@@ -37,4 +41,28 @@ export function useOwnerSummary() {
 
 export function useAdminSummary() {
   return useSummary<AdminDashboardSummary>(() => api.admin.summary().then((res) => res.data.data));
+}
+
+export function useAdminReports(from: string, to: string) {
+  const [data, setData] = useState<AdminReportsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData((await api.admin.reports({ from, to })).data.data);
+    } catch {
+      setError('Failed to load reports');
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, error, refetch };
 }
