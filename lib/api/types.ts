@@ -456,6 +456,8 @@ export type AuditLog = {
   action: string;
   entityType: string;
   entityId: string;
+  // A readable name for the thing the entry is about, when it still exists.
+  entityLabel?: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
 };
