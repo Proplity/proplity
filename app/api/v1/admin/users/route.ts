@@ -14,8 +14,32 @@ export const GET = withAuth(
       const { searchParams } = req.nextUrl;
       const { skip, take, page, limit } = parsePagination(searchParams);
       const role = searchParams.get('role');
+      const status = searchParams.get('status');
+      const vendorStatus = searchParams.get('vendorStatus');
+      const q = searchParams.get('q')?.trim();
 
-      const where = role ? { role: role as import('@prisma/client').Role } : {};
+      // Filters run in the database so the list pages correctly (ISS-054).
+      const where: import('@prisma/client').Prisma.UserWhereInput = {
+        ...(role ? { role: role as import('@prisma/client').Role } : {}),
+        ...(status ? { status: status as import('@prisma/client').UserStatus } : {}),
+        ...(vendorStatus
+          ? {
+              vendorProfile: {
+                verificationStatus:
+                  vendorStatus as import('@prisma/client').VendorVerificationStatus,
+              },
+            }
+          : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+                { phoneNumber: { contains: q } },
+              ],
+            }
+          : {}),
+      };
 
       const [users, total] = await Promise.all([
         prisma.user.findMany({

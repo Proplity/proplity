@@ -341,9 +341,19 @@ export const api = {
   },
   admin: {
     users: {
-      list: (params?: { role?: string; limit?: number; page?: number }) =>
-        apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+      list: (params?: {
+        role?: string;
+        status?: string;
+        vendorStatus?: string;
+        q?: string;
+        limit?: number;
+        page?: number;
+      }) => apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+    updateUser: (
+      userId: string,
+      body: { status?: 'ACTIVE' | 'SUSPENDED'; role?: string; reason: string },
+    ) => apiClient.patch(`/api/v1/admin/users/${userId}`, body),
     summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
     breakdown: () => apiClient.get<{ data: AdminBreakdownSummary }>('/api/v1/admin/breakdown'),
     reports: (params: { from: string; to: string }) =>
