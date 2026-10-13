@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { PaymentMethod } from '@prisma/client';
+import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
@@ -67,29 +67,84 @@ export async function POST(req: NextRequest) {
       });
       if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-      // Paystack can redeliver the same event -- guard against double-
-      // crediting by treating an existing Payment for this reference as
-      // already handled rather than creating a second one.
-      const existing = data.reference
-        ? await prisma.payment.findFirst({ where: { transactionRef: data.reference } })
-        : null;
+      const amount = Math.round(Number(data.amount)) / 100;
+      if (!data.reference || !Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ error: 'Missing reference or amount' }, { status: 400 });
+      }
 
-      if (!existing) {
-        await prisma.$transaction([
-          prisma.payment.create({
+      // Paystack can redeliver the same event, even concurrently. The unique
+      // Payment.transactionRef makes the second insert fail, and that is
+      // treated as "already handled" -- never a second credit (ISS-052).
+      // The invoice row is locked first so two different payments landing at
+      // once also total correctly.
+      let outcome: { wasPaid: boolean; status: string; paidTotal: number } | null = null;
+      try {
+        outcome = await prisma.$transaction(async (tx) => {
+          await tx.$queryRaw`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`;
+          const before = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+          await tx.payment.create({
             data: {
               invoiceId,
-              amount: data.amount / 100,
+              amount,
               paymentMethod: mapPaymentMethod(data.channel),
               provider: 'PAYSTACK',
               transactionRef: data.reference,
               rawProviderPayload: rawBody,
               paidAt: data.paid_at ? new Date(data.paid_at) : new Date(),
             },
-          }),
-          prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'PAID' } }),
-        ]);
+          });
+          const { _sum } = await tx.payment.aggregate({
+            where: { invoiceId },
+            _sum: { amount: true },
+          });
+          const paidTotal = _sum.amount ?? 0;
+          // A cancelled invoice stays cancelled; the money did move, so the
+          // payment is kept and flagged below for a refund.
+          const status =
+            before.status === 'CANCELLED'
+              ? 'CANCELLED'
+              : paidTotal >= before.amount - 0.005
+                ? 'PAID'
+                : 'PARTIALLY_PAID';
+          if (status !== before.status) {
+            await tx.invoice.update({ where: { id: invoiceId }, data: { status } });
+          }
+          return { wasPaid: before.status === 'PAID', status, paidTotal };
+        });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+        throw err;
+      }
 
+      // Anything that does not add up goes to the audit log for an admin.
+      const flags: string[] = [];
+      if (outcome.status === 'CANCELLED') flags.push('PAYMENT_ON_CANCELLED_INVOICE');
+      if (outcome.paidTotal > invoice.amount + 0.005 && outcome.status !== 'CANCELLED')
+        flags.push('PAYMENT_EXCEEDS_INVOICE');
+      const expected = data.metadata?.expectedAmount;
+      if (typeof expected === 'number' && Math.abs(expected - amount) > 0.005)
+        flags.push('PAYMENT_AMOUNT_MISMATCH');
+      for (const action of flags) {
+        await prisma.auditLog.create({
+          data: {
+            actorId: null,
+            action,
+            entityType: 'Invoice',
+            entityId: invoiceId,
+            metadata: {
+              reference: data.reference,
+              paid: amount,
+              expected: typeof expected === 'number' ? expected : null,
+              invoiceAmount: invoice.amount,
+              paidTotal: outcome.paidTotal,
+            },
+          },
+        });
+      }
+
+      {
         if (invoice.type === 'RENT' && invoice.lease) {
           const property = invoice.lease.unit?.property;
           const managersToNotify = [property?.landlordId, property?.managerId].filter(
@@ -99,7 +154,7 @@ export async function POST(req: NextRequest) {
             await notifyUsers(managersToNotify, {
               type: 'SYSTEM',
               title: 'Rent Payment Received',
-              body: `A rent payment of ₦${(data.amount / 100).toLocaleString()} was received for ${property?.name ?? 'your property'}.`,
+              body: `A rent payment of ₦${amount.toLocaleString()} was received for ${property?.name ?? 'your property'}.`,
               link: '/dashboard',
             });
           }
@@ -107,7 +162,7 @@ export async function POST(req: NextRequest) {
             await notifyUser(invoice.lease.tenantId, {
               type: 'SYSTEM',
               title: 'Rent Payment Confirmed',
-              body: `Your rent payment of ₦${(data.amount / 100).toLocaleString()} has been received. Thank you!`,
+              body: `Your rent payment of ₦${amount.toLocaleString()} has been received. Thank you!`,
               link: '/dashboard/payment-history',
             });
           }
@@ -116,7 +171,12 @@ export async function POST(req: NextRequest) {
         // A subscription invoice paying activates the subscription itself --
         // tier/cycle have no dedicated column, encoded into the description
         // at checkout time (see subscriptions/checkout/route.ts).
-        if (invoice.type === 'SUBSCRIPTION' && invoice.userId) {
+        if (
+          invoice.type === 'SUBSCRIPTION' &&
+          invoice.userId &&
+          outcome.status === 'PAID' &&
+          !outcome.wasPaid
+        ) {
           const match = invoice.description?.match(/tier=(\w+) cycle=(\w+)/);
           const tier = (match?.[1] as 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE' | undefined) ?? 'PRO';
           const cycle = match?.[2] === 'yearly' ? 'yearly' : 'monthly';
