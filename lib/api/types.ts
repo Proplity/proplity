@@ -623,3 +623,72 @@ export type LeaseSignature = {
   ipAddress: string | null;
   signedAt: string;
 };
+
+// Server-computed dashboard totals (GET /dashboard/summary, ISS-049).
+export type OwnerDashboardSummary = {
+  properties: {
+    count: number;
+    rows: {
+      id: string;
+      name: string;
+      units: number;
+      occupied: number;
+      occupancy: number;
+      listedRent: number;
+      collected: number;
+      pending: number;
+    }[];
+  };
+  managers: { id: string; name: string }[];
+  units: { total: number; occupied: number; occupancyRate: number; totalListedRent: number };
+  leases: { active: number; upcomingRenewalCount: number };
+  money: {
+    collected: number;
+    collectedThisMonth: number;
+    pending: number;
+    maintenanceCosts: number;
+  };
+  maintenance: { pending: number };
+  upcomingRenewals: {
+    id: string;
+    endDate: string;
+    tenant: { name: string } | null;
+    unit: { unitNumber: string; property: { name: string } } | null;
+  }[];
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    invoiceNumber: string;
+    type: string;
+    leaseId: string | null;
+    tenant: string | null;
+    property: string | null;
+  }[];
+  recentCompletedMaintenance: {
+    id: string;
+    completedAt: string | null;
+    finalCost: number | null;
+    unit: { property: { name: string } } | null;
+  }[];
+  recentLeases: {
+    id: string;
+    startDate: string;
+    tenant: { name: string } | null;
+    unit: { property: { name: string } } | null;
+  }[];
+};
+
+// GET /admin/summary (ISS-049).
+export type AdminDashboardSummary = {
+  users: { total: number; byRole: Record<string, number>; newThisWeek: number };
+  properties: { total: number; newThisWeek: number };
+  money: { collected: number };
+  maintenance: { open: number };
+  attentionItems: {
+    title: string;
+    time: string;
+    severity: 'high' | 'medium';
+    href: string | null;
+  }[];
+};
