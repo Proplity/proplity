@@ -13,7 +13,8 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
-import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
+import { useTenantSummary } from '@/hooks/useDashboardSummary';
+import { usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
@@ -24,7 +25,6 @@ import {
   useCancelAutoPayMandate,
 } from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
-import type { Invoice, Payment } from '@/lib/api/types';
 
 interface TenantDashboardProps {
   onNavigate?: (page: any) => void;
@@ -38,25 +38,11 @@ const maintenanceStatusColor: Record<string, string> = {
   CANCELLED: 'gray',
 };
 
-function outstandingBalance(invoices: Invoice[]) {
-  return invoices
-    .filter((i) => i.status !== 'CANCELLED')
-    .reduce((sum, i) => {
-      const paid = i.payments.reduce((p, payment) => p + payment.amount, 0);
-      return sum + Math.max(0, i.amount - paid);
-    }, 0);
-}
-
-function recentPayments(invoices: Invoice[]) {
-  return invoices
-    .flatMap((invoice) => invoice.payments.map((payment) => ({ invoice, payment })))
-    .sort((a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime())
-    .slice(0, 3);
-}
-
 export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: lease, loading: leaseLoading } = useActiveLease();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
+  // Balance, next due date and recent payments are summed on the server, so
+  // they stay right past the first page of invoices (ISS-049).
+  const { data: summary, loading: invoicesLoading } = useTenantSummary();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
   const { open: openConversation } = useOpenConversation();
@@ -112,11 +98,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: pendingLease, refetch: refetchPendingLease } = useLease(pendingLeaseId);
 
   const property = lease?.unit?.property;
-  const balance = outstandingBalance(invoices);
-  const nextDue = invoices
-    .filter((i) => i.status === 'UNPAID' || i.status === 'PARTIALLY_PAID' || i.status === 'OVERDUE')
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
-  const payments = recentPayments(invoices);
+  const balance = summary?.money.balance ?? 0;
+  const nextDue = summary?.nextDue ?? null;
+  const payments = summary?.recentPayments ?? [];
 
   const handlePayRent = async () => {
     if (!nextDue) return;
@@ -401,14 +385,14 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                 <div className="border-t border-gray-200 pt-4">
                   <p className="mb-3 text-sm font-medium">Recent Payments</p>
                   <div className="space-y-2">
-                    {payments.map(({ invoice, payment }) => (
+                    {payments.map((payment) => (
                       <div key={payment.id} className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">
                           {new Date(payment.paidAt).toLocaleDateString()}
                         </span>
                         <span className="font-medium">₦{payment.amount.toLocaleString()}</span>
                         <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-700">
-                          {invoice.type}
+                          {payment.type}
                         </span>
                       </div>
                     ))}
