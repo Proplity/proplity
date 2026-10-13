@@ -11,7 +11,13 @@ export const GET = withAuth(
   async () => {
     try {
       const vendors = await prisma.user.findMany({
-        where: { role: 'VENDOR', status: 'ACTIVE' },
+        // Only vetted businesses are listed (ISS-043). A vendor with no profile
+        // row at all predates sign-up profiles and stays visible.
+        where: {
+          role: 'VENDOR',
+          status: 'ACTIVE',
+          OR: [{ vendorProfile: null }, { vendorProfile: { verificationStatus: 'VERIFIED' } }],
+        },
         select: {
           id: true,
           name: true,
