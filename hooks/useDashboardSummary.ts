@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import type {
+  AdminBreakdownSummary,
   AdminDashboardSummary,
   AdminReportsSummary,
+  OwnerBreakdownSummary,
   OwnerDashboardSummary,
 } from '@/lib/api/types';
 
@@ -65,4 +67,16 @@ export function useAdminReports(from: string, to: string) {
   }, [refetch]);
 
   return { data, loading, error, refetch };
+}
+
+export function useOwnerBreakdown() {
+  return useSummary<OwnerBreakdownSummary>(() =>
+    api.dashboard.breakdown().then((res) => res.data.data),
+  );
+}
+
+export function useAdminBreakdown() {
+  return useSummary<AdminBreakdownSummary>(() =>
+    api.admin.breakdown().then((res) => res.data.data),
+  );
 }

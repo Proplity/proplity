@@ -29,6 +29,8 @@ import type {
   CreateUnitInput,
   CreateViewingInput,
   OwnerDashboardSummary,
+  OwnerBreakdownSummary,
+  AdminBreakdownSummary,
   AdminDashboardSummary,
   AdminReportsSummary,
   PropertyViewing,
@@ -133,8 +135,10 @@ export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
       apiClient.get<Paginated<Property>>('/api/v1/properties', { params }),
-    mine: () =>
-      apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
+    mine: (params?: { page?: number; limit?: number }) =>
+      apiClient.get<Paginated<Property>>('/api/v1/properties', {
+        params: { scope: 'mine', ...params },
+      }),
     get: (propertyId: string) =>
       apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
     create: (body: CreatePropertyInput) =>
@@ -251,7 +255,7 @@ export const api = {
   maintenance: {
     categories: () =>
       apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
     get: (id: string) =>
       apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
@@ -264,7 +268,7 @@ export const api = {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
   leases: {
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
     get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
@@ -290,9 +294,10 @@ export const api = {
   },
   dashboard: {
     summary: () => apiClient.get<{ data: OwnerDashboardSummary }>('/api/v1/dashboard/summary'),
+    breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
   },
   invoices: {
-    list: (params?: { type?: string; status?: string }) =>
+    list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
@@ -319,10 +324,11 @@ export const api = {
   },
   admin: {
     users: {
-      list: (params?: { role?: string; limit?: number }) =>
+      list: (params?: { role?: string; limit?: number; page?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
     summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
+    breakdown: () => apiClient.get<{ data: AdminBreakdownSummary }>('/api/v1/admin/breakdown'),
     reports: (params: { from: string; to: string }) =>
       apiClient.get<{ data: AdminReportsSummary }>('/api/v1/admin/reports', { params }),
     vendors: {
