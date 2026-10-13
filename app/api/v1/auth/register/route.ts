@@ -97,28 +97,25 @@ export async function POST(req: NextRequest) {
       ? (upperRole as Role)
       : Role.TENANT;
 
-    // A MANAGER account must come with a real, currently-redeemable
-    // landlord code -- re-validated here regardless of what the
-    // check-code preview endpoint said, since that response is
-    // client-trusted UX only.
+    // A landlord code supplied with a MANAGER sign-up is re-validated here
+    // regardless of what the check-code preview endpoint said, since that
+    // response is client-trusted UX only.
     let inviteCodeId: string | null = null;
     if (role === Role.MANAGER) {
-      if (!landlordCode) {
-        return NextResponse.json(
-          { error: 'A landlord invitation code is required to register as a manager' },
-          { status: 400 },
-        );
+      // A code is optional (ISS-041): a manager can sign up first and link to
+      // landlords later. When one is supplied it must still be valid.
+      if (landlordCode?.trim()) {
+        const code = await prisma.managerInviteCode.findUnique({
+          where: { code: landlordCode.trim().toUpperCase() },
+        });
+        if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
+          return NextResponse.json(
+            { error: 'Invalid or already-used landlord code' },
+            { status: 400 },
+          );
+        }
+        inviteCodeId = code.id;
       }
-      const code = await prisma.managerInviteCode.findUnique({
-        where: { code: landlordCode.trim().toUpperCase() },
-      });
-      if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
-        return NextResponse.json(
-          { error: 'Invalid or already-used landlord code' },
-          { status: 400 },
-        );
-      }
-      inviteCodeId = code.id;
     }
 
     const vendorCategoryId =
