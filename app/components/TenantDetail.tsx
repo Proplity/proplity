@@ -24,7 +24,7 @@ import {
   useCreateNotice,
   useSignLease,
 } from '@/hooks/useLeases';
-import { useCreateInvoice } from '@/hooks/useInvoices';
+import { useCreateInvoice, useRecordPayment } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
@@ -324,6 +324,11 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     submitting: savingInvoice,
     error: invoiceError,
   } = useCreateInvoice();
+  const {
+    submit: submitPayment,
+    submitting: recordingPayment,
+    error: paymentError,
+  } = useRecordPayment();
   const { open: openConversation } = useOpenConversation();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
@@ -345,6 +350,13 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     type: 'PAYMENT_REMINDER',
     content: '',
   });
+  const [recordingOpen, setRecordingOpen] = useState(false);
+  const [paymentDraft, setPaymentDraft] = useState<{
+    invoiceId: string;
+    amount: string;
+    method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+    reference: string;
+  }>({ invoiceId: '', amount: '', method: 'CASH', reference: '' });
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState<{
     type: CreateInvoiceInput['type'];
@@ -473,6 +485,25 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       refetchLease();
     } catch {
       // error surfaced below via noticeError
+    }
+  };
+
+  const owing = (inv: { amount: number; payments: { amount: number }[] }) =>
+    Math.max(0, inv.amount - inv.payments.reduce((sum, p) => sum + p.amount, 0));
+
+  const handleRecordPayment = async () => {
+    try {
+      await submitPayment({
+        invoiceId: paymentDraft.invoiceId,
+        amount: parseFloat(paymentDraft.amount) || 0,
+        method: paymentDraft.method,
+        reference: paymentDraft.reference.trim() || undefined,
+      });
+      setPaymentDraft({ invoiceId: '', amount: '', method: 'CASH', reference: '' });
+      setRecordingOpen(false);
+      refetchLease();
+    } catch {
+      // error surfaced below via paymentError
     }
   };
 
@@ -1082,7 +1113,103 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 <FileText className="h-4 w-4" />
                 Send Invoice
               </button>
+              <button
+                onClick={() => setRecordingOpen(true)}
+                disabled={unpaidInvoices.length === 0}
+                title={unpaidInvoices.length === 0 ? 'No unpaid invoices on this lease' : undefined}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <DollarSign className="h-4 w-4" />
+                Record cash or transfer payment
+              </button>
             </div>
+
+            {recordingOpen && (
+              <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-800">Record a payment</h3>
+                <p className="text-xs text-gray-500">
+                  Use this when the tenant paid you directly. The invoice is marked paid from the
+                  payments recorded, and the entry is logged.
+                </p>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Invoice</label>
+                  <select
+                    value={paymentDraft.invoiceId}
+                    onChange={(e) => {
+                      const inv = unpaidInvoices.find((i) => i.id === e.target.value);
+                      setPaymentDraft((s) => ({
+                        ...s,
+                        invoiceId: e.target.value,
+                        amount: inv ? String(owing(inv)) : '',
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="">Choose an invoice…</option>
+                    {unpaidInvoices.map((inv) => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.type} · due {new Date(inv.dueDate).toLocaleDateString()} · ₦
+                        {owing(inv).toLocaleString()} left
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Amount received (₦)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={paymentDraft.amount}
+                    onChange={(e) => setPaymentDraft((s) => ({ ...s, amount: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">How was it paid?</label>
+                  <select
+                    value={paymentDraft.method}
+                    onChange={(e) =>
+                      setPaymentDraft((s) => ({
+                        ...s,
+                        method: e.target.value as 'CASH' | 'BANK_TRANSFER' | 'CHECK',
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank transfer</option>
+                    <option value="CHECK">Cheque</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">
+                    Reference (optional, e.g. transfer ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentDraft.reference}
+                    onChange={(e) => setPaymentDraft((s) => ({ ...s, reference: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                {paymentError && <p className="text-sm text-red-600">{paymentError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRecordPayment}
+                    disabled={recordingPayment || !paymentDraft.invoiceId || !paymentDraft.amount}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {recordingPayment ? 'Saving…' : 'Record payment'}
+                  </button>
+                  <button
+                    onClick={() => setRecordingOpen(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {sendingInvoice && (
               <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
