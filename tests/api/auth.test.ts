@@ -329,6 +329,29 @@ describe('auth: register', () => {
   });
 });
 
+describe('auth: refresh without a cookie does not use up the rate-limit budget', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('answers 401 for 40 cookie-less refreshes without ever returning 429, and a real session still refreshes', async () => {
+    for (let i = 0; i < 40; i++) {
+      const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+      expect(res.status).toBe(401);
+    }
+    await createUser(Role.TENANT, { email: 'refresh-budget@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-budget@test.local', password: FIXTURE_PASSWORD },
+    });
+    const refresh = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: cookieHeaderFrom(login.setCookies),
+    });
+    expect(refresh.status).toBe(200);
+  });
+});
+
 describe('auth: refresh rotation + reuse detection', () => {
   beforeAll(async () => {
     await resetDb();
@@ -426,7 +449,12 @@ describe('auth: refresh rotation + reuse detection', () => {
     // comment on why refresh needs a much looser cap (periodic background
     // traffic from every authenticated tab, not credential-guessing).
     await fillRateLimit(`refresh:${ip}`, 30);
-    const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+    // A cookie must be present for the limiter to apply: cookie-less calls are
+    // signed-out page loads and are answered 401 before any attempt is counted.
+    const res = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: 'refresh_token=not-a-real-token',
+    });
     expect(res.status).toBe(429);
   });
 });
