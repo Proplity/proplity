@@ -346,7 +346,7 @@ These pages explain the platform to prospective users. No login needed.
 
 ## Step 1.8 — Registering for Each Role (Start Here)
 
-Follow your path: **Tenant / Landlord / Service Provider:** create account → verify email → sign in → your role's section. **Property Manager:** use a landlord invitation (Step 1.10), or register without a code and link to a landlord later from your dashboard → verify email → sign in. Email addresses are not case-sensitive. Landlords register in two steps; banking and properties are added later from the dashboard banner.
+Follow your path: **Tenant / Landlord / Service Provider:** create account → verify email → sign in → your role's section. **Property Manager:** get a landlord invitation (Step 1.10) → register → verify email → sign in. Email addresses are not case-sensitive. Landlords register in two steps; banking and properties are added later from the dashboard banner.
 
 ![Role selection](screenshots/reg_01_role_selection.png)
 

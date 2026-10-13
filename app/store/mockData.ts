@@ -1332,6 +1332,25 @@ export const mockSimilarProperties = [
   },
 ];
 
+export const mockInvoiceJobDetails = {
+  jobTitle: 'Broken Water Pipe',
+  property: 'Lekki Phase 1, Apt 203',
+  completedDate: 'May 4, 2026',
+  propertyManager: 'Proplity Management',
+  estimatedCost: 20000,
+};
+
+export const mockInvoiceVendorInfo = {
+  name: 'AquaFix Plumbers',
+  businessId: 'RC123456',
+  phone: '+234 901 234 5678',
+  email: 'contact@aquafixplumbers.com',
+  address: 'Shop 12, Lekki Plaza, Lagos',
+  accountNumber: '0123456789',
+  accountName: 'AquaFix Plumbers Ltd',
+  bankName: 'Access Bank',
+};
+
 export const mockPublicPropertyDetails: Record<number, any> = {
   1: {
     title: '3 Bedroom Luxury Apartment',
@@ -1424,5 +1443,33 @@ export const mockPublicPropertyDetails: Record<number, any> = {
     ],
   },
 };
+
+export const mockViewingAvailableDates = [
+  {
+    date: '2026-05-14',
+    day: 'Wednesday',
+    slots: ['10:00 AM', '2:00 PM', '4:00 PM'],
+  },
+  {
+    date: '2026-05-15',
+    day: 'Thursday',
+    slots: ['10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM'],
+  },
+  {
+    date: '2026-05-16',
+    day: 'Friday',
+    slots: ['10:00 AM', '2:00 PM', '4:00 PM', '6:00 PM'],
+  },
+  {
+    date: '2026-05-17',
+    day: 'Saturday',
+    slots: ['9:00 AM', '11:00 AM', '1:00 PM', '3:00 PM'],
+  },
+  {
+    date: '2026-05-18',
+    day: 'Sunday',
+    slots: ['10:00 AM', '12:00 PM', '2:00 PM'],
+  },
+];
 
 export const mockUserPropertyAddress = 'Lekki Phase 1, Apt 203';

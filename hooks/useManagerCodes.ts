@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
-import type { LinkedLandlord, ManagerInviteCode } from '@/lib/api/types';
+import type { ManagerInviteCode } from '@/lib/api/types';
 
 // LANDLORD's own issued codes.
 export function useManagerCodes() {
@@ -44,27 +44,4 @@ export function useSetManagerCodeStatus() {
 // MANAGER redeeming a landlord's code to link accounts.
 export function useRedeemManagerCode() {
   return useApiSubmit((code: string) => api.managerCodes.redeem(code).then((res) => res.data.data));
-}
-
-// MANAGER's own landlord links (one per redeemed code).
-export function useLinkedLandlords() {
-  const [data, setData] = useState<LinkedLandlord[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = useCallback(async () => {
-    try {
-      const res = await api.managerCodes.linked();
-      setData(res.data.data);
-    } catch {
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
-  return { data, loading, refetch };
 }
