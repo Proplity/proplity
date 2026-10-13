@@ -10,10 +10,7 @@ import {
   Clock,
   KeyRound,
 } from 'lucide-react';
-import { useMyProperties } from '@/hooks/useProperties';
-import { useLeases } from '@/hooks/useLeases';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 
 interface DashboardProps {
@@ -22,19 +19,10 @@ interface DashboardProps {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function isThisMonth(date: string) {
-  const d = new Date(date);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
-
 export function Dashboard({ onNavigate }: DashboardProps) {
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
-  const { data: activeLeases, loading: leasesLoading } = useLeases({ status: 'ACTIVE' });
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
-
-  const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
+  // Totals come from the server (ISS-049): summing the first page of each list
+  // in the browser was wrong past 20 rows.
+  const { data: summary, loading } = useOwnerSummary();
 
   const [codeInput, setCodeInput] = useState('');
   const { data: linkedLandlords, refetch: refetchLinks } = useLinkedLandlords();
@@ -54,61 +42,35 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     }
   };
 
-  const rentCollectedThisMonth = invoices
-    .flatMap((i) => i.payments)
-    .filter((p) => isThisMonth(p.paidAt))
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const pendingMaintenanceCount = maintenanceRequests.filter(
-    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
-  ).length;
-
   const stats = [
     {
       label: 'Total Properties',
-      value: loading ? '—' : String(properties.length),
+      value: loading || !summary ? '—' : String(summary.properties.count),
       icon: Home,
       breakdown: 'properties' as const,
     },
     {
       label: 'Active Leases',
-      value: loading ? '—' : String(activeLeases.length),
+      value: loading || !summary ? '—' : String(summary.leases.active),
       icon: Users,
       breakdown: 'tenants' as const,
     },
     {
       label: 'Rent Collected (This Month)',
-      value: loading ? '—' : `₦${rentCollectedThisMonth.toLocaleString()}`,
+      value: loading || !summary ? '—' : `₦${summary.money.collectedThisMonth.toLocaleString()}`,
       icon: DollarSign,
       breakdown: 'rent' as const,
     },
     {
       label: 'Pending Maintenance',
-      value: loading ? '—' : String(pendingMaintenanceCount),
+      value: loading || !summary ? '—' : String(summary.maintenance.pending),
       icon: AlertCircle,
       breakdown: 'maintenance' as const,
     },
   ];
 
-  // Recent Payments: every real payment across the manager's invoices,
-  // newest first. No stored "recent payments" feed exists -- derived the
-  // same way TenantPaymentHistory derives its own record list (Phase 9.2).
-  const recentPayments = invoices
-    .flatMap((invoice) => invoice.payments.map((payment) => ({ invoice, payment })))
-    .sort((a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime())
-    .slice(0, 5);
-
-  // Upcoming Renewals: ACTIVE leases ending within 60 days. There's no
-  // stored "contacted" status here (that would need per-lease Notice
-  // fetches this list can't afford) -- shown as days-until-expiry instead
-  // of a fabricated contact-status pill.
-  const upcomingRenewals = activeLeases
-    .filter((l) => {
-      const daysLeft = (new Date(l.endDate).getTime() - Date.now()) / MS_PER_DAY;
-      return daysLeft >= 0 && daysLeft <= 60;
-    })
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
-    .slice(0, 5);
+  const recentPayments = summary?.recentPayments ?? [];
+  const upcomingRenewals = summary?.upcomingRenewals ?? [];
 
   return (
     <div className="space-y-6 p-6">
@@ -153,24 +115,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <h2 className="font-semibold">Recent Payments</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {recentPayments.map(({ invoice, payment }) => (
+            {recentPayments.map((payment) => (
               <div
                 key={payment.id}
                 onClick={() =>
-                  invoice.lease && onNavigate({ type: 'tenant-detail', leaseId: invoice.lease.id })
+                  payment.leaseId && onNavigate({ type: 'tenant-detail', leaseId: payment.leaseId })
                 }
                 className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="font-medium">{invoice.lease?.tenant.name ?? 'Unknown tenant'}</p>
+                  <p className="font-medium">{payment.tenant ?? 'Unknown tenant'}</p>
                   <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
                     <CheckCircle className="mr-1 inline h-3 w-3" />
                     paid
                   </span>
                 </div>
-                <p className="mb-1 text-sm text-gray-600">
-                  {invoice.lease?.unit.property.name ?? '—'}
-                </p>
+                <p className="mb-1 text-sm text-gray-600">{payment.property ?? '—'}</p>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-blue-600">
                     ₦{payment.amount.toLocaleString()}
