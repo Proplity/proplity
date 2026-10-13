@@ -18,6 +18,23 @@ export const POST = withAuth(
       });
       if (!code) return NextResponse.json({ error: 'Invalid code' }, { status: 404 });
 
+      // A manager can link to several landlords, but only once to each: a
+      // second code from a landlord they already work with is refused with a
+      // clear message instead of silently doubling the link (ISS-040).
+      const already = await prisma.managerInviteCode.findFirst({
+        where: { landlordId: code.landlordId, linkedManagerId: session.sub },
+        include: { landlord: { select: { name: true } } },
+      });
+      if (already) {
+        return NextResponse.json(
+          {
+            error: `You are already linked to ${already.landlord.name}`,
+            code: 'ALREADY_LINKED',
+          },
+          { status: 409 },
+        );
+      }
+
       // The claim itself is a single atomic write, NOT a read-then-write.
       // `status`/`linkedManagerId` are part of the WHERE, so the database --
       // not this process -- decides who wins: exactly one of two concurrent

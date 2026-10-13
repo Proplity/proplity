@@ -20,6 +20,8 @@ export interface User {
   previousLandlordPhone?: string | null;
   previousLandlordEmail?: string | null;
   idDocumentUrl?: string | null;
+  vendorVerification?: 'PENDING' | 'VERIFIED' | 'REJECTED' | null;
+  vendorVerificationNote?: string | null;
   lastLoginAt?: string;
   createdAt?: string;
 }
@@ -38,6 +40,12 @@ interface AuthContextType {
     name: string;
     role?: string;
     landlordCode?: string;
+    vendor?: {
+      businessName: string;
+      serviceCategory?: string;
+      coverageStates?: string[];
+      cacNumber?: string;
+    };
   }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -117,6 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string;
     role?: string;
     landlordCode?: string;
+    vendor?: {
+      businessName: string;
+      serviceCategory?: string;
+      coverageStates?: string[];
+      cacNumber?: string;
+    };
   }) => {
     try {
       const res = await fetch('/api/v1/auth/register', {
