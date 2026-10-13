@@ -9,6 +9,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { notifyUsers } from '@/lib/notifications';
+import { safeUrlList } from '@/lib/api/urlField';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -63,7 +64,7 @@ const createRequestSchema = z.object({
   description: z.string().min(1),
   categoryId: z.string().optional(),
   priority: z.nativeEnum(MaintenancePriority).optional(),
-  mediaUrls: z.array(z.string()).optional(),
+  mediaUrls: safeUrlList.optional(),
 });
 
 export const POST = withAuth(
