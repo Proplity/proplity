@@ -5,6 +5,7 @@ import { runOverdueFlagger } from '@/lib/workers/overdueFlagger';
 import { runMaintenanceScheduleDispatcher } from '@/lib/workers/maintenanceScheduleDispatcher';
 import { runAccessCodeExpiryJanitor } from '@/lib/workers/accessCodeExpiryJanitor';
 import { runStorageJanitor } from '@/lib/workers/storageJanitor';
+import { runRetention } from '@/lib/workers/retention';
 import { runPaymentReliabilityScorer } from '@/lib/workers/paymentReliabilityScorer';
 import { handleApiError } from '@/lib/api/errors';
 
@@ -24,6 +25,7 @@ const JOBS: Record<string, () => Promise<unknown>> = {
   'access-code-expiry-janitor': runAccessCodeExpiryJanitor,
   'payment-reliability-scorer': runPaymentReliabilityScorer,
   'storage-janitor': runStorageJanitor,
+  retention: runRetention,
 };
 
 // Order matters: invoicing must create the cycle's invoices before the
@@ -36,6 +38,7 @@ const ALL_JOBS_IN_ORDER = [
   'access-code-expiry-janitor',
   'payment-reliability-scorer',
   'storage-janitor',
+  'retention',
 ] as const;
 
 /**
