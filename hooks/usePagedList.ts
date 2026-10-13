@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { api } from '@/lib/apiClient';
 import type { Paginated } from '@/lib/api/types';
 
 const PAGE_SIZE = 100;
@@ -45,4 +46,33 @@ export function usePagedList<T>(
   }, [refetch]);
 
   return { data, total, loading, error, truncated: total > data.length, refetch };
+}
+
+// Every maintenance request that is still open (not completed or cancelled),
+// newest first. The list API filters by one status at a time, so this loads the
+// three open ones side by side.
+export function useOpenMaintenance(enabled = true) {
+  const submitted = usePagedList(
+    (page, limit) => api.maintenance.list({ status: 'SUBMITTED', page, limit }),
+    500,
+    enabled,
+  );
+  const inProgress = usePagedList(
+    (page, limit) => api.maintenance.list({ status: 'IN_PROGRESS', page, limit }),
+    500,
+    enabled,
+  );
+  const scheduled = usePagedList(
+    (page, limit) => api.maintenance.list({ status: 'SCHEDULED', page, limit }),
+    500,
+    enabled,
+  );
+  const lists = [submitted, inProgress, scheduled];
+  return {
+    data: lists
+      .flatMap((l) => l.data)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    loading: lists.some((l) => l.loading),
+    truncated: lists.some((l) => l.truncated),
+  };
 }
