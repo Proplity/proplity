@@ -42,6 +42,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Errors only for real bugs (see eslint.config.mjs); style is Prettier's.
+      - name: Lint
+        run: pnpm lint
+
       # A real gate: the whole tree was formatted in one commit, so any
       # failure here is genuinely the PR's own. Run `pnpm format` to fix.
       - name: Check formatting
