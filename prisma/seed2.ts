@@ -202,6 +202,7 @@ async function main() {
       vendorProfile: {
         create: {
           businessName: 'Apex Repairs & Plumbing Ltd',
+          verificationStatus: 'VERIFIED',
           licenseNumber: 'LIC-PLUMB-9872',
         },
       },
@@ -222,6 +223,7 @@ async function main() {
       vendorProfile: {
         create: {
           businessName: 'John Electrical Services',
+          verificationStatus: 'VERIFIED',
           licenseNumber: 'LIC-ELEC-4421',
         },
       },
@@ -242,6 +244,7 @@ async function main() {
       vendorProfile: {
         create: {
           businessName: 'AquaFix Plumbing & Services',
+          verificationStatus: 'VERIFIED',
           licenseNumber: 'LIC-PLUMB-1092',
         },
       },

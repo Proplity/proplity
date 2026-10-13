@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Search, Shield, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/apiClient';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import type { AdminUser } from '@/lib/api/types';
 
@@ -24,7 +26,25 @@ const ALL_ROLES = ['ALL', 'ADMIN', 'MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'] as
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const { data: users, loading, error } = useAdminUsers();
+  const { data: users, loading, error, refetch } = useAdminUsers();
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const pendingVendors = users.filter(
+    (u) => u.role === 'VENDOR' && u.vendorProfile?.verificationStatus === 'PENDING',
+  );
+
+  const decide = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
+    setBusyId(id);
+    try {
+      await api.admin.vendors.verify(id, { status, note: notes[id]?.trim() || undefined });
+      toast.success(status === 'VERIFIED' ? 'Vendor verified.' : 'Vendor rejected.');
+      await refetch();
+    } catch {
+      toast.error('Could not save the decision. Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  };
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
@@ -61,6 +81,48 @@ export default function AdminUsersPage() {
           </p>
         </div>
       </div>
+
+      {pendingVendors.length > 0 && (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <p className="mb-3 text-sm font-semibold text-yellow-900">
+            Vendors awaiting verification ({pendingVendors.length})
+          </p>
+          <div className="space-y-3">
+            {pendingVendors.map((v) => (
+              <div key={v.id} className="flex flex-wrap items-center gap-3">
+                <div className="min-w-48 flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    {v.vendorProfile?.businessName}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {v.name} · {v.email}
+                  </p>
+                </div>
+                <input
+                  value={notes[v.id] ?? ''}
+                  onChange={(e) => setNotes({ ...notes, [v.id]: e.target.value })}
+                  placeholder="Reason (shown if rejected)"
+                  className="w-56 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                />
+                <button
+                  onClick={() => decide(v.id, 'VERIFIED')}
+                  disabled={busyId === v.id}
+                  className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  Verify
+                </button>
+                <button
+                  onClick={() => decide(v.id, 'REJECTED')}
+                  disabled={busyId === v.id}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-white disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Role summary chips */}
       <div className="flex flex-wrap gap-2">
@@ -173,6 +235,15 @@ export default function AdminUsersPage() {
                       >
                         {roleBadge.label}
                       </span>
+                      {user.vendorProfile && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          {user.vendorProfile.verificationStatus === 'VERIFIED'
+                            ? 'Verified'
+                            : user.vendorProfile.verificationStatus === 'REJECTED'
+                              ? 'Rejected'
+                              : 'Awaiting verification'}
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className={`flex items-center gap-1 ${statusMeta.className}`}>

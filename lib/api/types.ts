@@ -96,6 +96,17 @@ export type CreateUnitInput = {
   amenities?: string[];
 };
 
+export type PropertyViewing = {
+  id: string;
+  propertyId: string;
+  requestedById: string;
+  requestedBy?: { name: string; email: string };
+  scheduledAt: string;
+  status: 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  notes: string | null;
+  createdAt: string;
+};
+
 export type CreateViewingInput = { scheduledAt: string; unitId?: string; notes?: string };
 
 export type MaintenanceCategory = { id: string; name: string; isActive: boolean };
@@ -235,6 +246,7 @@ export type CreateLeaseInput = {
   tenantEmail?: string;
   tenantName?: string;
   tenantPhone?: string;
+  applicationId?: string;
   startDate: string;
   endDate: string;
   rentAmount: number;
@@ -422,6 +434,11 @@ export type AdminUser = {
   phoneNumber: string | null;
   createdAt: string;
   propertiesCount: number;
+  vendorProfile?: {
+    businessName: string;
+    verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+    verificationNote: string | null;
+  } | null;
 };
 
 export type AuditLog = {
@@ -456,6 +473,7 @@ export type Application = {
   reviewedById: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
+  leaseId?: string | null;
   createdAt: string;
   applicant?: { id: string; name: string; email: string; phoneNumber: string | null };
   unit?: { id: string; unitNumber: string; property: { id: string; name: string } };

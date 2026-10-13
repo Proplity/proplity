@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { notifyByEmail, notifyUser } from '@/lib/notifications';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -72,6 +73,40 @@ export const PATCH = withAuth(
           reviewedAt: new Date(),
         },
       });
+
+      // The applicant was left guessing (ISS-046): tell them the outcome in
+      // the app and by email.
+      const approved = updated.status === 'APPROVED';
+      const where = `unit ${application.unit.unitNumber} at ${application.unit.property.name}`;
+      const note = validated.data.reviewNotes
+        ? `\n\nNote from the property team: ${validated.data.reviewNotes}`
+        : '';
+      await notifyUser(application.applicantId, {
+        type: 'SYSTEM',
+        title: approved ? 'Application approved' : 'Application not approved',
+        body: approved
+          ? `Your application for ${where} was approved. The property team will set up your tenancy next.`
+          : `Your application for ${where} was not approved.`,
+        link: '/dashboard',
+      });
+      const applicant = await prisma.user.findUnique({
+        where: { id: application.applicantId },
+        select: { email: true, name: true },
+      });
+      if (applicant) {
+        await notifyByEmail(
+          applicant.email,
+          approved
+            ? 'Your Proplity application was approved'
+            : 'Update on your Proplity application',
+          `Hi ${applicant.name},\n\n${
+            approved
+              ? `Good news: your application for ${where} was approved. The property team will set up your tenancy next.`
+              : `Your application for ${where} was not approved.`
+          }${note}`,
+        );
+      }
+
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);
