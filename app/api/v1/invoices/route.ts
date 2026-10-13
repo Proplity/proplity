@@ -163,6 +163,23 @@ export const POST = withAuth(
         }
       }
 
+      // One live invoice per job (ISS-051): a vendor cannot bill the same work
+      // twice. A cancelled invoice frees the job for a corrected one.
+      if (maintenanceRequestId && rest.type === 'MAINTENANCE') {
+        const open = await prisma.invoice.findFirst({
+          where: { maintenanceRequestId, type: 'MAINTENANCE', status: { not: 'CANCELLED' } },
+          select: { invoiceNumber: true },
+        });
+        if (open) {
+          return NextResponse.json(
+            {
+              error: `This job already has an invoice (${open.invoiceNumber}). Cancel it first to send a corrected one.`,
+            },
+            { status: 409 },
+          );
+        }
+      }
+
       const data = { leaseId, maintenanceRequestId, userId, ...rest };
 
       // Admin-configurable (Platform Settings, SystemSettings.

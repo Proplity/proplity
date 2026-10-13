@@ -142,6 +142,14 @@ export type MaintenanceRequest = {
   costEstimate: number | null;
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
+  // Present on the single-request fetch only (ISS-051).
+  invoices?: {
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+    payments: { amount: number }[];
+  }[];
   createdAt: string;
   updatedAt: string;
 };

@@ -19,6 +19,8 @@ import {
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useVendors } from '@/hooks/useVendors';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
+import { useAuth } from '@/context/AuthContext';
+import { usePayInvoice } from '@/hooks/useInvoices';
 
 interface MaintenanceDetailProps {
   requestId: string;
@@ -71,6 +73,18 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const { open: openConversation } = useOpenConversation();
   const { submit: updateRequest, submitting } = useUpdateMaintenanceRequest(requestId);
   const { data: vendors, loading: vendorsLoading } = useVendors();
+  const auth = useAuth();
+  const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  // The vendor's bill is paid by whoever runs the property (ISS-051).
+  const canPayVendor = ['manager', 'landlord', 'admin'].includes(auth.user?.role ?? '');
+  const handlePay = async (invoiceId: string) => {
+    try {
+      const result = await payInvoice(invoiceId);
+      window.location.href = result.authorizationUrl;
+    } catch {
+      // surfaced through payError
+    }
+  };
 
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [vendorSearch, setVendorSearch] = useState('');
@@ -436,6 +450,35 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                   {request.finalCost != null ? `₦${request.finalCost.toLocaleString()}` : 'Pending'}
                 </span>
               </div>
+              {(request.invoices ?? []).map((inv) => {
+                const paid = inv.payments.reduce((sum, p) => sum + p.amount, 0);
+                const owing = Math.max(0, inv.amount - paid);
+                const payable = canPayVendor && inv.status !== 'PAID' && inv.status !== 'CANCELLED';
+                return (
+                  <div key={inv.id} className="border-t border-gray-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Vendor invoice {inv.invoiceNumber}</span>
+                      <span className="font-semibold">₦{inv.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">
+                        {inv.status.replace('_', ' ')}
+                        {payable && paid > 0 ? ` · ₦${owing.toLocaleString()} left to pay` : ''}
+                      </span>
+                      {payable && (
+                        <button
+                          onClick={() => handlePay(inv.id)}
+                          disabled={paying}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {paying ? 'Opening…' : `Pay ₦${owing.toLocaleString()}`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {payError && <p className="text-xs text-red-600">{payError}</p>}
             </div>
           </div>
         </div>
