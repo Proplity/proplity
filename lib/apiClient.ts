@@ -29,6 +29,7 @@ import type {
   CreateUnitInput,
   CreateViewingInput,
   PropertyViewing,
+  LinkedLandlord,
   CreateViolationInput,
   Equipment,
   Invoice,
@@ -413,6 +414,7 @@ export const api = {
       ),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
+    linked: () => apiClient.get<{ data: LinkedLandlord[] }>('/api/v1/manager-codes/linked'),
     redeem: (code: string) =>
       apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes/redeem', { code }),
   },
