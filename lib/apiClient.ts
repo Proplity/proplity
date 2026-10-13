@@ -363,8 +363,21 @@ export const api = {
         apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
     },
     auditLogs: {
-      list: (params?: { entityType?: string; limit?: number; page?: number }) =>
-        apiClient.get<Paginated<AuditLog>>('/api/v1/admin/audit-logs', { params }),
+      list: (params?: {
+        action?: string;
+        entityType?: string;
+        entityId?: string;
+        actor?: string;
+        q?: string;
+        from?: string;
+        to?: string;
+        facets?: 1;
+        limit?: number;
+        page?: number;
+      }) =>
+        apiClient.get<
+          Paginated<AuditLog> & { facets?: { actions: string[]; entityTypes: string[] } }
+        >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
       get: () =>
