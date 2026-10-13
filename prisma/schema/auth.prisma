@@ -79,7 +79,7 @@ model User {
   submittedApplications        Application[]             @relation("SubmittedApplications")
   reviewedApplications         Application[]             @relation("ReviewedApplications")
   issuedManagerCodes           ManagerInviteCode[]       @relation("IssuedManagerCodes")
-  linkedManagerCode            ManagerInviteCode?        @relation("LinkedManagerCode")
+  linkedManagerCodes           ManagerInviteCode[]       @relation("LinkedManagerCode")
   createdAdCampaigns           AdCampaign[]
   notifications                Notification[]
   createdAt                    DateTime                  @default(now())
@@ -187,12 +187,13 @@ model ManagerInviteCode {
   landlordId      String
   landlord        User                    @relation("IssuedManagerCodes", fields: [landlordId], references: [id], onDelete: Cascade)
   status          ManagerInviteCodeStatus @default(ACTIVE)
-  linkedManagerId String?                 @unique
+  linkedManagerId String?
   linkedManager   User?                   @relation("LinkedManagerCode", fields: [linkedManagerId], references: [id])
   linkedAt        DateTime?
   createdAt       DateTime                @default(now())
 
   @@index([landlordId, status])
+  @@index([linkedManagerId])
 }
 
 model BankAccount {

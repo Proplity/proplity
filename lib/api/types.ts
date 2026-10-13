@@ -464,6 +464,13 @@ export type Application = {
 export type CreateApplicationInput = { unitId: string; details: Record<string, unknown> };
 export type ReviewApplicationInput = { status: 'APPROVED' | 'REJECTED'; reviewNotes?: string };
 
+export type LinkedLandlord = {
+  codeId: string;
+  landlord: { id: string; name: string };
+  linkedAt: string | null;
+  active: boolean;
+};
+
 export type ManagerInviteCode = {
   id: string;
   code: string;
