@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parseCursorPagination, buildCursorMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { safeUrlList } from '@/lib/api/urlField';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -56,7 +57,7 @@ export const GET = withAuth(async (req, { session }, ctx: RouteCtx) => {
 const createMessageSchema = z.object({
   body: z.string().min(1),
   channel: z.nativeEnum(MessageChannel).optional(),
-  attachmentUrls: z.array(z.string()).optional(),
+  attachmentUrls: safeUrlList.optional(),
 });
 
 export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {

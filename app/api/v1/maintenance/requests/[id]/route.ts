@@ -9,6 +9,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { safeUrl } from '@/lib/api/urlField';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -83,7 +84,7 @@ const patchSchema = z.object({
   vendorId: z.string().nullable().optional(),
   scheduledFor: z.coerce.date().nullable().optional(),
   status: z.nativeEnum(MaintenanceStatus).optional(),
-  completionProofUrl: z.string().optional(),
+  completionProofUrl: safeUrl.optional(),
   finalCost: z.number().optional(),
   vendorNotes: z.string().optional(),
 });

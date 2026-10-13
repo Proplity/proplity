@@ -8,6 +8,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { serializeUnit } from '@/lib/api/propertyAccess';
+import { safeUrl } from '@/lib/api/urlField';
 
 export async function GET(req: NextRequest) {
   try {
@@ -110,9 +111,9 @@ const createPropertySchema = z.object({
   zipCode: z.string().optional(),
   type: z.nativeEnum(PropertyType).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().optional(),
-  video360Url: z.string().optional(),
-  exteriorPhotoUrl: z.string().optional(),
+  imageUrl: safeUrl.optional(),
+  video360Url: safeUrl.optional(),
+  exteriorPhotoUrl: safeUrl.optional(),
   isPublished: z.boolean().optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
