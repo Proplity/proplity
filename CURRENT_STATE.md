@@ -207,6 +207,3 @@ A full pass over every role's flow (add/manage/acquire/renew properties) surface
 - `docs/flow-guide.md`, `docs/testing-guide.md`, `docs/setup-guide.md`, `docs/proplity-step-by-step-role-guide.md` — click-by-click guides for each role, the QA checklist, and first-run setup.
 - `DEPLOYMENT.md` and `PROJECT_STRUCTURE.md` — deploy/CI/cron setup and the file-tree reference.
 - `CLAUDE.md` — the authoritative, always-current project reference; read it before making changes.
-
-- **P1 flow fixes (ISS-042/043/044):** `lib/viewingSlots.ts` generates bookable viewing days (next 10 Mon-Sat) and `POST .../viewings` rejects past times; `POST /auth/register` creates a `VendorProfile` (business name, coverage, CAC, matching existing category) for vendors; `VendorCreateInvoice` starts empty and uses the real job, vendor and bank account. Vendors are still not verified before they appear to landlords.
-- **Manager links (ISS-040/041, ADR-0011):** a manager can register without a landlord code and can link to several landlords (`ManagerInviteCode.linkedManagerId` is no longer unique; migration `20261013150000_manager_links_many_landlords`). Redeeming a second code from the same landlord returns 409 `ALREADY_LINKED`; `GET /manager-codes/linked` lists a manager's landlords.

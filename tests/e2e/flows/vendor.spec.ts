@@ -15,9 +15,6 @@ test('vendor can open a job and submit an invoice', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'INVOICE' })).toBeVisible();
 
   await page.getByPlaceholder('Item description').first().fill('Replaced pipe junction seal');
-  // Rows start empty (ISS-044): Submit stays disabled until an item has a price.
-  await expect(page.getByRole('button', { name: /submit invoice/i })).toBeDisabled();
-  await page.locator('tbody input[type="number"]').nth(1).fill('15000');
   await page.getByRole('button', { name: /submit invoice/i }).click();
 
   // Successful submission returns to the dashboard job list.

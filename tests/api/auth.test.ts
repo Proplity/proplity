@@ -231,7 +231,7 @@ describe('auth: register', () => {
     expect(loginAttempt.status).toBe(403);
   });
 
-  it('MANAGER registration accepts no code (ISS-041) but a supplied code must be real and unused', async () => {
+  it('MANAGER registration requires a real, still-unused landlord code', async () => {
     const noCode = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
       body: {
@@ -241,13 +241,7 @@ describe('auth: register', () => {
         role: 'manager',
       },
     });
-    // A manager can sign up unlinked and link to landlords later.
-    expect(noCode.status).toBe(200);
-    expect(
-      await testPrisma.managerInviteCode.count({
-        where: { linkedManagerId: noCode.body.user.id },
-      }),
-    ).toBe(0);
+    expect(noCode.status).toBe(400);
 
     const bogusCode = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
