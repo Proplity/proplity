@@ -11,8 +11,9 @@ import {
   Phone,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
-import { useInvoices } from '@/hooks/useInvoices';
+import { api } from '@/lib/apiClient';
+import { useVendorSummary } from '@/hooks/useDashboardSummary';
+import { usePagedList } from '@/hooks/usePagedList';
 
 interface VendorDashboardProps {
   onNavigate: (page: any) => void;
@@ -32,71 +33,43 @@ const priorityConfig = {
   LOW: { color: 'green', label: 'Low' },
 } as const;
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function isThisMonth(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
-
 export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
   const auth = useAuth();
   const [activeFilter, setActiveFilter] = useState<
     'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
   >('all');
 
-  const { data: jobs, loading: jobsLoading } = useMaintenanceRequests();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const loading = jobsLoading || invoicesLoading;
-
-  const now = new Date();
-  const completedJobs = jobs.filter((j) => j.status === 'COMPLETED');
-  const activeJobs = jobs.filter((j) => j.status === 'IN_PROGRESS' || j.status === 'SCHEDULED');
-  const completedThisMonth = completedJobs.filter(
-    (j) => j.completedAt && isThisMonth(j.completedAt),
+  // Every number comes from the server (ISS-049); the job cards below are a
+  // paged list (up to 500 jobs).
+  const { data: summary, loading: summaryLoading } = useVendorSummary();
+  const {
+    data: jobs,
+    loading: jobsLoading,
+    truncated: jobsCut,
+  } = usePagedList((page, limit) => api.maintenance.list({ page, limit }));
+  const { data: invoices, loading: invoicesLoading } = usePagedList((page, limit) =>
+    api.invoices.list({ page, limit }),
   );
-  const totalEarningsMTD = completedThisMonth.reduce((sum, j) => sum + (j.finalCost ?? 0), 0);
+  const loading = summaryLoading || jobsLoading || invoicesLoading;
+
+  const activeJobs = (summary?.jobs.scheduled ?? 0) + (summary?.jobs.inProgress ?? 0);
+  const completedThisMonth = summary?.earnings.completedThisMonth ?? 0;
+  const totalEarningsMTD = summary?.earnings.thisMonth ?? 0;
+  const pendingPayments = summary?.earnings.pendingPayments ?? 0;
+  const avgRating = summary?.rating.average ?? null;
+  const completionRate = summary?.jobs.completionRate ?? 0;
+  const completedThisWeek = summary?.earnings.completedThisWeek ?? 0;
+  const earningsThisWeek = summary?.earnings.thisWeek ?? 0;
+  const onTimeRate = summary?.jobs.onTimeRate ?? null;
+  const totalPaid = summary?.earnings.totalPaid ?? 0;
 
   // Invoice status per job -- an invoice is created automatically when a
   // job is marked COMPLETED (see PATCH /maintenance/requests/[id]), or
-  // manually via VendorCreateInvoice. Pending = invoiced but not yet PAID.
+  // manually via VendorCreateInvoice.
   const jobInvoice = (jobId: string) => invoices.find((i) => i.maintenanceRequestId === jobId);
-  const pendingPayments = completedJobs.reduce((sum, j) => {
-    const invoice = jobInvoice(j.id);
-    if (!invoice || invoice.status === 'PAID') return sum;
-    return sum + invoice.amount;
-  }, 0);
-
-  // Rating/completion rate computed from this vendor's own jobs -- GET
-  // /vendors (built in Phase 9.3a) is MANAGER/LANDLORD/ADMIN-only, so a
-  // vendor's own stats are derived client-side from their own scoped
-  // maintenance requests instead of calling that endpoint.
-  const ratings = jobs.map((j) => j.vendorRating?.rating).filter((r): r is number => r != null);
-  const avgRating = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null;
-  const completionRate =
-    jobs.length > 0 ? Math.round((completedJobs.length / jobs.length) * 100) : 0;
 
   const filteredJobs =
     activeFilter === 'all' ? jobs : jobs.filter((j) => j.status === activeFilter);
-
-  const weekAgo = new Date(now.getTime() - 7 * MS_PER_DAY);
-  const completedThisWeek = completedJobs.filter(
-    (j) => j.completedAt && new Date(j.completedAt) >= weekAgo,
-  );
-  const earningsThisWeek = completedThisWeek.reduce((sum, j) => sum + (j.finalCost ?? 0), 0);
-
-  const onTimeEligible = completedJobs.filter((j) => j.scheduledFor);
-  const onTimeCount = onTimeEligible.filter(
-    (j) => new Date(j.completedAt!) <= new Date(j.scheduledFor!),
-  ).length;
-  const onTimeRate =
-    onTimeEligible.length > 0 ? Math.round((onTimeCount / onTimeEligible.length) * 100) : null;
-
-  const totalPaid = completedJobs.reduce((sum, j) => {
-    const invoice = jobInvoice(j.id);
-    return invoice?.status === 'PAID' ? sum + invoice.amount : sum;
-  }, 0);
 
   return (
     <div className="space-y-6 p-6">
@@ -104,6 +77,19 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
         <h1 className="mb-1 text-2xl font-semibold">Vendor Dashboard</h1>
         <p className="text-gray-600">Manage your jobs and track your earnings</p>
       </div>
+
+      {auth.user?.vendorVerification === 'PENDING' && (
+        <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+          <strong>Your business is awaiting verification.</strong> Landlords and managers can find
+          and assign you once an admin approves it. You will get an email and a notification.
+        </p>
+      )}
+      {auth.user?.vendorVerification === 'REJECTED' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <strong>Your business was not verified.</strong>{' '}
+          {auth.user.vendorVerificationNote ?? 'Contact support if you think this is a mistake.'}
+        </p>
+      )}
 
       {loading && <p className="text-sm text-gray-500">Loading your jobs…</p>}
 
@@ -115,7 +101,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <Wrench className="h-6 w-6 text-orange-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : activeJobs.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : activeJobs}</p>
           <p className="text-sm text-gray-600">Active Jobs</p>
         </div>
 
@@ -125,7 +111,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : completedThisMonth.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : completedThisMonth}</p>
           <p className="text-sm text-gray-600">Completed This Month</p>
         </div>
 
@@ -190,18 +176,18 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
       {/* Job Filters */}
       <div className="flex gap-2 overflow-x-auto">
         {[
-          { id: 'all' as const, label: 'All Jobs', count: jobs.length },
+          { id: 'all' as const, label: 'All Jobs', count: summary?.jobs.total ?? 0 },
           {
             id: 'SCHEDULED' as const,
             label: 'Scheduled',
-            count: jobs.filter((j) => j.status === 'SCHEDULED').length,
+            count: summary?.jobs.scheduled ?? 0,
           },
           {
             id: 'IN_PROGRESS' as const,
             label: 'In Progress',
-            count: jobs.filter((j) => j.status === 'IN_PROGRESS').length,
+            count: summary?.jobs.inProgress ?? 0,
           },
-          { id: 'COMPLETED' as const, label: 'Completed', count: completedJobs.length },
+          { id: 'COMPLETED' as const, label: 'Completed', count: summary?.jobs.completed ?? 0 },
         ].map((filter) => (
           <button
             key={filter.id}
@@ -218,6 +204,11 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
       </div>
 
       {/* Job List */}
+      {jobsCut && (
+        <p className="text-xs text-gray-500">
+          Showing your 500 most recent jobs. The counts above include all of them.
+        </p>
+      )}
       <div className="space-y-4">
         {filteredJobs.map((job) => {
           const status =
@@ -363,7 +354,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Jobs Completed</span>
-              <span className="font-semibold">{completedThisWeek.length}</span>
+              <span className="font-semibold">{completedThisWeek}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Earnings</span>
@@ -379,7 +370,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Jobs This Month</span>
-              <span className="font-semibold">{completedThisMonth.length}</span>
+              <span className="font-semibold">{completedThisMonth}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">On-Time Rate</span>

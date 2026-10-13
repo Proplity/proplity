@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, User, Briefcase, CheckCircle, AlertCircle } from 'lucide-react';
@@ -74,8 +75,8 @@ export function PropertyApplicationForm({
 
     try {
       await createApplication({ unitId, details });
-      alert(
-        'Application submitted successfully! The property manager will review your application and contact you within 24-48 hours.',
+      toast.success(
+        'Application submitted. The property manager will review it and get back to you.',
       );
       router.push('/dashboard');
     } catch {

@@ -26,3 +26,29 @@ test('tenant can view payment history', async ({ page }) => {
   await page.getByRole('link', { name: 'Payment History' }).click();
   await expect(page).toHaveURL(/\/dashboard\/payment-history/);
 });
+
+test('tenant can book a viewing on a future date (ISS-042)', async ({ page, request }) => {
+  const list = await request.get('/api/v1/properties');
+  const propertyId = (await list.json()).data[0].id as string;
+
+  await loginAs(page, 'tenant');
+  await page.goto(`/dashboard/properties/${propertyId}/schedule-viewing`);
+
+  // The first offered day must be in the future, not a stale hard-coded date.
+  const firstDay = page.getByRole('button', { name: /slots available/i }).first();
+  await expect(firstDay).toBeVisible();
+  await firstDay.click();
+  await page.getByRole('button', { name: /10:00 AM/ }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await page.locator('input[type="text"]').first().fill('Jordan Hayes');
+  await page.locator('input[type="email"]').fill('tenant@proplity.com');
+  await page.locator('input[type="tel"]').fill('+234 803 555 1234');
+  await page.locator('input[type="checkbox"]').check();
+  await page.getByRole('button', { name: 'Confirm Viewing' }).click();
+
+  // Either booked, or already booked for that day by an earlier run.
+  await expect(page.getByText(/Viewing Requested!|already booked/i)).toBeVisible({
+    timeout: 15_000,
+  });
+});

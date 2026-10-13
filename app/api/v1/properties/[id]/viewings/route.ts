@@ -5,7 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
-import { sendEmail } from '@/lib/email';
+import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -19,6 +19,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     const canSeeAll = canManageProperty(session, property);
     const viewings = await prisma.propertyViewing.findMany({
       where: { propertyId: id, ...(canSeeAll ? {} : { requestedById: session.sub }) },
+      include: canSeeAll ? { requestedBy: { select: { name: true, email: true } } } : undefined,
       orderBy: { scheduledAt: 'asc' },
     });
 
@@ -41,6 +42,13 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const validated = await validateBody(req, createViewingSchema);
     if (!validated.success) return validated.response;
     const { scheduledAt, unitId, notes } = validated.data;
+
+    if (scheduledAt.getTime() <= Date.now()) {
+      return NextResponse.json(
+        { error: 'Choose a viewing time in the future', code: 'PAST_DATE' },
+        { status: 400 },
+      );
+    }
 
     const dayStart = new Date(scheduledAt);
     dayStart.setHours(0, 0, 0, 0);
@@ -68,20 +76,30 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       data: { propertyId: id, unitId, requestedById: session.sub, scheduledAt, notes },
     });
 
-    // ScheduleViewing.tsx's confirmation screen tells the visitor to "check
-    // your email for confirmation details" -- make that literally true,
-    // same console-transport sendEmail() pattern as moderation/tenant-invite.
+    // A viewing is a request until the property team confirms it (ISS-047).
+    // The requester is told it was received; the manager and landlord are
+    // told something is waiting.
     const [requester, property] = await Promise.all([
       prisma.user.findUnique({ where: { id: session.sub } }),
       prisma.property.findUnique({ where: { id } }),
     ]);
     if (requester && property) {
-      await sendEmail({
-        to: requester.email,
-        subject: `Viewing confirmed: ${property.name}`,
-        body: `Hi ${requester.name},\n\nYour viewing of "${property.name}" (${property.address}) is confirmed for ${scheduledAt.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}.${
+      const when = scheduledAt.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+      await notifyByEmail(
+        requester.email,
+        `Viewing requested: ${property.name}`,
+        `Hi ${requester.name},\n\nWe received your request to view "${property.name}" (${property.address}) on ${when}. The property team will confirm it shortly and you will get another email.${
           notes ? `\n\nYour notes: ${notes}` : ''
-        }\n\nPlease arrive a few minutes early and bring a valid ID.`,
+        }`,
+      );
+      const reviewers = [property.managerId, property.landlordId].filter(
+        (rid): rid is string => !!rid && rid !== session.sub,
+      );
+      await notifyUsers([...new Set(reviewers)], {
+        type: 'SYSTEM',
+        title: 'New viewing request',
+        body: `${requester.name} asked to view ${property.name} on ${when}.`,
+        link: `/dashboard/properties/${property.id}`,
       });
     }
 

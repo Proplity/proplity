@@ -117,6 +117,24 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (isTriage) {
       if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+      // Only a vetted vendor can take a job (ISS-043). A vendor with no
+      // profile row predates sign-up profiles and is still allowed.
+      if (vendorId) {
+        const vendor = await prisma.user.findFirst({
+          where: { id: vendorId, role: 'VENDOR' },
+          include: { vendorProfile: { select: { verificationStatus: true } } },
+        });
+        if (!vendor) {
+          return NextResponse.json({ error: 'vendorId must reference a vendor' }, { status: 400 });
+        }
+        if (vendor.vendorProfile && vendor.vendorProfile.verificationStatus !== 'VERIFIED') {
+          return NextResponse.json(
+            { error: 'This vendor has not been verified yet', code: 'VENDOR_NOT_VERIFIED' },
+            { status: 409 },
+          );
+        }
+      }
+
       const updated = await prisma.maintenanceRequest.update({
         where: { id },
         data: { categoryId, priority, vendorId, scheduledFor },
