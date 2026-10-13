@@ -116,7 +116,7 @@ test.describe('Registration Flows End-to-End', () => {
     await page.getByRole('button', { name: /Property Manager Manage properties/i }).click();
 
     // Step 2: Landlord Code verification
-    await expect(page.getByText('Landlord Invitation Code Required')).toBeVisible();
+    await expect(page.getByText('Landlord Invitation Code', { exact: true })).toBeVisible();
 
     await page.getByPlaceholder('e.g. LLD-2847-XK or DEMO-CODE').fill(code);
 
@@ -143,6 +143,29 @@ test.describe('Registration Flows End-to-End', () => {
 
     await page.locator('input[type="checkbox"]').check();
 
+    await page.getByRole('button', { name: 'Create Account' }).click();
+    await expect(page.getByRole('heading', { name: 'Check Your Email' })).toBeVisible();
+  });
+
+  test('Property Manager can register without a code and link to a landlord later (ISS-041)', async ({
+    page,
+  }) => {
+    const email = `nocode_manager_${timestamp}@example.com`;
+    await page.goto('/register');
+    await page.getByRole('button', { name: /Property Manager Manage properties/i }).click();
+    await page.getByRole('button', { name: /I don't have a code yet/i }).click();
+
+    await expect(page.getByText('Not linked to a landlord yet.')).toBeVisible();
+    await page.getByPlaceholder('First name').fill('Ngozi');
+    await page.getByPlaceholder('Last name').fill('Eze');
+    await page.getByPlaceholder('you@example.com').fill(email);
+    await page.getByPlaceholder('+234 803 000 0000').fill('+234 803 456 1111');
+    await page.locator('select').first().selectOption('Lagos');
+    await page.getByPlaceholder('12345678901').fill('12345678901');
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.nth(0).fill('Password123!');
+    await passwordInputs.nth(1).fill('Password123!');
+    await page.locator('input[type="checkbox"]').check();
     await page.getByRole('button', { name: 'Create Account' }).click();
     await expect(page.getByRole('heading', { name: 'Check Your Email' })).toBeVisible();
   });
