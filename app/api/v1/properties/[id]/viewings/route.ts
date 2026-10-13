@@ -42,13 +42,6 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (!validated.success) return validated.response;
     const { scheduledAt, unitId, notes } = validated.data;
 
-    if (scheduledAt.getTime() <= Date.now()) {
-      return NextResponse.json(
-        { error: 'Choose a viewing time in the future', code: 'PAST_DATE' },
-        { status: 400 },
-      );
-    }
-
     const dayStart = new Date(scheduledAt);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayStart);
