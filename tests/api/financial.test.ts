@@ -465,6 +465,91 @@ describe('payments: webhook (HMAC-SHA512 verification)', () => {
   });
 });
 
+describe('vendor invoices: who pays, one per job (ISS-051)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function setup() {
+    const manager = await createUser(Role.MANAGER);
+    const landlord = await createUser(Role.LANDLORD);
+    const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const vendor = await createUser(Role.VENDOR);
+    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    return { manager, landlord, tenant, vendor, request };
+  }
+
+  const post = (cookie: string, maintenanceRequestId: string, amount = 5000) =>
+    apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        maintenanceRequestId,
+        type: 'MAINTENANCE',
+        amount,
+        dueDate: new Date().toISOString(),
+      },
+    });
+
+  it("lets the property's manager and landlord start payment, but not others", async () => {
+    const { manager, landlord, tenant, vendor, request } = await setup();
+    const invoice = await post(await authCookie(vendor.id, vendor.role), request.id);
+    expect(invoice.status).toBe(201);
+    const invoiceId = invoice.body.data.id;
+
+    const outsider = await createUser(Role.MANAGER);
+    for (const [who, allowed] of [
+      [manager, true],
+      [landlord, true],
+      [outsider, false],
+      [tenant, false],
+      [vendor, false],
+    ] as const) {
+      const res = await apiFetch('/api/v1/payments/initialize', {
+        method: 'POST',
+        cookie: await authCookie(who.id, who.role),
+        body: { invoiceId },
+      });
+      // Authorised callers get past the permission check and are then stopped by
+      // the provider (503 not configured, 502 rejected the test key); others get 403.
+      if (allowed) expect([502, 503], who.role).toContain(res.status);
+      else expect(res.status, who.role).toBe(403);
+    }
+  });
+
+  it('allows one live invoice per job; a cancelled one frees it', async () => {
+    const { vendor, request } = await setup();
+    const cookie = await authCookie(vendor.id, vendor.role);
+    const first = await post(cookie, request.id);
+    expect(first.status).toBe(201);
+    expect((await post(cookie, request.id)).status).toBe(409);
+
+    await testPrisma.invoice.update({
+      where: { id: first.body.data.id },
+      data: { status: 'CANCELLED' },
+    });
+    expect((await post(cookie, request.id, 6000)).status).toBe(201);
+  });
+
+  it('does not create a second invoice when completing a job that already has one', async () => {
+    const { vendor, request } = await setup();
+    const cookie = await authCookie(vendor.id, vendor.role);
+    await testPrisma.systemSettings
+      .updateMany({ data: { autoCompleteMaintenanceOnInvoice: false } })
+      .catch(() => undefined);
+    expect((await post(cookie, request.id, 4000)).status).toBe(201);
+    const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+    });
+    expect(done.status).toBe(200);
+    expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(1);
+  });
+});
+
 describe('payments: amounts, part payments and concurrent delivery (ISS-052)', () => {
   beforeAll(async () => {
     await resetDb();
