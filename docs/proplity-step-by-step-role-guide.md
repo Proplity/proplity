@@ -1309,10 +1309,10 @@ A searchable table of every registered user on the platform. The admin can manag
 
 **What the admin can do:**
 
-- Search by name, email, or role
-- View a user's full profile and activity history
-- Suspend or re-activate an account
-- Change a user's role
+- Search by name, email or phone, and filter by role and status (the list is paged, 20 at a time)
+- Suspend an account (the person is signed out straight away and emailed your reason) or reactivate it
+- Change the role of a person who has no properties, tenancy or jobs yet
+- Every one of these asks for a reason, which is saved in the audit log. You cannot change your own account or another admin's
 
 **Screenshot:** `docs/screenshots/admin_02_users.png`
 
@@ -1351,13 +1351,18 @@ Platform-wide reporting — properties listed, active tenants, revenue, maintena
 ## Step 6.5 — Security & Audit Logs
 
 **What this is:**
-A chronological log of every significant action on the platform — used for security investigations.
+A chronological log of significant actions on the platform — used for security investigations.
 
 **What you see:**
 
-- Timestamp, user email, role
-- Action taken (e.g., "Updated Lease #123", "Failed login from IP 102.89.x.x")
-- IP address
+- Timestamp and who did it (or "System")
+- What happened (e.g., "User suspended", "Payment recorded manually") and what it was about, shown by name (a person, an invoice number, a property)
+- Click an entry to open its details
+
+**What you can do:**
+
+- Filter by what happened, what it was about, who did it, and a date range
+- Page through older entries
 
 **Screenshot:** `docs/screenshots/admin_05_notifications.png`
 
