@@ -28,6 +28,8 @@ import type {
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  OwnerDashboardSummary,
+  AdminDashboardSummary,
   PropertyViewing,
   LinkedLandlord,
   CreateViolationInput,
@@ -285,6 +287,9 @@ export const api = {
         apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
     },
   },
+  dashboard: {
+    summary: () => apiClient.get<{ data: OwnerDashboardSummary }>('/api/v1/dashboard/summary'),
+  },
   invoices: {
     list: (params?: { type?: string; status?: string }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
@@ -316,6 +321,7 @@ export const api = {
       list: (params?: { role?: string; limit?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+    summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
     vendors: {
       verify: (userId: string, body: { status: 'VERIFIED' | 'REJECTED'; note?: string }) =>
         apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
