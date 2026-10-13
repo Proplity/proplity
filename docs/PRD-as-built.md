@@ -157,9 +157,9 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 - **Overview dashboard** with platform totals and tiles that navigate to User Management, Security and Settings (the Database tile explains there is no in-app database console).
 - **Properties**: moderation queue with filters, search and per-listing review.
-- **User management**: all accounts across roles.
+- **User management**: all accounts across roles, searchable and paged, filterable by role and status. An admin can suspend or reactivate a non-admin account and change the role of someone with no records yet; each change needs a reason, is audit-logged, signs the person out and takes effect immediately.
 - **Reports and breakdown pages** (platform-wide drill-downs).
-- **Security**: audit-log viewer (currently only the setup wizard writes entries, so the log is nearly empty).
+- **Security**: audit-log viewer with filters (what happened, about what, done by whom, dates), paging, readable names and an expandable details view. Entries come from the setup wizard, account suspensions and role changes, manual payments and invoice edits, payment anomalies, vendor decisions, file reads and retention deletions.
 - **Platform settings**: toggles for platform-wide behaviour.
 - **Subscriptions** (not in the PRD): plan/checkout code exists but is **off by default**; it shows "Coming Soon".
 
@@ -173,18 +173,18 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 ## 9. Non-functional requirements
 
-| PRD requirement                      | Status | As built                                                                                                       |
-| ------------------------------------ | :----: | -------------------------------------------------------------------------------------------------------------- |
-| Role-based access control            |   ✅   | Enforced server-side on every route and tested (RBAC boundaries covered in the API suite).                     |
-| Audit logs                           |   🟡   | Access-code activity is fully logged; the general audit log has one writer (setup).                            |
-| Secure payment handling              |   ✅   | No card data touches Proplity; payments run on Paystack, with signed-webhook verification.                     |
-| Security hardening                   |   ✅   | See §2; independently reviewed 2026-09-30 and fixed.                                                           |
-| End-to-end encryption                |   ❌   | Not implemented. Transport is HTTPS via the host; passwords are hashed; messages are not end-to-end encrypted. |
-| NDPR alignment                       |   ❌   | Not assessed.                                                                                                  |
-| Mobile-responsive portals            |   ✅   | Tenant/vendor/manager dashboards work on phones (bottom tab bar). No offline mode.                             |
-| Performance (100k+ units, <2 s)      |   ❌   | Not measured or load-tested.                                                                                   |
-| 99.5 % uptime / graceful degradation |   🟡   | Missing provider keys degrade features with clear messages; no SLA monitoring is in place.                     |
-| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 73 routes) behind one typed client.                                             |
+| PRD requirement                      | Status | As built                                                                                                                                    |
+| ------------------------------------ | :----: | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Role-based access control            |   ✅   | Enforced server-side on every route and tested (RBAC boundaries covered in the API suite).                                                  |
+| Audit logs                           |   🟡   | Access-code activity, account changes, manual payments, payment anomalies, vendor decisions, file reads and retention deletions are logged. |
+| Secure payment handling              |   ✅   | No card data touches Proplity; payments run on Paystack, with signed-webhook verification.                                                  |
+| Security hardening                   |   ✅   | See §2; independently reviewed 2026-09-30 and fixed.                                                                                        |
+| End-to-end encryption                |   ❌   | Not implemented. Transport is HTTPS via the host; passwords are hashed; messages are not end-to-end encrypted.                              |
+| NDPR alignment                       |   ❌   | Not assessed.                                                                                                                               |
+| Mobile-responsive portals            |   ✅   | Tenant/vendor/manager dashboards work on phones (bottom tab bar). No offline mode.                                                          |
+| Performance (100k+ units, <2 s)      |   ❌   | Not measured or load-tested.                                                                                                                |
+| 99.5 % uptime / graceful degradation |   🟡   | Missing provider keys degrade features with clear messages; no SLA monitoring is in place.                                                  |
+| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 73 routes) behind one typed client.                                                                          |
 
 ## 10. Quality & operations
 
