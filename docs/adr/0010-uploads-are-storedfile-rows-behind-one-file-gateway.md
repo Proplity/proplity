@@ -1,7 +1,7 @@
 # 0010 — Uploads are StoredFile rows served through one file gateway
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
+Status: Accepted
+Decided by: roji-tech · Date: 2026-10-11
 Recorded: 2026-10-11
 Supersedes: 0007, 0008, 0009
 
