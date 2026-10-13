@@ -391,3 +391,108 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(lateFee?.description).toContain(`[late-fee-for:${invoice.id}]`);
   });
 });
+
+describe('admin: suspend, reactivate and change role (ISS-054)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const patch = (cookie: string, id: string, body: object) =>
+    apiFetch(`/api/v1/admin/users/${id}`, { method: 'PATCH', cookie, body });
+
+  it('suspends a user, locks them out at once, revokes sessions and audits it', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const tenant = await createUser(Role.TENANT);
+    const adminCookie = await authCookie(admin.id, admin.role);
+    const tenantCookie = await authCookie(tenant.id, tenant.role);
+    await testPrisma.refreshToken.create({
+      data: {
+        userId: tenant.id,
+        tokenHash: `h-${tenant.id}`,
+        familyId: tenant.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+
+    const res = await patch(adminCookie, tenant.id, {
+      status: 'SUSPENDED',
+      reason: 'Fraud report',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('SUSPENDED');
+
+    // The still-valid access token stops working immediately.
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(403);
+    const token = await testPrisma.refreshToken.findUnique({
+      where: { tokenHash: `h-${tenant.id}` },
+    });
+    expect(token?.revokedAt).not.toBeNull();
+    const audit = await testPrisma.auditLog.findFirst({
+      where: { entityId: tenant.id, action: 'USER_SUSPENDED' },
+    });
+    expect(audit?.actorId).toBe(admin.id);
+
+    const back = await patch(adminCookie, tenant.id, { status: 'ACTIVE', reason: 'Resolved' });
+    expect(back.status).toBe(200);
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+  });
+
+  it('protects admins and the caller, and needs a reason', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const other = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    expect((await patch(cookie, admin.id, { status: 'SUSPENDED', reason: 'oops' })).status).toBe(
+      403,
+    );
+    expect((await patch(cookie, other.id, { status: 'SUSPENDED', reason: 'no' })).status).toBe(400);
+    expect((await patch(cookie, other.id, { status: 'SUSPENDED', reason: 'testing' })).status).toBe(
+      403,
+    );
+    const unverified = await createUser(Role.TENANT, { status: 'PENDING_VERIFICATION' });
+    expect(
+      (await patch(cookie, unverified.id, { status: 'ACTIVE', reason: 'by hand' })).status,
+    ).toBe(409);
+  });
+
+  it('changes the role of someone with no records, but not someone who has some', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const fresh = await createUser(Role.TENANT);
+    const ok = await patch(cookie, fresh.id, { role: 'LANDLORD', reason: 'Signed up wrong' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.role).toBe('LANDLORD');
+
+    const manager = await createUser(Role.MANAGER);
+    await createProperty({ managerId: manager.id });
+    const blocked = await patch(cookie, manager.id, { role: 'TENANT', reason: 'Switching' });
+    expect(blocked.status).toBe(409);
+  });
+
+  it('is admin-only, and the user list filters and pages in the database', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const target = await createUser(Role.TENANT);
+    expect(
+      (
+        await patch(await authCookie(manager.id, manager.role), target.id, {
+          role: 'VENDOR',
+          reason: 'abc',
+        })
+      ).status,
+    ).toBe(403);
+
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    await createUser(Role.TENANT, { name: 'Zed Searchable', status: 'SUSPENDED' });
+    const byName = await apiFetch('/api/v1/admin/users?q=searchable', { cookie });
+    expect(byName.body.data.map((u: { name: string }) => u.name)).toEqual(['Zed Searchable']);
+    const suspended = await apiFetch('/api/v1/admin/users?status=SUSPENDED', { cookie });
+    expect(suspended.body.meta.total).toBeGreaterThanOrEqual(1);
+    expect(suspended.body.data.every((u: { status: string }) => u.status === 'SUSPENDED')).toBe(
+      true,
+    );
+    const paged = await apiFetch('/api/v1/admin/users?limit=2&page=2', { cookie });
+    expect(paged.body.data).toHaveLength(2);
+  });
+});
