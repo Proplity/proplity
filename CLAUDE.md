@@ -50,6 +50,7 @@ Roles: `ADMIN`, `MANAGER`, `LANDLORD`, `TENANT`, `VENDOR`.
 ```bash
 pnpm dev                          # dev server, localhost:3000
 pnpm typecheck                    # tsc --noEmit (CI runs this)
+pnpm lint                         # eslint . (CI runs this; errors fail, warnings do not)
 pnpm format:check                 # prettier --check . (CI runs this; `pnpm format` to fix)
 pnpm build                        # production build (CI runs this)
 pnpm db:seed2                     # re-seed (enriched dataset); `pnpm db:seed` is the minimal one
@@ -59,7 +60,7 @@ pnpm test                         # Vitest API suite (see "Testing" below)
 pnpm test:e2e                     # Playwright UI suite (needs a seeded DB + running app)
 ```
 
-Before opening a PR, run `pnpm typecheck && pnpm format:check` — CI fails the whole PR on a single unformatted file, including generated ones (`docs/proplity-guide.html` is in `.prettierignore` for exactly that reason).
+Before opening a PR, run `pnpm typecheck && pnpm lint && pnpm format:check` — CI fails the whole PR on a single unformatted file, including generated ones (`docs/proplity-guide.html` is in `.prettierignore` for exactly that reason).
 
 Seeded dev accounts all use password `Password123!` — `admin@`, `manager@`, `landlord@`, `tenant@`, `vendor@proplity.com`.
 
