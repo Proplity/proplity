@@ -69,6 +69,9 @@ const createLeaseSchema = z
     tenantEmail: emailSchema.optional(),
     tenantName: z.string().optional(),
     tenantPhone: z.string().optional(),
+    // Creating the tenancy from an APPROVED application (ISS-046): the
+    // applicant becomes the tenant and the application is linked to the lease.
+    applicationId: z.string().optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     // Full amount for the payment cycle, per CLAUDE.md rule 5 -- never
@@ -84,8 +87,8 @@ const createLeaseSchema = z
     lateFeePercentage: z.number().nonnegative().optional(),
     lateFeeFlatAmount: z.number().nonnegative().optional(),
   })
-  .refine((d) => d.tenantId || (d.tenantEmail && d.tenantName), {
-    message: 'Either tenantId, or both tenantEmail and tenantName, are required',
+  .refine((d) => d.applicationId || d.tenantId || (d.tenantEmail && d.tenantName), {
+    message: 'Either applicationId, tenantId, or both tenantEmail and tenantName, are required',
     path: ['tenantId'],
   });
 
@@ -100,6 +103,7 @@ export const POST = withAuth(
         tenantEmail,
         tenantName,
         tenantPhone,
+        applicationId,
         ...rest
       } = validated.data;
 
@@ -114,6 +118,23 @@ export const POST = withAuth(
 
       let tenantId = inputTenantId;
       let invited = false;
+
+      if (applicationId) {
+        const application = await prisma.application.findUnique({ where: { id: applicationId } });
+        if (!application || application.unitId !== unitId) {
+          return NextResponse.json(
+            { error: 'Application not found for this unit' },
+            { status: 404 },
+          );
+        }
+        if (application.status !== 'APPROVED' || application.leaseId) {
+          return NextResponse.json(
+            { error: 'Only an approved application without a lease can start a tenancy' },
+            { status: 409 },
+          );
+        }
+        tenantId = application.applicantId;
+      }
 
       if (tenantId) {
         const tenant = await prisma.user.findUnique({ where: { id: tenantId } });
@@ -182,6 +203,12 @@ export const POST = withAuth(
       // merged into the RENT invoice's amount (see CLAUDE.md).
       const result = await prisma.$transaction(async (tx) => {
         const lease = await tx.lease.create({ data: { unitId, tenantId: tenantId!, ...rest } });
+        if (applicationId) {
+          await tx.application.update({
+            where: { id: applicationId },
+            data: { leaseId: lease.id },
+          });
+        }
         const invoice = await tx.invoice.create({
           data: {
             leaseId: lease.id,

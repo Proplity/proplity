@@ -58,7 +58,10 @@ test.describe('dashboard bottom tab bar (needs a reachable, seeded database)', (
     await page.getByRole('button', { name: 'More' }).click();
     await expect(page.getByRole('link', { name: 'Maintenance' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'List Property' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Open AI Chat' })).toBeVisible();
+    // The sample assistant is hidden unless the build sets NEXT_PUBLIC_AI_ASSISTANT_DEMO (ISS-045).
+    const aiChat = page.getByRole('button', { name: 'Open AI Chat' });
+    if (process.env.NEXT_PUBLIC_AI_ASSISTANT_DEMO === 'true') await expect(aiChat).toBeVisible();
+    else await expect(aiChat).toHaveCount(0);
 
     await page.getByRole('link', { name: 'Maintenance' }).click();
     await expect(page).toHaveURL(/\/dashboard\/maintenance/);

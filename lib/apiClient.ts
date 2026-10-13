@@ -28,6 +28,7 @@ import type {
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  PropertyViewing,
   LinkedLandlord,
   CreateViolationInput,
   Equipment,
@@ -157,6 +158,13 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    listViewings: (propertyId: string) =>
+      apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
+    updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
+      apiClient.patch<{ data: PropertyViewing }>(
+        `/api/v1/properties/${propertyId}/viewings/${viewingId}`,
+        { status },
+      ),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
     moderate: (
@@ -307,6 +315,10 @@ export const api = {
     users: {
       list: (params?: { role?: string; limit?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+    },
+    vendors: {
+      verify: (userId: string, body: { status: 'VERIFIED' | 'REJECTED'; note?: string }) =>
+        apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
     },
     auditLogs: {
       list: (params?: { entityType?: string; limit?: number; page?: number }) =>
