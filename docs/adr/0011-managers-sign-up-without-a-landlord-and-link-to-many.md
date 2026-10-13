@@ -1,7 +1,7 @@
 # 0011 — Managers can sign up without a landlord and link to several
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-13
+Status: Accepted
+Decided by: roji-tech · Date: 2026-10-13
 Recorded: 2026-10-13
 
 ## Context

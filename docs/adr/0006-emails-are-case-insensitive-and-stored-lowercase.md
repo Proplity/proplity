@@ -1,7 +1,7 @@
 # 0006 — Emails are normalised to lowercase and looked up case-insensitively
 
-Status: Proposed
-Decided by: roji-tech (pending acceptance) · Date: 2026-10-11
+Status: Accepted
+Decided by: roji-tech · Date: 2026-10-11
 Recorded: 2026-10-11
 
 ## Context
