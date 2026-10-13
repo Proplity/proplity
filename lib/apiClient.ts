@@ -28,6 +28,15 @@ import type {
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  OwnerDashboardSummary,
+  OwnerBreakdownSummary,
+  TenantDashboardSummary,
+  VendorDashboardSummary,
+  AdminBreakdownSummary,
+  AdminDashboardSummary,
+  AdminReportsSummary,
+  PropertyViewing,
+  LinkedLandlord,
   CreateViolationInput,
   Equipment,
   Invoice,
@@ -128,8 +137,10 @@ export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
       apiClient.get<Paginated<Property>>('/api/v1/properties', { params }),
-    mine: () =>
-      apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
+    mine: (params?: { page?: number; limit?: number }) =>
+      apiClient.get<Paginated<Property>>('/api/v1/properties', {
+        params: { scope: 'mine', ...params },
+      }),
     get: (propertyId: string) =>
       apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
     create: (body: CreatePropertyInput) =>
@@ -156,6 +167,13 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    listViewings: (propertyId: string) =>
+      apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
+    updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
+      apiClient.patch<{ data: PropertyViewing }>(
+        `/api/v1/properties/${propertyId}/viewings/${viewingId}`,
+        { status },
+      ),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
     moderate: (
@@ -239,7 +257,7 @@ export const api = {
   maintenance: {
     categories: () =>
       apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
     get: (id: string) =>
       apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
@@ -252,7 +270,7 @@ export const api = {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
   leases: {
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
     get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
@@ -276,8 +294,14 @@ export const api = {
         apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
     },
   },
+  dashboard: {
+    summary: () => apiClient.get<{ data: OwnerDashboardSummary }>('/api/v1/dashboard/summary'),
+    breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
+    mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
+    mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
+  },
   invoices: {
-    list: (params?: { type?: string; status?: string }) =>
+    list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
@@ -304,8 +328,16 @@ export const api = {
   },
   admin: {
     users: {
-      list: (params?: { role?: string; limit?: number }) =>
+      list: (params?: { role?: string; limit?: number; page?: number }) =>
         apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+    },
+    summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
+    breakdown: () => apiClient.get<{ data: AdminBreakdownSummary }>('/api/v1/admin/breakdown'),
+    reports: (params: { from: string; to: string }) =>
+      apiClient.get<{ data: AdminReportsSummary }>('/api/v1/admin/reports', { params }),
+    vendors: {
+      verify: (userId: string, body: { status: 'VERIFIED' | 'REJECTED'; note?: string }) =>
+        apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
     },
     auditLogs: {
       list: (params?: { entityType?: string; limit?: number; page?: number }) =>
@@ -401,6 +433,7 @@ export const api = {
       ),
     setStatus: (id: string, status: 'ACTIVE' | 'DEACTIVATED') =>
       apiClient.patch<{ data: ManagerInviteCode }>(`/api/v1/manager-codes/${id}`, { status }),
+    linked: () => apiClient.get<{ data: LinkedLandlord[] }>('/api/v1/manager-codes/linked'),
     redeem: (code: string) =>
       apiClient.post<{ data: ManagerInviteCode }>('/api/v1/manager-codes/redeem', { code }),
   },

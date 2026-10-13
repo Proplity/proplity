@@ -231,7 +231,7 @@ describe('auth: register', () => {
     expect(loginAttempt.status).toBe(403);
   });
 
-  it('MANAGER registration requires a real, still-unused landlord code', async () => {
+  it('MANAGER registration accepts no code (ISS-041) but a supplied code must be real and unused', async () => {
     const noCode = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
       body: {
@@ -241,7 +241,13 @@ describe('auth: register', () => {
         role: 'manager',
       },
     });
-    expect(noCode.status).toBe(400);
+    // A manager can sign up unlinked and link to landlords later.
+    expect(noCode.status).toBe(200);
+    expect(
+      await testPrisma.managerInviteCode.count({
+        where: { linkedManagerId: noCode.body.user.id },
+      }),
+    ).toBe(0);
 
     const bogusCode = await apiFetch('/api/v1/auth/register', {
       method: 'POST',
@@ -320,6 +326,29 @@ describe('auth: register', () => {
       body: { email, password: 'somepassword', name: 'Dup Test' },
     });
     expect(limited.status).toBe(429);
+  });
+});
+
+describe('auth: refresh without a cookie does not use up the rate-limit budget', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('answers 401 for 40 cookie-less refreshes without ever returning 429, and a real session still refreshes', async () => {
+    for (let i = 0; i < 40; i++) {
+      const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+      expect(res.status).toBe(401);
+    }
+    await createUser(Role.TENANT, { email: 'refresh-budget@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-budget@test.local', password: FIXTURE_PASSWORD },
+    });
+    const refresh = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: cookieHeaderFrom(login.setCookies),
+    });
+    expect(refresh.status).toBe(200);
   });
 });
 
@@ -420,7 +449,12 @@ describe('auth: refresh rotation + reuse detection', () => {
     // comment on why refresh needs a much looser cap (periodic background
     // traffic from every authenticated tab, not credential-guessing).
     await fillRateLimit(`refresh:${ip}`, 30);
-    const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+    // A cookie must be present for the limiter to apply: cookie-less calls are
+    // signed-out page loads and are answered 401 before any attempt is counted.
+    const res = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: 'refresh_token=not-a-real-token',
+    });
     expect(res.status).toBe(429);
   });
 });

@@ -21,11 +21,8 @@ import {
   Shield,
   Mail,
 } from 'lucide-react';
-import { useMyProperties } from '@/hooks/useProperties';
+import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
-import { useLeases } from '@/hooks/useLeases';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import {
   useManagerCodes,
   useCreateManagerCode,
@@ -48,11 +45,9 @@ function timeAgo(iso: string) {
 }
 
 export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
-  const { data: leases, loading: leasesLoading } = useLeases({ status: 'ACTIVE' });
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
-  const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
+  // Totals are computed on the server (ISS-049): summing the first page of
+  // each list in the browser was wrong past 20 rows.
+  const { data: summary, loading } = useOwnerSummary();
 
   const { data: managerCodes, loading: codesLoading, refetch: refetchCodes } = useManagerCodes();
   const { submit: createCode, submitting: creatingCode } = useCreateManagerCode();
@@ -101,71 +96,42 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  // Portfolio stats -- all real, derived from the landlord's own
-  // properties/units (GET /leases, /invoices, /maintenance/requests are
-  // already server-scoped to properties this landlord owns).
-  const units = properties.flatMap((p) => p.units);
-  const occupiedUnits = units.filter((u) => u.status === 'OCCUPIED').length;
-  const occupancyRate = units.length > 0 ? Math.round((occupiedUnits / units.length) * 100) : 0;
-  const totalListedRent = units.reduce((sum, u) => sum + u.rentAmount, 0);
+  const propertyCount = summary?.properties.count ?? 0;
+  const totalUnits = summary?.units.total ?? 0;
+  const occupiedUnits = summary?.units.occupied ?? 0;
+  const occupancyRate = summary?.units.occupancyRate ?? 0;
+  const totalListedRent = summary?.units.totalListedRent ?? 0;
 
-  const collected = invoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
-  const pending = invoices
-    .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce(
-      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
-      0,
-    );
-  const maintenanceCosts = maintenanceRequests
-    .filter((r) => r.status === 'COMPLETED')
-    .reduce((sum, r) => sum + (r.finalCost ?? 0), 0);
+  const collected = summary?.money.collected ?? 0;
+  const pending = summary?.money.pending ?? 0;
+  const maintenanceCosts = summary?.money.maintenanceCosts ?? 0;
   const collectionRate =
     collected + pending > 0 ? Math.round((collected / (collected + pending)) * 100) : 0;
   const netRevenue = collected - maintenanceCosts;
   const cashTotal = collected + pending + maintenanceCosts;
 
-  // Per-property occupancy, used as the "Performance" bar -- the mock's
-  // arbitrary 0-100 performance score has no real analogue, so this is
-  // relabeled to what it actually measures.
-  const propertyRows = properties.map((property) => {
-    const propertyUnits = property.units;
-    const occupied = propertyUnits.filter((u) => u.status === 'OCCUPIED').length;
-    const revenue = propertyUnits.reduce((sum, u) => sum + u.rentAmount, 0);
-    return {
-      property,
-      unitCount: propertyUnits.length,
-      occupied,
-      revenue,
-      occupancy: propertyUnits.length > 0 ? Math.round((occupied / propertyUnits.length) * 100) : 0,
-    };
-  });
+  const propertyRows = (summary?.properties.rows ?? []).map((row) => ({
+    property: { id: row.id, name: row.name },
+    unitCount: row.units,
+    occupied: row.occupied,
+    revenue: row.listedRent,
+    occupancy: row.occupancy,
+    collected: row.collected,
+    pending: row.pending,
+  }));
 
-  // Financial summary CSV for "Download Report" -- built entirely from data
-  // already fetched for this dashboard (properties/units/invoices, all
-  // server-scoped to this landlord already), so no new backend endpoint is
-  // needed just to reshape it into rows and hand it back as a file.
   const downloadReport = () => {
-    const rows = propertyRows.map(({ property, unitCount, occupied, occupancy, revenue }) => {
-      const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === property.id);
-      const propertyCollected = propertyInvoices
-        .flatMap((i) => i.payments)
-        .reduce((sum, p) => sum + p.amount, 0);
-      const propertyPending = propertyInvoices
-        .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-        .reduce(
-          (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
-          0,
-        );
-      return {
+    const rows = propertyRows.map(
+      ({ property, unitCount, occupied, occupancy, revenue, collected: c, pending: pd }) => ({
         Property: property.name,
         Units: unitCount,
         Occupied: occupied,
         'Occupancy %': occupancy,
         'Listed Rent (₦/cycle)': revenue,
-        'Collected (₦)': propertyCollected,
-        'Pending (₦)': propertyPending,
-      };
-    });
+        'Collected (₦)': c,
+        'Pending (₦)': pd,
+      }),
+    );
     const csv = toCsv(rows, [
       'Property',
       'Units',
@@ -184,19 +150,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
     URL.revokeObjectURL(url);
   };
 
-  // Distinct managers across this landlord's properties, for "Schedule
-  // Review" -- there's no meeting/appointment model anywhere in this
-  // codebase, so the real available action is starting a direct message
-  // with the manager to arrange one (same idea as every other "Message
-  // Manager" entry point, just without a lease/maintenance-request context
-  // to derive participants from -- see useCreateConversation's own comment).
-  const managers = Array.from(
-    new Map(
-      properties
-        .filter((p) => p.manager)
-        .map((p) => [p.manager!.id, { id: p.manager!.id, name: p.manager!.name }]),
-    ).values(),
-  );
+  const managers = summary?.managers ?? [];
   const [schedulingReview, setSchedulingReview] = useState(false);
   const [reviewManagerId, setReviewManagerId] = useState('');
   const [reviewMessage, setReviewMessage] = useState(
@@ -235,17 +189,15 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   // maintenance, and newly-active leases -- replacing the mock's 4
   // hardcoded fabricated events.
   const activity = [
-    ...invoices.flatMap((invoice) =>
-      invoice.payments.map((payment) => ({
-        event: 'Rent payment received',
-        tenant: invoice.lease?.tenant.name,
-        property: invoice.lease?.unit.property.name,
-        amount: `₦${payment.amount.toLocaleString()}`,
-        time: payment.paidAt,
-      })),
-    ),
-    ...maintenanceRequests
-      .filter((r) => r.status === 'COMPLETED' && r.completedAt)
+    ...(summary?.recentPayments ?? []).map((payment) => ({
+      event: 'Rent payment received',
+      tenant: payment.tenant ?? undefined,
+      property: payment.property ?? undefined,
+      amount: `₦${payment.amount.toLocaleString()}`,
+      time: payment.paidAt,
+    })),
+    ...(summary?.recentCompletedMaintenance ?? [])
+      .filter((r) => r.completedAt)
       .map((r) => ({
         event: 'Maintenance completed',
         tenant: undefined,
@@ -253,7 +205,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         amount: r.finalCost != null ? `₦${r.finalCost.toLocaleString()}` : undefined,
         time: r.completedAt!,
       })),
-    ...leases.map((l) => ({
+    ...(summary?.recentLeases ?? []).map((l) => ({
       event: 'Lease active',
       tenant: l.tenant?.name,
       property: l.unit?.property?.name,
@@ -272,47 +224,43 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
       </div>
 
       {/* Sticky Setup & Profile Completion Prompt for Landlords */}
-      {!loading &&
-        !bankLoading &&
-        (properties.length === 0 || (bankAccounts ?? []).length === 0) && (
-          <div className="sticky top-4 z-20 flex flex-col items-start justify-between gap-4 rounded-xl border border-blue-200 bg-linear-to-r from-blue-50 via-white to-blue-50 p-5 shadow-sm sm:flex-row sm:items-center">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">
-                  Complete Your Landlord Setup
-                </h2>
-                <p className="mt-0.5 text-xs text-gray-600">
-                  {(bankAccounts ?? []).length === 0 && properties.length === 0
-                    ? 'To start collecting rents and managing tenancies, add your payout bank account in Settings and list your first rental property.'
-                    : (bankAccounts ?? []).length === 0
-                      ? 'Add your payout bank account in Settings so rent can be paid out to you.'
-                      : 'List your first rental property to start managing tenancies.'}
-                </p>
-              </div>
+      {!loading && !bankLoading && (propertyCount === 0 || (bankAccounts ?? []).length === 0) && (
+        <div className="sticky top-4 z-20 flex flex-col items-start justify-between gap-4 rounded-xl border border-blue-200 bg-linear-to-r from-blue-50 via-white to-blue-50 p-5 shadow-sm sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
+              <Building2 className="h-5 w-5" />
             </div>
-            <div className="flex w-full shrink-0 items-center gap-2.5 sm:w-auto">
-              {(bankAccounts ?? []).length === 0 && (
-                <Link
-                  href="/dashboard/settings"
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:flex-none"
-                >
-                  Add Bank Details
-                </Link>
-              )}
-              {properties.length === 0 && (
-                <Link
-                  href="/dashboard/properties/new"
-                  className="flex-1 rounded-lg bg-blue-600 px-3.5 py-2 text-center text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 sm:flex-none"
-                >
-                  List First Property
-                </Link>
-              )}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Complete Your Landlord Setup</h2>
+              <p className="mt-0.5 text-xs text-gray-600">
+                {(bankAccounts ?? []).length === 0 && propertyCount === 0
+                  ? 'To start collecting rents and managing tenancies, add your payout bank account in Settings and list your first rental property.'
+                  : (bankAccounts ?? []).length === 0
+                    ? 'Add your payout bank account in Settings so rent can be paid out to you.'
+                    : 'List your first rental property to start managing tenancies.'}
+              </p>
             </div>
           </div>
-        )}
+          <div className="flex w-full shrink-0 items-center gap-2.5 sm:w-auto">
+            {(bankAccounts ?? []).length === 0 && (
+              <Link
+                href="/dashboard/settings"
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:flex-none"
+              >
+                Add Bank Details
+              </Link>
+            )}
+            {propertyCount === 0 && (
+              <Link
+                href="/dashboard/properties/new"
+                className="flex-1 rounded-lg bg-blue-600 px-3.5 py-2 text-center text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 sm:flex-none"
+              >
+                List First Property
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
@@ -324,7 +272,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : units.length}</p>
+          <p className="mb-1 text-2xl font-semibold">{loading ? '—' : totalUnits}</p>
           <p className="text-sm text-gray-600">Total Units</p>
         </div>
 
@@ -501,7 +449,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <button
             onClick={downloadReport}
-            disabled={properties.length === 0}
+            disabled={propertyCount === 0}
             className="rounded-lg border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download className="mb-2 h-5 w-5 text-blue-600" />

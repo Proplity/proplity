@@ -20,7 +20,33 @@ const registerSchema = z.object({
   // that's a UX preview only) and, if valid, linked in the same
   // transaction as account creation.
   landlordCode: z.string().optional(),
+  // Only used when role resolves to VENDOR: the business details the
+  // sign-up form collects, saved as the VendorProfile (ISS-043).
+  vendor: z
+    .object({
+      businessName: z.string().trim().min(1).max(120),
+      serviceCategory: z.string().trim().max(80).optional(),
+      coverageStates: z.array(z.string().trim().max(40)).max(40).optional(),
+      cacNumber: z.string().trim().max(40).optional(),
+    })
+    .optional(),
 });
+
+/**
+ * Pick the existing, active maintenance category closest to what the vendor
+ * typed ("HVAC / Air Conditioning" -> "HVAC"). Categories are admin-managed,
+ * so a vendor can never create one by signing up; no match means no category.
+ */
+async function matchCategoryId(name: string | undefined): Promise<string | null> {
+  const wanted = name?.trim().toLowerCase();
+  if (!wanted) return null;
+  const categories = await prisma.maintenanceCategory.findMany({ where: { isActive: true } });
+  const hit = categories.find((c) => {
+    const have = c.name.toLowerCase();
+    return have === wanted || wanted.startsWith(have) || have.startsWith(wanted);
+  });
+  return hit?.id ?? null;
+}
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -53,7 +79,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, password, name, role: inputRole, landlordCode } = parsed.data;
+    const { email, password, name, role: inputRole, landlordCode, vendor } = parsed.data;
 
     // Check duplicate user
     const existing = await findUserByEmail(email);
@@ -71,29 +97,29 @@ export async function POST(req: NextRequest) {
       ? (upperRole as Role)
       : Role.TENANT;
 
-    // A MANAGER account must come with a real, currently-redeemable
-    // landlord code -- re-validated here regardless of what the
-    // check-code preview endpoint said, since that response is
-    // client-trusted UX only.
+    // A landlord code supplied with a MANAGER sign-up is re-validated here
+    // regardless of what the check-code preview endpoint said, since that
+    // response is client-trusted UX only.
     let inviteCodeId: string | null = null;
     if (role === Role.MANAGER) {
-      if (!landlordCode) {
-        return NextResponse.json(
-          { error: 'A landlord invitation code is required to register as a manager' },
-          { status: 400 },
-        );
+      // A code is optional (ISS-041): a manager can sign up first and link to
+      // landlords later. When one is supplied it must still be valid.
+      if (landlordCode?.trim()) {
+        const code = await prisma.managerInviteCode.findUnique({
+          where: { code: landlordCode.trim().toUpperCase() },
+        });
+        if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
+          return NextResponse.json(
+            { error: 'Invalid or already-used landlord code' },
+            { status: 400 },
+          );
+        }
+        inviteCodeId = code.id;
       }
-      const code = await prisma.managerInviteCode.findUnique({
-        where: { code: landlordCode.trim().toUpperCase() },
-      });
-      if (!code || code.status !== 'ACTIVE' || code.linkedManagerId) {
-        return NextResponse.json(
-          { error: 'Invalid or already-used landlord code' },
-          { status: 400 },
-        );
-      }
-      inviteCodeId = code.id;
     }
+
+    const vendorCategoryId =
+      role === Role.VENDOR ? await matchCategoryId(vendor?.serviceCategory) : null;
 
     const passwordHash = await bcrypt.hash(password, 12);
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -103,6 +129,20 @@ export async function POST(req: NextRequest) {
       const created = await tx.user.create({
         data: { email, name, passwordHash, role, status: UserStatus.PENDING_VERIFICATION },
       });
+
+      if (role === Role.VENDOR) {
+        await tx.vendorProfile.create({
+          data: {
+            userId: created.id,
+            businessName: vendor?.businessName || name,
+            licenseNumber: vendor?.cacNumber || null,
+            coverageArea: vendor?.coverageStates?.length ? vendor.coverageStates.join(', ') : null,
+            ...(vendorCategoryId
+              ? { serviceCategories: { connect: { id: vendorCategoryId } } }
+              : {}),
+          },
+        });
+      }
 
       await tx.verificationToken.create({
         data: {

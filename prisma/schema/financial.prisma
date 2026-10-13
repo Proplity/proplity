@@ -101,7 +101,9 @@ model Payment {
   paymentMethod        PaymentMethod   @default(BANK_TRANSFER)
   provider             PaymentProvider @default(PAYSTACK)
   virtualAccountNumber String?
-  transactionRef       String?
+  // Unique so a redelivered webhook can never credit twice (ISS-052); NULLs
+  // (manual payments) are not compared.
+  transactionRef       String?         @unique
   rawProviderPayload   String?
   paidAt               DateTime        @default(now())
   notes                String?

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Wrench, Upload, AlertCircle, Droplet, Zap, Wind, Home } from 'lucide-react';
@@ -78,7 +79,7 @@ export function MaintenanceRequestForm() {
         priority: PRIORITY_MAP[formData.priority],
         mediaUrls: formData.images.filter((i) => i.url).map((i) => i.url as string),
       });
-      alert('Maintenance request submitted successfully!');
+      toast.success('Maintenance request submitted.');
       router.push('/dashboard');
     } catch {
       // error state is already surfaced via the hook's `error`

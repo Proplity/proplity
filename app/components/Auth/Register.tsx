@@ -373,7 +373,20 @@ export function Register({
       password: pwd,
       name,
       role: userType,
-      landlordCode: userType === 'manager' ? managerForm.landlordCode : undefined,
+      landlordCode:
+        userType === 'manager' && codeStatus === 'valid' ? managerForm.landlordCode : undefined,
+      vendor:
+        userType === 'vendor'
+          ? {
+              businessName: vendorForm.businessName.trim() || name,
+              serviceCategory:
+                vendorForm.serviceCategory === 'Other'
+                  ? vendorForm.otherCategory.trim() || undefined
+                  : vendorForm.serviceCategory || undefined,
+              coverageStates: vendorForm.coverageStates,
+              cacNumber: vendorForm.cacNumber.trim() || undefined,
+            }
+          : undefined,
     });
     setSubmitting(false);
 
@@ -672,13 +685,10 @@ export function Register({
                 <div className="flex items-start gap-3">
                   <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                   <div>
-                    <p className="text-sm font-semibold text-blue-800">
-                      Landlord Invitation Code Required
-                    </p>
+                    <p className="text-sm font-semibold text-blue-800">Landlord Invitation Code</p>
                     <p className="mt-0.5 text-xs text-blue-700">
-                      To register as a Property Manager you need a unique code from the Landlord
-                      you'll be working with. Ask your landlord to share their code from their
-                      ProplityTMS dashboard.
+                      Enter the code from the landlord you'll be working with. No code yet? You can
+                      create your account now and link to a landlord later from your dashboard.
                     </p>
                   </div>
                 </div>
@@ -797,6 +807,18 @@ export function Register({
                 nextDisabled={codeStatus !== 'valid'}
                 nextLabel="Continue to Details"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  setManagerForm((f) => ({ ...f, landlordCode: '' }));
+                  setCodeStatus('idle');
+                  setVerifiedLandlord(null);
+                  setStep(3);
+                }}
+                className="w-full text-center text-sm font-medium text-blue-600 hover:underline"
+              >
+                I don't have a code yet — continue without one
+              </button>
             </div>
           )}
 
@@ -809,13 +831,20 @@ export function Register({
               }}
               className="space-y-4"
             >
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
-                <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
-                <p className="text-xs text-green-800">
-                  Linked to <span className="font-semibold">{verifiedLandlord?.name}</span> · Code:{' '}
-                  <span className="font-mono">{managerForm.landlordCode.toUpperCase()}</span>
-                </p>
-              </div>
+              {verifiedLandlord ? (
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
+                  <p className="text-xs text-green-800">
+                    Linked to <span className="font-semibold">{verifiedLandlord.name}</span> · Code:{' '}
+                    <span className="font-mono">{managerForm.landlordCode.toUpperCase()}</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Not linked to a landlord yet. After you sign in, enter a landlord's code on your
+                  dashboard to see their properties.
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
