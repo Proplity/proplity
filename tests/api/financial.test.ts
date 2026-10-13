@@ -143,6 +143,97 @@ describe('invoices: create', () => {
   });
 });
 
+describe('invoices: create is scoped for managers (ISS-050)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function setup() {
+    const manager = await createUser(Role.MANAGER);
+    const otherManager = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    const mine = await createProperty({ managerId: manager.id });
+    const theirs = await createProperty({ managerId: otherManager.id });
+    const myLease = await createLease((await createUnit(mine.id)).id, tenant.id);
+    const theirLease = await createLease((await createUnit(theirs.id)).id, tenant.id);
+    const theirJob = await createMaintenanceRequest((await createUnit(theirs.id)).id, tenant.id);
+    return {
+      manager,
+      tenant,
+      myLease,
+      theirLease,
+      theirJob,
+      cookie: await authCookie(manager.id, manager.role),
+    };
+  }
+
+  const body = (extra: Record<string, unknown>) => ({
+    type: 'UTILITY',
+    amount: 5000,
+    dueDate: new Date().toISOString(),
+    ...extra,
+  });
+
+  it('lets a manager invoice a lease on a property they manage', async () => {
+    const { cookie, myLease } = await setup();
+    const res = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id }),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("refuses another manager's lease and maintenance request", async () => {
+    const { cookie, theirLease, theirJob } = await setup();
+    const a = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: theirLease.id }),
+    });
+    expect(a.status).toBe(403);
+    const b = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ type: 'MAINTENANCE', maintenanceRequestId: theirJob.id }),
+    });
+    expect(b.status).toBe(403);
+  });
+
+  it('refuses billing an arbitrary user, subscription invoices and pre-paid invoices', async () => {
+    const { cookie, tenant, myLease } = await setup();
+    const user = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ userId: tenant.id }),
+    });
+    expect(user.status).toBe(403);
+    const sub = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id, type: 'SUBSCRIPTION' }),
+    });
+    expect(sub.status).toBe(403);
+    const paid = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id, status: 'PAID' }),
+    });
+    expect(paid.status).toBe(400);
+  });
+
+  it('still lets an admin invoice any user', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const tenant = await createUser(Role.TENANT);
+    const res = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie: await authCookie(admin.id, admin.role),
+      body: body({ userId: tenant.id }),
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
 describe('invoices: [id] access and PATCH', () => {
   beforeAll(async () => {
     await resetDb();
