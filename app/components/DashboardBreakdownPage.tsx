@@ -16,10 +16,9 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { useMyProperties } from '@/hooks/useProperties';
-import { useLeases } from '@/hooks/useLeases';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { api } from '@/lib/apiClient';
+import { useOwnerBreakdown } from '@/hooks/useDashboardSummary';
+import { usePagedList } from '@/hooks/usePagedList';
 import { fmtNaira } from '../../lib/utils';
 
 export type BreakdownType = 'properties' | 'tenants' | 'rent' | 'maintenance' | 'renewals';
@@ -47,74 +46,81 @@ const ICON_STYLES: Record<BreakdownType, { bg: string; color: string }> = {
   renewals: { bg: 'bg-purple-50', color: 'text-purple-600' },
 };
 
-// Same derivation as TenantManagement (Phase 9.3a): no stored rent-status
-// field, computed from the lease's RENT invoices.
-function rentInfo(leaseId: string, invoices: ReturnType<typeof useInvoices>['data']) {
-  const unpaid = invoices
-    .filter((i) => i.leaseId === leaseId && i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  if (unpaid.length === 0) return 'paid' as const;
-  return (new Date(unpaid[0].dueDate) < new Date() ? 'overdue' : 'due') as 'overdue' | 'due';
-}
-
-function monthKey(date: string) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${d.getMonth()}`;
-}
-function monthLabel(date: string) {
-  return new Date(date).toLocaleDateString('en-US', { month: 'short' });
-}
+const OPEN_STATUSES = ['SUBMITTED', 'IN_PROGRESS', 'SCHEDULED'];
 
 export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
-  const { data: allLeases, loading: leasesLoading } = useLeases();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
+  // Totals, buckets and charts come from the server; the tables below are
+  // paged lists, loaded only for the page being viewed.
+  const { data: b, loading: summaryLoading } = useOwnerBreakdown();
+  const is = (t: BreakdownType) => breakdownType === t;
+  const {
+    data: properties,
+    loading: propertiesLoading,
+    truncated: propsCut,
+  } = usePagedList((page, limit) => api.properties.mine({ page, limit }), 500, is('properties'));
+  const {
+    data: activeLeases,
+    loading: activeLoading,
+    truncated: activeCut,
+  } = usePagedList(
+    (page, limit) => api.leases.list({ status: 'ACTIVE', page, limit }),
+    500,
+    is('tenants'),
+  );
+  const { data: endedLeases, loading: endedLoading } = usePagedList(
+    (page, limit) => api.leases.list({ status: 'TERMINATED', page, limit }),
+    500,
+    is('tenants'),
+  );
+  const { data: expiredLeases, loading: expiredLoading } = usePagedList(
+    (page, limit) => api.leases.list({ status: 'EXPIRED', page, limit }),
+    500,
+    is('tenants'),
+  );
+  const openMaintenanceLists = OPEN_STATUSES.map((status) =>
+    usePagedList(
+      (page, limit) => api.maintenance.list({ status, page, limit }),
+      500,
+      is('maintenance'),
+    ),
+  );
 
-  const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
+  const terminatedLeases = [...endedLeases, ...expiredLeases];
+  const openMaintenance = openMaintenanceLists
+    .flatMap((l) => l.data)
+    .sort((a, c) => new Date(c.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const loading =
+    summaryLoading ||
+    propertiesLoading ||
+    activeLoading ||
+    endedLoading ||
+    expiredLoading ||
+    openMaintenanceLists.some((l) => l.loading);
 
   const Icon = ICONS[breakdownType];
   const iconStyle = ICON_STYLES[breakdownType];
-
-  const activeLeases = allLeases.filter((l) => l.status === 'ACTIVE');
-  const terminatedLeases = allLeases.filter(
-    (l) => l.status === 'TERMINATED' || l.status === 'EXPIRED',
-  );
-  const openMaintenance = maintenanceRequests.filter(
-    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
-  );
-  const allPayments = invoices.flatMap((invoice) =>
-    invoice.payments.map((payment) => ({ invoice, payment })),
-  );
-
   const now = new Date();
-  const thisMonthPayments = allPayments.filter(
-    (p) => monthKey(p.payment.paidAt) === monthKey(now.toISOString()),
-  );
-  const thisMonthCollected = thisMonthPayments.reduce((sum, p) => sum + p.payment.amount, 0);
 
-  const collectedTotal = allPayments.reduce((sum, p) => sum + p.payment.amount, 0);
-  const pendingTotal = invoices
-    .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce(
-      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
-      0,
-    );
-  const collectionRate =
-    collectedTotal + pendingTotal > 0
-      ? Math.round((collectedTotal / (collectedTotal + pendingTotal)) * 100)
-      : 0;
-
-  const renewalsUpcoming = activeLeases
-    .map((l) => ({
-      lease: l,
-      daysLeft: Math.ceil((new Date(l.endDate).getTime() - now.getTime()) / MS_PER_DAY),
-    }))
-    .filter((r) => r.daysLeft >= 0 && r.daysLeft <= 180)
-    .sort((a, b) => a.daysLeft - b.daysLeft);
+  const money = b?.money;
+  const collectedTotal = money?.collected ?? 0;
+  const pendingTotal = money?.pending ?? 0;
+  const collectionRate = money?.collectionRate ?? 0;
+  const thisMonthCollected = money?.collectedThisMonth ?? 0;
+  const renewalsUpcoming = (b?.renewals.rows ?? []).map((r) => ({
+    lease: {
+      id: r.id,
+      endDate: r.endDate,
+      rentAmount: r.rentAmount,
+      tenant: r.tenant ? { name: r.tenant } : null,
+      unit: { unitNumber: r.unitNumber, property: { name: r.property } },
+    },
+    daysLeft: r.daysLeft,
+  }));
+  const rentStatusOf = (leaseId: string) => b?.leases.rentStatusByLease[leaseId] ?? 'paid';
 
   const heroStat: Record<
     BreakdownType,
@@ -123,13 +129,13 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     properties: {
       title: 'Total Properties',
       subtitle: 'All properties under your management portfolio',
-      stat: String(properties.length),
+      stat: String(b?.properties.count ?? 0),
       statLabel: 'Properties',
     },
     tenants: {
       title: 'Active Leases',
       subtitle: 'All current and past tenants across your portfolio',
-      stat: String(activeLeases.length),
+      stat: String(b?.leases.active ?? 0),
       statLabel: 'Active Leases',
     },
     rent: {
@@ -141,13 +147,13 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     maintenance: {
       title: 'Open Maintenance Requests',
       subtitle: 'Maintenance tickets not yet completed or cancelled',
-      stat: String(openMaintenance.length),
+      stat: String(b?.maintenance.open ?? 0),
       statLabel: 'Open Requests',
     },
     renewals: {
       title: 'Upcoming Lease Renewals',
       subtitle: 'Leases expiring in the next 6 months',
-      stat: String(renewalsUpcoming.length),
+      stat: String(b?.renewals.count ?? 0),
       statLabel: 'Renewals Due',
     },
   };
@@ -155,15 +161,9 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
 
   const renderSummaryCards = () => {
     if (breakdownType === 'properties') {
-      const fullyOccupied = properties.filter(
-        (p) => p.units.length > 0 && p.units.every((u) => u.status === 'OCCUPIED'),
-      ).length;
-      const partial = properties.filter(
-        (p) =>
-          p.units.some((u) => u.status === 'OCCUPIED') &&
-          p.units.some((u) => u.status !== 'OCCUPIED'),
-      ).length;
-      const vacant = properties.length - fullyOccupied - partial;
+      const fullyOccupied = b?.properties.fully ?? 0;
+      const partial = b?.properties.partial ?? 0;
+      const vacant = b?.properties.vacant ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -192,9 +192,9 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       );
     }
     if (breakdownType === 'tenants') {
-      const paid = activeLeases.filter((l) => rentInfo(l.id, invoices) === 'paid').length;
-      const due = activeLeases.filter((l) => rentInfo(l.id, invoices) === 'due').length;
-      const overdue = activeLeases.filter((l) => rentInfo(l.id, invoices) === 'overdue').length;
+      const paid = b?.leases.paid ?? 0;
+      const due = b?.leases.due ?? 0;
+      const overdue = b?.leases.overdue ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -243,11 +243,9 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       );
     }
     if (breakdownType === 'maintenance') {
-      const high = openMaintenance.filter(
-        (r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY',
-      ).length;
-      const medium = openMaintenance.filter((r) => r.priority === 'MEDIUM').length;
-      const low = openMaintenance.filter((r) => r.priority === 'LOW').length;
+      const high = b?.maintenance.high ?? 0;
+      const medium = b?.maintenance.medium ?? 0;
+      const low = b?.maintenance.low ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -272,9 +270,9 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       );
     }
     if (breakdownType === 'renewals') {
-      const urgent = renewalsUpcoming.filter((r) => r.daysLeft < 30).length;
-      const soon = renewalsUpcoming.filter((r) => r.daysLeft >= 30 && r.daysLeft < 90).length;
-      const later = renewalsUpcoming.filter((r) => r.daysLeft >= 90).length;
+      const urgent = b?.renewals.urgent ?? 0;
+      const soon = b?.renewals.soon ?? 0;
+      const later = b?.renewals.later ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -406,7 +404,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             ])}
             <tbody className="divide-y divide-gray-100">
               {rows.map((lease) => {
-                const status = rentInfo(lease.id, invoices);
+                const status = rentStatusOf(lease.id);
                 return (
                   <tr key={lease.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
@@ -489,30 +487,26 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     }
 
     if (breakdownType === 'rent') {
-      const rows = allPayments
-        .filter((p) =>
-          (p.invoice.lease?.tenant.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-        .sort(
-          (a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime(),
-        );
+      const rows = (b?.payments ?? []).filter((p) =>
+        (p.tenant ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+      );
       return (
         <table className="w-full text-sm">
           {th(['Tenant', 'Property', 'Amount', 'Payment Method', 'Date'])}
           <tbody className="divide-y divide-gray-100">
-            {rows.map(({ invoice, payment }) => (
+            {rows.map((payment) => (
               <tr key={payment.id} className="transition-colors hover:bg-gray-50">
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {invoice.lease?.tenant.name ?? 'Unknown'}
+                  {payment.tenant ?? 'Unknown'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {invoice.lease?.unit.property.name ?? '—'}
+                  {payment.property ?? '—'}
                 </td>
                 <td className="px-4 py-3.5 font-semibold whitespace-nowrap text-gray-800">
                   ₦{payment.amount.toLocaleString()}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {payment.paymentMethod.replace('_', ' ')}
+                  {payment.method.replace('_', ' ')}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
                   {new Date(payment.paidAt).toLocaleDateString()}
@@ -633,45 +627,17 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     return null;
   };
 
-  // Rent charts -- all computed from real payments/invoices, last 6 months.
-  const rentTrend = (() => {
-    const months: { key: string; label: string }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({
-        key: `${d.getFullYear()}-${d.getMonth()}`,
-        label: d.toLocaleDateString('en-US', { month: 'short' }),
-      });
-    }
-    return months.map(({ key, label }) => ({
-      month: label,
-      expected: invoices
-        .filter((i) => monthKey(i.dueDate) === key)
-        .reduce((sum, i) => sum + i.amount, 0),
-      collected: allPayments
-        .filter((p) => monthKey(p.payment.paidAt) === key)
-        .reduce((sum, p) => sum + p.payment.amount, 0),
-    }));
-  })();
-
-  const rentByProperty = properties
-    .map((property, i) => ({
-      name: property.name,
-      amount: allPayments
-        .filter((p) => p.invoice.lease?.unit.property.id === property.id)
-        .reduce((sum, p) => sum + p.payment.amount, 0),
-      fill: CHART_COLORS[i % CHART_COLORS.length],
-    }))
-    .filter((p) => p.amount > 0);
-
-  const paymentMethods = Object.entries(
-    allPayments.reduce<Record<string, number>>((acc, p) => {
-      const method = p.payment.paymentMethod.replace('_', ' ');
-      acc[method] = (acc[method] ?? 0) + 1;
-      return acc;
-    }, {}),
-  ).map(([name, value], i) => ({ name, value, fill: CHART_COLORS[i % CHART_COLORS.length] }));
-
+  // Rent charts -- from the server (last 6 months, all-time per property).
+  const rentTrend = money?.trend ?? [];
+  const rentByProperty = (money?.byProperty ?? []).map((p, i) => ({
+    ...p,
+    fill: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+  const paymentMethods = (money?.methods ?? []).map((m, i) => ({
+    name: m.name.replace('_', ' '),
+    value: m.count,
+    fill: CHART_COLORS[i % CHART_COLORS.length],
+  }));
   const rentStatusChart = [
     { name: 'Collected', value: collectedTotal, fill: '#10b981' },
     { name: 'Pending', value: pendingTotal, fill: '#f59e0b' },
@@ -931,7 +897,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                 <Users className="h-3.5 w-3.5" />
                 Active
                 <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                  {activeLeases.length}
+                  {b?.leases.active ?? 0}
                 </span>
               </button>
               <button
@@ -945,19 +911,19 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                 <UserX className="h-3.5 w-3.5" />
                 Terminated / Expired
                 <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                  {terminatedLeases.length}
+                  {b?.leases.terminated ?? 0}
                 </span>
               </button>
             </div>
           ) : (
             <p className="text-sm font-medium text-gray-700">
               {breakdownType === 'properties'
-                ? `${properties.length} properties`
+                ? `${b?.properties.count ?? 0} properties`
                 : breakdownType === 'rent'
-                  ? `${allPayments.length} transactions`
+                  ? `${money?.paymentCount ?? 0} transactions · showing the latest 100`
                   : breakdownType === 'maintenance'
-                    ? `${openMaintenance.length} open requests`
-                    : `${renewalsUpcoming.length} upcoming renewals`}
+                    ? `${b?.maintenance.open ?? 0} open requests`
+                    : `${b?.renewals.count ?? 0} upcoming renewals`}
             </p>
           )}
 
@@ -976,6 +942,11 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
         </div>
 
         <div className="overflow-x-auto">{renderTable()}</div>
+        {(propsCut || activeCut || openMaintenanceLists.some((l) => l.truncated)) && (
+          <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
+            Showing the first 500 rows. Totals above count everything.
+          </p>
+        )}
       </div>
     </div>
   );

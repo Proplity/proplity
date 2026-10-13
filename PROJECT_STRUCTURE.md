@@ -15,7 +15,7 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 24 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 78 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 81 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL — 41 models, 11 schema files, 16 migrations")]
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/, properties/ (moderation queue), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 78 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 81 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings,
