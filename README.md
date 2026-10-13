@@ -2,7 +2,7 @@
 
 A property-management and tenant-experience platform for five roles — **admin, manager, landlord, tenant and vendor** — built on **Next.js 16 (App Router)**, **TypeScript**, **PostgreSQL** and **Prisma 7**.
 
-Landlords list properties and units; managers run tenants, leases and maintenance; tenants apply, pay rent and raise requests; vendors work assigned jobs and invoice for them; admins moderate listings and run the platform. Everything is a real route backed by a real API (`/api/v1/*`, 78 routes) — there is no mock-only screen apart from the marketing feature pages and the AI assistant.
+Landlords list properties and units; managers run tenants, leases and maintenance; tenants apply, pay rent and raise requests; vendors work assigned jobs and invoice for them; admins moderate listings and run the platform. Everything is a real route backed by a real API (`/api/v1/*`, 81 routes) — there is no mock-only screen apart from the marketing feature pages and the AI assistant.
 
 ## Quick start
 

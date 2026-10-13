@@ -16,6 +16,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 });
   }
 
+  // No refresh cookie means a signed-out visitor: every page load calls this
+  // after /auth/me returns 401, so counting these against the per-IP budget
+  // let anonymous traffic (or many people behind one NAT) lock real users out
+  // of silent session restore. Answer it before reserving an attempt.
+  const rawRefreshToken = req.cookies.get('refresh_token')?.value;
+  if (!rawRefreshToken) {
+    return NextResponse.json({ error: 'Missing refresh token' }, { status: 401 });
+  }
+
   // Reserved before any work, atomically (see reserveAttempt's own
   // comment). Previously this called the old checkRateLimit() but never
   // recordAttempt() anywhere in this route -- no LoginAttempt row was ever
@@ -28,11 +37,6 @@ export async function POST(req: NextRequest) {
   const { allowed, attemptId } = await reserveAttempt(identifier, undefined, REFRESH_MAX_ATTEMPTS);
   if (!allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
-
-  const rawRefreshToken = req.cookies.get('refresh_token')?.value;
-  if (!rawRefreshToken) {
-    return NextResponse.json({ error: 'Missing refresh token' }, { status: 401 });
   }
 
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
