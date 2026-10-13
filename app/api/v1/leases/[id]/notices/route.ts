@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { safeUrl } from '@/lib/api/urlField';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -47,7 +48,7 @@ const bodySchema = z.object({
   type: z.nativeEnum(NoticeType).optional(),
   invoiceId: z.string().optional(),
   content: z.string().optional(),
-  documentUrl: z.string().optional(),
+  documentUrl: safeUrl.optional(),
   proposedTerms: z.any().optional(),
   status: z.nativeEnum(NoticeStatus).optional(),
 });
