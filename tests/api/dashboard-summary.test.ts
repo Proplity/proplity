@@ -210,3 +210,196 @@ describe('GET /admin/reports (period charts, past one page)', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /dashboard/breakdown and /admin/breakdown (card pages, past one page)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('buckets owner leases, properties, payments and maintenance beyond 20 rows', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id, name: 'Palm Court' });
+    const empty = await createProperty({ managerId: manager.id, name: 'Empty Court' });
+    expect(empty.id).toBeTruthy();
+    const unit = await createUnit(property.id, { rentAmount: 100_000 });
+    await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
+    // 25 active leases: first has an overdue invoice, second a future-due one, rest are paid up.
+    let first: { id: string } | null = null;
+    let second: { id: string } | null = null;
+    for (let i = 0; i < 25; i++) {
+      const u = i === 0 ? unit : await createUnit(property.id);
+      const lease = await createLease(u.id, (await createUser(Role.TENANT)).id, {
+        status: LeaseStatus.ACTIVE,
+      });
+      if (i === 0) first = lease;
+      if (i === 1) second = lease;
+    }
+    await createInvoice({
+      leaseId: first!.id,
+      amount: 50_000,
+      dueDate: new Date(Date.now() - 3 * 86_400_000),
+    });
+    await createInvoice({
+      leaseId: second!.id,
+      amount: 60_000,
+      dueDate: new Date(Date.now() + 5 * 86_400_000),
+    });
+    const paid = await createInvoice({ leaseId: first!.id, amount: 20_000, status: 'PAID' });
+    for (let i = 0; i < 22; i++) {
+      await testPrisma.payment.create({ data: { invoiceId: paid.id, amount: 1_000 } });
+    }
+
+    const res = await apiFetch('/api/v1/dashboard/breakdown', {
+      cookie: await authCookie(manager.id, manager.role),
+    });
+    expect(res.status).toBe(200);
+    const b = res.body.data;
+    expect(b.properties.count).toBe(2);
+    expect(b.properties.vacant).toBe(1);
+    expect(b.leases.active).toBe(25);
+    expect(b.leases.overdue).toBe(1);
+    expect(b.leases.due).toBe(1);
+    expect(b.leases.paid).toBe(23);
+    expect(b.leases.rentStatusByLease[first!.id]).toBe('overdue');
+    expect(b.money.collected).toBe(22_000);
+    expect(b.money.paymentCount).toBe(22);
+    expect(b.money.pending).toBe(110_000);
+    expect(b.money.trend).toHaveLength(6);
+    expect(b.payments).toHaveLength(22);
+    expect(b.money.byProperty[0].name).toBe('Palm Court');
+  });
+
+  it('is limited to managers and landlords; admin counts everything', async () => {
+    const tenant = await createUser(Role.TENANT);
+    const denied = await apiFetch('/api/v1/dashboard/breakdown', {
+      cookie: await authCookie(tenant.id, tenant.role),
+    });
+    expect(denied.status).toBe(403);
+
+    const admin = await createUser(Role.ADMIN);
+    const res = await apiFetch('/api/v1/admin/breakdown', {
+      cookie: await authCookie(admin.id, admin.role),
+    });
+    expect(res.status).toBe(200);
+    const b = res.body.data;
+    expect(b.users.tenant).toBe(26);
+    expect(b.properties.total).toBe(2);
+    expect(b.money.collected).toBe(22_000);
+    expect(b.money.pending).toBe(110_000);
+
+    const notAdmin = await apiFetch('/api/v1/admin/breakdown', {
+      cookie: await authCookie(tenant.id, tenant.role),
+    });
+    expect(notAdmin.status).toBe(403);
+  });
+});
+
+describe('GET /dashboard/mine (tenant and vendor totals)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('sums a tenant balance across more than a page of invoices', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    const property = await createProperty({ managerId: manager.id });
+    const lease = await createLease((await createUnit(property.id)).id, tenant.id, {
+      status: LeaseStatus.ACTIVE,
+    });
+    // 25 unpaid invoices of 10k, the oldest due first; one half paid; one cancelled.
+    for (let i = 0; i < 25; i++) {
+      await createInvoice({
+        leaseId: lease.id,
+        amount: 10_000,
+        dueDate: new Date(Date.now() + (i + 1) * 86_400_000),
+      });
+    }
+    const half = await createInvoice({
+      leaseId: lease.id,
+      amount: 40_000,
+      status: 'PARTIALLY_PAID',
+    });
+    await testPrisma.payment.create({ data: { invoiceId: half.id, amount: 15_000 } });
+    await createInvoice({ leaseId: lease.id, amount: 999_999, status: InvoiceStatus.CANCELLED });
+
+    const res = await apiFetch('/api/v1/dashboard/mine', {
+      cookie: await authCookie(tenant.id, tenant.role),
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.money.balance).toBe(25 * 10_000 + 25_000);
+    expect(res.body.data.nextDue).toBeTruthy();
+    expect(res.body.data.recentPayments).toHaveLength(1);
+
+    const other = await createUser(Role.TENANT);
+    const otherRes = await apiFetch('/api/v1/dashboard/mine', {
+      cookie: await authCookie(other.id, other.role),
+    });
+    expect(otherRes.body.data.money.balance).toBe(0);
+    expect(otherRes.body.data.nextDue).toBeNull();
+  });
+
+  it('totals a vendor’s jobs, earnings and pending payments past one page', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const vendor = await createUser(Role.VENDOR);
+    const tenant = await createUser(Role.TENANT);
+    const property = await createProperty({ managerId: manager.id });
+    const unit = await createUnit(property.id);
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const job = await testPrisma.maintenanceRequest.create({
+        data: {
+          unitId: unit.id,
+          tenantId: tenant.id,
+          vendorId: vendor.id,
+          title: `Job ${i}`,
+          description: 'x',
+          status: 'COMPLETED',
+          completedAt: now,
+          finalCost: 5_000,
+          scheduledFor: new Date(now.getTime() + 86_400_000),
+        },
+      });
+      // 20 paid, 4 awaiting payment.
+      await createInvoice({
+        maintenanceRequestId: job.id,
+        type: 'MAINTENANCE',
+        amount: 5_000,
+        status: i < 20 ? 'PAID' : 'UNPAID',
+      });
+    }
+    await testPrisma.maintenanceRequest.create({
+      data: {
+        unitId: unit.id,
+        tenantId: tenant.id,
+        vendorId: vendor.id,
+        title: 'Open job',
+        description: 'x',
+        status: 'IN_PROGRESS',
+      },
+    });
+
+    const res = await apiFetch('/api/v1/dashboard/mine', {
+      cookie: await authCookie(vendor.id, vendor.role),
+    });
+    expect(res.status).toBe(200);
+    const v = res.body.data;
+    expect(v.jobs.total).toBe(25);
+    expect(v.jobs.completed).toBe(24);
+    expect(v.jobs.inProgress).toBe(1);
+    expect(v.jobs.completionRate).toBe(96);
+    expect(v.jobs.onTimeRate).toBe(100);
+    expect(v.earnings.completedThisMonth).toBe(24);
+    expect(v.earnings.thisMonth).toBe(120_000);
+    expect(v.earnings.pendingPayments).toBe(20_000);
+    expect(v.earnings.totalPaid).toBe(100_000);
+    expect(v.rating.average).toBeNull();
+  });
+
+  it('is not available to managers', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const res = await apiFetch('/api/v1/dashboard/mine', {
+      cookie: await authCookie(manager.id, manager.role),
+    });
+    expect(res.status).toBe(403);
+  });
+});
