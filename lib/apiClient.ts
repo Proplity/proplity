@@ -305,6 +305,19 @@ export const api = {
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
+    recordPayment: (
+      invoiceId: string,
+      body: {
+        amount: number;
+        method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+        reference?: string;
+        notes?: string;
+      },
+    ) =>
+      apiClient.post<{ data: { status: string; paidTotal: number } }>(
+        `/api/v1/invoices/${invoiceId}/payments`,
+        body,
+      ),
   },
   accessCodes: {
     list: (unitId: string) =>
