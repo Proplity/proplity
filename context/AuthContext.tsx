@@ -20,6 +20,8 @@ export interface User {
   previousLandlordPhone?: string | null;
   previousLandlordEmail?: string | null;
   idDocumentUrl?: string | null;
+  vendorVerification?: 'PENDING' | 'VERIFIED' | 'REJECTED' | null;
+  vendorVerificationNote?: string | null;
   lastLoginAt?: string;
   createdAt?: string;
 }

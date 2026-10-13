@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -281,9 +282,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
       }
 
       if (allSucceeded) {
-        alert(
-          'Property listing submitted for review! You will be notified by email once it is approved.',
-        );
+        toast.success('Property listing submitted for review.');
         router.push('/dashboard');
       } else {
         setSubmitError(
@@ -312,9 +311,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     // already 'created', so allSucceeded here means the whole set is done.
     if (allSucceeded) {
       setSubmitError(null);
-      alert(
-        'Property listing submitted for review! You will be notified by email once it is approved.',
-      );
+      toast.success('Property listing submitted for review.');
       router.push('/dashboard');
     }
   };

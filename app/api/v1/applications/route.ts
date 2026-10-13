@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApplicationStatus, Prisma } from '@prisma/client';
+import { notifyUsers } from '@/lib/notifications';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -85,6 +86,29 @@ export const POST = withAuth(
       const application = await prisma.application.create({
         data: { unitId, applicantId: session.sub, details: details as Prisma.InputJsonValue },
       });
+
+      // Tell whoever reviews applications for this property (ISS-017): the
+      // review UI is buried on the property page, so without this nobody
+      // knows an application is waiting.
+      const [property, applicant] = await Promise.all([
+        prisma.property.findUnique({
+          where: { id: unit.propertyId },
+          select: { id: true, name: true, managerId: true, landlordId: true },
+        }),
+        prisma.user.findUnique({ where: { id: session.sub }, select: { name: true } }),
+      ]);
+      if (property) {
+        const reviewers = [property.managerId, property.landlordId].filter(
+          (id): id is string => !!id,
+        );
+        await notifyUsers([...new Set(reviewers)], {
+          type: 'SYSTEM',
+          title: 'New rental application',
+          body: `${applicant?.name ?? 'A tenant'} applied for unit ${unit.unitNumber} at ${property.name}.`,
+          link: `/dashboard/properties/${property.id}`,
+        });
+      }
+
       return NextResponse.json({ data: application }, { status: 201 });
     } catch (err) {
       return handleApiError(err);
