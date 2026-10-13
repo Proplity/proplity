@@ -141,3 +141,72 @@ describe('GET /admin/summary (platform totals)', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /admin/reports (period charts, past one page)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const thisMonth = new Date().toISOString().slice(0, 7);
+
+  it('totals more than a page of payments, users and requests, bucketed by month', async () => {
+    const admin = await createUser(Role.ADMIN);
+    for (let i = 0; i < 25; i++) await createUser(Role.TENANT);
+    const landlord = await createUser(Role.LANDLORD);
+    const property = await createProperty({ landlordId: landlord.id });
+    const unit = await createUnit(property.id, { rentAmount: 400_000 });
+    await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    for (let i = 0; i < 55; i++) {
+      const inv = await createInvoice({ leaseId: lease.id, amount: 10_000, status: 'PAID' });
+      await testPrisma.payment.create({ data: { invoiceId: inv.id, amount: 10_000 } });
+    }
+    await createInvoice({ leaseId: lease.id, amount: 30_000 });
+
+    const res = await apiFetch(`/api/v1/admin/reports?from=${thisMonth}&to=${thisMonth}`, {
+      cookie: await authCookie(admin.id, admin.role),
+    });
+    expect(res.status).toBe(200);
+    const r = res.body.data;
+    expect(r.totals.collected).toBe(550_000);
+    expect(r.totals.paymentCount).toBe(55);
+    expect(r.totals.avgTransactionValue).toBe(10_000);
+    expect(r.totals.pending).toBe(30_000);
+    expect(r.totals.invoiceCount).toBe(56);
+    expect(r.series.collected[thisMonth]).toBe(550_000);
+    expect(r.series.newUsers[thisMonth].TENANT).toBe(26);
+    expect(r.users.total).toBe(1 + 25 + 1 + 1);
+    expect(r.users.byRole.TENANT).toBe(26);
+    expect(r.recentPayments).toHaveLength(50);
+    expect(r.revenueByType.reduce((s: number, t: { amount: number }) => s + t.amount, 0)).toBe(
+      550_000,
+    );
+    expect(r.properties.total).toBe(1);
+    expect(r.units.avgOccupancy).toBe(100);
+    expect(r.units.avgRent).toBe(400_000);
+  });
+
+  it('rejects a missing, malformed or oversized range', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    for (const q of [
+      '',
+      '?from=2026-01',
+      '?from=2026-13&to=2026-14',
+      '?from=2026-05&to=2026-01',
+      '?from=2020-01&to=2026-01',
+    ]) {
+      const res = await apiFetch(`/api/v1/admin/reports${q}`, { cookie });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it('is admin-only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const res = await apiFetch(`/api/v1/admin/reports?from=${thisMonth}&to=${thisMonth}`, {
+      cookie: await authCookie(manager.id, manager.role),
+    });
+    expect(res.status).toBe(403);
+  });
+});

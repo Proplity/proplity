@@ -315,3 +315,219 @@ export async function adminDashboardSummary(now = new Date()) {
     attentionItems,
   };
 }
+
+// ── Admin reports (ISS-049, part 2) ─────────────────────────────────────────
+// Everything on the Reports page, computed in the database. Period-based
+// series are bucketed by UTC month; the caller picks the month range.
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** `YYYY-MM` -> first instant of that month (UTC). */
+function monthStart(key: string): Date {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1));
+}
+
+export function parseMonthRange(from: string | null, to: string | null) {
+  if (!from || !to || !MONTH_RE.test(from) || !MONTH_RE.test(to)) return null;
+  const start = monthStart(from);
+  const endInclusive = monthStart(to);
+  if (endInclusive < start) return null;
+  const end = new Date(Date.UTC(endInclusive.getUTCFullYear(), endInclusive.getUTCMonth() + 1, 1));
+  // A report window is a few months to a year; refuse anything silly.
+  if (end.getTime() - start.getTime() > 400 * MS_PER_DAY) return null;
+  return { start, end };
+}
+
+type MonthRow = { m: string; v: number };
+
+export async function adminReportsSummary(start: Date, end: Date) {
+  const [
+    billedRows,
+    collectedRows,
+    newUserRows,
+    createdRows,
+    resolvedRows,
+    revenueByType,
+    paymentTotals,
+    recentPayments,
+    invoiceCounts,
+    pendingRows,
+    maintenanceByStatus,
+    highPriorityOpen,
+    resolution,
+    usersByRoleStatus,
+    propertyTotal,
+    propertyApproved,
+    propertiesByType,
+    stateRows,
+    unitTotals,
+  ] = await Promise.all([
+    prisma.$queryRaw<MonthRow[]>(Prisma.sql`
+      SELECT to_char(date_trunc('month', "dueDate"), 'YYYY-MM') AS m, SUM("amount") AS v
+      FROM "Invoice" WHERE "dueDate" >= ${start} AND "dueDate" < ${end} GROUP BY m`),
+    prisma.$queryRaw<MonthRow[]>(Prisma.sql`
+      SELECT to_char(date_trunc('month', "paidAt"), 'YYYY-MM') AS m, SUM("amount") AS v
+      FROM "Payment" WHERE "paidAt" >= ${start} AND "paidAt" < ${end} GROUP BY m`),
+    prisma.$queryRaw<{ m: string; role: string; v: number }[]>(Prisma.sql`
+      SELECT to_char(date_trunc('month', "createdAt"), 'YYYY-MM') AS m, "role"::text AS role,
+             COUNT(*)::int AS v
+      FROM "User" WHERE "createdAt" >= ${start} AND "createdAt" < ${end} GROUP BY m, role`),
+    prisma.$queryRaw<MonthRow[]>(Prisma.sql`
+      SELECT to_char(date_trunc('month', "createdAt"), 'YYYY-MM') AS m, COUNT(*)::int AS v
+      FROM "MaintenanceRequest" WHERE "createdAt" >= ${start} AND "createdAt" < ${end} GROUP BY m`),
+    prisma.$queryRaw<MonthRow[]>(Prisma.sql`
+      SELECT to_char(date_trunc('month', "completedAt"), 'YYYY-MM') AS m, COUNT(*)::int AS v
+      FROM "MaintenanceRequest"
+      WHERE "completedAt" IS NOT NULL AND "completedAt" >= ${start} AND "completedAt" < ${end}
+      GROUP BY m`),
+    prisma.$queryRaw<{ type: string; amount: number }[]>(Prisma.sql`
+      SELECT i."type"::text AS type, SUM(p."amount") AS amount
+      FROM "Payment" p JOIN "Invoice" i ON i."id" = p."invoiceId" GROUP BY i."type"`),
+    prisma.payment.aggregate({ _sum: { amount: true }, _count: { _all: true } }),
+    prisma.payment.findMany({
+      orderBy: { paidAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        amount: true,
+        paidAt: true,
+        invoice: {
+          select: {
+            type: true,
+            lease: {
+              select: {
+                tenant: { select: { name: true } },
+                unit: { select: { property: { select: { name: true } } } },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.invoice.groupBy({ by: ['status'], _count: { _all: true } }),
+    prisma.$queryRaw<{ pending: number }[]>(Prisma.sql`
+      SELECT COALESCE(SUM(GREATEST(0, i."amount" - COALESCE(p.paid, 0))), 0) AS pending
+      FROM "Invoice" i
+      LEFT JOIN (SELECT "invoiceId", SUM("amount") AS paid FROM "Payment" GROUP BY "invoiceId") p
+        ON p."invoiceId" = i."id"
+      WHERE i."status" NOT IN ('PAID', 'CANCELLED')`),
+    prisma.maintenanceRequest.groupBy({ by: ['status'], _count: { _all: true } }),
+    prisma.maintenanceRequest.count({
+      where: {
+        status: { notIn: ['COMPLETED', 'CANCELLED'] },
+        priority: { in: ['HIGH', 'EMERGENCY'] },
+      },
+    }),
+    prisma.$queryRaw<{ days: number | null }[]>(Prisma.sql`
+      SELECT AVG(EXTRACT(EPOCH FROM ("completedAt" - "createdAt")) / 86400) AS days
+      FROM "MaintenanceRequest" WHERE "status" = 'COMPLETED' AND "completedAt" IS NOT NULL`),
+    prisma.user.groupBy({ by: ['role', 'status'], _count: { _all: true } }),
+    prisma.property.count(),
+    prisma.property.count({ where: { moderationStatus: 'APPROVED' } }),
+    prisma.property.groupBy({ by: ['type'], _count: { _all: true } }),
+    prisma.$queryRaw<
+      {
+        state: string | null;
+        total: number;
+        approved: number;
+        pending: number;
+        units: number;
+        occupied: number;
+        avgRent: number | null;
+      }[]
+    >(Prisma.sql`
+      SELECT pr."state" AS state,
+        COUNT(DISTINCT pr."id")::int AS total,
+        COUNT(DISTINCT pr."id") FILTER (WHERE pr."moderationStatus" = 'APPROVED')::int AS approved,
+        COUNT(DISTINCT pr."id") FILTER (WHERE pr."moderationStatus" = 'PENDING_REVIEW')::int AS pending,
+        COUNT(u."id")::int AS units,
+        COUNT(u."id") FILTER (WHERE u."status" = 'OCCUPIED')::int AS occupied,
+        AVG(u."rentAmount") AS "avgRent"
+      FROM "Property" pr LEFT JOIN "Unit" u ON u."propertyId" = pr."id"
+      GROUP BY pr."state"`),
+    prisma.unit.aggregate({ _count: { _all: true }, _avg: { rentAmount: true } }),
+  ]);
+
+  const occupiedUnits = await prisma.unit.count({ where: { status: 'OCCUPIED' } });
+
+  const byMonth = (rows: MonthRow[]) => Object.fromEntries(rows.map((r) => [r.m, num(r.v)]));
+  const newUsersByMonth: Record<string, Record<string, number>> = {};
+  for (const r of newUserRows) (newUsersByMonth[r.m] ??= {})[r.role] = num(r.v);
+
+  const invoiceTotal = invoiceCounts.reduce((s, g) => s + g._count._all, 0);
+  const cancelledInvoices = invoiceCounts.find((g) => g.status === 'CANCELLED')?._count._all ?? 0;
+  const maintenanceCount = (status: string) =>
+    maintenanceByStatus.find((g) => g.status === status)?._count._all ?? 0;
+  const maintenanceTotal = maintenanceByStatus.reduce((s, g) => s + g._count._all, 0);
+
+  const usersByRole: Record<string, number> = {};
+  const statusByRole: Record<string, { active: number; pending: number; other: number }> = {};
+  let usersTotal = 0;
+  for (const g of usersByRoleStatus) {
+    const n = g._count._all;
+    usersTotal += n;
+    usersByRole[g.role] = (usersByRole[g.role] ?? 0) + n;
+    const row = (statusByRole[g.role] ??= { active: 0, pending: 0, other: 0 });
+    if (g.status === 'ACTIVE') row.active += n;
+    else if (g.status === 'PENDING_VERIFICATION') row.pending += n;
+    else row.other += n;
+  }
+
+  return {
+    totals: {
+      collected: num(paymentTotals._sum.amount),
+      paymentCount: paymentTotals._count._all,
+      avgTransactionValue:
+        paymentTotals._count._all > 0
+          ? num(paymentTotals._sum.amount) / paymentTotals._count._all
+          : 0,
+      pending: num(pendingRows[0]?.pending),
+      invoiceCount: invoiceTotal,
+      cancelledInvoices,
+    },
+    series: {
+      billed: byMonth(billedRows),
+      collected: byMonth(collectedRows),
+      newUsers: newUsersByMonth,
+      maintenanceCreated: byMonth(createdRows),
+      maintenanceResolved: byMonth(resolvedRows),
+    },
+    revenueByType: revenueByType.map((r) => ({ type: r.type, amount: num(r.amount) })),
+    recentPayments: recentPayments.map((p) => ({
+      id: p.id,
+      amount: p.amount,
+      paidAt: p.paidAt,
+      type: p.invoice.type,
+      tenant: p.invoice.lease?.tenant.name ?? null,
+      property: p.invoice.lease?.unit.property.name ?? null,
+    })),
+    users: { total: usersTotal, byRole: usersByRole, statusByRole },
+    maintenance: {
+      total: maintenanceTotal,
+      completed: maintenanceCount('COMPLETED'),
+      open: maintenanceTotal - maintenanceCount('COMPLETED') - maintenanceCount('CANCELLED'),
+      highPriorityOpen,
+      avgResolutionDays: num(resolution[0]?.days),
+    },
+    properties: {
+      total: propertyTotal,
+      approved: propertyApproved,
+      byType: Object.fromEntries(propertiesByType.map((g) => [g.type, g._count._all])),
+      byState: stateRows.map((r) => ({
+        state: r.state ?? 'Unknown',
+        total: r.total,
+        approved: r.approved,
+        pending: r.pending,
+        avgRent: num(r.avgRent),
+        occupancy: r.units > 0 ? (r.occupied / r.units) * 100 : 0,
+      })),
+    },
+    units: {
+      total: unitTotals._count._all,
+      occupied: occupiedUnits,
+      avgOccupancy: unitTotals._count._all > 0 ? (occupiedUnits / unitTotals._count._all) * 100 : 0,
+      avgRent: num(unitTotals._avg.rentAmount),
+    },
+  };
+}
