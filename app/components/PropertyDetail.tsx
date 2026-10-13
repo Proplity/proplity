@@ -26,6 +26,8 @@ import {
   useModerateProperty,
   useSetPropertyPublished,
   useImportUnits,
+  usePropertyViewings,
+  useUpdateViewing,
 } from '@/hooks/useProperties';
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
@@ -382,6 +384,82 @@ function ImportUnitsControl({
   );
 }
 
+function ViewingRequestsCard({ propertyId }: { propertyId: string }) {
+  const { data: viewings, refetch } = usePropertyViewings(propertyId);
+  const { submit, submitting } = useUpdateViewing(propertyId);
+  const open = viewings.filter(
+    (v) =>
+      (v.status === 'REQUESTED' || v.status === 'CONFIRMED') &&
+      new Date(v.scheduledAt).getTime() > Date.now(),
+  );
+
+  const act = async (viewingId: string, status: 'CONFIRMED' | 'CANCELLED') => {
+    try {
+      await submit({ viewingId, status });
+    } catch {
+      // the list is refetched either way, so a stale row corrects itself
+    }
+    refetch();
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="border-b border-gray-200 p-6">
+        <h2 className="font-semibold">Viewing Requests</h2>
+        <p className="text-sm text-gray-500">Upcoming viewings for this property</p>
+      </div>
+      <div className="divide-y divide-gray-200">
+        {open.map((v) => (
+          <div key={v.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-medium">{v.requestedBy?.name ?? 'Visitor'}</p>
+              <p className="text-xs text-gray-500">
+                {new Date(v.scheduledAt).toLocaleString('en-US', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+                {v.notes ? ` · ${v.notes}` : ''}
+              </p>
+            </div>
+            {v.status === 'CONFIRMED' ? (
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  Confirmed
+                </span>
+                <button
+                  onClick={() => act(v.id, 'CANCELLED')}
+                  disabled={submitting}
+                  className="text-xs text-gray-500 underline disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => act(v.id, 'CONFIRMED')}
+                  disabled={submitting}
+                  className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => act(v.id, 'CANCELLED')}
+                  disabled={submitting}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Decline
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {open.length === 0 && <p className="p-6 text-sm text-gray-400">No upcoming viewings.</p>}
+      </div>
+    </div>
+  );
+}
+
 function ApplicationRow({
   application,
   onReviewed,
@@ -447,6 +525,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const { data: pendingApplications, refetch: refetchApplications } = useApplications({
     status: 'PENDING',
   });
+  const { data: approvedApplications } = useApplications({ status: 'APPROVED' });
 
   if (loading) {
     return <div className="p-6 text-gray-500">Loading property…</div>;
@@ -481,6 +560,10 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const propertyLeases = leases.filter((l) => l.unit?.propertyId === propertyId);
   const propertyApplications = pendingApplications.filter(
     (a) => a.unit?.property.id === propertyId,
+  );
+  // Approved but no tenancy yet: the manager's next step (ISS-046).
+  const awaitingTenancy = approvedApplications.filter(
+    (a) => a.unit?.property.id === propertyId && !a.leaseId,
   );
   const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === propertyId);
   const propertyMaintenance = maintenanceRequests
@@ -717,9 +800,31 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                 {propertyApplications.length === 0 && (
                   <p className="p-6 text-sm text-gray-400">No pending applications.</p>
                 )}
+                {awaitingTenancy.length > 0 && (
+                  <div className="bg-green-50 p-4">
+                    <p className="mb-2 text-sm font-medium text-green-900">
+                      Approved, ready to set up a tenancy
+                    </p>
+                    {awaitingTenancy.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between py-1.5">
+                        <p className="text-sm text-green-900">
+                          {a.applicant?.name ?? 'Applicant'} · Unit {a.unit?.unitNumber}
+                        </p>
+                        <Link
+                          href={`/dashboard/tenants/add?applicationId=${a.id}`}
+                          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                        >
+                          Create tenancy
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
+
+          {canManage && <ViewingRequestsCard propertyId={property.id} />}
 
           {/* Announcements -- visible to every tenant of the property */}
           <AnnouncementsCard propertyId={property.id} canManage={canManage} />

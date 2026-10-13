@@ -48,7 +48,7 @@ test('tenant can book a viewing on a future date (ISS-042)', async ({ page, requ
   await page.getByRole('button', { name: 'Confirm Viewing' }).click();
 
   // Either booked, or already booked for that day by an earlier run.
-  await expect(page.getByText(/Viewing Scheduled!|already booked/i)).toBeVisible({
+  await expect(page.getByText(/Viewing Requested!|already booked/i)).toBeVisible({
     timeout: 15_000,
   });
 });
