@@ -16,6 +16,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0008](0008-private-uploads-are-namespaced-by-owner-behind-a-storage-driver.md) | Private uploads are namespaced by owner, behind a storage-driver interface                | Superseded by 0010 | 2026-10-11 | roji-tech           |
 | [0009](0009-uploads-support-several-storage-providers-through-one-gateway.md)   | Uploads support several storage providers through one gateway                             | Superseded by 0010 | 2026-10-11 | roji-tech           |
 | [0010](0010-uploads-are-storedfile-rows-behind-one-file-gateway.md)             | Uploads are StoredFile rows served through one file gateway                               | Proposed           | 2026-10-11 | roji-tech (pending) |
+| [0011](0011-managers-sign-up-without-a-landlord-and-link-to-many.md)            | Managers can sign up without a landlord and link to several                               | Proposed           | 2026-10-13 | roji-tech (pending) |
 
 ---
 

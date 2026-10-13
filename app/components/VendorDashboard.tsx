@@ -105,6 +105,19 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
         <p className="text-gray-600">Manage your jobs and track your earnings</p>
       </div>
 
+      {auth.user?.vendorVerification === 'PENDING' && (
+        <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+          <strong>Your business is awaiting verification.</strong> Landlords and managers can find
+          and assign you once an admin approves it. You will get an email and a notification.
+        </p>
+      )}
+      {auth.user?.vendorVerification === 'REJECTED' && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <strong>Your business was not verified.</strong>{' '}
+          {auth.user.vendorVerificationNote ?? 'Contact support if you think this is a mistake.'}
+        </p>
+      )}
+
       {loading && <p className="text-sm text-gray-500">Loading your jobs…</p>}
 
       {/* Stats Grid */}

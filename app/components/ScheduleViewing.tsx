@@ -11,7 +11,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
-import { mockViewingAvailableDates as availableDates } from '../store/mockData';
+import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
 import { useCreateViewing } from '@/hooks/useProperties';
 
 interface ScheduleViewingProps {
@@ -52,6 +52,7 @@ export function ScheduleViewing({
   });
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [availableDates] = useState(() => upcomingViewingDays());
   const selectedDate = availableDates.find((d) => d.date === formData.date);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +64,7 @@ export function ScheduleViewing({
     }
 
     const hour = slotToHour(formData.timeSlot);
-    const scheduledAt = new Date(formData.date);
+    const scheduledAt = fromLocalDateKey(formData.date);
     scheduledAt.setHours(hour, 0, 0, 0);
 
     try {
@@ -85,9 +86,9 @@ export function ScheduleViewing({
             <div className="mx-auto mb-4 flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold">Viewing Scheduled!</h2>
+            <h2 className="mb-2 text-2xl font-bold">Viewing Requested!</h2>
             <p className="mb-6 text-gray-600">
-              Your property viewing has been confirmed for{' '}
+              Your viewing request has been sent for{' '}
               <strong>
                 {selectedDate?.day}, {formData.date}
               </strong>{' '}
@@ -96,8 +97,8 @@ export function ScheduleViewing({
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
               <p className="mb-2 text-sm font-medium text-blue-900">What's Next?</p>
               <ul className="space-y-1 text-sm text-blue-800">
-                <li>• Check your email for confirmation details</li>
-                <li>• Property manager will contact you 24 hours before</li>
+                <li>• The property team will confirm or suggest another time</li>
+                <li>• You will get an email and a notification either way</li>
                 <li>• Bring valid ID for verification</li>
                 <li>• Feel free to ask questions during the tour</li>
               </ul>
@@ -193,7 +194,7 @@ export function ScheduleViewing({
                     >
                       <p className="font-semibold">{dateOption.day}</p>
                       <p className="text-sm text-gray-600">
-                        {new Date(dateOption.date).toLocaleDateString('en-US', {
+                        {fromLocalDateKey(dateOption.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
@@ -260,7 +261,7 @@ export function ScheduleViewing({
                 <p className="text-sm text-green-800">
                   <strong>
                     {selectedDate?.day},{' '}
-                    {new Date(formData.date).toLocaleDateString('en-US', {
+                    {fromLocalDateKey(formData.date).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',

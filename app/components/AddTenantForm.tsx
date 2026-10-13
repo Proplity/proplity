@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { api } from '@/lib/apiClient';
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +21,6 @@ import {
   Bath,
   Link2,
   FileText,
-  Upload,
   AlertCircle,
 } from 'lucide-react';
 import { useProperties, useUnits } from '@/hooks/useProperties';
@@ -36,6 +37,8 @@ const RENT_FREQUENCY_MAP: Record<string, string> = {
 
 export function AddTenantForm() {
   const router = useRouter();
+  const applicationId = useSearchParams().get('applicationId');
+  const [fromApplicant, setFromApplicant] = useState<string | null>(null);
   const { data: properties } = useProperties();
   const { submit: createLease, submitting, error } = useCreateLease();
 
@@ -46,6 +49,50 @@ export function AddTenantForm() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { data: vacantUnits } = useUnits(selectedPropertyId, 'VACANT');
+
+  // Opened from an approved application (ISS-046): preselect its property and
+  // unit, fill the applicant in as the tenant, and jump to the lease terms.
+  useEffect(() => {
+    if (!applicationId) return;
+    let cancelled = false;
+    api.applications
+      .get(applicationId)
+      .then((res) => {
+        const app = res.data.data;
+        if (cancelled || app.status !== 'APPROVED' || app.leaseId || !app.unit) return;
+        const [first, ...rest] = (app.applicant?.name ?? '').split(' ');
+        setSelectedPropertyId(app.unit.property.id);
+        setSelectedUnitId(app.unitId);
+        setTenantInfo((t) => ({
+          ...t,
+          firstName: first ?? '',
+          lastName: rest.join(' '),
+          email: app.applicant?.email ?? '',
+          phone: app.applicant?.phoneNumber ?? '',
+        }));
+        setFromApplicant(app.applicant?.name ?? 'the applicant');
+        setStep(2);
+      })
+      .catch(() => toast.error('Could not load that application.'));
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId]);
+
+  useEffect(() => {
+    if (!applicationId || !selectedUnitId) return;
+    const unit = vacantUnits.find((u) => u.id === selectedUnitId);
+    if (unit)
+      setLeaseDetails((s) =>
+        s.rentAmount
+          ? s
+          : {
+              ...s,
+              rentAmount: String(unit.rentAmount),
+              serviceCharge: String(unit.serviceCharge ?? 0),
+            },
+      );
+  }, [applicationId, selectedUnitId, vacantUnits]);
 
   // Auto-select the only vacant unit -- most properties in the seeded data
   // have exactly one, and forcing a second click there would be friction
@@ -117,6 +164,7 @@ export function AddTenantForm() {
     try {
       const lease = await createLease({
         unitId: selectedUnitId,
+        ...(fromApplicant && applicationId ? { applicationId } : {}),
         tenantEmail: tenantInfo.email,
         tenantName: `${tenantInfo.firstName} ${tenantInfo.lastName}`.trim(),
         tenantPhone: tenantInfo.phone || undefined,
@@ -135,7 +183,7 @@ export function AddTenantForm() {
         lateFeeFlatAmount: parseFloat(leaseDetails.lateFeeFlatAmount) || 0,
       });
 
-      alert(
+      toast.success(
         lease.tenantInvited
           ? `Tenancy created! An invitation has been sent to ${tenantInfo.email} to set up their account.`
           : `Tenancy created and linked to the existing account for ${tenantInfo.email}.`,
@@ -161,6 +209,13 @@ export function AddTenantForm() {
           <p className="text-sm text-gray-500">Fill in tenant details and link to a property</p>
         </div>
       </div>
+
+      {fromApplicant && (
+        <p className="mb-6 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          Creating a tenancy for <strong>{fromApplicant}</strong> from their approved application.
+          Set the lease terms below.
+        </p>
+      )}
 
       {/* Step Indicator */}
       <div className="mb-8 flex items-center gap-0">
@@ -288,22 +343,6 @@ export function AddTenantForm() {
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="e.g. Dangote Group"
               />
-            </div>
-            <div className="border-t border-gray-100 pt-4">
-              <p className="mb-3 text-xs font-medium text-gray-500">Documents (optional)</p>
-              <div className="flex gap-3">
-                {['Government ID', 'Proof of Income', 'Reference Letter'].map((doc) => (
-                  <button
-                    key={doc}
-                    type="button"
-                    onClick={() => alert('Document upload is not available yet.')}
-                    className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 transition-colors hover:border-blue-400 hover:text-blue-500"
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    {doc}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}

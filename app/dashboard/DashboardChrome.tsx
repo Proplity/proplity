@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
-import { AIAssistant } from '../components/AIAssistant';
+import { AIAssistant, aiAssistantDemoEnabled } from '../components/AIAssistant';
 import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
 import { NotificationBell } from '../components/notifications/NotificationBell';
 import { MobileTabBar } from './MobileTabBar';
@@ -82,7 +82,7 @@ function getTabsForRole(role: Role) {
     case 'vendor':
       return [
         { href: '/dashboard', label: 'My Jobs', icon: Wrench },
-        { href: '/dashboard', label: 'Invoices', icon: DollarSign },
+        { href: '/dashboard/vendor/invoices', label: 'Invoices', icon: DollarSign },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
   }
@@ -248,7 +248,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {role !== 'vendor' && (
+          {role !== 'vendor' && aiAssistantDemoEnabled && (
             <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
               <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
               <p className="mb-3 text-xs text-gray-600">
@@ -269,7 +269,9 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
 
-        {showAIAssistant && <AIAssistant onClose={() => setShowAIAssistant(false)} />}
+        {showAIAssistant && aiAssistantDemoEnabled && (
+          <AIAssistant onClose={() => setShowAIAssistant(false)} />
+        )}
       </div>
 
       {role && (
@@ -281,7 +283,9 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           listPropertyHref={
             role === 'manager' || role === 'landlord' ? '/dashboard/properties/new' : undefined
           }
-          onOpenAIAssistant={role !== 'vendor' ? () => setShowAIAssistant(true) : undefined}
+          onOpenAIAssistant={
+            role !== 'vendor' && aiAssistantDemoEnabled ? () => setShowAIAssistant(true) : undefined
+          }
           onLogout={() => setShowLogout(true)}
         />
       )}
