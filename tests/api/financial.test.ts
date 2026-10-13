@@ -465,6 +465,107 @@ describe('payments: webhook (HMAC-SHA512 verification)', () => {
   });
 });
 
+describe('payments: amounts, part payments and concurrent delivery (ISS-052)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function deliver(invoiceId: string, reference: string, naira: number, extra = {}) {
+    const rawBody = JSON.stringify({
+      event: 'charge.success',
+      data: {
+        reference,
+        amount: naira * 100,
+        channel: 'card',
+        paid_at: new Date().toISOString(),
+        metadata: { invoiceId, ...extra },
+      },
+    });
+    return apiFetch('/api/v1/payments/webhook', {
+      method: 'POST',
+      headers: { 'x-paystack-signature': signWebhookBody(rawBody) },
+      rawBody,
+    });
+  }
+
+  it('marks an invoice PARTIALLY_PAID, then PAID once the balance is cleared', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 100_000 });
+
+    expect((await deliver(invoice.id, `p1-${invoice.id}`, 40_000)).status).toBe(200);
+    let row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('PARTIALLY_PAID');
+
+    expect((await deliver(invoice.id, `p2-${invoice.id}`, 60_000)).status).toBe(200);
+    row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('PAID');
+  });
+
+  it('credits once when the same event is delivered concurrently', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 30_000 });
+    const ref = `race-${invoice.id}`;
+    const results = await Promise.all([1, 2, 3, 4].map(() => deliver(invoice.id, ref, 30_000)));
+    expect(results.every((r) => r.status === 200)).toBe(true);
+    expect(await testPrisma.payment.count({ where: { transactionRef: ref } })).toBe(1);
+  });
+
+  it('flags an amount that differs from what was requested, and an overpayment', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 50_000 });
+    await deliver(invoice.id, `mm-${invoice.id}`, 70_000, { expectedAmount: 50_000 });
+    const actions = (await testPrisma.auditLog.findMany({ where: { entityId: invoice.id } })).map(
+      (a) => a.action,
+    );
+    expect(actions).toContain('PAYMENT_AMOUNT_MISMATCH');
+    expect(actions).toContain('PAYMENT_EXCEEDS_INVOICE');
+  });
+
+  it('keeps a cancelled invoice cancelled, records the money and flags it', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({
+      userId: owner.id,
+      amount: 20_000,
+      status: 'CANCELLED',
+    });
+    await deliver(invoice.id, `cx-${invoice.id}`, 20_000);
+    const row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('CANCELLED');
+    expect(await testPrisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(1);
+    const flagged = await testPrisma.auditLog.findFirst({
+      where: { entityId: invoice.id, action: 'PAYMENT_ON_CANCELLED_INVOICE' },
+    });
+    expect(flagged).not.toBeNull();
+  });
+
+  it('initialize refuses a cancelled invoice and charges only the outstanding balance', async () => {
+    const owner = await createUser(Role.TENANT);
+    const cancelled = await createInvoice({
+      userId: owner.id,
+      amount: 10_000,
+      status: 'CANCELLED',
+    });
+    const cookie = await authCookie(owner.id, owner.role);
+    const refused = await apiFetch('/api/v1/payments/initialize', {
+      method: 'POST',
+      cookie,
+      body: { invoiceId: cancelled.id },
+    });
+    expect(refused.status).toBe(409);
+
+    const partly = await createInvoice({ userId: owner.id, amount: 80_000 });
+    await testPrisma.payment.create({ data: { invoiceId: partly.id, amount: 30_000 } });
+    const tooMuch = await apiFetch('/api/v1/payments/initialize', {
+      method: 'POST',
+      cookie,
+      body: { invoiceId: partly.id, amount: 60_000 },
+    });
+    // 503 when no provider key is configured in this environment; the
+    // balance check runs before that, so an excessive amount is a 400.
+    expect(tooMuch.status).toBe(400);
+  });
+});
+
 describe('subscriptions: checkout, me, and webhook activation', () => {
   beforeAll(async () => {
     await resetDb();
