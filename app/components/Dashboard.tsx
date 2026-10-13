@@ -14,7 +14,7 @@ import { useMyProperties } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
-import { useRedeemManagerCode } from '@/hooks/useManagerCodes';
+import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 
 interface DashboardProps {
   onNavigate: (page: any) => void;
@@ -37,7 +37,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const loading = propertiesLoading || leasesLoading || invoicesLoading || maintenanceLoading;
 
   const [codeInput, setCodeInput] = useState('');
-  const [linkedTo, setLinkedTo] = useState<string | null>(null);
+  const { data: linkedLandlords, refetch: refetchLinks } = useLinkedLandlords();
+  const [justLinked, setJustLinked] = useState<string | null>(null);
   const { submit: redeemCode, submitting: redeeming, error: redeemError } = useRedeemManagerCode();
 
   const handleRedeem = async (e: React.FormEvent) => {
@@ -45,8 +46,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     if (!codeInput.trim()) return;
     try {
       const result = await redeemCode(codeInput.trim());
-      setLinkedTo(result.landlord?.name ?? 'landlord');
+      setJustLinked(result.landlord?.name ?? 'your landlord');
       setCodeInput('');
+      refetchLinks();
     } catch {
       // error state is already surfaced via the hook's `error`
     }
@@ -238,34 +240,50 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <KeyRound className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">Link to a Landlord</h2>
+            <h2 className="font-semibold text-gray-900">Your Landlords</h2>
             <p className="mt-0.5 text-xs text-gray-500">
-              Enter the code your landlord shared with you.
+              Link to each landlord you work with using the code they share.
             </p>
           </div>
         </div>
-        {linkedTo ? (
-          <p className="flex items-center gap-2 text-sm font-medium text-green-700">
-            <CheckCircle className="h-4 w-4" />
-            Linked to {linkedTo}.
-          </p>
+        {linkedLandlords.length > 0 ? (
+          <ul className="mb-3 space-y-1">
+            {linkedLandlords.map((l) => (
+              <li
+                key={l.codeId}
+                className={`flex items-center gap-2 text-sm font-medium ${
+                  l.active ? 'text-green-700' : 'text-gray-400 line-through'
+                }`}
+              >
+                <CheckCircle className="h-4 w-4" />
+                {l.landlord.name}
+                {!l.active && <span className="text-xs font-normal no-underline">(revoked)</span>}
+              </li>
+            ))}
+          </ul>
         ) : (
-          <form onSubmit={handleRedeem} className="flex gap-2">
-            <input
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              placeholder="e.g. LLD-2847-XK"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={redeeming || !codeInput.trim()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {redeeming ? 'Linking…' : 'Link'}
-            </button>
-          </form>
+          <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            You are not linked to a landlord yet. Enter a code to get started.
+          </p>
         )}
+        {justLinked && (
+          <p className="mb-2 text-sm font-medium text-green-700">Linked to {justLinked}.</p>
+        )}
+        <form onSubmit={handleRedeem} className="flex gap-2">
+          <input
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="e.g. LLD-2847-XK"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={redeeming || !codeInput.trim()}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {redeeming ? 'Linking…' : 'Link'}
+          </button>
+        </form>
         {redeemError && <p className="mt-2 text-sm text-red-600">{redeemError}</p>}
       </div>
     </div>
