@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { appUrl } from '@/lib/appUrl';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 import { paymentsMockEnabled } from '@/lib/payments/mockGateway';
 
 // `amount` (naira) is optional: omitted means "the whole outstanding balance",
@@ -28,11 +29,25 @@ export const POST = withAuth(async (req, { session }) => {
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: validated.data.invoiceId },
-      include: { lease: true, payments: { select: { amount: true } } },
+      include: {
+        lease: true,
+        payments: { select: { amount: true } },
+        maintenanceRequest: { include: { unit: { include: { property: true } } } },
+      },
     });
     if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    const isPayer = invoice.userId === session.sub || invoice.lease?.tenantId === session.sub;
+    // A vendor's job invoice has no lease and no user: the party who pays it is
+    // whoever runs the property (its manager or landlord, ISS-051).
+    const isPropertySidePayer =
+      !invoice.leaseId &&
+      !invoice.userId &&
+      !!invoice.maintenanceRequest &&
+      canManageProperty(session, invoice.maintenanceRequest.unit.property);
+    const isPayer =
+      invoice.userId === session.sub ||
+      invoice.lease?.tenantId === session.sub ||
+      isPropertySidePayer;
     if (!isPayer && session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
