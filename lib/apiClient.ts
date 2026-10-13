@@ -305,6 +305,19 @@ export const api = {
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
+    recordPayment: (
+      invoiceId: string,
+      body: {
+        amount: number;
+        method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+        reference?: string;
+        notes?: string;
+      },
+    ) =>
+      apiClient.post<{ data: { status: string; paidTotal: number } }>(
+        `/api/v1/invoices/${invoiceId}/payments`,
+        body,
+      ),
   },
   accessCodes: {
     list: (unitId: string) =>
@@ -328,9 +341,19 @@ export const api = {
   },
   admin: {
     users: {
-      list: (params?: { role?: string; limit?: number; page?: number }) =>
-        apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+      list: (params?: {
+        role?: string;
+        status?: string;
+        vendorStatus?: string;
+        q?: string;
+        limit?: number;
+        page?: number;
+      }) => apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+    updateUser: (
+      userId: string,
+      body: { status?: 'ACTIVE' | 'SUSPENDED'; role?: string; reason: string },
+    ) => apiClient.patch(`/api/v1/admin/users/${userId}`, body),
     summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
     breakdown: () => apiClient.get<{ data: AdminBreakdownSummary }>('/api/v1/admin/breakdown'),
     reports: (params: { from: string; to: string }) =>
