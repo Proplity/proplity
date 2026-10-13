@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import type {
+  AdminBreakdownSummary,
   AdminDashboardSummary,
   AdminReportsSummary,
+  OwnerBreakdownSummary,
   OwnerDashboardSummary,
+  TenantDashboardSummary,
+  VendorDashboardSummary,
 } from '@/lib/api/types';
 
 // Server-computed totals for the dashboards (ISS-049): correct at any data
@@ -65,4 +69,28 @@ export function useAdminReports(from: string, to: string) {
   }, [refetch]);
 
   return { data, loading, error, refetch };
+}
+
+export function useOwnerBreakdown() {
+  return useSummary<OwnerBreakdownSummary>(() =>
+    api.dashboard.breakdown().then((res) => res.data.data),
+  );
+}
+
+export function useAdminBreakdown() {
+  return useSummary<AdminBreakdownSummary>(() =>
+    api.admin.breakdown().then((res) => res.data.data),
+  );
+}
+
+export function useTenantSummary() {
+  return useSummary<TenantDashboardSummary>(() =>
+    api.dashboard.mineTenant().then((res) => res.data.data),
+  );
+}
+
+export function useVendorSummary() {
+  return useSummary<VendorDashboardSummary>(() =>
+    api.dashboard.mineVendor().then((res) => res.data.data),
+  );
 }
