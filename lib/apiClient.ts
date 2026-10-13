@@ -30,6 +30,8 @@ import type {
   CreateViewingInput,
   OwnerDashboardSummary,
   OwnerBreakdownSummary,
+  TenantDashboardSummary,
+  VendorDashboardSummary,
   AdminBreakdownSummary,
   AdminDashboardSummary,
   AdminReportsSummary,
@@ -295,6 +297,8 @@ export const api = {
   dashboard: {
     summary: () => apiClient.get<{ data: OwnerDashboardSummary }>('/api/v1/dashboard/summary'),
     breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
+    mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
+    mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
   },
   invoices: {
     list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>

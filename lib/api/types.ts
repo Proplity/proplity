@@ -803,3 +803,36 @@ export type AdminBreakdownSummary = {
   money: { collected: number; pending: number; cancelled: number; paymentCount: number };
   maintenance: { open: number; high: number; medium: number; low: number };
 };
+
+// GET /dashboard/mine (ISS-049): totals over the caller's own records.
+export type TenantDashboardSummary = {
+  money: { balance: number };
+  nextDue: { id: string; dueDate: string; amount: number; status: string } | null;
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    invoiceNumber: string;
+    type: string;
+  }[];
+};
+
+export type VendorDashboardSummary = {
+  jobs: {
+    total: number;
+    scheduled: number;
+    inProgress: number;
+    completed: number;
+    completionRate: number;
+    onTimeRate: number | null;
+  };
+  earnings: {
+    completedThisMonth: number;
+    thisMonth: number;
+    completedThisWeek: number;
+    thisWeek: number;
+    pendingPayments: number;
+    totalPaid: number;
+  };
+  rating: { average: number | null; count: number };
+};

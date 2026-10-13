@@ -6,6 +6,8 @@ import type {
   AdminReportsSummary,
   OwnerBreakdownSummary,
   OwnerDashboardSummary,
+  TenantDashboardSummary,
+  VendorDashboardSummary,
 } from '@/lib/api/types';
 
 // Server-computed totals for the dashboards (ISS-049): correct at any data
@@ -78,5 +80,17 @@ export function useOwnerBreakdown() {
 export function useAdminBreakdown() {
   return useSummary<AdminBreakdownSummary>(() =>
     api.admin.breakdown().then((res) => res.data.data),
+  );
+}
+
+export function useTenantSummary() {
+  return useSummary<TenantDashboardSummary>(() =>
+    api.dashboard.mineTenant().then((res) => res.data.data),
+  );
+}
+
+export function useVendorSummary() {
+  return useSummary<VendorDashboardSummary>(() =>
+    api.dashboard.mineVendor().then((res) => res.data.data),
   );
 }
