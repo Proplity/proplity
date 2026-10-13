@@ -38,12 +38,6 @@ interface AuthContextType {
     name: string;
     role?: string;
     landlordCode?: string;
-    vendor?: {
-      businessName: string;
-      serviceCategory?: string;
-      coverageStates?: string[];
-      cacNumber?: string;
-    };
   }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -123,12 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string;
     role?: string;
     landlordCode?: string;
-    vendor?: {
-      businessName: string;
-      serviceCategory?: string;
-      coverageStates?: string[];
-      cacNumber?: string;
-    };
   }) => {
     try {
       const res = await fetch('/api/v1/auth/register', {

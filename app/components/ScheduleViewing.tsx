@@ -11,7 +11,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
-import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
+import { mockViewingAvailableDates as availableDates } from '../store/mockData';
 import { useCreateViewing } from '@/hooks/useProperties';
 
 interface ScheduleViewingProps {
@@ -52,7 +52,6 @@ export function ScheduleViewing({
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [availableDates] = useState(() => upcomingViewingDays());
   const selectedDate = availableDates.find((d) => d.date === formData.date);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +63,7 @@ export function ScheduleViewing({
     }
 
     const hour = slotToHour(formData.timeSlot);
-    const scheduledAt = fromLocalDateKey(formData.date);
+    const scheduledAt = new Date(formData.date);
     scheduledAt.setHours(hour, 0, 0, 0);
 
     try {
@@ -194,7 +193,7 @@ export function ScheduleViewing({
                     >
                       <p className="font-semibold">{dateOption.day}</p>
                       <p className="text-sm text-gray-600">
-                        {fromLocalDateKey(dateOption.date).toLocaleDateString('en-US', {
+                        {new Date(dateOption.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',
@@ -261,7 +260,7 @@ export function ScheduleViewing({
                 <p className="text-sm text-green-800">
                   <strong>
                     {selectedDate?.day},{' '}
-                    {fromLocalDateKey(formData.date).toLocaleDateString('en-US', {
+                    {new Date(formData.date).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
