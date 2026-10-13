@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import { api } from '@/lib/apiClient';
 import { useOwnerBreakdown } from '@/hooks/useDashboardSummary';
-import { usePagedList } from '@/hooks/usePagedList';
+import { useOpenMaintenance, usePagedList } from '@/hooks/usePagedList';
 import { fmtNaira } from '../../lib/utils';
 
 export type BreakdownType = 'properties' | 'tenants' | 'rent' | 'maintenance' | 'renewals';
@@ -45,8 +45,6 @@ const ICON_STYLES: Record<BreakdownType, { bg: string; color: string }> = {
   maintenance: { bg: 'bg-orange-50', color: 'text-orange-600' },
   renewals: { bg: 'bg-purple-50', color: 'text-purple-600' },
 };
-
-const OPEN_STATUSES = ['SUBMITTED', 'IN_PROGRESS', 'SCHEDULED'];
 
 export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
@@ -80,18 +78,10 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     500,
     is('tenants'),
   );
-  const openMaintenanceLists = OPEN_STATUSES.map((status) =>
-    usePagedList(
-      (page, limit) => api.maintenance.list({ status, page, limit }),
-      500,
-      is('maintenance'),
-    ),
-  );
+  const openMaintenanceList = useOpenMaintenance(is('maintenance'));
 
   const terminatedLeases = [...endedLeases, ...expiredLeases];
-  const openMaintenance = openMaintenanceLists
-    .flatMap((l) => l.data)
-    .sort((a, c) => new Date(c.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const openMaintenance = openMaintenanceList.data;
 
   const loading =
     summaryLoading ||
@@ -99,7 +89,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     activeLoading ||
     endedLoading ||
     expiredLoading ||
-    openMaintenanceLists.some((l) => l.loading);
+    openMaintenanceList.loading;
 
   const Icon = ICONS[breakdownType];
   const iconStyle = ICON_STYLES[breakdownType];
@@ -942,7 +932,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
         </div>
 
         <div className="overflow-x-auto">{renderTable()}</div>
-        {(propsCut || activeCut || openMaintenanceLists.some((l) => l.truncated)) && (
+        {(propsCut || activeCut || openMaintenanceList.truncated) && (
           <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
             Showing the first 500 rows. Totals above count everything.
           </p>

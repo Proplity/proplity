@@ -26,6 +26,7 @@ Third-party integrations are all optional locally — without keys the app logs 
 | -------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `pnpm dev` / `pnpm build` / `pnpm start`                             | Dev server, production build, serve the build                   |
 | `pnpm typecheck`                                                     | `tsc --noEmit` (CI)                                             |
+| `pnpm lint`                                                          | ESLint; errors fail CI, warnings do not                         |
 | `pnpm format:check` / `pnpm format`                                  | Prettier check (CI) / fix                                       |
 | `pnpm test`                                                          | Vitest API suite — needs `.env.test` (copy `.env.test.example`) |
 | `pnpm test:e2e` (`:smoke`, `:flows`, `:ui`)                          | Playwright UI suite — needs a seeded DB and `E2E_BASE_URL`      |
