@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
 import type {
+  PropertyViewing,
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
@@ -161,5 +162,38 @@ export function useModerateProperty(propertyId: string) {
   return useApiSubmit(
     (body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
       api.properties.moderate(propertyId, body).then((res) => res.data.data),
+  );
+}
+
+// Viewing requests for one property: everything for the property team, only
+// the caller's own for anyone else (server-scoped).
+export function usePropertyViewings(propertyId: string | null) {
+  const [data, setData] = useState<PropertyViewing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    if (!propertyId) return;
+    try {
+      const res = await api.properties.listViewings(propertyId);
+      setData(res.data.data);
+    } catch {
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [propertyId]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { data, loading, refetch };
+}
+
+export function useUpdateViewing(propertyId: string) {
+  return useApiSubmit((args: { viewingId: string; status: 'CONFIRMED' | 'CANCELLED' }) =>
+    api.properties
+      .updateViewing(propertyId, args.viewingId, args.status)
+      .then((res) => res.data.data),
   );
 }

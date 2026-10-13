@@ -22,6 +22,7 @@ const PROFILE_SELECT = {
   previousLandlordPhone: true,
   previousLandlordEmail: true,
   idDocumentUrl: true,
+  vendorProfile: { select: { verificationStatus: true, verificationNote: true } },
   lastLoginAt: true,
   createdAt: true,
 } as const;
@@ -41,6 +42,7 @@ function serialize(user: {
   previousLandlordPhone: string | null;
   previousLandlordEmail: string | null;
   idDocumentUrl: string | null;
+  vendorProfile: { verificationStatus: string; verificationNote: string | null } | null;
   lastLoginAt: Date | null;
   createdAt: Date;
 }) {
@@ -59,6 +61,8 @@ function serialize(user: {
     previousLandlordPhone: user.previousLandlordPhone,
     previousLandlordEmail: user.previousLandlordEmail,
     idDocumentUrl: user.idDocumentUrl,
+    vendorVerification: user.vendorProfile?.verificationStatus ?? null,
+    vendorVerificationNote: user.vendorProfile?.verificationNote ?? null,
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
   };
