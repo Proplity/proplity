@@ -30,6 +30,9 @@ export const GET = withAuth(
             status: true,
             phoneNumber: true,
             createdAt: true,
+            vendorProfile: {
+              select: { businessName: true, verificationStatus: true, verificationNote: true },
+            },
             _count: { select: { managedProperties: true, ownedProperties: true } },
           },
           orderBy: { createdAt: 'desc' },

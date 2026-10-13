@@ -6,17 +6,23 @@ import {
   getMockAiResponse,
 } from '../store/aiAssistantData';
 
+// The assistant has no backend: every answer is canned text with made-up
+// figures (ISS-045). It is hidden unless this build-time flag is "true", and
+// even then it says so on screen, so nobody mistakes it for their own data.
+export const aiAssistantDemoEnabled = process.env.NEXT_PUBLIC_AI_ASSISTANT_DEMO === 'true';
+
 export function AIAssistant({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState(mockAiInitialMessages);
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const handleSendMessage = (override?: string) => {
+    const text = (override ?? message).trim();
+    if (!text) return;
 
     const newUserMessage = {
       id: messages.length + 1,
       sender: 'user',
-      text: message,
+      text,
       timestamp: new Date().toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
@@ -31,7 +37,7 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
       const aiResponse = {
         id: messages.length + 2,
         sender: 'ai',
-        text: getMockAiResponse(message),
+        text: getMockAiResponse(text),
         timestamp: new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
@@ -42,8 +48,7 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
   };
 
   const handleQuickAction = (query: string) => {
-    setMessage(query);
-    handleSendMessage();
+    handleSendMessage(query);
   };
 
   return (
@@ -65,6 +70,10 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
+
+      <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+        Demo only: these answers are samples, not your real rent, tenant or maintenance data.
+      </p>
 
       {/* Quick Actions */}
       <div className="border-b border-gray-200 bg-gray-50 p-4">
@@ -136,7 +145,7 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
-            onClick={handleSendMessage}
+            onClick={() => handleSendMessage()}
             disabled={!message.trim()}
             className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -144,7 +153,7 @@ export function AIAssistant({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="mt-2 text-center text-xs text-gray-500">
-          Powered by AI • Available 24/7 • WhatsApp integration coming soon
+          Sample assistant • Not connected to your data yet
         </p>
       </div>
     </div>

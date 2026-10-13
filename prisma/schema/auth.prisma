@@ -88,18 +88,31 @@ model User {
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
+// Vendors sign themselves up, so an admin vets the business before landlords
+// and managers can find or assign it (ISS-043). Profiles that existed before
+// this field are marked VERIFIED by the migration.
+enum VendorVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model VendorProfile {
-  id                String                @id @default(uuid())
-  userId            String                @unique
-  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  businessName      String
-  licenseNumber     String?
+  id                 String                   @id @default(uuid())
+  userId             String                   @unique
+  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName       String
+  licenseNumber      String?
   // Many-to-many with the MaintenanceCategory table (operations.prisma) —
   // updated from an enum array now that categories are admin-editable rows.
-  serviceCategories MaintenanceCategory[]
-  coverageArea      String?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  serviceCategories  MaintenanceCategory[]
+  coverageArea       String?
+  verificationStatus VendorVerificationStatus @default(PENDING)
+  verificationNote   String?
+  verifiedAt         DateTime?
+  verifiedById       String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
 }
 
 // PRD Appendix "ID Verification - API Integration" — records the verification
