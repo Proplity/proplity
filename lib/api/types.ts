@@ -747,3 +747,59 @@ export type AdminReportsSummary = {
   };
   units: { total: number; occupied: number; avgOccupancy: number; avgRent: number };
 };
+
+// GET /dashboard/breakdown (ISS-049): totals and chart data for the pages
+// opened from a dashboard card.
+export type OwnerBreakdownSummary = {
+  properties: { count: number; fully: number; partial: number; vacant: number };
+  leases: {
+    active: number;
+    terminated: number;
+    paid: number;
+    due: number;
+    overdue: number;
+    rentStatusByLease: Record<string, 'due' | 'overdue'>;
+  };
+  money: {
+    collected: number;
+    collectedThisMonth: number;
+    pending: number;
+    collectionRate: number;
+    paymentCount: number;
+    trend: { month: string; expected: number; collected: number }[];
+    byProperty: { name: string; amount: number }[];
+    methods: { name: string; count: number }[];
+  };
+  maintenance: { open: number; high: number; medium: number; low: number };
+  renewals: {
+    count: number;
+    urgent: number;
+    soon: number;
+    later: number;
+    rows: {
+      id: string;
+      endDate: string;
+      rentAmount: number;
+      tenant: string | null;
+      property: string | null;
+      unitNumber: string | null;
+      daysLeft: number;
+    }[];
+  };
+  payments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    method: string;
+    tenant: string | null;
+    property: string | null;
+  }[];
+};
+
+// GET /admin/breakdown (ISS-049).
+export type AdminBreakdownSummary = {
+  users: { total: number; manager: number; landlord: number; tenant: number; vendor: number };
+  properties: { total: number; approved: number; pending: number; flagged: number };
+  money: { collected: number; pending: number; cancelled: number; paymentCount: number };
+  maintenance: { open: number; high: number; medium: number; low: number };
+};

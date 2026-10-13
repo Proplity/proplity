@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Users, Building2, DollarSign, AlertCircle, Search, Clock } from 'lucide-react';
-import { useAdminUsers } from '@/hooks/useAdminUsers';
-import { useMyProperties, useModerateProperty } from '@/hooks/useProperties';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { api } from '@/lib/apiClient';
+import { useModerateProperty } from '@/hooks/useProperties';
+import { useAdminBreakdown } from '@/hooks/useDashboardSummary';
+import { usePagedList } from '@/hooks/usePagedList';
 
 export type AdminBreakdownType = 'users' | 'properties' | 'transactions' | 'maintenance';
 
@@ -66,26 +66,51 @@ function ModerationActions({
 export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: users, loading: usersLoading } = useAdminUsers();
+  // Totals come from the server; the tables are paged lists, loaded only for
+  // the page being viewed (ISS-049).
+  const { data: totals, loading: totalsLoading } = useAdminBreakdown();
+  const is = (t: AdminBreakdownType) => breakdownType === t;
+  const {
+    data: users,
+    loading: usersLoading,
+    truncated: usersCut,
+  } = usePagedList((page, limit) => api.admin.users.list({ page, limit }), 500, is('users'));
   const {
     data: properties,
     loading: propertiesLoading,
     refetch: refetchProperties,
-  } = useMyProperties();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
+    truncated: propsCut,
+  } = usePagedList((page, limit) => api.properties.mine({ page, limit }), 500, is('properties'));
+  const {
+    data: invoices,
+    loading: invoicesLoading,
+    truncated: invoicesCut,
+  } = usePagedList((page, limit) => api.invoices.list({ page, limit }), 500, is('transactions'));
+  const openLists = ['SUBMITTED', 'IN_PROGRESS', 'SCHEDULED'].map((status) =>
+    usePagedList(
+      (page, limit) => api.maintenance.list({ status, page, limit }),
+      500,
+      is('maintenance'),
+    ),
+  );
 
-  const loading = usersLoading || propertiesLoading || invoicesLoading || maintenanceLoading;
+  const loading =
+    totalsLoading ||
+    usersLoading ||
+    propertiesLoading ||
+    invoicesLoading ||
+    openLists.some((l) => l.loading);
   const Icon = ICONS[breakdownType];
   const iconStyle = ICON_STYLES[breakdownType];
 
   const allPayments = invoices.flatMap((invoice) =>
     invoice.payments.map((payment) => ({ invoice, payment })),
   );
-  const collectedTotal = allPayments.reduce((sum, p) => sum + p.payment.amount, 0);
-  const openMaintenance = maintenanceRequests.filter(
-    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
-  );
+  const collectedTotal = totals?.money.collected ?? 0;
+  const openMaintenance = openLists
+    .flatMap((l) => l.data)
+    .sort((a, c) => new Date(c.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const cutOff = usersCut || propsCut || invoicesCut || openLists.some((l) => l.truncated);
 
   const heroConfig: Record<
     AdminBreakdownType,
@@ -94,13 +119,13 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     users: {
       title: 'Total Users',
       subtitle: 'All registered users across the platform by role and status',
-      stat: String(users.length),
+      stat: String(totals?.users.total ?? 0),
       statLabel: 'Registered Users',
     },
     properties: {
       title: 'Properties Listed',
       subtitle: 'All property listings on the platform with moderation status',
-      stat: String(properties.length),
+      stat: String(totals?.properties.total ?? 0),
       statLabel: 'Properties',
     },
     transactions: {
@@ -112,7 +137,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     maintenance: {
       title: 'Open Maintenance Requests',
       subtitle: 'Maintenance tickets not yet completed or cancelled, across all properties',
-      stat: String(openMaintenance.length),
+      stat: String(totals?.maintenance.open ?? 0),
       statLabel: 'Open Requests',
     },
   };
@@ -122,7 +147,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     if (breakdownType === 'users') {
       const byRole = ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => ({
         label: role.charAt(0) + role.slice(1).toLowerCase() + 's',
-        value: users.filter((u) => u.role === role).length,
+        value: totals?.users[role.toLowerCase() as 'manager'] ?? 0,
       }));
       const colors = [
         'bg-blue-50 border-blue-200 text-blue-700',
@@ -142,11 +167,9 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       );
     }
     if (breakdownType === 'properties') {
-      const approved = properties.filter((p) => p.moderationStatus === 'APPROVED').length;
-      const pending = properties.filter((p) => p.moderationStatus === 'PENDING_REVIEW').length;
-      const flagged = properties.filter(
-        (p) => p.moderationStatus === 'FLAGGED' || p.moderationStatus === 'REJECTED',
-      ).length;
+      const approved = totals?.properties.approved ?? 0;
+      const pending = totals?.properties.pending ?? 0;
+      const flagged = totals?.properties.flagged ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -175,15 +198,8 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       );
     }
     if (breakdownType === 'transactions') {
-      const pendingTotal = invoices
-        .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-        .reduce(
-          (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
-          0,
-        );
-      const cancelledTotal = invoices
-        .filter((i) => i.status === 'CANCELLED')
-        .reduce((sum, i) => sum + i.amount, 0);
+      const pendingTotal = totals?.money.pending ?? 0;
+      const cancelledTotal = totals?.money.cancelled ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -212,11 +228,9 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       );
     }
     if (breakdownType === 'maintenance') {
-      const high = openMaintenance.filter(
-        (r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY',
-      ).length;
-      const medium = openMaintenance.filter((r) => r.priority === 'MEDIUM').length;
-      const low = openMaintenance.filter((r) => r.priority === 'LOW').length;
+      const high = totals?.maintenance.high ?? 0;
+      const medium = totals?.maintenance.medium ?? 0;
+      const low = totals?.maintenance.low ?? 0;
       return (
         <div className="mb-6 grid grid-cols-3 gap-4">
           {[
@@ -498,16 +512,16 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
   };
 
   const rowCount = {
-    users: users.length,
-    properties: properties.length,
-    transactions: allPayments.length,
-    maintenance: openMaintenance.length,
+    users: totals?.users.total ?? 0,
+    properties: totals?.properties.total ?? 0,
+    transactions: totals?.money.paymentCount ?? 0,
+    maintenance: totals?.maintenance.open ?? 0,
   }[breakdownType];
   const rowLabel = {
-    users: 'users shown',
-    properties: 'listings shown',
-    transactions: 'transactions shown',
-    maintenance: 'requests shown',
+    users: 'users',
+    properties: 'listings',
+    transactions: 'transactions',
+    maintenance: 'open requests',
   }[breakdownType];
 
   return (
@@ -557,6 +571,11 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
           </div>
         </div>
         <div className="overflow-x-auto">{renderTable()}</div>
+        {cutOff && (
+          <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
+            Showing the first 500 rows. Totals above count everything.
+          </p>
+        )}
       </div>
     </div>
   );
