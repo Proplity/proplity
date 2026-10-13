@@ -15,6 +15,21 @@ const MAX_ATTEMPTS = 5;
 // locking out ordinary multi-session usage from a shared IP.
 export const REFRESH_MAX_ATTEMPTS = 30;
 
+// Registrations per IP per window. Defaults to the same 5 as login. The
+// Playwright run starts several registration tests at once from one IP and
+// raises this on its own dev server only (playwright.config.ts); a production
+// deployment should leave REGISTER_MAX_ATTEMPTS unset.
+export function registerMaxAttempts(): number {
+  const n = Number(process.env.REGISTER_MAX_ATTEMPTS);
+  return Number.isInteger(n) && n > 0 ? n : MAX_ATTEMPTS;
+}
+
+// Callers sharing an identifier queue on the advisory lock, so a transaction can
+// legitimately wait on the others ahead of it. Prisma's default 5 s timeout
+// expired under a burst of sign-ups from one IP and surfaced as a 500; give the
+// queue room instead (ISS-006).
+const TX_OPTIONS = { timeout: 20_000, maxWait: 20_000 } as const;
+
 export type Reservation = { allowed: boolean; attemptId: string | null };
 
 // Atomically checks-and-reserves a rate-limit slot -- closes the race
@@ -59,7 +74,7 @@ export async function reserveAttempt(
 
     const attempt = await tx.loginAttempt.create({ data: { identifier, userId } });
     return { allowed: true, attemptId: attempt.id };
-  });
+  }, TX_OPTIONS);
 }
 
 // Deletes a reservation that turned out not to need counting (e.g. the
