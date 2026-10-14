@@ -134,6 +134,7 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
   const { user } = useAuth();
   const { data: property, loading } = useProperty(propertyId);
   const { data: allProperties } = useProperties();
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showNeighModal, setShowNeighModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMsg, setLoginModalMsg] = useState('');
@@ -180,9 +181,15 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
   const verified = property.moderationStatus === 'APPROVED';
   const similar = allProperties.filter((p) => p.id !== propertyId).slice(0, 3);
 
-  // No multi-image gallery exists in the schema beyond imageUrl/video360Url/
-  // exteriorPhotoUrl -- gradient placeholders fill in for the 3 remaining
-  // gallery slots the original mock design used.
+  // Real photos first (cover, exterior, then the rest of the gallery, without
+  // repeats); the gradient placeholders fill whichever slots have no photo yet.
+  const photos = [
+    ...new Set(
+      [property.imageUrl, property.exteriorPhotoUrl, ...(property.photoUrls ?? [])].filter(
+        (u): u is string => !!u,
+      ),
+    ),
+  ];
   const galleryPlaceholders = [
     'bg-linear-to-br from-blue-100 to-blue-200',
     'bg-linear-to-br from-green-100 to-green-200',
@@ -280,24 +287,69 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
           <div
             className={`col-span-2 row-span-2 ${galleryPlaceholders[0]} relative flex items-end p-4`}
           >
+            {photos[0] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photos[0]}
+                alt={property.name}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            )}
             {verified && (
-              <span className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white">
+              <span className="relative flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white">
                 <Shield className="h-3 w-3" /> Verified
               </span>
             )}
           </div>
           {/* 3 smaller */}
           {galleryPlaceholders.slice(1, 3).map((img: string, i: number) => (
-            <div key={i} className={`${img} relative`} />
-          ))}
-          {/* 4th with 360 badge */}
-          <div className={`${galleryPlaceholders[3]} relative flex items-center justify-center`}>
-            <div className="flex items-center gap-2 rounded-xl bg-black/50 px-3 py-2 backdrop-blur-sm">
-              <Maximize2 className="h-4 w-4 text-white" />
-              <span className="text-xs font-semibold text-white">360° View</span>
+            <div key={i} className={`${img} relative`}>
+              {photos[i + 1] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photos[i + 1]}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
             </div>
+          ))}
+          {/* 4th: the next photo, with the 360 badge when the listing has a 360 video */}
+          <div className={`${galleryPlaceholders[3]} relative flex items-center justify-center`}>
+            {photos[3] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photos[3]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            )}
+            {photos.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setShowAllPhotos((v) => !v)}
+                className="absolute right-2 bottom-2 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white hover:bg-black/80"
+              >
+                {showAllPhotos ? 'Hide photos' : `+${photos.length - 4} more`}
+              </button>
+            )}
+            {property.video360Url && (
+              <a
+                href={property.video360Url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative flex items-center gap-2 rounded-xl bg-black/50 px-3 py-2 backdrop-blur-sm"
+              >
+                <Maximize2 className="h-4 w-4 text-white" />
+                <span className="text-xs font-semibold text-white">360° View</span>
+              </a>
+            )}
           </div>
         </div>
+        {showAllPhotos && (
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={url} src={url} alt="" className="h-40 w-full rounded-lg object-cover" />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── Main content ── */}

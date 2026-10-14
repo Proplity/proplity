@@ -7,7 +7,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
-import { safeUrl } from '@/lib/api/urlField';
+import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -95,6 +95,7 @@ const updatePropertySchema = z.object({
   imageUrl: safeUrl.optional(),
   video360Url: safeUrl.optional(),
   exteriorPhotoUrl: safeUrl.optional(),
+  photoUrls: safeUrlList.optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
   // The property's own manager/landlord visibility toggle -- independent of

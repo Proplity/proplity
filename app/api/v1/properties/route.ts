@@ -8,7 +8,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { serializeUnit } from '@/lib/api/propertyAccess';
-import { safeUrl } from '@/lib/api/urlField';
+import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 
 export async function GET(req: NextRequest) {
@@ -115,6 +115,7 @@ const createPropertySchema = z.object({
   imageUrl: safeUrl.optional(),
   video360Url: safeUrl.optional(),
   exteriorPhotoUrl: safeUrl.optional(),
+  photoUrls: safeUrlList.optional(),
   isPublished: z.boolean().optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
