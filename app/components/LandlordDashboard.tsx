@@ -610,9 +610,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <p className="text-xs text-amber-800">
             <span className="font-semibold">How it works:</span> Generate a code and share it with
-            the person you want to appoint as your Property Manager. They'll enter it during
+            the person you want to appoint as your Property Manager. They&apos;ll enter it during
             registration. You can deactivate a code at any time to immediately revoke access — even
-            after they've registered.
+            after they&apos;ve registered.
           </p>
         </div>
 
@@ -706,7 +706,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
             <div className="p-8 text-center text-gray-400">
               <KeyRound className="mx-auto mb-2 h-10 w-10 opacity-40" />
               <p className="text-sm">
-                No codes generated yet. Click "Generate New Code" to get started.
+                No codes generated yet. Click &quot;Generate New Code&quot; to get started.
               </p>
             </div>
           )}

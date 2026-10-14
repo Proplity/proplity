@@ -126,8 +126,8 @@ export function ContactPage() {
           </span>
           <h1 className="mb-4 text-4xl font-bold md:text-5xl">Get in Touch</h1>
           <p className="mx-auto max-w-xl text-base leading-relaxed text-blue-100">
-            We're here to help you transform your property operations with AI intelligence. Reach
-            out to our team of experts today.
+            We&apos;re here to help you transform your property operations with AI intelligence.
+            Reach out to our team of experts today.
           </p>
         </div>
       </section>
@@ -139,7 +139,7 @@ export function ContactPage() {
           <div className="lg:col-span-2">
             <h2 className="mb-1 text-xl font-bold text-gray-900">Send us a message</h2>
             <p className="mb-7 text-sm text-gray-500">
-              Fill out the form below and we'll get back to you within 24 hours.
+              Fill out the form below and we&apos;ll get back to you within 24 hours.
             </p>
 
             {sent ? (
@@ -420,8 +420,8 @@ export function ContactPage() {
           <div>
             <Logo className="opacity-90 brightness-0 invert" />
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
-              Nigeria's first AI-native property management platform. Built for the realities of the
-              modern rental market.
+              Nigeria&apos;s first AI-native property management platform. Built for the realities
+              of the modern rental market.
             </p>
           </div>
           {[
