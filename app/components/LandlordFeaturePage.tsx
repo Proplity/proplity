@@ -295,7 +295,7 @@ export function LandlordFeaturePage() {
       <section className="bg-purple-600 py-20 text-white">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <Home className="mx-auto mb-6 h-16 w-16 text-purple-200" />
-          <h2 className="mb-4 text-4xl font-bold">Join as a Landlord — It's Free</h2>
+          <h2 className="mb-4 text-4xl font-bold">Join as a Landlord — It&apos;s Free</h2>
           <p className="mb-8 text-xl text-purple-100">
             Get full visibility on your properties. No management fees, no subscriptions.
           </p>

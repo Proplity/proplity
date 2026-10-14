@@ -258,6 +258,7 @@ export function ProplityGuideClient() {
                 className="relative flex max-h-full max-w-full cursor-default items-center justify-center"
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- static guide screenshot */}
                 <img
                   src={currentScreenshot.src}
                   alt={currentScreenshot.alt || currentScreenshot.title}

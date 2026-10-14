@@ -120,7 +120,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="mb-1 text-2xl font-semibold">My Rental Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's your rental information.</p>
+        <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
 
       {pendingLease && <LeaseSignatureCard lease={pendingLease} onSigned={refetchPendingLease} />}
