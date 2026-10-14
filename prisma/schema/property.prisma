@@ -68,6 +68,9 @@ model Property {
   imageUrl              String?
   video360Url           String?
   exteriorPhotoUrl      String?
+  // Gallery: every room and exterior photo uploaded with the listing (ISS-014).
+  // imageUrl / exteriorPhotoUrl stay as the cover and exterior picks.
+  photoUrls             String[]
   isPublished           Boolean               @default(false)
   moderationStatus      ModerationStatus      @default(PENDING_REVIEW)
   moderationNotes       String?

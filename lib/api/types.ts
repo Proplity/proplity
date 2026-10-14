@@ -30,6 +30,9 @@ export type Property = {
   type: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
   description?: string | null;
   imageUrl?: string | null;
+  exteriorPhotoUrl?: string | null;
+  video360Url?: string | null;
+  photoUrls?: string[];
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
@@ -83,6 +86,7 @@ export type CreatePropertyInput = {
   imageUrl?: string;
   video360Url?: string;
   exteriorPhotoUrl?: string;
+  photoUrls?: string[];
 };
 
 export type CreateUnitInput = {

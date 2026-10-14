@@ -262,6 +262,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
           imageUrl: uploadedMedia.photos[0]?.url,
           video360Url: uploadedMedia.video360?.url,
           exteriorPhotoUrl: uploadedMedia.exteriorPhotos[0]?.url,
+          photoUrls: [...uploadedMedia.photos, ...uploadedMedia.exteriorPhotos].map((f) => f.url),
         });
         propertyId = property.id;
         setCreatedPropertyId(propertyId);
