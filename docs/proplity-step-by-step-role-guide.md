@@ -1318,6 +1318,10 @@ A searchable table of every registered user on the platform. The admin can manag
 
 ![Admin 02 Users](screenshots/admin_02_users.png)
 
+Suspending (or changing a role) asks for a reason first. It is saved in the audit log and the person is signed out straight away.
+
+![Admin 07 Suspend an account](screenshots/admin_07_user_suspend.png)
+
 ---
 
 ## Step 6.3 — Properties Moderation Queue
@@ -1364,9 +1368,9 @@ A chronological log of significant actions on the platform — used for security
 - Filter by what happened, what it was about, who did it, and a date range
 - Page through older entries
 
-**Screenshot:** `docs/screenshots/admin_05_notifications.png`
+**Screenshot:** `docs/screenshots/admin_08_security.png`
 
-![Admin 05 Notifications](screenshots/admin_05_notifications.png)
+![Admin 08 Security](screenshots/admin_08_security.png)
 
 ---
 

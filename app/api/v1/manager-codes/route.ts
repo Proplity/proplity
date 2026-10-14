@@ -6,6 +6,7 @@ import { appUrl } from '@/lib/appUrl';
 import { sendEmail } from '@/lib/email';
 import { emailSchema } from '@/lib/auth/email';
 import { reserveAttempt } from '@/lib/auth/rateLimit';
+import { Prisma } from '@prisma/client';
 
 export const GET = withAuth(
   async (_req, { session }) => {
@@ -69,8 +70,8 @@ export const POST = withAuth(
         created = await prisma.managerInviteCode.create({
           data: { code: generateCode(), landlordId: session.sub },
         });
-      } catch (err: any) {
-        if (err?.code === 'P2002') {
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
           created = await prisma.managerInviteCode.create({
             data: { code: generateCode(), landlordId: session.sub },
           });

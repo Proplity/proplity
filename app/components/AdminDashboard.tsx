@@ -6,7 +6,6 @@ import {
   Building2,
   DollarSign,
   AlertCircle,
-  TrendingUp,
   Shield,
   Database,
   Settings,

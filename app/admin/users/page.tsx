@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Search, Shield, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
+import { Search, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import type { AdminUser } from '@/lib/api/types';
+import { isAxiosError } from 'axios';
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   ADMIN: { label: 'Admin', className: 'bg-gray-100 text-gray-800' },
@@ -138,8 +139,10 @@ export default function AdminUsersPage() {
       );
       setAction(null);
       await load();
-    } catch (e: any) {
-      setActionError(e?.response?.data?.error ?? 'Could not save the change. Try again.');
+    } catch (e) {
+      setActionError(
+        (isAxiosError(e) && e.response?.data?.error) || 'Could not save the change. Try again.',
+      );
     } finally {
       setBusyId(null);
     }
@@ -265,7 +268,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium tracking-wide text-gray-500 uppercase">
             <tr>
@@ -349,10 +352,10 @@ export default function AdminUsersPage() {
                       {user.phoneNumber ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-6 py-4">
-                      {(user as any).propertiesCount > 0 ? (
+                      {user.propertiesCount > 0 ? (
                         <div className="flex items-center gap-1 text-gray-600">
                           <Building2 className="h-3.5 w-3.5" />
-                          <span>{(user as any).propertiesCount}</span>
+                          <span>{user.propertiesCount}</span>
                         </div>
                       ) : (
                         <span className="text-gray-300">—</span>
