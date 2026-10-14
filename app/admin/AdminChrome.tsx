@@ -49,7 +49,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex size-full flex-col bg-gray-50">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
+      <header className="border-b border-gray-200 bg-white px-3 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -61,24 +61,26 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
             <Link href="/" className="focus:outline-none">
-              <Logo />
+              <Logo compactOnMobile />
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             {process.env.NODE_ENV !== 'production' && (
-              <RoleSwitcher
-                currentRole="admin"
-                onRoleChange={(newRole) =>
-                  router.push(newRole === 'admin' ? '/admin' : '/dashboard')
-                }
-              />
+              <div className="hidden sm:block">
+                <RoleSwitcher
+                  currentRole="admin"
+                  onRoleChange={(newRole) =>
+                    router.push(newRole === 'admin' ? '/admin' : '/dashboard')
+                  }
+                />
+              </div>
             )}
             <NotificationBell />
             <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
               <Settings className="h-5 w-5 text-gray-600" />
             </Link>
-            <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
+            <button className="hidden items-center gap-2 rounded-lg p-2 hover:bg-gray-100 sm:flex">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
                 <User className="h-4 w-4 text-white" />
               </div>
