@@ -1,12 +1,4 @@
-import {
-  Users,
-  Building2,
-  DollarSign,
-  Activity,
-  AlertCircle,
-  Clock,
-  CheckCircle,
-} from 'lucide-react';
+import { Users, Building2, DollarSign, Activity, AlertCircle } from 'lucide-react';
 
 export const mockAdminPlatformStats = [
   {

@@ -6,10 +6,13 @@ import { prisma } from '@/lib/db';
 type Handler = (
   req: NextRequest,
   ctx: { session: { sub: string; role: Role } },
+  // Next passes route params as a Promise the route itself types, so this stays loose.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   routeCtx?: any,
 ) => Promise<NextResponse>;
 
 export function withAuth(handler: Handler, opts?: { roles?: Role[] }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (req: NextRequest, routeCtx?: any) => {
     const jwtSession = await getServerSession();
     if (!jwtSession) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
