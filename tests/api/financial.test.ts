@@ -769,6 +769,26 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
   });
 });
 
+// A card payment on a lease whose signed webhook body carries a reusable
+// Paystack authorization -- the only thing auto-pay may be set up with (ISS-056).
+async function seedCardAuthorization(leaseId: string, code = 'AUTH_test_123') {
+  const invoice = await createInvoice({ leaseId, amount: 10_000, status: 'PAID' });
+  await testPrisma.payment.create({
+    data: {
+      invoiceId: invoice.id,
+      amount: 10_000,
+      provider: 'PAYSTACK',
+      transactionRef: `seed-${invoice.id}`,
+      rawProviderPayload: JSON.stringify({
+        data: {
+          authorization: { reusable: true, authorization_code: code, last4: '4081' },
+        },
+      }),
+    },
+  });
+  return code;
+}
+
 describe('payments: autopay', () => {
   beforeAll(async () => {
     await resetDb();
@@ -804,10 +824,11 @@ describe('payments: autopay', () => {
     const lease = await createLease(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
 
+    const token = await seedCardAuthorization(lease.id);
     const created = await apiFetch('/api/v1/payments/autopay', {
       method: 'POST',
       cookie,
-      body: { leaseId: lease.id, paymentMethodToken: 'tok_test_123' },
+      body: { leaseId: lease.id, paymentMethodToken: token },
     });
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('ACTIVE');
@@ -832,5 +853,120 @@ describe('payments: autopay', () => {
     // A cancelled mandate no longer shows up in the active list.
     const listAfter = await apiFetch('/api/v1/payments/autopay', { cookie });
     expect(listAfter.body.data.length).toBe(0);
+  });
+
+  it('only accepts a card token Paystack gave us for this lease, and only on an active lease (ISS-056)', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const post = (token: string, leaseId = lease.id) =>
+      apiFetch('/api/v1/payments/autopay', {
+        method: 'POST',
+        cookie,
+        body: { leaseId, paymentMethodToken: token },
+      });
+
+    // No card payment yet: nothing to set up with.
+    expect((await post('AUTH_made_up')).status).toBe(400);
+
+    const real = await seedCardAuthorization(lease.id, 'AUTH_real_card');
+    expect((await post('AUTH_made_up')).status).toBe(400);
+    expect((await post(real)).status).toBe(201);
+
+    // Another tenant's lease token is not valid here either.
+    const other = await createLease((await createUnit(property.id)).id, tenant.id);
+    const otherToken = await seedCardAuthorization(other.id, 'AUTH_other_card');
+    expect((await post(otherToken)).status).toBe(400);
+
+    // An ended lease cannot take a mandate.
+    await testPrisma.lease.update({ where: { id: other.id }, data: { status: 'TERMINATED' } });
+    expect((await post(otherToken, other.id)).status).toBe(409);
+  });
+
+  it('keeps one active mandate per lease: a new one replaces the old', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const token = await seedCardAuthorization(lease.id);
+    const post = () =>
+      apiFetch('/api/v1/payments/autopay', {
+        method: 'POST',
+        cookie,
+        body: { leaseId: lease.id, paymentMethodToken: token },
+      });
+
+    const first = await post();
+    const second = await post();
+    expect(second.status).toBe(201);
+    const rows = await testPrisma.autoPayMandate.findMany({ where: { leaseId: lease.id } });
+    expect(rows.filter((r) => r.status === 'ACTIVE')).toHaveLength(1);
+    expect(rows.find((r) => r.id === first.body.data.id)?.status).toBe('CANCELLED');
+    expect(rows.find((r) => r.id === second.body.data.id)?.status).toBe('ACTIVE');
+
+    // The database itself refuses a second active one.
+    await expect(
+      testPrisma.autoPayMandate.create({
+        data: { leaseId: lease.id, paymentMethodToken: token, status: 'ACTIVE' },
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe('subscriptions: downgrading to FREE keeps the paid period (ISS-056)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const free = (cookie: string, confirmDowngrade?: boolean) =>
+    apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'FREE', ...(confirmDowngrade ? { confirmDowngrade } : {}) },
+    });
+
+  it('asks for confirmation, then keeps the paid plan until the period ends and reverts after', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const paidUntil = new Date(Date.now() + 20 * 86_400_000);
+    await testPrisma.subscription.create({
+      data: { userId: landlord.id, tier: 'PRO', status: 'ACTIVE', currentPeriodEnd: paidUntil },
+    });
+
+    const asked = await free(cookie);
+    expect(asked.status).toBe(409);
+    expect(asked.body.code).toBe('DOWNGRADE_NEEDS_CONFIRMATION');
+    expect(
+      (await testPrisma.subscription.findUnique({ where: { userId: landlord.id } }))?.tier,
+    ).toBe('PRO');
+
+    const confirmed = await free(cookie, true);
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.data.scheduled).toBe(true);
+    const row = await testPrisma.subscription.findUnique({ where: { userId: landlord.id } });
+    expect(row?.tier).toBe('PRO'); // still paid
+    expect(row?.cancelAtPeriodEnd).toBe(true);
+
+    const during = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(during.body.data.tier).toBe('PRO');
+
+    // After the paid period, the plan is Free.
+    await testPrisma.subscription.update({
+      where: { userId: landlord.id },
+      data: { currentPeriodEnd: new Date(Date.now() - 1000) },
+    });
+    const after = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(after.body.data.tier).toBe('FREE');
+  });
+
+  it('switches straight to FREE when nothing is paid for', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await free(cookie);
+    expect(res.status).toBe(201);
+    expect(res.body.data.activated).toBe(true);
   });
 });
