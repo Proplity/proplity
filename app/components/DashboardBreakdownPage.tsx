@@ -646,12 +646,14 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
         </Link>
         {breakdownType === 'properties' && (
           <div className="flex gap-2">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page */}
             <a
               href="/api/v1/properties/export?format=csv"
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               Export CSV
             </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page */}
             <a
               href="/api/v1/properties/export?format=xlsx"
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"

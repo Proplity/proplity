@@ -774,7 +774,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <p className="text-sm text-yellow-800">
                 <strong>Note:</strong> Our team reviews every submission for authenticity before it
-                can be published. Listings that don't pass review will be rejected.
+                can be published. Listings that don&apos;t pass review will be rejected.
               </p>
             </div>
           </div>
@@ -904,8 +904,8 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                 <h3 className="mb-2 font-semibold text-blue-900">What Happens Next?</h3>
                 <ol className="list-inside list-decimal space-y-1 text-sm text-blue-800">
                   <li>Our team reviews the listing details and media</li>
-                  <li>You'll get an email once it's approved or if changes are needed</li>
-                  <li>Once approved, you can publish it from the property's page</li>
+                  <li>You&apos;ll get an email once it&apos;s approved or if changes are needed</li>
+                  <li>Once approved, you can publish it from the property&apos;s page</li>
                 </ol>
               </div>
             </div>

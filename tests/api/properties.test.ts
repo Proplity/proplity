@@ -119,6 +119,56 @@ describe('properties: create (POST /properties)', () => {
   });
 });
 
+describe('properties: duplicate listings (ISS-025)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('fingerprints a listing and flags a second one at the same address in its review notes', async () => {
+    const a = await createUser(Role.MANAGER);
+    const b = await createUser(Role.LANDLORD);
+    const first = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie: await authCookie(a.id, a.role),
+      body: { name: 'Palm Court', address: '12 Admiralty Way', city: 'Lekki' },
+    });
+    expect(first.status).toBe(201);
+    expect(first.body.data.listingHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(first.body.possibleDuplicates).toBe(0);
+    expect(first.body.data.moderationNotes).toBeNull();
+
+    const second = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie: await authCookie(b.id, b.role),
+      body: { name: 'Palm Court Apartments', address: ' 12  admiralty way.', city: 'LEKKI' },
+    });
+    expect(second.status).toBe(201);
+    expect(second.body.possibleDuplicates).toBe(1);
+    expect(second.body.data.listingHash).toBe(first.body.data.listingHash);
+    expect(second.body.data.moderationNotes).toContain(first.body.data.id);
+    // Still reviewable, never auto-rejected.
+    expect(second.body.data.moderationStatus).toBe('PENDING_REVIEW');
+  });
+
+  it('recomputes the fingerprint when the address changes', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const created = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie,
+      body: { name: 'Move Me', address: '1 Old Road', city: 'Ikeja' },
+    });
+    const id = created.body.data.id;
+    const patched = await apiFetch(`/api/v1/properties/${id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { address: '2 New Road' },
+    });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.listingHash).not.toBe(created.body.data.listingHash);
+  });
+});
+
 describe('properties: photo gallery (ISS-014)', () => {
   beforeAll(async () => {
     await resetDb();

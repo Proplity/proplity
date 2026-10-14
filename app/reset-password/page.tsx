@@ -2,12 +2,11 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Lock, AlertCircle } from 'lucide-react';
 import { LogoIcon } from '../components/Logo';
 
 function ResetPasswordContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -64,8 +63,8 @@ function ResetPasswordContent() {
             </div>
             <h2 className="mb-2 text-2xl font-bold">Password Reset</h2>
             <p className="mb-6 text-gray-600">
-              Your password has been updated. You've been signed out everywhere else for security —
-              sign back in with your new password.
+              Your password has been updated. You&apos;ve been signed out everywhere else for
+              security — sign back in with your new password.
             </p>
             <Link
               href="/login"
