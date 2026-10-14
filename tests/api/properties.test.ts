@@ -476,3 +476,64 @@ describe('properties: units', () => {
     expect(patched.body.data.sqft).toBe(700);
   });
 });
+
+describe('neighbourhood report: save and keep history (ISS-016)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('lets the property manager save a report; later saves keep untouched sections', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const cookie = await authCookie(manager.id, manager.role);
+    const url = `/api/v1/properties/${property.id}/neighbourhood-report`;
+
+    expect((await apiFetch(url)).status).toBe(404);
+
+    const first = await apiFetch(url, {
+      method: 'PUT',
+      cookie,
+      body: {
+        security: { rating: 4, status: 'Good' },
+        electricity: { hoursPerDay: 18 },
+      },
+    });
+    expect(first.status).toBe(201);
+
+    const second = await apiFetch(url, {
+      method: 'PUT',
+      cookie,
+      body: { security: { rating: 5, status: 'Excellent' } },
+    });
+    expect(second.status).toBe(201);
+
+    const latest = await apiFetch(url);
+    expect(latest.body.data.security).toEqual({ rating: 5, status: 'Excellent' });
+    // Carried over from the earlier version.
+    expect(latest.body.data.electricity).toEqual({ hoursPerDay: 18 });
+
+    const versions = await testPrisma.neighbourhoodReport.count({
+      where: { propertyId: property.id },
+    });
+    expect(versions).toBe(2);
+    const audits = await testPrisma.auditLog.count({
+      where: { entityId: property.id, action: 'NEIGHBOURHOOD_REPORT_SAVED' },
+    });
+    expect(audits).toBe(2);
+  });
+
+  it('refuses strangers, tenants, empty bodies and oversized sections', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const url = `/api/v1/properties/${property.id}/neighbourhood-report`;
+    const put = async (who: { id: string; role: Role }, body: object) =>
+      apiFetch(url, { method: 'PUT', cookie: await authCookie(who.id, who.role), body });
+
+    const stranger = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    expect((await put(stranger, { water: { source: 'borehole' } })).status).toBe(403);
+    expect((await put(tenant, { water: { source: 'borehole' } })).status).toBe(403);
+    expect((await put(manager, {})).status).toBe(400);
+    expect((await put(manager, { water: { blob: 'x'.repeat(25_000) } })).status).toBe(400);
+  });
+});
