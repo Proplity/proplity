@@ -7,7 +7,6 @@ import {
   X,
   Play,
   CheckCircle2,
-  Building,
   CreditCard,
   Wrench,
   Users,

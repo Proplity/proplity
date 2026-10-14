@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Send, Bot, User, Sparkles, FileText, DollarSign, Wrench } from 'lucide-react';
+import { X, Send, Bot, User } from 'lucide-react';
 import {
   mockAiInitialMessages,
   mockAiQuickActions as quickActions,
