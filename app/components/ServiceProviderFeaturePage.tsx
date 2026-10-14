@@ -4,14 +4,10 @@ import {
   DollarSign,
   Star,
   MessageSquare,
-  FileText,
   CheckCircle,
   ArrowRight,
   Bell,
   Shield,
-  TrendingUp,
-  Users,
-  BarChart3,
 } from 'lucide-react';
 import { MarketingNav } from './MarketingNav';
 import { mockServiceProviderFeatureJobs as jobs } from '../store/mockData';

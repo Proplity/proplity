@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Phone,
-  Mail,
-  CheckCircle,
-  AlertCircle,
-} from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
 import { useCreateViewing } from '@/hooks/useProperties';
 
