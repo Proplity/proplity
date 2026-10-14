@@ -281,7 +281,6 @@ export function Register({
     return ['Account Type', 'Your Details'];
   };
   const steps = getSteps();
-  const totalSteps = steps.length;
 
   const handleUserTypeSelect = (type: UserType) => {
     setUserType(type);
@@ -577,7 +576,7 @@ export function Register({
             </div>
             <h2 className="mb-2 text-2xl font-bold">Check Your Email</h2>
             <p className="mb-6 text-gray-600">
-              We've sent a verification link to <strong>{registeredEmail}</strong>. Click it to
+              We&apos;ve sent a verification link to <strong>{registeredEmail}</strong>. Click it to
               activate your account, then sign in.
             </p>
             <Link
@@ -687,8 +686,8 @@ export function Register({
                   <div>
                     <p className="text-sm font-semibold text-blue-800">Landlord Invitation Code</p>
                     <p className="mt-0.5 text-xs text-blue-700">
-                      Enter the code from the landlord you'll be working with. No code yet? You can
-                      create your account now and link to a landlord later from your dashboard.
+                      Enter the code from the landlord you&apos;ll be working with. No code yet? You
+                      can create your account now and link to a landlord later from your dashboard.
                     </p>
                   </div>
                 </div>
@@ -774,8 +773,8 @@ export function Register({
                         Invalid or deactivated code
                       </p>
                       <p className="mt-0.5 text-xs text-red-600">
-                        This code doesn't match any active landlord account. Check the code and try
-                        again, or ask your landlord to generate a new one.
+                        This code doesn&apos;t match any active landlord account. Check the code and
+                        try again, or ask your landlord to generate a new one.
                       </p>
                     </div>
                   </div>
@@ -790,7 +789,7 @@ export function Register({
                     <span className="font-medium">Settings → Manager Access</span>.
                   </li>
                   <li>
-                    The code links your account to their portfolio — you'll only manage their
+                    The code links your account to their portfolio — you&apos;ll only manage their
                     properties.
                   </li>
                   <li>
@@ -817,7 +816,7 @@ export function Register({
                 }}
                 className="w-full text-center text-sm font-medium text-blue-600 hover:underline"
               >
-                I don't have a code yet — continue without one
+                I don&apos;t have a code yet — continue without one
               </button>
             </div>
           )}
@@ -841,8 +840,8 @@ export function Register({
                 </div>
               ) : (
                 <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Not linked to a landlord yet. After you sign in, enter a landlord's code on your
-                  dashboard to see their properties.
+                  Not linked to a landlord yet. After you sign in, enter a landlord&apos;s code on
+                  your dashboard to see their properties.
                 </div>
               )}
 

@@ -99,6 +99,7 @@ apiClient.interceptors.response.use(
       if (refreshed) {
         return apiClient(originalRequest);
       } else if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
         window.location.href = '/login';
       }
     }
@@ -118,6 +119,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     if (refreshed) {
       return fetch(url, options);
     } else if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
       window.location.href = '/login';
     }
   }

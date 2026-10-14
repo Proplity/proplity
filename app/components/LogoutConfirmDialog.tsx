@@ -41,7 +41,7 @@ export function LogoutConfirmDialog({
         {/* Text */}
         <h2 className="mb-1 text-lg font-semibold text-gray-900">Sign out?</h2>
         <p className="mb-6 text-sm text-gray-500">
-          You'll need to sign in again to access your dashboard.
+          You&apos;ll need to sign in again to access your dashboard.
         </p>
 
         {/* Actions */}

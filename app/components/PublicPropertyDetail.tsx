@@ -134,7 +134,6 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
   const { user } = useAuth();
   const { data: property, loading } = useProperty(propertyId);
   const { data: allProperties } = useProperties();
-  const [activeImg, setActiveImg] = useState(0);
   const [showNeighModal, setShowNeighModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMsg, setLoginModalMsg] = useState('');
@@ -578,7 +577,7 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
           <div>
             <Logo className="opacity-90 brightness-0 invert" />
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
-              Nigeria's first AI-native property management platform.
+              Nigeria&apos;s first AI-native property management platform.
             </p>
           </div>
           {[
