@@ -16,7 +16,6 @@ import {
   InvoiceStatus,
   PaymentMethod,
   PaymentProvider,
-  ViewingStatus,
   AccessCodeStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';

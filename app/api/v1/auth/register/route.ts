@@ -196,8 +196,8 @@ export async function POST(req: NextRequest) {
         status: user.status,
       },
     });
-  } catch (err: any) {
-    if (err?.message === 'LANDLORD_CODE_RACE') {
+  } catch (err) {
+    if (err instanceof Error && err.message === 'LANDLORD_CODE_RACE') {
       return NextResponse.json(
         { error: 'This landlord code was just used by someone else' },
         { status: 409 },

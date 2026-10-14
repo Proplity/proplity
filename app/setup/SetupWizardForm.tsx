@@ -112,8 +112,9 @@ export function SetupWizardForm({ requiresToken }: SetupWizardFormProps) {
       setTimeout(() => {
         router.push('/login');
       }, 3500);
-    } catch (err: any) {
-      const msg = err.message || 'An unexpected error occurred during setup.';
+    } catch (err) {
+      const msg =
+        (err instanceof Error && err.message) || 'An unexpected error occurred during setup.';
       setErrorMessage(msg);
       toast.error(msg);
     } finally {

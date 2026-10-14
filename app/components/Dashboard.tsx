@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Home,
-  Users,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  KeyRound,
-} from 'lucide-react';
+import { DollarSign, Home, Users, AlertCircle, CheckCircle, KeyRound } from 'lucide-react';
 import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 
