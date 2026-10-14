@@ -8,6 +8,7 @@ import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
+import { listingHash } from '@/lib/propertyFingerprint';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -157,7 +158,22 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       );
     }
 
-    const updated = await prisma.property.update({ where: { id }, data: validated.data });
+    const addressChanged =
+      validated.data.address !== undefined || validated.data.city !== undefined;
+    const updated = await prisma.property.update({
+      where: { id },
+      data: {
+        ...validated.data,
+        ...(addressChanged
+          ? {
+              listingHash: listingHash(
+                validated.data.address ?? property.address,
+                validated.data.city ?? property.city,
+              ),
+            }
+          : {}),
+      },
+    });
     return NextResponse.json({ data: updated });
   } catch (err) {
     return handleApiError(err);

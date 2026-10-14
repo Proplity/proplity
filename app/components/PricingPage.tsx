@@ -388,8 +388,8 @@ export function PricingPage() {
               <Logo className="opacity-90 brightness-0 invert" />
             </div>
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
-              Nigeria's first AI-native property management platform. Built for the realities of the
-              modern rental market.
+              Nigeria&apos;s first AI-native property management platform. Built for the realities
+              of the modern rental market.
             </p>
           </div>
           {[
