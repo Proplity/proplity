@@ -200,8 +200,8 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
-    if (error.message === 'SETUP_ALREADY_COMPLETED') {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'SETUP_ALREADY_COMPLETED') {
       return NextResponse.json(
         { error: 'Platform setup has already been completed.' },
         { status: 409 },
