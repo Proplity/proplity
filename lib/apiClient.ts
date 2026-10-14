@@ -448,7 +448,9 @@ export const api = {
     checkout: (body: CheckoutSubscriptionInput) =>
       apiClient.post<{
         data:
-          { activated: true; subscription: Subscription } | { invoiceId: string; amount: number };
+          | { activated: true; subscription: Subscription }
+          | { activated: false; scheduled: true; endsAt: string; subscription: Subscription }
+          | { invoiceId: string; amount: number };
       }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {
