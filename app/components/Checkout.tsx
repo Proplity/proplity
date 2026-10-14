@@ -3,6 +3,7 @@ import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle } from 'lucide-re
 import { LogoIcon } from './Logo';
 import { useCheckoutSubscription } from '@/hooks/useSubscription';
 import { usePayInvoice } from '@/hooks/useInvoices';
+import { useMySubscription } from '@/hooks/useSubscription';
 
 interface CheckoutProps {
   plan: {
@@ -37,13 +38,28 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     error: checkoutError,
   } = useCheckoutSubscription();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { data: currentPlan } = useMySubscription();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Switching to Free while a paid period is still running keeps the paid plan
+    // until that period ends; ask first so nobody thinks it stops today.
+    const paidUntil = currentPlan?.currentPeriodEnd ? new Date(currentPlan.currentPeriodEnd) : null;
+    const downgrading =
+      plan.tier === 'FREE' && currentPlan?.tier !== 'FREE' && !!paidUntil && paidUntil > new Date();
+    if (
+      downgrading &&
+      !window.confirm(
+        `You have paid until ${paidUntil!.toLocaleDateString()}. Switching to Free keeps your current plan until then and then ends it. Continue?`,
+      )
+    ) {
+      return;
+    }
     try {
       const result = await checkoutSubscription({
         tier: plan.tier,
         billingCycle: billingCycle === 'yearly' ? 'yearly' : 'monthly',
+        ...(downgrading ? { confirmDowngrade: true } : {}),
       });
 
       if ('activated' in result) {
