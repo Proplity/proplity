@@ -909,6 +909,17 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
           <div className="space-y-6">
             <ListingStatusCard property={property} onRefetch={refetchProperty} />
             <EquipmentCard propertyId={property.id} />
+            <Link
+              href={`/dashboard/properties/${property.id}/neighbourhood`}
+              className="block rounded-lg border border-gray-200 bg-white p-6 hover:bg-gray-50"
+            >
+              <h2 className="font-semibold">Neighbourhood report</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {property.neighbourhoodReports?.length
+                  ? 'Update what tenants and applicants see.'
+                  : 'No report yet. Add one for tenants and applicants.'}
+              </p>
+            </Link>
 
             {/* Financial Summary */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">

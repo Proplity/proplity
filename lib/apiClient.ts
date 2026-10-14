@@ -143,6 +143,11 @@ export const api = {
       }),
     get: (propertyId: string) =>
       apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
+    saveNeighbourhoodReport: (propertyId: string, body: Record<string, Record<string, unknown>>) =>
+      apiClient.put<{ data: unknown }>(
+        `/api/v1/properties/${propertyId}/neighbourhood-report`,
+        body,
+      ),
     create: (body: CreatePropertyInput) =>
       apiClient.post<{ data: Property }>('/api/v1/properties', body),
     listUnits: (propertyId: string, status?: string) =>
