@@ -101,6 +101,8 @@ model Property {
   adCampaigns           AdCampaign[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+
+  @@index([listingHash])
 }
 
 enum AdCampaignStatus {
