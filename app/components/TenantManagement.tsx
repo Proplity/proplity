@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
-import type { Invoice, Lease } from '@/lib/api/types';
+import type { Invoice } from '@/lib/api/types';
 
 interface TenantManagementProps {
   onNavigate: (page: any) => void;

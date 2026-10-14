@@ -472,6 +472,7 @@ export type Subscription = {
 export type CheckoutSubscriptionInput = {
   tier: 'FREE' | 'PRO';
   billingCycle?: 'monthly' | 'yearly';
+  confirmDowngrade?: boolean;
 };
 
 export type Application = {

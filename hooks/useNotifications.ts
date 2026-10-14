@@ -71,7 +71,6 @@ export function useNotifications() {
       } catch {
         setError('Failed to delete notification');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [data],
   );

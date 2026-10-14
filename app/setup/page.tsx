@@ -14,9 +14,9 @@ export default async function SetupPage() {
     if (settings?.setupComplete) {
       redirect('/login');
     }
-  } catch (err: any) {
+  } catch (err) {
     // Crucial: Next.js redirect() throws a NEXT_REDIRECT error that must be re-thrown
-    if (err?.digest?.startsWith('NEXT_REDIRECT')) {
+    if ((err as { digest?: string })?.digest?.startsWith('NEXT_REDIRECT')) {
       throw err;
     }
     // Fail-open on DB connection issues so deployers can still access the wizard
