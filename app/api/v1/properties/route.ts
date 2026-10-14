@@ -9,6 +9,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { serializeUnit } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
+import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 
 export async function GET(req: NextRequest) {
   try {
@@ -132,15 +133,31 @@ export const POST = withAuth(
     const { isPublished: _isPublished, ...data } = validated.data;
 
     try {
+      // ISS-025: a listing whose address and city match an existing one is
+      // still accepted, but its review notes point the moderator at the match.
+      // Nothing is merged or rejected automatically.
+      const hash = listingHash(data.address, data.city);
+      const duplicates = await findPossibleDuplicates(hash);
       const property = await prisma.property.create({
         data: {
           ...data,
+          listingHash: hash,
+          ...(duplicates.length > 0
+            ? {
+                moderationNotes: `Possible duplicate of: ${duplicates
+                  .map((d) => `${d.name} (${d.id})`)
+                  .join(', ')}`,
+              }
+            : {}),
           isPublished: false,
           ...(session.role === 'MANAGER' && !data.managerId ? { managerId: session.sub } : {}),
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },
       });
-      return NextResponse.json({ data: property }, { status: 201 });
+      return NextResponse.json(
+        { data: property, possibleDuplicates: duplicates.length },
+        { status: 201 },
+      );
     } catch (err) {
       return handleApiError(err);
     }
