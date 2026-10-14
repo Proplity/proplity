@@ -144,10 +144,10 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
         'bg-orange-50 border-orange-200 text-orange-700',
       ];
       return (
-        <div className="mb-6 grid grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {byRole.map((c, i) => (
             <div key={c.label} className={`rounded-lg border p-4 ${colors[i]}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -159,7 +159,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       const pending = totals?.properties.pending ?? 0;
       const flagged = totals?.properties.flagged ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             {
               label: 'Approved',
@@ -178,7 +178,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
             },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -189,7 +189,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       const pendingTotal = totals?.money.pending ?? 0;
       const cancelledTotal = totals?.money.cancelled ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             {
               label: 'Completed',
@@ -208,7 +208,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
             },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
@@ -220,7 +220,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
       const medium = totals?.maintenance.medium ?? 0;
       const low = totals?.maintenance.low ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { label: 'High Priority', value: high, color: 'bg-red-50 border-red-200 text-red-700' },
             {
@@ -235,7 +235,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
             },
           ].map((c) => (
             <div key={c.label} className={`rounded-lg border p-4 ${c.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : c.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : c.value}</p>
               <p className="mt-0.5 text-sm">{c.label}</p>
             </div>
           ))}
