@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { findReusableAuthorization } from '@/lib/payments/authorization';
 
 // Auto-pay (PRD §5.1/§5.2) needs a provider-side, reusable charge token, but
 // there's no card-entry UI anywhere in this codebase and building one is a
@@ -27,32 +28,7 @@ export const GET = withAuth(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const payments = await prisma.payment.findMany({
-        where: { invoice: { leaseId }, provider: 'PAYSTACK', rawProviderPayload: { not: null } },
-        orderBy: { paidAt: 'desc' },
-        take: 10,
-      });
-
-      for (const payment of payments) {
-        try {
-          const payload = JSON.parse(payment.rawProviderPayload!);
-          const auth = payload?.data?.authorization;
-          if (auth?.reusable && typeof auth.authorization_code === 'string') {
-            return NextResponse.json({
-              data: {
-                authorizationCode: auth.authorization_code as string,
-                last4: (auth.last4 as string | undefined) ?? null,
-                cardType: (auth.card_type as string | undefined) ?? null,
-                bank: (auth.bank as string | undefined) ?? null,
-              },
-            });
-          }
-        } catch {
-          // Malformed/legacy payload for this one payment -- try the next.
-        }
-      }
-
-      return NextResponse.json({ data: null });
+      return NextResponse.json({ data: await findReusableAuthorization(leaseId) });
     } catch (err) {
       return handleApiError(err);
     }
