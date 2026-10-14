@@ -102,11 +102,11 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
             </p>
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm text-blue-800">
-                We've sent a confirmation email to <strong>{formData.email}</strong>
+                We&apos;ve sent a confirmation email to <strong>{formData.email}</strong>
               </p>
             </div>
             <p className="mb-6 text-sm text-gray-500">
-              You'll be redirected to your dashboard in a moment...
+              You&apos;ll be redirected to your dashboard in a moment...
             </p>
           </div>
         </div>

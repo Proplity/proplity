@@ -110,7 +110,7 @@ export function LandingPage() {
           <div className="mx-auto max-w-4xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700">
               <Zap className="h-4 w-4" />
-              Nigeria's First AI-Native Property Management Platform
+              Nigeria&apos;s First AI-Native Property Management Platform
             </div>
             <h1 className="mb-6 text-5xl leading-tight font-bold md:text-6xl">
               Transform Rental Operations with{' '}
@@ -118,8 +118,8 @@ export function LandingPage() {
             </h1>
             <p className="mb-8 text-xl leading-relaxed text-gray-600">
               From fragmented spreadsheets to unified automation. Manage properties, track rent,
-              handle maintenance, and verify listings—all powered by AI built for Nigeria's rental
-              market.
+              handle maintenance, and verify listings—all powered by AI built for Nigeria&apos;s
+              rental market.
             </p>
 
             {/* Property Search Bar */}
@@ -383,7 +383,7 @@ export function LandingPage() {
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-4xl font-bold">Everything You Need to Manage Properties</h2>
             <p className="text-xl text-gray-600">
-              Built for Nigeria's scale, behaviors, and infrastructure realities
+              Built for Nigeria&apos;s scale, behaviors, and infrastructure realities
             </p>
           </div>
 
@@ -553,7 +553,7 @@ export function LandingPage() {
                     <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <p className="mb-6 text-gray-700 italic">"{testimonial.text}"</p>
+                <p className="mb-6 text-gray-700 italic">&quot;{testimonial.text}&quot;</p>
                 <div className="flex items-center gap-3">
                   <div
                     className={`h-12 w-12 ${testimonial.image} flex items-center justify-center rounded-full font-semibold text-white`}
@@ -814,7 +814,7 @@ export function LandingPage() {
                 <Logo className="text-white" />
               </div>
               <p className="text-sm">
-                Nigeria's most trusted AI-native property management platform
+                Nigeria&apos;s most trusted AI-native property management platform
               </p>
             </div>
             <div>
