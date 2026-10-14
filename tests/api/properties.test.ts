@@ -119,6 +119,52 @@ describe('properties: create (POST /properties)', () => {
   });
 });
 
+describe('properties: photo gallery (ISS-014)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('keeps every photo URL on create and edit, and rejects unsafe ones', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const photos = [
+      'https://cdn.example.com/a.jpg',
+      'https://cdn.example.com/b.jpg',
+      'https://cdn.example.com/c.jpg',
+      'https://cdn.example.com/d.jpg',
+      'https://cdn.example.com/e.jpg',
+    ];
+    const created = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie,
+      body: {
+        name: 'Gallery',
+        address: '5 Photo Lane',
+        city: 'Abuja',
+        imageUrl: photos[0],
+        photoUrls: photos,
+      },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data.photoUrls).toEqual(photos);
+
+    const edited = await apiFetch(`/api/v1/properties/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { photoUrls: photos.slice(0, 2) },
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.data.photoUrls).toEqual(photos.slice(0, 2));
+
+    const bad = await apiFetch(`/api/v1/properties/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { photoUrls: ['javascript:alert(1)'] },
+    });
+    expect(bad.status).toBe(400);
+  });
+});
+
 describe('properties: canManageProperty gating (PATCH /properties/[id])', () => {
   beforeAll(async () => {
     await resetDb();
