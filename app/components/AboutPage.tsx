@@ -98,7 +98,7 @@ export function AboutPage() {
         </div>
         <div className="relative mx-auto max-w-4xl px-6 text-center">
           <span className="mb-6 inline-block rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-widest text-blue-300 uppercase">
-            Proplity · Nigeria's Platform
+            Proplity · Nigeria&apos;s Platform
           </span>
           <h1 className="mb-6 text-4xl leading-tight font-bold md:text-6xl">
             Where Property
@@ -107,7 +107,7 @@ export function AboutPage() {
           </h1>
           <p className="mx-auto mb-12 max-w-xl text-base leading-relaxed text-gray-400">
             Proplity transforms management with AI — built for local scale and simplicity, in
-            Nigeria's rental market.
+            Nigeria&apos;s rental market.
           </p>
 
           {/* Stats row */}
@@ -152,7 +152,7 @@ export function AboutPage() {
               </p>
               <p>
                 Today, Proplity powers thousands of properties across Lagos, Abuja, and Port
-                Harcourt — and we're just getting started. Our mission is simple: make property
+                Harcourt — and we&apos;re just getting started. Our mission is simple: make property
                 management as easy as sending a WhatsApp message.
               </p>
             </div>
@@ -195,7 +195,9 @@ export function AboutPage() {
       {/* ── Pull Quote ── */}
       <section className="bg-gray-900 px-6 py-20 text-white">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mb-4 font-serif text-7xl leading-none text-blue-400 opacity-60">"</div>
+          <div className="mb-4 font-serif text-7xl leading-none text-blue-400 opacity-60">
+            &quot;
+          </div>
           <blockquote className="mb-10 text-2xl leading-snug font-semibold text-white md:text-3xl">
             Make property management smart, seamless, and human.
           </blockquote>
@@ -220,8 +222,8 @@ export function AboutPage() {
           <div className="mb-12 text-center">
             <h2 className="mb-3 text-2xl font-bold text-gray-900">What We Do</h2>
             <p className="mx-auto max-w-xl text-sm text-gray-500">
-              Proplity is not just our business — it's the technology platform that helps property
-              businesses thrive.
+              Proplity is not just our business — it&apos;s the technology platform that helps
+              property businesses thrive.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -354,9 +356,12 @@ export function AboutPage() {
       {/* ── Founder Quote ── */}
       <section className="bg-gray-50 px-6 py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-3 font-serif text-6xl leading-none text-blue-300 opacity-70">"</div>
+          <div className="mb-3 font-serif text-6xl leading-none text-blue-300 opacity-70">
+            &quot;
+          </div>
           <blockquote className="mb-5 text-xl leading-snug font-semibold text-gray-900 md:text-2xl">
-            Property management shouldn't be a hassle. It should be clear, efficient, and scalable.
+            Property management shouldn&apos;t be a hassle. It should be clear, efficient, and
+            scalable.
           </blockquote>
           <Link
             href="/login"
@@ -388,8 +393,8 @@ export function AboutPage() {
           <div>
             <Logo className="opacity-90 brightness-0 invert" />
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
-              Nigeria's first AI-native property management platform. Built for the realities of the
-              modern rental market.
+              Nigeria&apos;s first AI-native property management platform. Built for the realities
+              of the modern rental market.
             </p>
           </div>
           {[

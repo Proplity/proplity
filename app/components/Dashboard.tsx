@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Home,
-  Users,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  KeyRound,
-} from 'lucide-react';
+import { DollarSign, Home, Users, AlertCircle, CheckCircle, KeyRound } from 'lucide-react';
 import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 
@@ -76,7 +66,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="mb-1 text-2xl font-semibold">Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's what's happening with your properties.</p>
+        <p className="text-gray-600">
+          Welcome back! Here&apos;s what&apos;s happening with your properties.
+        </p>
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}

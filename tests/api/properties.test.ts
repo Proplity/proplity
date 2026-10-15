@@ -119,6 +119,102 @@ describe('properties: create (POST /properties)', () => {
   });
 });
 
+describe('properties: duplicate listings (ISS-025)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('fingerprints a listing and flags a second one at the same address in its review notes', async () => {
+    const a = await createUser(Role.MANAGER);
+    const b = await createUser(Role.LANDLORD);
+    const first = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie: await authCookie(a.id, a.role),
+      body: { name: 'Palm Court', address: '12 Admiralty Way', city: 'Lekki' },
+    });
+    expect(first.status).toBe(201);
+    expect(first.body.data.listingHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(first.body.possibleDuplicates).toBe(0);
+    expect(first.body.data.moderationNotes).toBeNull();
+
+    const second = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie: await authCookie(b.id, b.role),
+      body: { name: 'Palm Court Apartments', address: ' 12  admiralty way.', city: 'LEKKI' },
+    });
+    expect(second.status).toBe(201);
+    expect(second.body.possibleDuplicates).toBe(1);
+    expect(second.body.data.listingHash).toBe(first.body.data.listingHash);
+    expect(second.body.data.moderationNotes).toContain(first.body.data.id);
+    // Still reviewable, never auto-rejected.
+    expect(second.body.data.moderationStatus).toBe('PENDING_REVIEW');
+  });
+
+  it('recomputes the fingerprint when the address changes', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const created = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie,
+      body: { name: 'Move Me', address: '1 Old Road', city: 'Ikeja' },
+    });
+    const id = created.body.data.id;
+    const patched = await apiFetch(`/api/v1/properties/${id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { address: '2 New Road' },
+    });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.listingHash).not.toBe(created.body.data.listingHash);
+  });
+});
+
+describe('properties: photo gallery (ISS-014)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('keeps every photo URL on create and edit, and rejects unsafe ones', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const photos = [
+      'https://cdn.example.com/a.jpg',
+      'https://cdn.example.com/b.jpg',
+      'https://cdn.example.com/c.jpg',
+      'https://cdn.example.com/d.jpg',
+      'https://cdn.example.com/e.jpg',
+    ];
+    const created = await apiFetch('/api/v1/properties', {
+      method: 'POST',
+      cookie,
+      body: {
+        name: 'Gallery',
+        address: '5 Photo Lane',
+        city: 'Abuja',
+        imageUrl: photos[0],
+        photoUrls: photos,
+      },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data.photoUrls).toEqual(photos);
+
+    const edited = await apiFetch(`/api/v1/properties/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { photoUrls: photos.slice(0, 2) },
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.data.photoUrls).toEqual(photos.slice(0, 2));
+
+    const bad = await apiFetch(`/api/v1/properties/${created.body.data.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { photoUrls: ['javascript:alert(1)'] },
+    });
+    expect(bad.status).toBe(400);
+  });
+});
+
 describe('properties: canManageProperty gating (PATCH /properties/[id])', () => {
   beforeAll(async () => {
     await resetDb();
@@ -474,5 +570,66 @@ describe('properties: units', () => {
     );
     expect(patched.status).toBe(200);
     expect(patched.body.data.sqft).toBe(700);
+  });
+});
+
+describe('neighbourhood report: save and keep history (ISS-016)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('lets the property manager save a report; later saves keep untouched sections', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const cookie = await authCookie(manager.id, manager.role);
+    const url = `/api/v1/properties/${property.id}/neighbourhood-report`;
+
+    expect((await apiFetch(url)).status).toBe(404);
+
+    const first = await apiFetch(url, {
+      method: 'PUT',
+      cookie,
+      body: {
+        security: { rating: 4, status: 'Good' },
+        electricity: { hoursPerDay: 18 },
+      },
+    });
+    expect(first.status).toBe(201);
+
+    const second = await apiFetch(url, {
+      method: 'PUT',
+      cookie,
+      body: { security: { rating: 5, status: 'Excellent' } },
+    });
+    expect(second.status).toBe(201);
+
+    const latest = await apiFetch(url);
+    expect(latest.body.data.security).toEqual({ rating: 5, status: 'Excellent' });
+    // Carried over from the earlier version.
+    expect(latest.body.data.electricity).toEqual({ hoursPerDay: 18 });
+
+    const versions = await testPrisma.neighbourhoodReport.count({
+      where: { propertyId: property.id },
+    });
+    expect(versions).toBe(2);
+    const audits = await testPrisma.auditLog.count({
+      where: { entityId: property.id, action: 'NEIGHBOURHOOD_REPORT_SAVED' },
+    });
+    expect(audits).toBe(2);
+  });
+
+  it('refuses strangers, tenants, empty bodies and oversized sections', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const url = `/api/v1/properties/${property.id}/neighbourhood-report`;
+    const put = async (who: { id: string; role: Role }, body: object) =>
+      apiFetch(url, { method: 'PUT', cookie: await authCookie(who.id, who.role), body });
+
+    const stranger = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    expect((await put(stranger, { water: { source: 'borehole' } })).status).toBe(403);
+    expect((await put(tenant, { water: { source: 'borehole' } })).status).toBe(403);
+    expect((await put(manager, {})).status).toBe(400);
+    expect((await put(manager, { water: { blob: 'x'.repeat(25_000) } })).status).toBe(400);
   });
 });

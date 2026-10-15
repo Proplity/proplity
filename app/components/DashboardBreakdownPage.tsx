@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import { api } from '@/lib/apiClient';
 import { useOwnerBreakdown } from '@/hooks/useDashboardSummary';
-import { usePagedList } from '@/hooks/usePagedList';
+import { useOpenMaintenance, usePagedList } from '@/hooks/usePagedList';
 import { fmtNaira } from '../../lib/utils';
 
 export type BreakdownType = 'properties' | 'tenants' | 'rent' | 'maintenance' | 'renewals';
@@ -45,8 +45,6 @@ const ICON_STYLES: Record<BreakdownType, { bg: string; color: string }> = {
   maintenance: { bg: 'bg-orange-50', color: 'text-orange-600' },
   renewals: { bg: 'bg-purple-50', color: 'text-purple-600' },
 };
-
-const OPEN_STATUSES = ['SUBMITTED', 'IN_PROGRESS', 'SCHEDULED'];
 
 export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
@@ -80,18 +78,10 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     500,
     is('tenants'),
   );
-  const openMaintenanceLists = OPEN_STATUSES.map((status) =>
-    usePagedList(
-      (page, limit) => api.maintenance.list({ status, page, limit }),
-      500,
-      is('maintenance'),
-    ),
-  );
+  const openMaintenanceList = useOpenMaintenance(is('maintenance'));
 
   const terminatedLeases = [...endedLeases, ...expiredLeases];
-  const openMaintenance = openMaintenanceLists
-    .flatMap((l) => l.data)
-    .sort((a, c) => new Date(c.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const openMaintenance = openMaintenanceList.data;
 
   const loading =
     summaryLoading ||
@@ -99,7 +89,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     activeLoading ||
     endedLoading ||
     expiredLoading ||
-    openMaintenanceLists.some((l) => l.loading);
+    openMaintenanceList.loading;
 
   const Icon = ICONS[breakdownType];
   const iconStyle = ICON_STYLES[breakdownType];
@@ -165,7 +155,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       const partial = b?.properties.partial ?? 0;
       const vacant = b?.properties.vacant ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             {
               label: 'Fully Occupied',
@@ -184,7 +174,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -196,7 +186,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       const due = b?.leases.due ?? 0;
       const overdue = b?.leases.overdue ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { label: 'Paid', value: paid, color: 'bg-green-50 border-green-200 text-green-700' },
             {
@@ -207,7 +197,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             { label: 'Overdue', value: overdue, color: 'bg-red-50 border-red-200 text-red-700' },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -216,7 +206,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
     }
     if (breakdownType === 'rent') {
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             {
               label: 'Total Collected',
@@ -235,7 +225,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -247,7 +237,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       const medium = b?.maintenance.medium ?? 0;
       const low = b?.maintenance.low ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             { label: 'High Priority', value: high, color: 'bg-red-50 border-red-200 text-red-700' },
             {
@@ -262,7 +252,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -274,7 +264,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
       const soon = b?.renewals.soon ?? 0;
       const later = b?.renewals.later ?? 0;
       return (
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             {
               label: 'Urgent (< 30 days)',
@@ -293,7 +283,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
             },
           ].map((card) => (
             <div key={card.label} className={`rounded-lg border p-4 ${card.color}`}>
-              <p className="text-2xl font-bold">{loading ? '—' : card.value}</p>
+              <p className="text-2xl font-bold break-words">{loading ? '—' : card.value}</p>
               <p className="mt-0.5 text-sm">{card.label}</p>
             </div>
           ))}
@@ -656,12 +646,14 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
         </Link>
         {breakdownType === 'properties' && (
           <div className="flex gap-2">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page */}
             <a
               href="/api/v1/properties/export?format=csv"
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               Export CSV
             </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page */}
             <a
               href="/api/v1/properties/export?format=xlsx"
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
@@ -942,7 +934,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
         </div>
 
         <div className="overflow-x-auto">{renderTable()}</div>
-        {(propsCut || activeCut || openMaintenanceLists.some((l) => l.truncated)) && (
+        {(propsCut || activeCut || openMaintenanceList.truncated) && (
           <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
             Showing the first 500 rows. Totals above count everything.
           </p>
