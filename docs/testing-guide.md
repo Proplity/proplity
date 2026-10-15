@@ -214,7 +214,7 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API suite (Vitest)** — `pnpm test`. 364 tests across 25 files in
+- **API suite (Vitest)** — `pnpm test`. 365 tests across 25 files in
   `tests/api/`, real HTTP against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
