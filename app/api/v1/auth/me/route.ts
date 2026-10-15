@@ -6,6 +6,7 @@ import { getServerSession } from '@/lib/auth/session';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { validateBody } from '@/lib/api/validate';
 import { prisma } from '@/lib/db';
+import { safeUrlOrName } from '@/lib/api/urlField';
 
 const PROFILE_SELECT = {
   id: true,
@@ -107,7 +108,7 @@ const updateProfileSchema = z.object({
   // (uploadsEnabled() false, see CompleteProfileForm), this falls back to
   // just the selected file's name, same "record the name, not lost
   // silently" precedent as PropertyApplicationForm's own document fields.
-  idDocumentUrl: z.string().min(1).nullable().optional(),
+  idDocumentUrl: safeUrlOrName.nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {

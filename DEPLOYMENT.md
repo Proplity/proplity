@@ -226,7 +226,7 @@ real users hit.
 Read-only. Runs `prisma validate` plus an informational `prisma migrate
 diff` against the `staging` database, so schema drift or conflicts surface
 in review instead of at merge time. Skipped for forks (no access to
-environment secrets, same reasoning `preview.yml` already documents).
+environment secrets, the same reason forks cannot run the migration workflows).
 
 ### `migrate-production.yml` — manual only
 
@@ -247,10 +247,12 @@ applied. **Deliberately not chained automatically** to
 succeeded before the code that depends on it goes live. Same `prod`-branch
 gate as `migrate-production.yml`.
 
-### `preview.yml` — on PR into `main`
+### Preview deployments — Vercel's GitHub integration
 
-Deploys a preview URL without waiting for tests, so reviewers get a link
-fast. Skipped for forks (they have no access to repository secrets).
+Pull requests get a preview URL from Vercel's own GitHub integration, which
+posts the link on the PR. The custom `preview.yml` workflow was removed: it
+needed `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets that were
+never set, so it failed on every PR.
 
 > **Point Preview at a non-production database.** Set a Preview-scoped
 > `DATABASE_URL` in Vercel, or a pull request will read and write live data.

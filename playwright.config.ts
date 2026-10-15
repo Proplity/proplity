@@ -12,6 +12,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   // One worker in CI: the specs share a database and some mutate global state.
   workers: process.env.CI ? 1 : undefined,
+  // Registration does a bcrypt hash and, on a cold `next dev`, compiles routes on
+  // first use; with several workers at once that can pass the 5 s default.
+  expect: { timeout: 15_000 },
+  timeout: 60_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
@@ -30,6 +34,9 @@ export default defineConfig({
         command: 'pnpm dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
+        // The registration specs run side by side from one IP; the production
+        // cap of 5 per 5 minutes would reject some of them (ISS-006).
+        env: { REGISTER_MAX_ATTEMPTS: '1000' },
         timeout: 120_000,
       },
 });

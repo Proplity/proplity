@@ -489,6 +489,18 @@ export const guideScreenshots = [
     badge: 'Desktop',
   },
   {
+    src: '/screenshots/public_property_gallery.png',
+    alt: 'Public property gallery',
+    title: 'Public property page with the photo gallery \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
+    src: '/screenshots/landlord_02c_neighbourhood_editor.png',
+    alt: 'Neighbourhood report editor',
+    title: 'Neighbourhood report editor (landlord/manager view) \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
     src: '/screenshots/landlord_03_add_property_desktop.png',
     alt: 'Add property modal',
     title: 'Add property modal dialog \u2014 Desktop',
@@ -725,7 +737,15 @@ export const guideScreenshots = [
   {
     src: '/screenshots/admin_02_users.png',
     alt: 'User management',
-    title: 'User management (all users table) \u2014 Desktop',
+    title:
+      'User management (search, filter by role and status, page through accounts) \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
+    src: '/screenshots/admin_07_user_suspend.png',
+    alt: 'Suspend an account',
+    title:
+      'Suspending an account asks for a reason, which is saved in the audit log \u2014 Desktop',
     badge: 'Desktop',
   },
   {
@@ -735,15 +755,22 @@ export const guideScreenshots = [
     badge: 'Desktop',
   },
   {
+    src: '/screenshots/admin_09_duplicate_listing.png',
+    alt: 'Duplicate listings',
+    title: 'Possible duplicate listings flagged in the moderation queue \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
     src: '/screenshots/admin_03_reports.png',
     alt: 'Reports',
     title: 'Platform-wide reports & analytics \u2014 Desktop',
     badge: 'Desktop',
   },
   {
-    src: '/screenshots/admin_05_notifications.png',
+    src: '/screenshots/admin_08_security.png',
     alt: 'Audit logs',
-    title: 'Security & audit logs (every action logged) \u2014 Desktop',
+    title:
+      'Security & audit log (filters, paging, readable names, open an entry for details) \u2014 Desktop',
     badge: 'Desktop',
   },
   {

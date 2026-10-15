@@ -7,6 +7,7 @@ import { runAccessCodeExpiryJanitor } from '@/lib/workers/accessCodeExpiryJanito
 import { runStorageJanitor } from '@/lib/workers/storageJanitor';
 import { runRetention } from '@/lib/workers/retention';
 import { runPaymentReliabilityScorer } from '@/lib/workers/paymentReliabilityScorer';
+import { runPropertyTrustScorer } from '@/lib/workers/propertyTrustScorer';
 import { handleApiError } from '@/lib/api/errors';
 
 // Never prerender or cache: this route mutates the database on every call.
@@ -24,6 +25,7 @@ const JOBS: Record<string, () => Promise<unknown>> = {
   'maintenance-schedule-dispatcher': runMaintenanceScheduleDispatcher,
   'access-code-expiry-janitor': runAccessCodeExpiryJanitor,
   'payment-reliability-scorer': runPaymentReliabilityScorer,
+  'property-trust-scorer': runPropertyTrustScorer,
   'storage-janitor': runStorageJanitor,
   retention: runRetention,
 };
@@ -37,6 +39,7 @@ const ALL_JOBS_IN_ORDER = [
   'maintenance-schedule-dispatcher',
   'access-code-expiry-janitor',
   'payment-reliability-scorer',
+  'property-trust-scorer',
   'storage-janitor',
   'retention',
 ] as const;

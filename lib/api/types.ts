@@ -30,6 +30,9 @@ export type Property = {
   type: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
   description?: string | null;
   imageUrl?: string | null;
+  exteriorPhotoUrl?: string | null;
+  video360Url?: string | null;
+  photoUrls?: string[];
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
@@ -41,6 +44,7 @@ export type Property = {
   roadConditionScore: number | null;
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   moderationNotes?: string | null;
+  listingHash?: string | null;
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
   createdAt: string;
@@ -82,6 +86,7 @@ export type CreatePropertyInput = {
   imageUrl?: string;
   video360Url?: string;
   exteriorPhotoUrl?: string;
+  photoUrls?: string[];
 };
 
 export type CreateUnitInput = {
@@ -456,6 +461,8 @@ export type AuditLog = {
   action: string;
   entityType: string;
   entityId: string;
+  // A readable name for the thing the entry is about, when it still exists.
+  entityLabel?: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
 };
@@ -470,6 +477,7 @@ export type Subscription = {
 export type CheckoutSubscriptionInput = {
   tier: 'FREE' | 'PRO';
   billingCycle?: 'monthly' | 'yearly';
+  confirmDowngrade?: boolean;
 };
 
 export type Application = {
