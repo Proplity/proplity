@@ -489,6 +489,18 @@ export const guideScreenshots = [
     badge: 'Desktop',
   },
   {
+    src: '/screenshots/public_property_gallery.png',
+    alt: 'Public property gallery',
+    title: 'Public property page with the photo gallery \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
+    src: '/screenshots/landlord_02c_neighbourhood_editor.png',
+    alt: 'Neighbourhood report editor',
+    title: 'Neighbourhood report editor (landlord/manager view) \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
     src: '/screenshots/landlord_03_add_property_desktop.png',
     alt: 'Add property modal',
     title: 'Add property modal dialog \u2014 Desktop',
@@ -740,6 +752,12 @@ export const guideScreenshots = [
     src: '/screenshots/admin_06_properties.png',
     alt: 'Properties moderation',
     title: 'Properties moderation queue (approve/reject listings) \u2014 Desktop',
+    badge: 'Desktop',
+  },
+  {
+    src: '/screenshots/admin_09_duplicate_listing.png',
+    alt: 'Duplicate listings',
+    title: 'Possible duplicate listings flagged in the moderation queue \u2014 Desktop',
     badge: 'Desktop',
   },
   {

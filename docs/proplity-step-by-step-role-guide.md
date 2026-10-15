@@ -813,6 +813,18 @@ A full list of all properties the landlord owns and has listed on Proplity, with
 
 ![Landlord 02 Property Detail](screenshots/landlord_02_property_detail.png)
 
+Open **Neighbourhood report** on the property page to rate security, electricity, water, roads, flooding, amenities and demographics (0-10), add a status, features (one per line) and notes. Tenants and applicants see the latest saved version; each save keeps the earlier one.
+
+- Neighbourhood report editor: `docs/screenshots/landlord_02c_neighbourhood_editor.png`
+
+![Neighbourhood report editor](screenshots/landlord_02c_neighbourhood_editor.png)
+
+Every photo uploaded with a listing now appears in the public gallery (cover, exterior, then the rest, with a "+N more" button).
+
+- Public property page gallery: `docs/screenshots/public_property_gallery.png`
+
+![Public property page gallery](screenshots/public_property_gallery.png)
+
 ---
 
 ## Step 3.3 — List a New Property (3-Step Wizard)
@@ -1338,6 +1350,12 @@ Every new property listing from a landlord goes through admin review before publ
 **Screenshot:** `docs/screenshots/admin_06_properties.png`
 
 ![Admin 06 Properties](screenshots/admin_06_properties.png)
+
+A listing at the same address and city as another live listing shows a **Possible duplicate** badge, and its review notes name the match. Nothing is merged or rejected automatically; you decide.
+
+- Possible duplicate listings: `docs/screenshots/admin_09_duplicate_listing.png`
+
+![Possible duplicate listings](screenshots/admin_09_duplicate_listing.png)
 
 ---
 
