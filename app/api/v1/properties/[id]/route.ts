@@ -7,6 +7,8 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
+import { safeUrl, safeUrlList } from '@/lib/api/urlField';
+import { listingHash } from '@/lib/propertyFingerprint';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -90,9 +92,10 @@ const updatePropertySchema = z.object({
   zipCode: z.string().optional(),
   type: z.nativeEnum(PropertyType).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().optional(),
-  video360Url: z.string().optional(),
-  exteriorPhotoUrl: z.string().optional(),
+  imageUrl: safeUrl.optional(),
+  video360Url: safeUrl.optional(),
+  exteriorPhotoUrl: safeUrl.optional(),
+  photoUrls: safeUrlList.optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
   // The property's own manager/landlord visibility toggle -- independent of
@@ -155,7 +158,22 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       );
     }
 
-    const updated = await prisma.property.update({ where: { id }, data: validated.data });
+    const addressChanged =
+      validated.data.address !== undefined || validated.data.city !== undefined;
+    const updated = await prisma.property.update({
+      where: { id },
+      data: {
+        ...validated.data,
+        ...(addressChanged
+          ? {
+              listingHash: listingHash(
+                validated.data.address ?? property.address,
+                validated.data.city ?? property.city,
+              ),
+            }
+          : {}),
+      },
+    });
     return NextResponse.json({ data: updated });
   } catch (err) {
     return handleApiError(err);

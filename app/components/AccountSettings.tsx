@@ -230,7 +230,7 @@ function ChangePasswordCard() {
           {submitting ? 'Updating…' : 'Update Password'}
         </button>
         <p className="text-xs text-gray-400">
-          You'll be signed out on other devices and asked to log in again.
+          You&apos;ll be signed out on other devices and asked to log in again.
         </p>
       </div>
     </div>

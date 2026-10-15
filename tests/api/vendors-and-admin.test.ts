@@ -496,3 +496,89 @@ describe('admin: suspend, reactivate and change role (ISS-054)', () => {
     expect(paged.body.data).toHaveLength(2);
   });
 });
+
+describe('admin: audit log filters, paging and names (ISS-055)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('filters by action, entity, actor and date, pages, and names the subject', async () => {
+    const admin = await createUser(Role.ADMIN, { name: 'Ada Admin' });
+    const other = await createUser(Role.ADMIN, { name: 'Bola Other' });
+    const tenant = await createUser(Role.TENANT, { name: 'Tunde Tenant' });
+    const cookie = await authCookie(admin.id, admin.role);
+
+    for (let i = 0; i < 30; i++) {
+      await testPrisma.auditLog.create({
+        data: {
+          actorId: admin.id,
+          action: 'USER_SUSPENDED',
+          entityType: 'User',
+          entityId: tenant.id,
+          metadata: { reason: `r${i}` },
+        },
+      });
+    }
+    await testPrisma.auditLog.create({
+      data: {
+        actorId: other.id,
+        action: 'INVOICE_EDITED',
+        entityType: 'Invoice',
+        entityId: 'gone',
+      },
+    });
+    await testPrisma.auditLog.create({
+      data: {
+        actorId: null,
+        action: 'FILE_RETENTION_DELETED',
+        entityType: 'StoredFile',
+        entityId: 'f1',
+        createdAt: new Date('2020-01-15T10:00:00Z'),
+      },
+    });
+
+    const all = await apiFetch('/api/v1/admin/audit-logs?limit=10&facets=1', { cookie });
+    expect(all.status).toBe(200);
+    expect(all.body.meta.total).toBe(32);
+    expect(all.body.data).toHaveLength(10);
+    expect(all.body.facets.actions).toEqual(
+      expect.arrayContaining(['USER_SUSPENDED', 'INVOICE_EDITED', 'FILE_RETENTION_DELETED']),
+    );
+    expect(all.body.facets.entityTypes).toEqual(
+      expect.arrayContaining(['User', 'Invoice', 'StoredFile']),
+    );
+
+    const byAction = await apiFetch('/api/v1/admin/audit-logs?action=USER_SUSPENDED&limit=100', {
+      cookie,
+    });
+    expect(byAction.body.meta.total).toBe(30);
+    // The subject is named, not just an id.
+    expect(byAction.body.data[0].entityLabel).toBe(`Tunde Tenant (${tenant.email})`);
+
+    const byActor = await apiFetch('/api/v1/admin/audit-logs?actor=bola', { cookie });
+    expect(byActor.body.data.map((l: { action: string }) => l.action)).toEqual(['INVOICE_EDITED']);
+    // A subject that no longer exists has no label rather than an error.
+    expect(byActor.body.data[0].entityLabel).toBeNull();
+
+    const byDate = await apiFetch('/api/v1/admin/audit-logs?from=2020-01-15&to=2020-01-15', {
+      cookie,
+    });
+    expect(byDate.body.data.map((l: { action: string }) => l.action)).toEqual([
+      'FILE_RETENTION_DELETED',
+    ]);
+
+    const byEntity = await apiFetch('/api/v1/admin/audit-logs?entityType=Invoice', { cookie });
+    expect(byEntity.body.meta.total).toBe(1);
+
+    const page3 = await apiFetch('/api/v1/admin/audit-logs?limit=10&page=4', { cookie });
+    expect(page3.body.data).toHaveLength(2);
+  });
+
+  it('is admin-only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const res = await apiFetch('/api/v1/admin/audit-logs', {
+      cookie: await authCookie(manager.id, manager.role),
+    });
+    expect(res.status).toBe(403);
+  });
+});

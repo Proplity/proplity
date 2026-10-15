@@ -16,7 +16,6 @@ import {
   InvoiceStatus,
   PaymentMethod,
   PaymentProvider,
-  ViewingStatus,
   AccessCodeStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -503,7 +502,7 @@ async function main() {
     },
   });
 
-  const gateCodePermanent = await prisma.accessCode.create({
+  await prisma.accessCode.create({
     data: {
       unitId: unitHighland4B.id,
       createdById: tenantJordan.id,
@@ -579,7 +578,7 @@ async function main() {
   });
 
   // 8. Maintenance Request Board (Active, Completed, Rated)
-  const reqSink = await prisma.maintenanceRequest.create({
+  await prisma.maintenanceRequest.create({
     data: {
       unitId: unitHighland4B.id,
       tenantId: tenantJordan.id,
@@ -695,7 +694,7 @@ async function main() {
     },
   });
 
-  const invUtilityAdewale = await prisma.invoice.create({
+  await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1002',
       leaseId: leaseAdewale.id,
