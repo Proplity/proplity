@@ -19,6 +19,7 @@ export function useAuthRefresh(isAuthenticated: boolean) {
         const check = await fetch('/api/v1/auth/me');
         if (!check.ok) {
           if (typeof window !== 'undefined') {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
             window.location.href = '/';
           }
         }

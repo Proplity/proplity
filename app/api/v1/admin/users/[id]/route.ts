@@ -71,7 +71,11 @@ export const PATCH = withAuth(
       if (role && role !== target.role) {
         const c = target._count;
         const inUse =
-          c.managedProperties + c.ownedProperties + c.leases + c.maintenanceRequests + c.assignedJobs;
+          c.managedProperties +
+          c.ownedProperties +
+          c.leases +
+          c.maintenanceRequests +
+          c.assignedJobs;
         if (inUse > 0) {
           return NextResponse.json(
             {

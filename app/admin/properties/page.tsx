@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Search, ArrowLeft, Clock, CheckCircle2, XCircle, Flag } from 'lucide-react';
+import {
+  Building2,
+  Search,
+  ArrowLeft,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Flag,
+  Copy,
+} from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
 import type { Property } from '@/lib/api/types';
 
@@ -30,6 +39,14 @@ export default function AdminPropertiesPage() {
   // to that filter instead of "ALL" so the queue this page exists for is
   // what's visible the moment it loads.
   const [statusFilter, setStatusFilter] = useState<(typeof ALL_STATUSES)[number]>('PENDING_REVIEW');
+
+  // ISS-025: listings that share an address fingerprint with another live
+  // listing. Merged-away ones are not in the list's fingerprint groups.
+  const duplicateCounts = properties.reduce<Record<string, number>>((acc, p) => {
+    if (p.listingHash) acc[p.listingHash] = (acc[p.listingHash] ?? 0) + 1;
+    return acc;
+  }, {});
+  const isDuplicate = (p: Property) => !!p.listingHash && duplicateCounts[p.listingHash] > 1;
 
   const filtered = properties.filter((p) => {
     const matchesStatus = statusFilter === 'ALL' || p.moderationStatus === statusFilter;
@@ -112,7 +129,7 @@ export default function AdminPropertiesPage() {
         </p>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium tracking-wide text-gray-500 uppercase">
             <tr>
@@ -158,7 +175,18 @@ export default function AdminPropertiesPage() {
                           <Building2 className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{property.name}</p>
+                          <p className="font-medium text-gray-900">
+                            {property.name}
+                            {isDuplicate(property) && (
+                              <span
+                                className="ml-2 inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800"
+                                title="Another listing has the same address and city"
+                              >
+                                <Copy className="h-3 w-3" />
+                                Possible duplicate
+                              </span>
+                            )}
+                          </p>
                           <p className="text-xs text-gray-500">
                             {property.address}, {property.city}
                           </p>

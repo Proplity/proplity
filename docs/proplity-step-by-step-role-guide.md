@@ -813,6 +813,18 @@ A full list of all properties the landlord owns and has listed on Proplity, with
 
 ![Landlord 02 Property Detail](screenshots/landlord_02_property_detail.png)
 
+Open **Neighbourhood report** on the property page to rate security, electricity, water, roads, flooding, amenities and demographics (0-10), add a status, features (one per line) and notes. Tenants and applicants see the latest saved version; each save keeps the earlier one.
+
+- Neighbourhood report editor: `docs/screenshots/landlord_02c_neighbourhood_editor.png`
+
+![Neighbourhood report editor](screenshots/landlord_02c_neighbourhood_editor.png)
+
+Every photo uploaded with a listing now appears in the public gallery (cover, exterior, then the rest, with a "+N more" button).
+
+- Public property page gallery: `docs/screenshots/public_property_gallery.png`
+
+![Public property page gallery](screenshots/public_property_gallery.png)
+
 ---
 
 ## Step 3.3 — List a New Property (3-Step Wizard)
@@ -1309,14 +1321,18 @@ A searchable table of every registered user on the platform. The admin can manag
 
 **What the admin can do:**
 
-- Search by name, email, or role
-- View a user's full profile and activity history
-- Suspend or re-activate an account
-- Change a user's role
+- Search by name, email or phone, and filter by role and status (the list is paged, 20 at a time)
+- Suspend an account (the person is signed out straight away and emailed your reason) or reactivate it
+- Change the role of a person who has no properties, tenancy or jobs yet
+- Every one of these asks for a reason, which is saved in the audit log. You cannot change your own account or another admin's
 
 **Screenshot:** `docs/screenshots/admin_02_users.png`
 
 ![Admin 02 Users](screenshots/admin_02_users.png)
+
+Suspending (or changing a role) asks for a reason first. It is saved in the audit log and the person is signed out straight away.
+
+![Admin 07 Suspend an account](screenshots/admin_07_user_suspend.png)
 
 ---
 
@@ -1335,6 +1351,12 @@ Every new property listing from a landlord goes through admin review before publ
 
 ![Admin 06 Properties](screenshots/admin_06_properties.png)
 
+A listing at the same address and city as another live listing shows a **Possible duplicate** badge, and its review notes name the match. Nothing is merged or rejected automatically; you decide.
+
+- Possible duplicate listings: `docs/screenshots/admin_09_duplicate_listing.png`
+
+![Possible duplicate listings](screenshots/admin_09_duplicate_listing.png)
+
 ---
 
 ## Step 6.4 — Reports & Analytics
@@ -1351,17 +1373,22 @@ Platform-wide reporting — properties listed, active tenants, revenue, maintena
 ## Step 6.5 — Security & Audit Logs
 
 **What this is:**
-A chronological log of every significant action on the platform — used for security investigations.
+A chronological log of significant actions on the platform — used for security investigations.
 
 **What you see:**
 
-- Timestamp, user email, role
-- Action taken (e.g., "Updated Lease #123", "Failed login from IP 102.89.x.x")
-- IP address
+- Timestamp and who did it (or "System")
+- What happened (e.g., "User suspended", "Payment recorded manually") and what it was about, shown by name (a person, an invoice number, a property)
+- Click an entry to open its details
 
-**Screenshot:** `docs/screenshots/admin_05_notifications.png`
+**What you can do:**
 
-![Admin 05 Notifications](screenshots/admin_05_notifications.png)
+- Filter by what happened, what it was about, who did it, and a date range
+- Page through older entries
+
+**Screenshot:** `docs/screenshots/admin_08_security.png`
+
+![Admin 08 Security](screenshots/admin_08_security.png)
 
 ---
 

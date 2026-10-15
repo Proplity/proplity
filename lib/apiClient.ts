@@ -99,6 +99,7 @@ apiClient.interceptors.response.use(
       if (refreshed) {
         return apiClient(originalRequest);
       } else if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
         window.location.href = '/login';
       }
     }
@@ -118,6 +119,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     if (refreshed) {
       return fetch(url, options);
     } else if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
       window.location.href = '/login';
     }
   }
@@ -143,6 +145,11 @@ export const api = {
       }),
     get: (propertyId: string) =>
       apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
+    saveNeighbourhoodReport: (propertyId: string, body: Record<string, Record<string, unknown>>) =>
+      apiClient.put<{ data: unknown }>(
+        `/api/v1/properties/${propertyId}/neighbourhood-report`,
+        body,
+      ),
     create: (body: CreatePropertyInput) =>
       apiClient.post<{ data: Property }>('/api/v1/properties', body),
     listUnits: (propertyId: string, status?: string) =>
@@ -363,8 +370,21 @@ export const api = {
         apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
     },
     auditLogs: {
-      list: (params?: { entityType?: string; limit?: number; page?: number }) =>
-        apiClient.get<Paginated<AuditLog>>('/api/v1/admin/audit-logs', { params }),
+      list: (params?: {
+        action?: string;
+        entityType?: string;
+        entityId?: string;
+        actor?: string;
+        q?: string;
+        from?: string;
+        to?: string;
+        facets?: 1;
+        limit?: number;
+        page?: number;
+      }) =>
+        apiClient.get<
+          Paginated<AuditLog> & { facets?: { actions: string[]; entityTypes: string[] } }
+        >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
       get: () =>
@@ -435,7 +455,9 @@ export const api = {
     checkout: (body: CheckoutSubscriptionInput) =>
       apiClient.post<{
         data:
-          { activated: true; subscription: Subscription } | { invoiceId: string; amount: number };
+          | { activated: true; subscription: Subscription }
+          | { activated: false; scheduled: true; endsAt: string; subscription: Subscription }
+          | { invoiceId: string; amount: number };
       }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {

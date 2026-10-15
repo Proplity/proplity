@@ -6,7 +6,12 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
-import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import {
+  reserveAttempt,
+  releaseAttempt,
+  getClientIp,
+  registerMaxAttempts,
+} from '@/lib/auth/rateLimit';
 import { sendEmail } from '@/lib/email';
 import { Role, UserStatus } from '@prisma/client';
 
@@ -60,7 +65,7 @@ export async function POST(req: NextRequest) {
   // comment for why check-then-record separately raced. Released in the
   // `finally` block below on every exit EXCEPT the duplicate-email path,
   // which is the only one that counted toward the limit before this fix.
-  const { allowed, attemptId } = await reserveAttempt(identifier);
+  const { allowed, attemptId } = await reserveAttempt(identifier, undefined, registerMaxAttempts());
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many registration attempts. Please try again later.' },
@@ -191,8 +196,8 @@ export async function POST(req: NextRequest) {
         status: user.status,
       },
     });
-  } catch (err: any) {
-    if (err?.message === 'LANDLORD_CODE_RACE') {
+  } catch (err) {
+    if (err instanceof Error && err.message === 'LANDLORD_CODE_RACE') {
       return NextResponse.json(
         { error: 'This landlord code was just used by someone else' },
         { status: 409 },

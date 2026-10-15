@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import { safeUrlList } from '@/lib/api/urlField';
 
 type RouteCtx = { params: Promise<{ id: string; unitId: string }> };
 
@@ -37,7 +38,7 @@ const updateUnitSchema = z.object({
   depositAmount: z.number().optional(),
   status: z.nativeEnum(UnitStatus).optional(),
   amenities: z.array(z.string()).optional(),
-  mediaUrls: z.array(z.string()).optional(),
+  mediaUrls: safeUrlList.optional(),
   sqft: z.number().int().optional(),
 });
 

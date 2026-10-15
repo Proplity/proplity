@@ -129,7 +129,7 @@ export function MaintenanceRequestForm() {
           </Link>
           <h1 className="mb-2 text-2xl font-bold">Submit Maintenance Request</h1>
           <p className="text-gray-600">
-            Let us know what needs to be fixed and we'll get it resolved quickly
+            Let us know what needs to be fixed and we&apos;ll get it resolved quickly
           </p>
         </div>
 

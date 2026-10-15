@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
       }
-    } catch (err) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalized = normalizeUser(data.user);
       setUser(normalized);
       return { success: true, user: normalized || undefined };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Network error during login' };
     }
   };
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // account is PENDING_VERIFICATION until the emailed link is used, so
       // there's no `user` to log in as yet (setUser would just be wrong).
       return { success: true, requiresVerification: true };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Network error during registration' };
     }
   };
