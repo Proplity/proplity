@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Home, Users, DollarSign, AlertCircle, UserX, Search, type LucideIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Home,
+  Users,
+  DollarSign,
+  AlertCircle,
+  UserX,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   AreaChart,
   Area,

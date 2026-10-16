@@ -254,7 +254,7 @@ Where new users create their Proplity account. First step is picking your accoun
 
 1. **Tenant** — "I'm looking for a place to rent"
 2. **Landlord** — "I own properties I want to rent out"
-3. **Property Manager** — "I manage properties for a landlord" _(needs landlord invitation code)_
+3. **Property Manager** — "I manage properties for a landlord" _(landlord invitation code optional — can link later)_
 4. **Service Provider** — "I provide repair/maintenance services"
 
 **Screenshots (role cards):**
@@ -825,6 +825,14 @@ Every photo uploaded with a listing now appears in the public gallery (cover, ex
 
 ![Public property page gallery](screenshots/public_property_gallery.png)
 
+**Photo Management:**
+Landlords and property managers can manage images on any listing by clicking **Manage Photos** on the Property Details page. This opens the Photo Management dialog (`PropertyPhotoManager.tsx`), which supports:
+- Adding image URLs or uploading new photos directly
+- Dragging or moving photos to change their display order
+- Setting any photo as the **Cover photo** (`Property.imageUrl`) or **Exterior photo**
+- Deleting individual photos
+- Saving updates via `PATCH /api/v1/properties/[id]`, which updates `Property.photoUrls` and instantly reflects on the public listing and gallery.
+
 ---
 
 ## Step 3.3 — List a New Property (3-Step Wizard)
@@ -1356,6 +1364,12 @@ A listing at the same address and city as another live listing shows a **Possibl
 - Possible duplicate listings: `docs/screenshots/admin_09_duplicate_listing.png`
 
 ![Possible duplicate listings](screenshots/admin_09_duplicate_listing.png)
+
+**Duplicate Detection, Merging & Undo Merge:**
+- **Automated Fingerprinting:** Each listing gets an automatic `listingHash` (SHA-256 of lowercase address & city, punctuation and spaces stripped; `lib/propertyFingerprint.ts`), recomputed whenever the address changes.
+- **Duplicate Badge:** If a new or updated listing matches an existing property, a **Possible duplicate** badge appears in the table.
+- **Merge Duplicates Dialog:** Admins can click **Merge** on flagged listings to open `MergeDuplicateModal.tsx`. The admin confirms the primary listing and the duplicate to merge. When merged (`POST /api/v1/properties/[id]/merge`), units, active leases, and applications are consolidated into the primary listing, `Property.mergedIntoId` is set, the duplicate is hidden from public browse listings, and an audited event (`PROPERTY_MERGE`) is written to the Security Audit Log.
+- **Merged Tab & Undo Merge:** A dedicated **Merged** filter tab on `/admin/properties` lists all merged properties. Admins can click **Undo Merge** (`POST /api/v1/properties/[id]/unmerge`) at any time to restore the listing, clearing `mergedIntoId` and logging a `PROPERTY_UNMERGE` audit event.
 
 ---
 

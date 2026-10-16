@@ -63,9 +63,7 @@ export const POST = withAuth(
             mergedIntoId: target.id,
             isPublished: false,
             moderationStatus: 'REJECTED',
-            moderationNotes: source.moderationNotes
-              ? `${source.moderationNotes}\n${note}`
-              : note,
+            moderationNotes: source.moderationNotes ? `${source.moderationNotes}\n${note}` : note,
           },
           include: {
             mergedInto: { select: { id: true, name: true, address: true, city: true } },
@@ -120,7 +118,10 @@ export const DELETE = withAuth(
       }
 
       if (!source.mergedIntoId) {
-        return NextResponse.json({ error: 'This property is not currently merged' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'This property is not currently merged' },
+          { status: 400 },
+        );
       }
 
       const previousTargetName = source.mergedInto?.name ?? source.mergedIntoId;
@@ -133,9 +134,7 @@ export const DELETE = withAuth(
             mergedIntoId: null,
             isPublished: false,
             moderationStatus: 'PENDING_REVIEW',
-            moderationNotes: source.moderationNotes
-              ? `${source.moderationNotes}\n${note}`
-              : note,
+            moderationNotes: source.moderationNotes ? `${source.moderationNotes}\n${note}` : note,
           },
         });
 

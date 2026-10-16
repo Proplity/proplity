@@ -25,7 +25,10 @@ export const POST = withAuth(
       }
 
       if (!source.mergedIntoId) {
-        return NextResponse.json({ error: 'This property is not currently merged' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'This property is not currently merged' },
+          { status: 400 },
+        );
       }
 
       const previousTargetName = source.mergedInto?.name ?? source.mergedIntoId;
@@ -38,9 +41,7 @@ export const POST = withAuth(
             mergedIntoId: null,
             isPublished: false,
             moderationStatus: 'PENDING_REVIEW',
-            moderationNotes: source.moderationNotes
-              ? `${source.moderationNotes}\n${note}`
-              : note,
+            moderationNotes: source.moderationNotes ? `${source.moderationNotes}\n${note}` : note,
           },
         });
 

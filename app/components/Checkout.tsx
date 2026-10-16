@@ -32,7 +32,7 @@ function DowngradeConfirmModal({
 }: DowngradeConfirmModalProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
@@ -51,9 +51,7 @@ function DowngradeConfirmModal({
           <AlertCircle className="h-6 w-6 text-amber-600" />
         </div>
 
-        <h2 className="mb-2 text-lg font-semibold text-gray-900">
-          Confirm Subscription Downgrade
-        </h2>
+        <h2 className="mb-2 text-lg font-semibold text-gray-900">Confirm Subscription Downgrade</h2>
         <p className="mb-4 text-sm text-gray-600">
           You have already paid for your current subscription until{' '}
           <span className="font-semibold text-gray-900">
@@ -61,12 +59,14 @@ function DowngradeConfirmModal({
           </span>
           .
         </p>
-        <div className="mb-6 rounded-lg bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
+        <div className="mb-6 space-y-1 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
           <p>
-            • Switching to <strong>Free</strong> keeps your current plan active until the end of your billing period.
+            • Switching to <strong>Free</strong> keeps your current plan active until the end of
+            your billing period.
           </p>
           <p>
-            • Your account will not be billed again, and will transition to Free on {paidUntil.toLocaleDateString(undefined, { dateStyle: 'medium' })}.
+            • Your account will not be billed again, and will transition to Free on{' '}
+            {paidUntil.toLocaleDateString(undefined, { dateStyle: 'medium' })}.
           </p>
         </div>
 

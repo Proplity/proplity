@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users, Building2, DollarSign, AlertCircle, Search, Clock, type LucideIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Users,
+  Building2,
+  DollarSign,
+  AlertCircle,
+  Search,
+  Clock,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { useModerateProperty } from '@/hooks/useProperties';
 import { useAdminBreakdown } from '@/hooks/useDashboardSummary';

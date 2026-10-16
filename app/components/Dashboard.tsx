@@ -148,9 +148,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
           <div className="divide-y divide-gray-200">
             {upcomingRenewals.map((lease) => {
-              const daysLeft = Math.ceil(
-                (new Date(lease.endDate).getTime() - now) / MS_PER_DAY,
-              );
+              const daysLeft = Math.ceil((new Date(lease.endDate).getTime() - now) / MS_PER_DAY);
               return (
                 <div
                   key={lease.id}

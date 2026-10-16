@@ -6,12 +6,12 @@
 
 Proplity is a property-management platform for the Nigerian market: landlords, managers, tenants, vendors and an admin. Next.js 16 App Router, Prisma 7 on PostgreSQL, JWT cookies with rotating refresh tokens, Paystack payments, Cloudinary uploads, Resend email, deployed on Vercel.
 
-## Where things stand (2026-10-15)
+## Where things stand (2026-10-16)
 
-- The domain API roadmap, the frontend, the background workers and the test suites are built. 87 route handlers, 41 models, 23 migrations.
+- The domain API roadmap, the frontend, the background workers and the test suites are built. 89 route handlers, 41 models, 23 migrations.
 - The issue register (`docs/issues/issues.md`) is worked through: everything that can be done without outside input is built and merged to `dev`.
-- **Tests:** `pnpm test` runs 370 Vitest tests in 25 files, all passing on `dev` (real HTTP against a spawned `next dev` and a recreated `proplity_test_db`). Playwright E2E: 15 spec files, CI uses one worker. `pnpm lint`: 0 errors, 0 warnings (all 138 lint warnings completely eliminated with 0 `@typescript-eslint/no-explicit-any` and 0 React Compiler warnings).
-- **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. At the time of writing, PRs up to #83 are merged or open into `dev`; `main` and `prod` do not yet have everything after #71 (PR #71 was the last `main` → `prod` release).
+- **Tests:** `pnpm test` runs 370 Vitest tests in 25 files, all passing on `dev` (real HTTP against a spawned `next dev` and a recreated `proplity_test_db`). Playwright E2E: 52 tests across 15 spec files, CI uses one worker. `pnpm lint`: 0 errors, 0 warnings (all 138 lint warnings completely eliminated with 0 `@typescript-eslint/no-explicit-any` and 0 React Compiler warnings).
+- **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. All stale local and remote feature branches merged into `dev` have been pruned.
 - **Repo and CI:** GitHub `Proplity/proplity`. CI runs typecheck, lint, format check, build, the API integration suite and Playwright. Vercel's GitHub integration posts preview deployments (the custom preview workflow was removed).
 
 ## What is left
@@ -24,7 +24,7 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 4. Confirm the production environment variables (see `DEPLOYMENT.md`).
 5. Compliance sign-off on the identity-document retention periods before setting `RETENTION_ENABLED=true`.
 6. Run the production migrations and confirm before deploying. New since the last release: `20261014090000_payment_ref_unique`, `20261014120000_trust_score_computed` (nulls the old placeholder trust score), `20261014150000_one_active_autopay_per_lease` (soft-cancels duplicate active auto-pay mandates, keeping the newest), `20261014180000_listing_hash_backfill`, `20261014200000_property_photo_urls`.
-7. Merge open PRs and delete merged remote branches in GitHub.
+7. Promote `dev` into `main` (staging) and then into `prod` (production).
 
 ### Blocked on something outside the code
 

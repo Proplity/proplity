@@ -1,9 +1,10 @@
 # Proplity — Step-by-Step Flow Guide
 
-_Last updated 2026-10-04 — covers everything through the UI/UX gap audit
-(tenant profile gate, 3-step applications, multi-unit listings with service
-charge, real media upload, auto-pay, lease renewal/notices/invoices, the
-landlord report download, and the admin Properties/Security pages)._
+_Last updated 2026-10-16 — covers complete operational flows including
+tenant profile gate, 3-step applications, multi-unit listings with service
+charge, full media gallery and photo manager, auto-pay, lease renewal/notices/invoices,
+landlord report download, neighbourhood report editor, duplicate listing merge/unmerge,
+and admin user suspension & security audit log._
 
 Every flow below was walked through click by click against a real, seeded
 database — not just read from the code — including the flows where two or
@@ -61,8 +62,8 @@ that property's own page.
 role (Tenant, Landlord, Property Manager or Service Provider), fill in your
 details and submit. A verification link is emailed to you; **your account
 can't sign in until you click it** (the login page says so and offers a
-_Resend it_ link). Property managers also need a **landlord invitation
-code** from the landlord they'll work for, checked live as you type it.
+_Resend it_ link). Property managers can provide an optional **landlord invitation
+code** (checked live as you type), or register without one and link to landlords later.
 
 **6. Browse All Properties** — takes you to sign in (or, if you're already
 logged in, to your own property browser: _Discover_ for managers, _Browse_
@@ -183,14 +184,24 @@ tab bar's _More_ menu on mobile).
     step shows each unit's combined total per cycle). Then amenities and
     utilities.
 3.  _Media Upload_: **360° walkthrough video**, **photos of every room**
-    and **exterior photos**, each uploaded directly. The first room photo
-    becomes the listing's main image. If file storage isn't configured you'll
+    and **exterior photos**, each uploaded directly. Every photo is saved to
+    the listing's photo collection (`photoUrls`), and the first photo
+    becomes the listing's main cover image. If file storage isn't configured you'll
     see a "not available in this environment" note and can continue without
     media.
 4.  _Review_ → **Submit for Verification**. The property is created first,
     then each unit; if a unit fails you get a **Retry Failed Units** button
     instead of having to start over. New listings need admin approval
     before they go live.
+
+**3b. Manage listing photos** — on any existing property details page, click
+**Manage Photos** to open the photo management dialog. Add photos, drag to
+reorder, designate the cover or exterior photo, and delete outdated images.
+Changes save via PATCH and update the public listing gallery immediately.
+
+**3c. Edit neighbourhood report** — click **Neighbourhood** on any property
+page to rate security, electricity, water, roads, flood risk, amenities, and
+demographics (0–10), add key features and status notes.
 
 **4. View your tenants** — open _Tenants_ from the sidebar to see everyone
 renting from you, their property, rent, and payment status.
@@ -320,19 +331,26 @@ address (e.g. `/dashboard/discover`), they are sent back to `/admin`.
 **2. System Overview** — a bird's-eye view of the whole platform.
 
 **3. User Management** — every account on the platform, filterable by
-role (chips: All / Admin / Manager / Landlord / Tenant / Vendor) and
-searchable by name, email, or phone.
+role (chips: All / Admin / Manager / Landlord / Tenant / Vendor) and status,
+searchable by name, email, or phone. Admins can click **Suspend Account** to
+deactivate any account (mandatory reason recorded in the audit log; user's session
+is terminated immediately) or reactivate it, and change roles where eligible.
 
 **4. Reports** — platform-wide reporting.
 
 **5. Properties** — the **moderation queue**. Filter chips (Pending Review
-by default, Approved, Rejected, Flagged) and search show who submitted each
-listing; open one to approve or reject it. Pending listings also appear
-under "Items Needing Attention" on System Overview.
+by default, Approved, Rejected, Flagged, Merged) and search show who submitted each
+listing; open one to approve or reject it.
+- **Duplicate Detection & Merge**: listings sharing an address and city display a
+  **Possible duplicate** badge. Admins can click **Merge** to designate a canonical
+  listing and merge duplicates (`MergeDuplicateModal`), consolidating units, leases, and inquiries.
+- **Undo Merge**: the **Merged** tab lists all merged properties, allowing one-click
+  **Undo Merge** to restore a listing if needed.
 
 **5b. Security** — an **audit log** of sensitive platform actions (actor,
-action, entity, time). It is genuinely sparse today — little writes to it
-yet — so an empty list means little has happened, not that it's broken.
+action, entity, date/time) with filtering by action, actor, entity, and date range,
+plus expandable JSON metadata for deep inspection. Tracks user suspensions, role changes,
+private file access, vendor verifications, retention erasures, and property merge/unmerge.
 
 **5c. Platform Settings** — currently one live toggle: whether a vendor's
 invoice automatically completes its maintenance job. Flip it and it takes
@@ -388,9 +406,5 @@ in their own account, live:
   the screen opening.
 - **Auto-pay records the authorization but doesn't charge yet** — a
   recurring-charge job isn't built; tenants keep paying invoices manually.
-- **The Security audit log is sparse** — only a few actions write to it so
-  far.
 - **"Schedule Review" is a message, not a calendar booking** — there's no
   meeting/appointment feature behind it.
-- **Several room photos, one stored** — the listing form accepts many room
-  photos but only the first is saved as the main image.
