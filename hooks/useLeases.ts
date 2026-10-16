@@ -99,7 +99,10 @@ export function useLeases(params?: { status?: string }) {
   }, [params?.status]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -132,7 +135,10 @@ export function useLease(leaseId: string | null) {
   }, [leaseId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -164,7 +170,10 @@ export function useLeaseNotes(leaseId: string | null) {
   }, [leaseId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

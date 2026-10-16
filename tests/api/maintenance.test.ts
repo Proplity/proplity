@@ -22,9 +22,9 @@ describe('maintenance: categories', () => {
     await createMaintenanceCategory({ name: 'Plumbing', isActive: true });
     await createMaintenanceCategory({ name: 'Retired Category', isActive: false });
 
-    const res = await apiFetch('/api/v1/maintenance/categories');
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/maintenance/categories');
     expect(res.status).toBe(200);
-    const names = res.body.data.map((c: any) => c.name);
+    const names = res.body.data.map((c) => c.name);
     expect(names).toContain('Plumbing');
     expect(names).not.toContain('Retired Category');
   });
@@ -134,16 +134,24 @@ describe('maintenance: requests, list scoping', () => {
     await createMaintenanceRequest(otherUnit.id, otherTenant.id, { title: 'Not mine' });
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantRes = await apiFetch('/api/v1/maintenance/requests', { cookie: tenantCookie });
-    expect(tenantRes.body.data.map((r: any) => r.title)).toEqual(['Mine']);
+    const tenantRes = await apiFetch<{ data: { title: string }[] }>(
+      '/api/v1/maintenance/requests',
+      { cookie: tenantCookie },
+    );
+    expect(tenantRes.body.data.map((r) => r.title)).toEqual(['Mine']);
 
     const vendorCookie = await authCookie(vendor.id, vendor.role);
-    const vendorRes = await apiFetch('/api/v1/maintenance/requests', { cookie: vendorCookie });
-    expect(vendorRes.body.data.map((r: any) => r.id)).toEqual([mine.id]);
+    const vendorRes = await apiFetch<{ data: { id: string }[] }>('/api/v1/maintenance/requests', {
+      cookie: vendorCookie,
+    });
+    expect(vendorRes.body.data.map((r) => r.id)).toEqual([mine.id]);
 
     const managerCookie = await authCookie(manager.id, manager.role);
-    const managerRes = await apiFetch('/api/v1/maintenance/requests', { cookie: managerCookie });
-    expect(managerRes.body.data.map((r: any) => r.title)).toEqual(['Mine']);
+    const managerRes = await apiFetch<{ data: { title: string }[] }>(
+      '/api/v1/maintenance/requests',
+      { cookie: managerCookie },
+    );
+    expect(managerRes.body.data.map((r) => r.title)).toEqual(['Mine']);
 
     const admin = await createUser(Role.ADMIN);
     const adminCookie = await authCookie(admin.id, admin.role);
@@ -159,10 +167,15 @@ describe('maintenance: requests, list scoping', () => {
     await createMaintenanceRequest(unit.id, tenant.id);
 
     const cookie = await authCookie(admin.id, admin.role);
-    const res = await apiFetch('/api/v1/maintenance/requests', { cookie });
-    const row = res.body.data.find((r: any) => r.unit.id === unit.id);
-    expect(row.unit.property.name).toBe('Include Check Property');
-    expect(row.tenant.name).toBe('Include Check Tenant');
+    const res = await apiFetch<{
+      data: {
+        unit: { id: string; property: { name: string } };
+        tenant: { name: string };
+      }[];
+    }>('/api/v1/maintenance/requests', { cookie });
+    const row = res.body.data.find((r) => r.unit.id === unit.id);
+    expect(row?.unit.property.name).toBe('Include Check Property');
+    expect(row?.tenant.name).toBe('Include Check Tenant');
   });
 });
 

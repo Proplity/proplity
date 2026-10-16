@@ -13,9 +13,10 @@ import {
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
 import type { Invoice } from '@/lib/api/types';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface TenantManagementProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const AVATAR_COLORS = [

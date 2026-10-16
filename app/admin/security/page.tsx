@@ -68,7 +68,10 @@ export default function AdminSecurityPage() {
   }, [page, action, entityType, actor, from, to]);
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [load]);
 
   const change = (apply: () => void) => {

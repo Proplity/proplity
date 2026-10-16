@@ -69,7 +69,10 @@ export function MessagingPortal() {
   useEffect(() => {
     const target = searchParams.get('c');
     if (target && conversations.some((c) => c.id === target)) {
-      setSelectedId(target);
+      const timer = setTimeout(() => {
+        setSelectedId(target);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [searchParams, conversations]);
   const {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Home, Users, DollarSign, AlertCircle, UserX, Search } from 'lucide-react';
+import { ArrowLeft, Home, Users, DollarSign, AlertCircle, UserX, Search, type LucideIcon } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -20,18 +20,19 @@ import { api } from '@/lib/apiClient';
 import { useOwnerBreakdown } from '@/hooks/useDashboardSummary';
 import { useOpenMaintenance, usePagedList } from '@/hooks/usePagedList';
 import { fmtNaira } from '../../lib/utils';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 export type BreakdownType = 'properties' | 'tenants' | 'rent' | 'maintenance' | 'renewals';
 
 interface DashboardBreakdownPageProps {
   breakdownType: BreakdownType;
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-const ICONS: Record<BreakdownType, any> = {
+const ICONS: Record<BreakdownType, LucideIcon> = {
   properties: Home,
   tenants: Users,
   rent: DollarSign,
