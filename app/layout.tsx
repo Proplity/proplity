@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import type { User, UserRole } from '@/context/AuthContext';
+import { getServerSession } from '@/lib/auth/session';
 import { FileViewerProvider } from '@/context/FileViewerContext';
 import { FileViewerModal } from '@/app/components/FileViewerModal';
 import { PwaRegister } from '@/app/components/PwaRegister';
@@ -30,11 +32,22 @@ export const viewport: Viewport = {
   themeColor: '#2563eb',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession();
+  const initialUser: User | null = session
+    ? {
+        id: session.sub,
+        email: '',
+        name: '',
+        role: (session.role || 'tenant').toLowerCase() as UserRole,
+        status: 'ACTIVE',
+      }
+    : null;
+
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
+        <AuthProvider initialUser={initialUser}>
           <FileViewerProvider>
             {children}
             <FileViewerModal />

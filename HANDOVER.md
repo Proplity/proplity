@@ -28,11 +28,15 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 ### Blocked on something outside the code
 
-- **ISS-010, 011, 012:** live Paystack calls, auto-pay charging (a stored mandate is never charged today) and bank-transfer reconciliation / vendor payouts. Need a Paystack account and product decisions.
+- **ISS-010, 012:** live Paystack calls and bank-transfer reconciliation / vendor payouts. Need a Paystack account and product decisions.
 - **ISS-035:** storage providers. Need real credentials.
+- **ISS-011, ISS-039:** background workers built; require environment flags (`AUTOPAY_WORKER_ENABLED=true`, `RETENTION_ENABLED=true`) once live operations and NDPR sign-offs are finalized.
 
 ### Completed in current pass (previously pending)
 
+- **Landing Page Session Restore (ISS-057):** Resolved session state latency by reading `getServerSession()` in `RootLayout` and passing `initialUser` directly to `AuthProvider`. Eliminates all flash of login state for authenticated visitors and ensures action links immediately point to `/admin` or `/dashboard`.
+- **Auto-Pay Mandate Recurring Charging Worker (ISS-011):** Built `runAutopayCharger` in `lib/workers/autopayCharger.ts`, runner script `scripts/workers/autopayCharger.ts`, and wired into daily cron dependency chain at `/api/v1/cron/[job]`. Charges open due invoices for active leases with active mandates (via Paystack charge authorization or mock gateway), updates invoice status to PAID, and records audit logs. Safely defaults to disabled until `AUTOPAY_WORKER_ENABLED=true`. Covered by unit/anomaly tests in `tests/anomaly/financial-anomalies.test.ts`.
+- **Sliding-Window Rate Limiter (ISS-021):** Upgraded `reserveAttempt` in `lib/auth/rateLimit.ts` from fixed-window counting to a true advisory-locked sliding-window log. Automatically purges expired attempt rows outside `[now - windowMs, now]` to prevent database bloat, eliminates window-edge burst doubling, and computes exact `remaining`, `resetAt`, and `retryAfterSeconds` values.
 - **File Gateway Unification (ISS-038):** Extended secure file gateway (`lib/fileRef.ts`, `lib/uploadPolicy.ts`) with `notices`, `leases`, and `communications` folders. Enforced `assertOwnsFileUrls` on `Notice.documentUrl`, `Lease.signedAgreementUrl`, `Message.attachmentUrls`, `Violation.evidenceUrls`, and `User.avatarUrl`. Added multi-role read authorization in `canReadFile()` and unit tests in `fileRef.test.ts` and `uploadPolicy.test.ts`.
 - **Manager Invite Code Rate Limiting:** Protected public `GET /api/v1/manager-codes/check` endpoint against brute-force invite code enumeration using atomic advisory-locked DB rate limiter (10 attempts / 5 mins per IP), with quota release on valid code checks. Added test in `tests/api/manager-links.test.ts`.
 - **App-Wide Responsive File Viewer:** Global context (`FileViewerContext`) and responsive viewer modal (`FileViewerModal`) supporting images (pan, zoom up to 400%, 90° rotation), PDFs, videos (speed control, PiP), audio, monospace syntax-styled code/text/CSV with 1-click clipboard copy, and formatted document cards with keyboard navigation (Esc, Arrow keys, + / -). Integrated into Tenant Dashboard and Tenant Detail views for signed lease agreements.
