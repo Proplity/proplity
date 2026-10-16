@@ -85,6 +85,11 @@ model User {
   createdAt                    DateTime                  @default(now())
   updatedAt                    DateTime                  @updatedAt
   storedFiles                  StoredFile[]              @relation("UploadedFiles")
+  bankTransfersSubmitted       BankTransferSubmission[]  @relation("BankTransfersSubmitted")
+  bankTransfersReconciled      BankTransferSubmission[]  @relation("BankTransfersReconciled")
+  vendorPayoutsReceived        VendorPayout[]            @relation("VendorPayoutsReceived")
+  vendorPayoutsInitiated       VendorPayout[]            @relation("VendorPayoutsInitiated")
+  vendorPayoutsApproved        VendorPayout[]            @relation("VendorPayoutsApproved")
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
@@ -217,9 +222,10 @@ model BankAccount {
   bankCode      String
   bankName      String
   accountName   String
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isDefault     Boolean        @default(false)
+  vendorPayouts VendorPayout[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model RefreshToken {

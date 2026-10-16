@@ -874,3 +874,100 @@ export type VendorDashboardSummary = {
   };
   rating: { average: number | null; count: number };
 };
+
+// PRD §5.1 / §5.2 / ISS-012 "Bank-Transfer Reconciliation"
+export type BankTransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type BankTransferSubmission = {
+  id: string;
+  invoiceId: string;
+  submittedById: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string | null;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string | null;
+  notes?: string | null;
+  status: BankTransferStatus;
+  reconciledById?: string | null;
+  reconciledAt?: string | null;
+  rejectionReason?: string | null;
+  paymentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+    type: string;
+    dueDate: string;
+  };
+  submittedBy?: { id: string; name: string; email: string };
+  reconciledBy?: { id: string; name: string; role: string } | null;
+  payment?: { id: string; amount: number; paidAt: string; transactionRef: string | null } | null;
+};
+
+export type SubmitBankTransferInput = {
+  invoiceId: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string;
+  notes?: string;
+};
+
+// PRD §5.4 / §5.5 / ISS-012 "Vendor Payouts"
+export type VendorPayoutStatus =
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'FAILED';
+
+export type PayoutMethod = 'BANK_TRANSFER' | 'PAYSTACK_TRANSFER' | 'MANUAL';
+
+export type VendorPayout = {
+  id: string;
+  payoutNumber: string;
+  vendorId: string;
+  invoiceId?: string | null;
+  maintenanceRequestId?: string | null;
+  amount: number;
+  currency: string;
+  status: VendorPayoutStatus;
+  payoutMethod: PayoutMethod;
+  bankAccountId?: string | null;
+  reference?: string | null;
+  transferCode?: string | null;
+  failureReason?: string | null;
+  notes?: string | null;
+  initiatedById: string;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: { id: string; name: string; email: string; phone?: string | null };
+  bankAccount?: { id: string; bankName: string; accountName: string; accountNumber: string } | null;
+  invoice?: { id: string; invoiceNumber: string; amount: number; status: string } | null;
+  maintenanceRequest?: { id: string; title: string; status: string } | null;
+  initiatedBy?: { id: string; name: string; role: string };
+  approvedBy?: { id: string; name: string; role: string } | null;
+};
+
+export type InitiateVendorPayoutInput = {
+  vendorId: string;
+  invoiceId?: string;
+  maintenanceRequestId?: string;
+  amount: number;
+  bankAccountId?: string;
+  payoutMethod?: PayoutMethod;
+  notes?: string;
+};

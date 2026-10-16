@@ -309,6 +309,29 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     return Boolean(participant);
   }
 
+  if (file.folder === 'reconciliation') {
+    const url = fileUrl(file.id);
+    const submission = await prisma.bankTransferSubmission.findFirst({
+      where: { proofFileUrl: url },
+      include: {
+        invoice: {
+          include: {
+            lease: { include: { unit: { include: { property: true } } } },
+            maintenanceRequest: { include: { unit: { include: { property: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission) return false;
+    if (submission.submittedById === actor.sub) return true;
+    if (!scope) return false;
+    const property =
+      submission.invoice.lease?.unit.property ??
+      submission.invoice.maintenanceRequest?.unit.property;
+    if (!property) return false;
+    return property.managerId === actor.sub || property.landlordId === actor.sub;
+  }
+
   return false;
 }
 

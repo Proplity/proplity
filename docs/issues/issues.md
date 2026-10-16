@@ -7,10 +7,9 @@ _Last updated 2026-10-16. How to use it, the severity rubric and the row templat
 1. ISS-035 Non-Cloudinary storage providers untested against real services (smoke-test staging with the chosen provider)
 2. ISS-010 Paystack live charge call never exercised
 3. ISS-020 Case-only duplicate accounts already in the database (check production before relying on ADR-0006)
-4. ISS-012 No bank-transfer reconciliation, no vendor payouts
-5. ISS-039 Switch on `RETENTION_ENABLED` once compliance confirms the periods (ADR-0012)
-6. ISS-011 Auto-pay charging worker built; switch on `AUTOPAY_WORKER_ENABLED=true` once live payments are active
-7. ISS-007 Inbox widget rewrites links to the current host (dev tool only)
+4. ISS-039 Switch on `RETENTION_ENABLED` once compliance confirms the periods (ADR-0012)
+5. ISS-011 Auto-pay charging worker built; switch on `AUTOPAY_WORKER_ENABLED=true` once live payments are active
+6. ISS-007 Inbox widget rewrites links to the current host (dev tool only)
 
 ---
 
@@ -49,7 +48,7 @@ _Last updated 2026-10-16. How to use it, the severity rubric and the row templat
 | ------- | ---------------------------------------------------------------- | -------- | --- | ---------- | --------------------- | ------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
 | ISS-010 | Live Paystack `initialize` call never run against a real account | Payments | P1  | Possible   | Confirmed (untested)  | Yes           | `app/api/v1/payments/initialize` | Webhook path is tested via the mock gateway only. Needs a test-mode key before launch. |
 | ISS-011 | Auto-pay mandates are never charged                              | Payments | P1  | Certain    | Fixed on `dev` (disabled until `AUTOPAY_WORKER_ENABLED=true`) | Yes until merged + released | `lib/workers/autopayCharger.ts`, `cron/[job]` | Built `runAutopayCharger`: charges due invoices with active mandates using Paystack's charge authorization API or mock gateway, updates payment and invoice to PAID, updates mandate `lastChargedAt`, and logs audit trail. Safely defaults to disabled until enabled via environment flag. |
-| ISS-012 | No bank-transfer reconciliation, no vendor payouts               | Payments | P2  | Certain    | Confirmed (not built) | Yes           | —                                | See `docs/PRD-as-built.md`.                                                            |
+| ISS-012 | No bank-transfer reconciliation, no vendor payouts               | Payments | P2  | Certain    | Fixed on `dev`        | Yes until merged + released | `lib/payments/bankTransferService.ts`, `lib/payments/payoutService.ts`, `/api/v1/bank-transfers`, `/api/v1/vendor-payouts` | Built complete offline bank-transfer submission & reconciliation workflow (`/api/v1/bank-transfers`, `/api/v1/bank-transfers/[id]/reconcile`) with atomic locking, duplicate reference prevention, file proof uploads, and automated Payment creation. Built multi-step vendor payout lifecycle (`/api/v1/vendor-payouts`, `/api/v1/vendor-payouts/[id]`) with role-scoped approval, invoice cap enforcement, and Paystack/mock transfer settlement. Covered by integration tests in `tests/api/bank-reconciliation-and-payouts.test.ts`. |
 
 ## Data integrity & authorisation
 

@@ -11,6 +11,7 @@ export const FOLDER_ROLES: Record<UploadFolder, Role[]> = {
   notices: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
   leases: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
   communications: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR, Role.ADMIN],
+  reconciliation: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
 };
 
 export const UPLOAD_FOLDERS = Object.keys(FOLDER_ROLES) as [UploadFolder, ...UploadFolder[]];
