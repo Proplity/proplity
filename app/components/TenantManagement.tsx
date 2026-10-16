@@ -12,10 +12,11 @@ import {
 } from 'lucide-react';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
-import type { Invoice, Lease } from '@/lib/api/types';
+import type { Invoice } from '@/lib/api/types';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface TenantManagementProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const AVATAR_COLORS = [
@@ -116,7 +117,7 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Tenant List */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-gray-200 bg-gray-50">

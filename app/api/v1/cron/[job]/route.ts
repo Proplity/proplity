@@ -5,7 +5,10 @@ import { runOverdueFlagger } from '@/lib/workers/overdueFlagger';
 import { runMaintenanceScheduleDispatcher } from '@/lib/workers/maintenanceScheduleDispatcher';
 import { runAccessCodeExpiryJanitor } from '@/lib/workers/accessCodeExpiryJanitor';
 import { runStorageJanitor } from '@/lib/workers/storageJanitor';
+import { runRetention } from '@/lib/workers/retention';
 import { runPaymentReliabilityScorer } from '@/lib/workers/paymentReliabilityScorer';
+import { runPropertyTrustScorer } from '@/lib/workers/propertyTrustScorer';
+import { runAutopayCharger } from '@/lib/workers/autopayCharger';
 import { handleApiError } from '@/lib/api/errors';
 
 // Never prerender or cache: this route mutates the database on every call.
@@ -19,23 +22,29 @@ export const maxDuration = 60;
 // a specific worker without this app needing to know which one is used.
 const JOBS: Record<string, () => Promise<unknown>> = {
   'rent-invoicer': runRentInvoicer,
+  'autopay-charger': runAutopayCharger,
   'overdue-flagger': runOverdueFlagger,
   'maintenance-schedule-dispatcher': runMaintenanceScheduleDispatcher,
   'access-code-expiry-janitor': runAccessCodeExpiryJanitor,
   'payment-reliability-scorer': runPaymentReliabilityScorer,
+  'property-trust-scorer': runPropertyTrustScorer,
   'storage-janitor': runStorageJanitor,
+  retention: runRetention,
 };
 
-// Order matters: invoicing must create the cycle's invoices before the
-// overdue flagger judges what is late, and both must land before payment
-// reliability is rescored from that same invoice history.
+// Order matters: invoicing must create the cycle's invoices before autopay
+// attempts to charge them, the overdue flagger judges what remains late,
+// and payment reliability is rescored from that resulting invoice history.
 const ALL_JOBS_IN_ORDER = [
   'rent-invoicer',
+  'autopay-charger',
   'overdue-flagger',
   'maintenance-schedule-dispatcher',
   'access-code-expiry-janitor',
   'payment-reliability-scorer',
+  'property-trust-scorer',
   'storage-janitor',
+  'retention',
 ] as const;
 
 /**

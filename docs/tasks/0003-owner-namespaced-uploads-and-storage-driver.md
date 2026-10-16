@@ -1,12 +1,12 @@
 # 0003: StoredFile, File Gateway and Storage Providers (ISS-034 and follow-ups)
 
 - **Period / Focus:** 2026-10-11
-- **Status:** In Progress
+- **Status:** Completed
 - **Priority:** Medium
 - **Assignee:** Claude
-- **Target Branch / PR:** `feat/storage-owner-prefix` (PR #40, stacked on `feature/registration-ux-and-e2e`, PR #38)
+- **Target Branch / PR:** `feat/storage-owner-prefix` (merged into `dev`)
 - **Started:** 2026-10-11 14:00:00 UTC
-- **Ended:** —
+- **Ended:** 2026-10-13 10:00:00 UTC
 
 > **How to tick:** change `[ ]` to `[x]`. _Currently: nothing running._
 
@@ -27,7 +27,7 @@ Replace provider-shaped file references with a `StoredFile` table and one audite
 - [x] Test server uses `STORAGE_PROVIDER=local`; tests `files.test.ts` (15), `storage-drivers.test.ts` (14)
 - [ ] **Not verified against real services:** Cloudinary (upload → complete → read), S3 / R2 / MinIO / Supabase (CORS + presigned PUT/GET), ImageKit, Vercel Blob
 - [ ] Route remaining file fields (`Notice.documentUrl`, `Lease.signedAgreementUrl`, `Message.attachmentUrls`, `avatarUrl`, `evidenceUrls`) through the gateway when they get upload paths (ISS-033)
-- [ ] Decide retention / erasure for identity documents (NDPR)
+- [x] Decide retention / erasure for identity documents (NDPR) — ADR-0012; `retention` cron job, enable with `RETENTION_ENABLED=true` after compliance confirms the periods
 - [ ] Backfill if any pre-existing Cloudinary URLs need `StoredFile` rows (none in production when written)
 
 ## 3. Unified Verification & Quality Gates

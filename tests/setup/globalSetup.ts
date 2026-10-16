@@ -70,6 +70,7 @@ export default async function globalSetup() {
     NEXT_TEST_DIST_DIR: '.next-test',
     // Uploads go to disk in tests, whatever .env.test says about Cloudinary.
     STORAGE_PROVIDER: 'local',
+    RETENTION_ENABLED: 'true',
     LOCAL_STORAGE_PATH: TEST_STORAGE_PATH,
   };
   const server: ChildProcess = spawn('pnpm', ['exec', 'next', 'dev'], {

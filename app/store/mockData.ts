@@ -1332,7 +1332,7 @@ export const mockSimilarProperties = [
   },
 ];
 
-export const mockPublicPropertyDetails: Record<number, any> = {
+export const mockPublicPropertyDetails: Record<number, Record<string, unknown>> = {
   1: {
     title: '3 Bedroom Luxury Apartment',
     location: 'Block 15, Lekki Phase 1, Lagos State',

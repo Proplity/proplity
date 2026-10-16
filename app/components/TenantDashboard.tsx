@@ -13,7 +13,8 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
-import { useInvoices, usePayInvoice } from '@/hooks/useInvoices';
+import { useTenantSummary } from '@/hooks/useDashboardSummary';
+import { usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
@@ -24,10 +25,11 @@ import {
   useCancelAutoPayMandate,
 } from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
-import type { Invoice, Payment } from '@/lib/api/types';
+import type { Page } from '@/app/dashboard/navigateToPage';
+import { useFileViewer } from '@/context/FileViewerContext';
 
 interface TenantDashboardProps {
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const maintenanceStatusColor: Record<string, string> = {
@@ -38,25 +40,12 @@ const maintenanceStatusColor: Record<string, string> = {
   CANCELLED: 'gray',
 };
 
-function outstandingBalance(invoices: Invoice[]) {
-  return invoices
-    .filter((i) => i.status !== 'CANCELLED')
-    .reduce((sum, i) => {
-      const paid = i.payments.reduce((p, payment) => p + payment.amount, 0);
-      return sum + Math.max(0, i.amount - paid);
-    }, 0);
-}
-
-function recentPayments(invoices: Invoice[]) {
-  return invoices
-    .flatMap((invoice) => invoice.payments.map((payment) => ({ invoice, payment })))
-    .sort((a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime())
-    .slice(0, 3);
-}
-
 export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
+  const { openFile } = useFileViewer();
   const { data: lease, loading: leaseLoading } = useActiveLease();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
+  // Balance, next due date and recent payments are summed on the server, so
+  // they stay right past the first page of invoices (ISS-049).
+  const { data: summary, loading: invoicesLoading } = useTenantSummary();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
   const { open: openConversation } = useOpenConversation();
@@ -112,11 +101,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: pendingLease, refetch: refetchPendingLease } = useLease(pendingLeaseId);
 
   const property = lease?.unit?.property;
-  const balance = outstandingBalance(invoices);
-  const nextDue = invoices
-    .filter((i) => i.status === 'UNPAID' || i.status === 'PARTIALLY_PAID' || i.status === 'OVERDUE')
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
-  const payments = recentPayments(invoices);
+  const balance = summary?.money.balance ?? 0;
+  const nextDue = summary?.nextDue ?? null;
+  const payments = summary?.recentPayments ?? [];
 
   const handlePayRent = async () => {
     if (!nextDue) return;
@@ -136,7 +123,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="mb-1 text-2xl font-semibold">My Rental Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's your rental information.</p>
+        <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
 
       {pendingLease && <LeaseSignatureCard lease={pendingLease} onSigned={refetchPendingLease} />}
@@ -401,14 +388,14 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                 <div className="border-t border-gray-200 pt-4">
                   <p className="mb-3 text-sm font-medium">Recent Payments</p>
                   <div className="space-y-2">
-                    {payments.map(({ invoice, payment }) => (
+                    {payments.map((payment) => (
                       <div key={payment.id} className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">
                           {new Date(payment.paidAt).toLocaleDateString()}
                         </span>
                         <span className="font-medium">₦{payment.amount.toLocaleString()}</span>
                         <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-700">
-                          {invoice.type}
+                          {payment.type}
                         </span>
                       </div>
                     ))}
@@ -507,20 +494,25 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
             </div>
             <div className="p-6">
               {lease.signedAgreementUrl ? (
-                <a
-                  href={lease.signedAgreementUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openFile({
+                      url: lease.signedAgreementUrl!,
+                      name: 'Signed Lease Agreement.pdf',
+                      type: 'application/pdf',
+                    })
+                  }
+                  className="flex items-center justify-between w-full text-left rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-medium">Signed Lease Agreement</p>
+                    <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
                     <p className="text-xs text-gray-500">
                       Since {new Date(lease.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <FileText className="h-4 w-4 text-gray-600" />
-                </a>
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </button>
               ) : (
                 <p className="text-sm text-gray-400">No documents on file yet.</p>
               )}

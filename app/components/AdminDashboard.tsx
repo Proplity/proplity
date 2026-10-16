@@ -6,7 +6,6 @@ import {
   Building2,
   DollarSign,
   AlertCircle,
-  TrendingUp,
   Shield,
   Database,
   Settings,
@@ -14,13 +13,11 @@ import {
   Wrench,
   XCircle,
 } from 'lucide-react';
-import { useAdminUsers } from '@/hooks/useAdminUsers';
-import { useMyProperties } from '@/hooks/useProperties';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useAdminSummary } from '@/hooks/useDashboardSummary';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface AdminDashboardProps {
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const ROLE_COLOR: Record<string, string> = {
@@ -31,33 +28,20 @@ const ROLE_COLOR: Record<string, string> = {
   ADMIN: 'gray',
 };
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function isWithinDays(iso: string, days: number) {
-  return Date.now() - new Date(iso).getTime() <= days * MS_PER_DAY;
-}
-
 export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
   const router = useRouter();
   const [showDatabaseInfo, setShowDatabaseInfo] = useState(false);
-  const { data: users, loading: usersLoading } = useAdminUsers();
-  const { data: properties, loading: propertiesLoading } = useMyProperties();
-  const { data: invoices, loading: invoicesLoading } = useInvoices();
-  const { data: maintenanceRequests, loading: maintenanceLoading } = useMaintenanceRequests();
-
-  const loading = usersLoading || propertiesLoading || invoicesLoading || maintenanceLoading;
-
-  const totalCollected = invoices.flatMap((i) => i.payments).reduce((sum, p) => sum + p.amount, 0);
-  const openMaintenance = maintenanceRequests.filter(
-    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
-  );
+  // Platform totals come from the server (ISS-049): the old per-list sums only
+  // saw the first page of users (100), properties and invoices (20).
+  const { data: summary, loading } = useAdminSummary();
+  const dash = (v: string | number | undefined) => (loading || v === undefined ? '—' : String(v));
 
   const stats = [
     {
       icon: Users,
       bg: 'bg-blue-50',
       color: 'text-blue-600',
-      value: loading ? '—' : String(users.length),
+      value: dash(summary?.users.total),
       label: 'Total Users',
       breakdown: 'users' as const,
     },
@@ -65,7 +49,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
       icon: Building2,
       bg: 'bg-purple-50',
       color: 'text-purple-600',
-      value: loading ? '—' : String(properties.length),
+      value: dash(summary?.properties.total),
       label: 'Properties Listed',
       breakdown: 'properties' as const,
     },
@@ -73,7 +57,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
       icon: DollarSign,
       bg: 'bg-green-50',
       color: 'text-green-600',
-      value: loading ? '—' : `₦${totalCollected.toLocaleString()}`,
+      value: loading || !summary ? '—' : `₦${summary.money.collected.toLocaleString()}`,
       label: 'Total Transactions',
       breakdown: 'transactions' as const,
     },
@@ -81,55 +65,27 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
       icon: AlertCircle,
       bg: 'bg-orange-50',
       color: 'text-orange-600',
-      value: loading ? '—' : String(openMaintenance.length),
+      value: dash(summary?.maintenance.open),
       label: 'Open Maintenance',
       breakdown: 'maintenance' as const,
     },
   ];
 
-  const usersByRole = ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => ({
-    type: role.charAt(0) + role.slice(1).toLowerCase(),
-    count: users.filter((u) => u.role === role).length,
-    percentage:
-      users.length > 0
-        ? Math.round((users.filter((u) => u.role === role).length / users.length) * 100)
-        : 0,
-    color: ROLE_COLOR[role],
+  const totalUsers = summary?.users.total ?? 0;
+  const usersByRole = ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => {
+    const count = summary?.users.byRole[role] ?? 0;
+    return {
+      type: role.charAt(0) + role.slice(1).toLowerCase(),
+      count,
+      percentage: totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0,
+      color: ROLE_COLOR[role],
+    };
+  });
+
+  const attentionItems = (summary?.attentionItems ?? []).map((i) => ({
+    ...i,
+    href: i.href ?? undefined,
   }));
-
-  // "Items Needing Attention" -- a real feed (overdue invoices + cancelled
-  // maintenance requests), replacing the mock's fabricated "System Issues"
-  // (no error/incident-tracking model exists anywhere in the schema).
-  const attentionItems = [
-    ...properties
-      .filter((p) => p.moderationStatus === 'PENDING_REVIEW')
-      .map((p) => ({
-        title: `Property awaiting review: ${p.name}`,
-        time: p.createdAt,
-        severity: 'high' as const,
-        href: '/admin/properties',
-      })),
-    ...invoices
-      .filter((i) => i.status === 'OVERDUE')
-      .map((i) => ({
-        title: `Invoice ${i.invoiceNumber} overdue`,
-        time: i.dueDate,
-        severity: 'high' as const,
-        href: undefined,
-      })),
-    ...maintenanceRequests
-      .filter((r) => r.status === 'CANCELLED')
-      .map((r) => ({
-        title: `Maintenance request cancelled: ${r.title}`,
-        time: r.updatedAt,
-        severity: 'medium' as const,
-        href: undefined,
-      })),
-  ]
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 5);
-
-  const newPropertiesThisWeek = properties.filter((p) => isWithinDays(p.createdAt, 7)).length;
 
   return (
     <div className="space-y-6 p-6">
@@ -300,21 +256,17 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="rounded-lg bg-blue-50 p-4 text-center">
               <BarChart3 className="mx-auto mb-2 h-8 w-8 text-blue-600" />
-              <p className="mb-1 text-2xl font-semibold">{loading ? '—' : newPropertiesThisWeek}</p>
+              <p className="mb-1 text-2xl font-semibold">{dash(summary?.properties.newThisWeek)}</p>
               <p className="text-sm text-gray-600">New Properties</p>
             </div>
             <div className="rounded-lg bg-green-50 p-4 text-center">
               <Wrench className="mx-auto mb-2 h-8 w-8 text-green-600" />
-              <p className="mb-1 text-2xl font-semibold">
-                {loading ? '—' : openMaintenance.length}
-              </p>
+              <p className="mb-1 text-2xl font-semibold">{dash(summary?.maintenance.open)}</p>
               <p className="text-sm text-gray-600">Open Maintenance Requests</p>
             </div>
             <div className="rounded-lg bg-purple-50 p-4 text-center">
               <Users className="mx-auto mb-2 h-8 w-8 text-purple-600" />
-              <p className="mb-1 text-2xl font-semibold">
-                {loading ? '—' : users.filter((u) => isWithinDays(u.createdAt, 7)).length}
-              </p>
+              <p className="mb-1 text-2xl font-semibold">{dash(summary?.users.newThisWeek)}</p>
               <p className="text-sm text-gray-600">New Users</p>
             </div>
           </div>

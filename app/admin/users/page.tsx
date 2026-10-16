@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Search, Shield, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
+import { Search, Building2, ArrowLeft, UserCheck, UserX, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
-import { useAdminUsers } from '@/hooks/useAdminUsers';
 import type { AdminUser } from '@/lib/api/types';
+import { isAxiosError } from 'axios';
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   ADMIN: { label: 'Admin', className: 'bg-gray-100 text-gray-800' },
@@ -24,45 +24,137 @@ const STATUS_BADGE: Record<string, { icon: typeof UserCheck; className: string }
 
 const ALL_ROLES = ['ALL', 'ADMIN', 'MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'] as const;
 
+const PAGE_SIZE = 20;
+const STATUS_FILTERS = [
+  { value: 'ALL', label: 'Any status' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'PENDING_VERIFICATION', label: 'Awaiting email check' },
+] as const;
+const CHANGEABLE_ROLES = ['TENANT', 'LANDLORD', 'MANAGER', 'VENDOR'] as const;
+
 export default function AdminUsersPage() {
   const router = useRouter();
-  const { data: users, loading, error, refetch } = useAdminUsers();
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [page, setPage] = useState(1);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingVendors, setPendingVendors] = useState<AdminUser[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  const pendingVendors = users.filter(
-    (u) => u.role === 'VENDOR' && u.vendorProfile?.verificationStatus === 'PENDING',
-  );
+  // Suspend / reactivate / change role asks for a reason first.
+  const [action, setAction] = useState<{
+    user: AdminUser;
+    kind: 'SUSPENDED' | 'ACTIVE' | 'ROLE';
+  } | null>(null);
+  const [reason, setReason] = useState('');
+  const [newRole, setNewRole] = useState<string>('TENANT');
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // The search box waits for a pause in typing, then goes back to page 1.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuery(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.admin.users.list({
+        page,
+        limit: PAGE_SIZE,
+        ...(roleFilter !== 'ALL' ? { role: roleFilter } : {}),
+        ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
+        ...(query ? { q: query } : {}),
+      });
+      setUsers(res.data.data);
+      setTotal(res.data.meta.total);
+    } catch {
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, roleFilter, statusFilter, query]);
+
+  const loadPendingVendors = useCallback(async () => {
+    try {
+      const res = await api.admin.users.list({ vendorStatus: 'PENDING', limit: 50 });
+      setPendingVendors(res.data.data);
+    } catch {
+      setPendingVendors([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPendingVendors();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadPendingVendors]);
 
   const decide = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
     setBusyId(id);
     try {
       await api.admin.vendors.verify(id, { status, note: notes[id]?.trim() || undefined });
       toast.success(status === 'VERIFIED' ? 'Vendor verified.' : 'Vendor rejected.');
-      await refetch();
+      await Promise.all([load(), loadPendingVendors()]);
     } catch {
       toast.error('Could not save the decision. Try again.');
     } finally {
       setBusyId(null);
     }
   };
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
-  const filtered = users.filter((u) => {
-    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
-    const term = search.toLowerCase();
-    const matchesSearch =
-      !term ||
-      u.name.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term) ||
-      (u.phoneNumber ?? '').includes(term);
-    return matchesRole && matchesSearch;
-  });
+  const openAction = (user: AdminUser, kind: 'SUSPENDED' | 'ACTIVE' | 'ROLE') => {
+    setAction({ user, kind });
+    setReason('');
+    setActionError(null);
+    setNewRole(CHANGEABLE_ROLES.find((r) => r !== user.role) ?? 'TENANT');
+  };
 
-  const roleCounts = ALL_ROLES.slice(1).reduce<Record<string, number>>((acc, role) => {
-    acc[role] = users.filter((u) => u.role === role).length;
-    return acc;
-  }, {});
+  const confirmAction = async () => {
+    if (!action) return;
+    setBusyId(action.user.id);
+    setActionError(null);
+    try {
+      await api.admin.updateUser(action.user.id, {
+        reason: reason.trim(),
+        ...(action.kind === 'ROLE' ? { role: newRole } : { status: action.kind }),
+      });
+      toast.success(
+        action.kind === 'SUSPENDED'
+          ? 'Account suspended. They are signed out.'
+          : action.kind === 'ACTIVE'
+            ? 'Account reactivated.'
+            : 'Role changed. They must sign in again.',
+      );
+      setAction(null);
+      await load();
+    } catch (e) {
+      setActionError(
+        (isAxiosError(e) && e.response?.data?.error) || 'Could not save the change. Try again.',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-6 p-6">
@@ -77,7 +169,7 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-semibold">User Management</h1>
           <p className="text-sm text-gray-500">
-            {loading ? 'Loading…' : `${users.length} registered accounts`}
+            {loading ? 'Loading…' : `${total} matching accounts`}
           </p>
         </div>
       </div>
@@ -124,34 +216,42 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Role summary chips */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setRoleFilter('ALL')}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            roleFilter === 'ALL'
-              ? 'bg-blue-600 text-white'
-              : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          All ({users.length})
-        </button>
-        {ALL_ROLES.slice(1).map((role) => {
-          const badge = ROLE_BADGE[role];
+      {/* Role and status filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        {ALL_ROLES.map((role) => {
+          const label = role === 'ALL' ? 'All roles' : ROLE_BADGE[role].label;
           return (
             <button
               key={role}
-              onClick={() => setRoleFilter(role)}
+              onClick={() => {
+                setRoleFilter(role);
+                setPage(1);
+              }}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 roleFilter === role
                   ? 'bg-blue-600 text-white'
                   : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {badge.label} ({roleCounts[role] ?? 0})
+              {label}
             </button>
           );
         })}
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm"
+          aria-label="Filter by status"
+        >
+          {STATUS_FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Search */}
@@ -174,7 +274,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium tracking-wide text-gray-500 uppercase">
             <tr>
@@ -184,13 +284,14 @@ export default function AdminUsersPage() {
               <th className="px-6 py-3 text-left">Phone</th>
               <th className="px-6 py-3 text-left">Properties</th>
               <th className="px-6 py-3 text-left">Joined</th>
+              <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading &&
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  {Array.from({ length: 6 }).map((__, j) => (
+                  {Array.from({ length: 7 }).map((__, j) => (
                     <td key={j} className="px-6 py-4">
                       <div className="h-4 rounded bg-gray-100" />
                     </td>
@@ -198,16 +299,16 @@ export default function AdminUsersPage() {
                 </tr>
               ))}
 
-            {!loading && filtered.length === 0 && (
+            {!loading && users.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
                   No users match your filters.
                 </td>
               </tr>
             )}
 
             {!loading &&
-              filtered.map((user: AdminUser) => {
+              users.map((user: AdminUser) => {
                 const roleBadge = ROLE_BADGE[user.role] ?? {
                   label: user.role,
                   className: 'bg-gray-100 text-gray-700',
@@ -257,10 +358,10 @@ export default function AdminUsersPage() {
                       {user.phoneNumber ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-6 py-4">
-                      {(user as any).propertiesCount > 0 ? (
+                      {user.propertiesCount > 0 ? (
                         <div className="flex items-center gap-1 text-gray-600">
                           <Building2 className="h-3.5 w-3.5" />
-                          <span>{(user as any).propertiesCount}</span>
+                          <span>{user.propertiesCount}</span>
                         </div>
                       ) : (
                         <span className="text-gray-300">—</span>
@@ -273,19 +374,137 @@ export default function AdminUsersPage() {
                         year: 'numeric',
                       })}
                     </td>
+                    <td className="px-6 py-4">
+                      {user.role === 'ADMIN' ? (
+                        <span className="text-xs text-gray-300">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {user.status === 'ACTIVE' && (
+                            <button
+                              onClick={() => openAction(user, 'SUSPENDED')}
+                              className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                            >
+                              Suspend
+                            </button>
+                          )}
+                          {user.status === 'SUSPENDED' && (
+                            <button
+                              onClick={() => openAction(user, 'ACTIVE')}
+                              className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openAction(user, 'ROLE')}
+                            className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            Change role
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
           </tbody>
         </table>
 
-        {/* Footer count */}
-        {!loading && filtered.length > 0 && (
-          <div className="border-t border-gray-100 px-6 py-3 text-xs text-gray-400">
-            Showing {filtered.length} of {users.length} users
+        {/* Paging */}
+        {!loading && total > 0 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 text-xs text-gray-500">
+            <span>
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="rounded border border-gray-200 px-2.5 py-1 disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span>
+                Page {page} of {pageCount}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                disabled={page >= pageCount}
+                className="rounded border border-gray-200 px-2.5 py-1 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {action && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setAction(null)}
+        >
+          <div
+            className="w-full max-w-md space-y-4 rounded-xl bg-white p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold">
+              {action.kind === 'SUSPENDED'
+                ? `Suspend ${action.user.name}?`
+                : action.kind === 'ACTIVE'
+                  ? `Reactivate ${action.user.name}?`
+                  : `Change ${action.user.name}'s role`}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {action.kind === 'SUSPENDED'
+                ? 'They are signed out straight away and cannot sign in until you reactivate them. They get an email with your reason.'
+                : action.kind === 'ACTIVE'
+                  ? 'They can sign in again.'
+                  : 'They are signed out and must sign in again. This only works for people with no properties, tenancy or jobs yet.'}
+            </p>
+            {action.kind === 'ROLE' && (
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                {CHANGEABLE_ROLES.filter((r) => r !== action.user.role).map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_BADGE[r].label}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">
+                Reason (saved in the audit log)
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setAction(null)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                disabled={reason.trim().length < 3 || busyId === action.user.id}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {busyId === action.user.id ? 'Saving…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { safeUrlList } from '@/lib/api/urlField';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 type RouteCtx = { params: Promise<{ id: string; unitId: string }> };
 
@@ -50,7 +52,7 @@ export const GET = withAuth(
 const createViolationSchema = z.object({
   description: z.string().min(1),
   severity: z.nativeEnum(ViolationSeverity).optional(),
-  evidenceUrls: z.array(z.string()).optional(),
+  evidenceUrls: safeUrlList.optional(),
 });
 
 export const POST = withAuth(
@@ -65,6 +67,10 @@ export const POST = withAuth(
 
       const validated = await validateBody(req, createViolationSchema);
       if (!validated.success) return validated.response;
+
+      if (validated.data.evidenceUrls?.length) {
+        await assertOwnsFileUrls(validated.data.evidenceUrls, session.sub, 'properties');
+      }
 
       const violation = await prisma.violation.create({
         data: { unitId, reportedById: session.sub, ...validated.data },

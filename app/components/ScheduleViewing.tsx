@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  MapPin,
-  User,
-  Phone,
-  Mail,
-  CheckCircle,
-  AlertCircle,
-} from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
 import { useCreateViewing } from '@/hooks/useProperties';
 
@@ -95,7 +85,7 @@ export function ScheduleViewing({
               at <strong>{formData.timeSlot}</strong>
             </p>
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
-              <p className="mb-2 text-sm font-medium text-blue-900">What's Next?</p>
+              <p className="mb-2 text-sm font-medium text-blue-900">What&apos;s Next?</p>
               <ul className="space-y-1 text-sm text-blue-800">
                 <li>• The property team will confirm or suggest another time</li>
                 <li>• You will get an email and a notification either way</li>

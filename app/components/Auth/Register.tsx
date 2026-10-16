@@ -178,6 +178,175 @@ interface VendorForm extends BaseForm {
   bio: string;
 }
 
+const USER_TYPES = [
+  {
+    id: 'manager' as UserType,
+    label: 'Property Manager',
+    description: 'Manage properties on behalf of landlords',
+    icon: Building2,
+    color: 'blue',
+    badge: 'PREMIUM',
+  },
+  {
+    id: 'landlord' as UserType,
+    label: 'Landlord',
+    description: 'I own rental properties',
+    icon: Home,
+    color: 'purple',
+    badge: 'PREMIUM',
+  },
+  {
+    id: 'tenant' as UserType,
+    label: 'Tenant',
+    description: 'Looking for or currently renting a property',
+    icon: User,
+    color: 'green',
+    badge: 'FREE',
+  },
+  {
+    id: 'vendor' as UserType,
+    label: 'Service Provider',
+    description: 'I offer maintenance & property services',
+    icon: Wrench,
+    color: 'orange',
+    badge: 'FREE',
+  },
+];
+
+function StateSelect({
+  value,
+  onChange,
+  labelCls = 'block text-sm font-medium text-gray-700 mb-1.5',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  labelCls?: string;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>State *</label>
+      <div className="relative">
+        <MapPin className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pr-8 pl-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        >
+          <option value="">Select state</option>
+          {NIGERIAN_STATES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      </div>
+    </div>
+  );
+}
+
+function TermsCheckbox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+      />
+      <span className="text-sm text-gray-700">
+        I agree to the{' '}
+        <a href="#" className="text-blue-600 hover:underline">
+          Terms of Service
+        </a>{' '}
+        and{' '}
+        <a href="#" className="text-blue-600 hover:underline">
+          Privacy Policy
+        </a>
+      </span>
+    </label>
+  );
+}
+
+function StepIndicator({ step, steps }: { step: number; steps: string[] }) {
+  return (
+    <div className="mb-7 flex items-center justify-center gap-0">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const active = step >= n;
+        const current = step === n;
+        return (
+          <div key={n} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                  active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                } ${current ? 'ring-4 ring-blue-100' : ''}`}
+              >
+                {step > n ? <CheckCircle className="h-4 w-4" /> : n}
+              </div>
+              <span
+                className={`mt-1 text-xs font-medium whitespace-nowrap ${active ? 'text-blue-600' : 'text-gray-400'}`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`mx-1 mb-4 h-1 w-14 rounded-full transition-colors ${step > n ? 'bg-blue-600' : 'bg-gray-200'}`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function NavButtons({
+  onNext,
+  onBack,
+  nextLabel = 'Continue',
+  nextDisabled = false,
+  isSubmit = false,
+}: {
+  onNext?: () => void;
+  onBack?: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+  isSubmit?: boolean;
+}) {
+  return (
+    <div className="flex gap-3 pt-4">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+      )}
+      <button
+        type={isSubmit ? 'submit' : 'button'}
+        onClick={!isSubmit ? onNext : undefined}
+        disabled={nextDisabled}
+        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {nextLabel}
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export function Register({
   onSwitchToLogin,
   loginHref = '/login',
@@ -281,7 +450,6 @@ export function Register({
     return ['Account Type', 'Your Details'];
   };
   const steps = getSteps();
-  const totalSteps = steps.length;
 
   const handleUserTypeSelect = (type: UserType) => {
     setUserType(type);
@@ -313,7 +481,10 @@ export function Register({
   // show it as valid for text the user has since changed).
   useEffect(() => {
     if (initialCode && initialCode.trim()) {
-      verifyLandlordCode(initialCode.trim());
+      const timer = setTimeout(() => {
+        verifyLandlordCode(initialCode.trim());
+      }, 0);
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -411,160 +582,7 @@ export function Register({
     'w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
   const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
-  const StateSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <div>
-      <label className={labelCls}>State *</label>
-      <div className="relative">
-        <MapPin className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required
-          className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2.5 pr-8 pl-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          <option value="">Select state</option>
-          {NIGERIAN_STATES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-      </div>
-    </div>
-  );
-
-  const TermsCheckbox = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: (v: boolean) => void;
-  }) => (
-    <label className="flex cursor-pointer items-start gap-2">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-      />
-      <span className="text-sm text-gray-700">
-        I agree to the{' '}
-        <a href="#" className="text-blue-600 hover:underline">
-          Terms of Service
-        </a>{' '}
-        and{' '}
-        <a href="#" className="text-blue-600 hover:underline">
-          Privacy Policy
-        </a>
-      </span>
-    </label>
-  );
-
-  // ── Step indicator ────────────────────────────────────────────────────────
-  const StepIndicator = () => (
-    <div className="mb-7 flex items-center justify-center gap-0">
-      {steps.map((label, i) => {
-        const n = i + 1;
-        const active = step >= n;
-        const current = step === n;
-        return (
-          <div key={n} className="flex items-center">
-            <div className="flex flex-col items-center">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                  active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                } ${current ? 'ring-4 ring-blue-100' : ''}`}
-              >
-                {step > n ? <CheckCircle className="h-4 w-4" /> : n}
-              </div>
-              <span
-                className={`mt-1 text-xs font-medium whitespace-nowrap ${active ? 'text-blue-600' : 'text-gray-400'}`}
-              >
-                {label}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div
-                className={`mx-1 mb-4 h-1 w-14 rounded-full transition-colors ${step > n ? 'bg-blue-600' : 'bg-gray-200'}`}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const NavButtons = ({
-    onNext,
-    onBack,
-    nextLabel = 'Continue',
-    nextDisabled = false,
-    isSubmit = false,
-  }: {
-    onNext?: () => void;
-    onBack?: () => void;
-    nextLabel?: string;
-    nextDisabled?: boolean;
-    isSubmit?: boolean;
-  }) => (
-    <div className="flex gap-3 pt-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
-      )}
-      <button
-        type={isSubmit ? 'submit' : 'button'}
-        onClick={!isSubmit ? onNext : undefined}
-        disabled={nextDisabled}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {nextLabel}
-        <ArrowRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-
-  // ── STEP 1: choose role ───────────────────────────────────────────────────
-  const userTypes = [
-    {
-      id: 'manager' as UserType,
-      label: 'Property Manager',
-      description: 'Manage properties on behalf of landlords',
-      icon: Building2,
-      color: 'blue',
-      badge: 'PREMIUM',
-    },
-    {
-      id: 'landlord' as UserType,
-      label: 'Landlord',
-      description: 'I own rental properties',
-      icon: Home,
-      color: 'purple',
-      badge: 'PREMIUM',
-    },
-    {
-      id: 'tenant' as UserType,
-      label: 'Tenant',
-      description: 'Looking for or currently renting a property',
-      icon: User,
-      color: 'green',
-      badge: 'FREE',
-    },
-    {
-      id: 'vendor' as UserType,
-      label: 'Service Provider',
-      description: 'I offer maintenance & property services',
-      icon: Wrench,
-      color: 'orange',
-      badge: 'FREE',
-    },
-  ];
+  // ─────────────────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────────────────
   if (registeredEmail) {
@@ -577,7 +595,7 @@ export function Register({
             </div>
             <h2 className="mb-2 text-2xl font-bold">Check Your Email</h2>
             <p className="mb-6 text-gray-600">
-              We've sent a verification link to <strong>{registeredEmail}</strong>. Click it to
+              We&apos;ve sent a verification link to <strong>{registeredEmail}</strong>. Click it to
               activate your account, then sign in.
             </p>
             <Link
@@ -625,7 +643,7 @@ export function Register({
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
-          <StepIndicator />
+          <StepIndicator step={step} steps={steps} />
 
           {submitError && (
             <div className="mb-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -638,7 +656,7 @@ export function Register({
           {step === 1 && (
             <div className="space-y-3">
               <h2 className="mb-5 text-center text-lg font-semibold">I want to register as a...</h2>
-              {userTypes.map((type) => {
+              {USER_TYPES.map((type) => {
                 const Icon = type.icon;
                 const badgeColor =
                   type.badge === 'FREE'
@@ -687,8 +705,8 @@ export function Register({
                   <div>
                     <p className="text-sm font-semibold text-blue-800">Landlord Invitation Code</p>
                     <p className="mt-0.5 text-xs text-blue-700">
-                      Enter the code from the landlord you'll be working with. No code yet? You can
-                      create your account now and link to a landlord later from your dashboard.
+                      Enter the code from the landlord you&apos;ll be working with. No code yet? You
+                      can create your account now and link to a landlord later from your dashboard.
                     </p>
                   </div>
                 </div>
@@ -774,8 +792,8 @@ export function Register({
                         Invalid or deactivated code
                       </p>
                       <p className="mt-0.5 text-xs text-red-600">
-                        This code doesn't match any active landlord account. Check the code and try
-                        again, or ask your landlord to generate a new one.
+                        This code doesn&apos;t match any active landlord account. Check the code and
+                        try again, or ask your landlord to generate a new one.
                       </p>
                     </div>
                   </div>
@@ -790,7 +808,7 @@ export function Register({
                     <span className="font-medium">Settings → Manager Access</span>.
                   </li>
                   <li>
-                    The code links your account to their portfolio — you'll only manage their
+                    The code links your account to their portfolio — you&apos;ll only manage their
                     properties.
                   </li>
                   <li>
@@ -817,7 +835,7 @@ export function Register({
                 }}
                 className="w-full text-center text-sm font-medium text-blue-600 hover:underline"
               >
-                I don't have a code yet — continue without one
+                I don&apos;t have a code yet — continue without one
               </button>
             </div>
           )}
@@ -841,8 +859,8 @@ export function Register({
                 </div>
               ) : (
                 <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Not linked to a landlord yet. After you sign in, enter a landlord's code on your
-                  dashboard to see their properties.
+                  Not linked to a landlord yet. After you sign in, enter a landlord&apos;s code on
+                  your dashboard to see their properties.
                 </div>
               )}
 

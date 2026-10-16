@@ -1,4 +1,4 @@
-export const mockVendorJobs: Record<number, any> = {
+export const mockVendorJobs: Record<number, Record<string, unknown>> = {
   1: {
     id: 1,
     title: 'Broken Water Pipe',

@@ -9,6 +9,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { safeUrl } from '@/lib/api/urlField';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,11 @@ function loadRequest(id: string) {
       tenant: true,
       conversation: true,
       vendorRating: true,
+      invoices: {
+        where: { type: 'MAINTENANCE' },
+        orderBy: { createdAt: 'desc' },
+        include: { payments: { select: { amount: true } } },
+      },
     },
   });
 }
@@ -78,7 +84,7 @@ const patchSchema = z.object({
   vendorId: z.string().nullable().optional(),
   scheduledFor: z.coerce.date().nullable().optional(),
   status: z.nativeEnum(MaintenanceStatus).optional(),
-  completionProofUrl: z.string().optional(),
+  completionProofUrl: safeUrl.optional(),
   finalCost: z.number().optional(),
   vendorNotes: z.string().optional(),
 });
@@ -194,20 +200,30 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         // Auto-create the MAINTENANCE invoice in the same transaction as the
         // completion write -- maintenanceRequestId satisfies Invoice's
         // "at least one of leaseId/maintenanceRequestId/userId" rule.
+        // Skipped when the vendor already sent a live invoice for this job
+        // (one invoice per job, ISS-051).
+        const alreadyInvoiced = await prisma.invoice.findFirst({
+          where: { maintenanceRequestId: id, type: 'MAINTENANCE', status: { not: 'CANCELLED' } },
+          select: { id: true },
+        });
         const [updated] = await prisma.$transaction([
           prisma.maintenanceRequest.update({
             where: { id },
             data: { status: 'COMPLETED', completionProofUrl, finalCost, completedAt: new Date() },
           }),
-          prisma.invoice.create({
-            data: {
-              maintenanceRequestId: id,
-              type: 'MAINTENANCE',
-              amount: finalCost,
-              dueDate: new Date(),
-              description: `Maintenance: ${request.title}`,
-            },
-          }),
+          ...(alreadyInvoiced
+            ? []
+            : [
+                prisma.invoice.create({
+                  data: {
+                    maintenanceRequestId: id,
+                    type: 'MAINTENANCE' as const,
+                    amount: finalCost,
+                    dueDate: new Date(),
+                    description: `Maintenance: ${request.title}`,
+                  },
+                }),
+              ]),
         ]);
         await notifyTenantOfStatus(
           request,

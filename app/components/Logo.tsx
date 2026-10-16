@@ -1,4 +1,11 @@
-export function Logo({ className = '' }: { className?: string }) {
+export function Logo({
+  className = '',
+  compactOnMobile = false,
+}: {
+  className?: string;
+  /** Hide the tagline below `sm` so the logo fits next to header buttons. */
+  compactOnMobile?: boolean;
+}) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <svg
@@ -21,7 +28,9 @@ export function Logo({ className = '' }: { className?: string }) {
       </svg>
       <div className="flex flex-col">
         <span className="text-xl font-bold tracking-tight">Proplity</span>
-        <span className="text-xs text-gray-500">AI-Powered Property Management</span>
+        <span className={`text-xs text-gray-500 ${compactOnMobile ? 'hidden sm:block' : ''}`}>
+          AI-Powered Property Management
+        </span>
       </div>
     </div>
   );

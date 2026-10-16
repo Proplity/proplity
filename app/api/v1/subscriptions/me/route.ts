@@ -5,7 +5,25 @@ import { handleApiError } from '@/lib/api/errors';
 
 export const GET = withAuth(async (_req, { session }) => {
   try {
-    const subscription = await prisma.subscription.findUnique({ where: { userId: session.sub } });
+    let subscription = await prisma.subscription.findUnique({ where: { userId: session.sub } });
+    // A plan set to end with its paid period reverts to FREE once that period is over.
+    if (
+      subscription &&
+      subscription.cancelAtPeriodEnd &&
+      subscription.currentPeriodEnd &&
+      subscription.currentPeriodEnd <= new Date()
+    ) {
+      subscription = await prisma.subscription.update({
+        where: { userId: session.sub },
+        data: {
+          tier: 'FREE',
+          status: 'ACTIVE',
+          cancelAtPeriodEnd: false,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+        },
+      });
+    }
     // No row yet = never subscribed -- represented as a real FREE tier
     // rather than null, so the frontend has one shape to render either way.
     return NextResponse.json({

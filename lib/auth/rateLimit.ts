@@ -15,51 +15,99 @@ const MAX_ATTEMPTS = 5;
 // locking out ordinary multi-session usage from a shared IP.
 export const REFRESH_MAX_ATTEMPTS = 30;
 
-export type Reservation = { allowed: boolean; attemptId: string | null };
+// Registrations per IP per window. Defaults to the same 5 as login. The
+// Playwright run starts several registration tests at once from one IP and
+// raises this on its own dev server only (playwright.config.ts); a production
+// deployment should leave REGISTER_MAX_ATTEMPTS unset.
+export function registerMaxAttempts(): number {
+  const n = Number(process.env.REGISTER_MAX_ATTEMPTS);
+  return Number.isInteger(n) && n > 0 ? n : MAX_ATTEMPTS;
+}
 
-// Atomically checks-and-reserves a rate-limit slot -- closes the race
-// checkRateLimit()+recordAttempt() had: two concurrent requests for the
-// same identifier could both pass the count check before either had
-// recorded an attempt, since the slow work in between (bcrypt compare, DB
-// writes, sendEmail) gave the race a window of hundreds of milliseconds.
+// Callers sharing an identifier queue on the advisory lock, so a transaction can
+// legitimately wait on the others ahead of it. Prisma's default 5 s timeout
+// expired under a burst of sign-ups from one IP and surfaced as a 500; give the
+// queue room instead (ISS-006).
+const TX_OPTIONS = { timeout: 20_000, maxWait: 20_000 } as const;
+
+export type Reservation = {
+  allowed: boolean;
+  attemptId: string | null;
+  remaining: number;
+  retryAfterSeconds?: number;
+  resetAt?: Date;
+};
+
+// Atomically checks-and-reserves a rate-limit slot using a true sliding-window
+// log (ISS-021) guarded by a PostgreSQL advisory transaction lock.
 //
-// A Postgres advisory lock scoped to the identifier serializes concurrent
-// callers sharing it: the second caller blocks until the first's
-// transaction commits (releasing the lock), then re-reads the count
-// including the first's now-committed row. This is genuinely atomic, not
-// just "check and insert close together" -- a single combined SQL
-// statement (e.g. an INSERT...SELECT...WHERE count < limit) would still
-// let two truly concurrent transactions each read the same pre-insert
-// count in their own snapshot and both insert, since Postgres's default
-// READ COMMITTED isolation doesn't lock rows a plain SELECT count(*) reads.
+// Sliding-window guarantees:
+// 1. Sliding boundary: Evaluates attempts in the exact rolling window [now - windowMs, now],
+//    completely eliminating fixed-window boundary burst bypasses (~2x limit).
+// 2. Active table pruning: Automatically purges expired attempts older than windowMs
+//    for the identifier on each reservation pass, preventing unbounded table growth.
+// 3. Precise retry timing: Computes exact remaining attempts, resetAt timestamp, and
+//    retryAfterSeconds derived from the oldest entry in the active window.
+// 4. Atomicity: Scoped Postgres advisory lock serializes concurrent attempts per
+//    identifier across transactions.
 //
 // Call this BEFORE any slow work, not after. If `allowed`, the caller must
-// eventually call either nothing further (permanent record, e.g.
-// forgot-password) or releaseAttempt(attemptId) once it's known the
-// request didn't need to count (e.g. login succeeded) -- see each route
-// for which applies.
+// eventually call either nothing further (permanent record, e.g. forgot-password)
+// or releaseAttempt(attemptId) once it's known the request didn't need to count
+// (e.g. login succeeded).
 export async function reserveAttempt(
   identifier: string,
   userId?: string,
   maxAttempts: number = MAX_ATTEMPTS,
+  windowMs: number = WINDOW_MS,
 ): Promise<Reservation> {
   return prisma.$transaction(async (tx) => {
-    // hashtext() maps the identifier string to the int4 pg_advisory_xact_lock
-    // expects; the lock is released automatically when this transaction ends
-    // (commit or rollback), never needs an explicit unlock.
+    // hashtext() maps the identifier string to the int4 pg_advisory_xact_lock expects;
+    // released automatically when this transaction ends (commit or rollback).
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${identifier}))`;
 
-    const since = new Date(Date.now() - WINDOW_MS);
-    const count = await tx.loginAttempt.count({
-      where: { identifier, createdAt: { gt: since } },
+    const now = Date.now();
+    const windowStart = new Date(now - windowMs);
+
+    // 1. Purge stale records older than the sliding window
+    await tx.loginAttempt.deleteMany({
+      where: { identifier, createdAt: { lte: windowStart } },
     });
+
+    // 2. Count active attempts strictly within the sliding window (windowStart, now]
+    const count = await tx.loginAttempt.count({
+      where: { identifier, createdAt: { gt: windowStart } },
+    });
+
     if (count >= maxAttempts) {
-      return { allowed: false, attemptId: null };
+      // Find oldest active attempt to calculate exact window roll-off time
+      const oldest = await tx.loginAttempt.findFirst({
+        where: { identifier, createdAt: { gt: windowStart } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      });
+
+      const resetAt = new Date((oldest ? oldest.createdAt.getTime() : windowStart.getTime()) + windowMs);
+      const retryAfterSeconds = Math.max(1, Math.ceil((resetAt.getTime() - now) / 1000));
+
+      return {
+        allowed: false,
+        attemptId: null,
+        remaining: 0,
+        retryAfterSeconds,
+        resetAt,
+      };
     }
 
+    // 3. Record attempt in sliding window log
     const attempt = await tx.loginAttempt.create({ data: { identifier, userId } });
-    return { allowed: true, attemptId: attempt.id };
-  });
+    return {
+      allowed: true,
+      attemptId: attempt.id,
+      remaining: Math.max(0, maxAttempts - count - 1),
+      resetAt: new Date(now + windowMs),
+    };
+  }, TX_OPTIONS);
 }
 
 // Deletes a reservation that turned out not to need counting (e.g. the

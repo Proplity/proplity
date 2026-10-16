@@ -4,14 +4,10 @@ import {
   DollarSign,
   Star,
   MessageSquare,
-  FileText,
   CheckCircle,
   ArrowRight,
   Bell,
   Shield,
-  TrendingUp,
-  Users,
-  BarChart3,
 } from 'lucide-react';
 import { MarketingNav } from './MarketingNav';
 import { mockServiceProviderFeatureJobs as jobs } from '../store/mockData';
@@ -360,7 +356,7 @@ export function ServiceProviderFeaturePage() {
           <Wrench className="mx-auto mb-6 h-16 w-16 text-orange-200" />
           <h2 className="mb-4 text-4xl font-bold">Register as a Service Provider — Free</h2>
           <p className="mb-8 text-xl text-orange-100">
-            Join Nigeria's largest network of verified maintenance professionals.
+            Join Nigeria&apos;s largest network of verified maintenance professionals.
           </p>
           <Link
             href="/register"

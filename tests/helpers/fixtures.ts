@@ -325,3 +325,26 @@ export async function createConversation(
     },
   });
 }
+
+export async function createBankAccount(
+  userId: string,
+  overrides: Partial<{
+    accountNumber: string;
+    bankCode: string;
+    bankName: string;
+    accountName: string;
+    isDefault: boolean;
+  }> = {},
+) {
+  return testPrisma.bankAccount.create({
+    data: {
+      userId,
+      accountNumber: overrides.accountNumber ?? '0123456789',
+      bankCode: overrides.bankCode ?? '058',
+      bankName: overrides.bankName ?? 'Guaranty Trust Bank',
+      accountName: overrides.accountName ?? 'Test Vendor Account',
+      isDefault: overrides.isDefault ?? true,
+    },
+  });
+}
+

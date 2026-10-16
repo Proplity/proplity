@@ -296,6 +296,24 @@ describe('auth: register', () => {
     expect(reuse.status).toBe(400);
   });
 
+  // ISS-006: a burst of sign-ups from one address used to queue on the rate
+  // limiter's advisory lock and hit Prisma's 5 s transaction timeout, which
+  // surfaced as a 500. Each caller must get an answer (200 or 429), never a 500.
+  it('answers a burst of simultaneous registrations from one IP without a 500', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        apiFetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'x-forwarded-for': '203.0.113.77' },
+          body: { email: `burst${i}@test.local`, password: 'somepassword', name: `Burst ${i}` },
+        }),
+      ),
+    );
+    const statuses = results.map((r) => r.status);
+    expect(statuses.every((s) => s === 200 || s === 429)).toBe(true);
+    expect(statuses.filter((s) => s === 200).length).toBeGreaterThanOrEqual(1);
+  });
+
   // Deliberately last in this describe block -- exhausts register's
   // IP-scoped rate-limit budget, which would otherwise 429 every
   // subsequent registration test that shares this describe's beforeAll.
@@ -326,6 +344,29 @@ describe('auth: register', () => {
       body: { email, password: 'somepassword', name: 'Dup Test' },
     });
     expect(limited.status).toBe(429);
+  });
+});
+
+describe('auth: refresh without a cookie does not use up the rate-limit budget', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('answers 401 for 40 cookie-less refreshes without ever returning 429, and a real session still refreshes', async () => {
+    for (let i = 0; i < 40; i++) {
+      const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+      expect(res.status).toBe(401);
+    }
+    await createUser(Role.TENANT, { email: 'refresh-budget@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-budget@test.local', password: FIXTURE_PASSWORD },
+    });
+    const refresh = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: cookieHeaderFrom(login.setCookies),
+    });
+    expect(refresh.status).toBe(200);
   });
 });
 
@@ -426,7 +467,12 @@ describe('auth: refresh rotation + reuse detection', () => {
     // comment on why refresh needs a much looser cap (periodic background
     // traffic from every authenticated tab, not credential-guessing).
     await fillRateLimit(`refresh:${ip}`, 30);
-    const res = await apiFetch('/api/v1/auth/refresh', { method: 'POST' });
+    // A cookie must be present for the limiter to apply: cookie-less calls are
+    // signed-out page loads and are answered 401 before any attempt is counted.
+    const res = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: 'refresh_token=not-a-real-token',
+    });
     expect(res.status).toBe(429);
   });
 });

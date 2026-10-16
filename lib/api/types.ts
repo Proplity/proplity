@@ -30,6 +30,9 @@ export type Property = {
   type: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
   description?: string | null;
   imageUrl?: string | null;
+  exteriorPhotoUrl?: string | null;
+  video360Url?: string | null;
+  photoUrls?: string[];
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
@@ -41,6 +44,10 @@ export type Property = {
   roadConditionScore: number | null;
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   moderationNotes?: string | null;
+  listingHash?: string | null;
+  mergedIntoId?: string | null;
+  mergedInto?: { id: string; name: string; address?: string; city?: string } | null;
+  mergedFrom?: { id: string; name: string; address?: string; city?: string }[];
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
   createdAt: string;
@@ -82,6 +89,26 @@ export type CreatePropertyInput = {
   imageUrl?: string;
   video360Url?: string;
   exteriorPhotoUrl?: string;
+  photoUrls?: string[];
+};
+
+export type UpdatePropertyInput = {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  type?: string;
+  description?: string;
+  imageUrl?: string | null;
+  video360Url?: string | null;
+  exteriorPhotoUrl?: string | null;
+  photoUrls?: string[];
+  isPublished?: boolean;
+};
+
+export type MergePropertyInput = {
+  targetPropertyId: string;
 };
 
 export type CreateUnitInput = {
@@ -142,6 +169,14 @@ export type MaintenanceRequest = {
   costEstimate: number | null;
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
+  // Present on the single-request fetch only (ISS-051).
+  invoices?: {
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+    payments: { amount: number }[];
+  }[];
   createdAt: string;
   updatedAt: string;
 };
@@ -448,6 +483,8 @@ export type AuditLog = {
   action: string;
   entityType: string;
   entityId: string;
+  // A readable name for the thing the entry is about, when it still exists.
+  entityLabel?: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
 };
@@ -462,6 +499,7 @@ export type Subscription = {
 export type CheckoutSubscriptionInput = {
   tier: 'FREE' | 'PRO';
   billingCycle?: 'monthly' | 'yearly';
+  confirmDowngrade?: boolean;
 };
 
 export type Application = {
@@ -622,4 +660,314 @@ export type LeaseSignature = {
   fullNameTyped: string;
   ipAddress: string | null;
   signedAt: string;
+};
+
+// Server-computed dashboard totals (GET /dashboard/summary, ISS-049).
+export type OwnerDashboardSummary = {
+  properties: {
+    count: number;
+    rows: {
+      id: string;
+      name: string;
+      units: number;
+      occupied: number;
+      occupancy: number;
+      listedRent: number;
+      collected: number;
+      pending: number;
+    }[];
+  };
+  managers: { id: string; name: string }[];
+  units: { total: number; occupied: number; occupancyRate: number; totalListedRent: number };
+  leases: { active: number; upcomingRenewalCount: number };
+  money: {
+    collected: number;
+    collectedThisMonth: number;
+    pending: number;
+    maintenanceCosts: number;
+  };
+  maintenance: { pending: number };
+  upcomingRenewals: {
+    id: string;
+    endDate: string;
+    tenant: { name: string } | null;
+    unit: { unitNumber: string; property: { name: string } } | null;
+  }[];
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    invoiceNumber: string;
+    type: string;
+    leaseId: string | null;
+    tenant: string | null;
+    property: string | null;
+  }[];
+  recentCompletedMaintenance: {
+    id: string;
+    completedAt: string | null;
+    finalCost: number | null;
+    unit: { property: { name: string } } | null;
+  }[];
+  recentLeases: {
+    id: string;
+    startDate: string;
+    tenant: { name: string } | null;
+    unit: { property: { name: string } } | null;
+  }[];
+};
+
+// GET /admin/summary (ISS-049).
+export type AdminDashboardSummary = {
+  users: { total: number; byRole: Record<string, number>; newThisWeek: number };
+  properties: { total: number; newThisWeek: number };
+  money: { collected: number };
+  maintenance: { open: number };
+  attentionItems: {
+    title: string;
+    time: string;
+    severity: 'high' | 'medium';
+    href: string | null;
+  }[];
+};
+
+// GET /admin/reports?from=YYYY-MM&to=YYYY-MM (ISS-049). Series are keyed by
+// UTC month ('YYYY-MM'); months with no activity are absent.
+export type AdminReportsSummary = {
+  totals: {
+    collected: number;
+    paymentCount: number;
+    avgTransactionValue: number;
+    pending: number;
+    invoiceCount: number;
+    cancelledInvoices: number;
+  };
+  series: {
+    billed: Record<string, number>;
+    collected: Record<string, number>;
+    newUsers: Record<string, Record<string, number>>;
+    maintenanceCreated: Record<string, number>;
+    maintenanceResolved: Record<string, number>;
+  };
+  revenueByType: { type: string; amount: number }[];
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    type: string;
+    tenant: string | null;
+    property: string | null;
+  }[];
+  users: {
+    total: number;
+    byRole: Record<string, number>;
+    statusByRole: Record<string, { active: number; pending: number; other: number }>;
+  };
+  maintenance: {
+    total: number;
+    completed: number;
+    open: number;
+    highPriorityOpen: number;
+    avgResolutionDays: number;
+  };
+  properties: {
+    total: number;
+    approved: number;
+    byType: Record<string, number>;
+    byState: {
+      state: string;
+      total: number;
+      approved: number;
+      pending: number;
+      avgRent: number;
+      occupancy: number;
+    }[];
+  };
+  units: { total: number; occupied: number; avgOccupancy: number; avgRent: number };
+};
+
+// GET /dashboard/breakdown (ISS-049): totals and chart data for the pages
+// opened from a dashboard card.
+export type OwnerBreakdownSummary = {
+  properties: { count: number; fully: number; partial: number; vacant: number };
+  leases: {
+    active: number;
+    terminated: number;
+    paid: number;
+    due: number;
+    overdue: number;
+    rentStatusByLease: Record<string, 'due' | 'overdue'>;
+  };
+  money: {
+    collected: number;
+    collectedThisMonth: number;
+    pending: number;
+    collectionRate: number;
+    paymentCount: number;
+    trend: { month: string; expected: number; collected: number }[];
+    byProperty: { name: string; amount: number }[];
+    methods: { name: string; count: number }[];
+  };
+  maintenance: { open: number; high: number; medium: number; low: number };
+  renewals: {
+    count: number;
+    urgent: number;
+    soon: number;
+    later: number;
+    rows: {
+      id: string;
+      endDate: string;
+      rentAmount: number;
+      tenant: string | null;
+      property: string | null;
+      unitNumber: string | null;
+      daysLeft: number;
+    }[];
+  };
+  payments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    method: string;
+    tenant: string | null;
+    property: string | null;
+  }[];
+};
+
+// GET /admin/breakdown (ISS-049).
+export type AdminBreakdownSummary = {
+  users: { total: number; manager: number; landlord: number; tenant: number; vendor: number };
+  properties: { total: number; approved: number; pending: number; flagged: number };
+  money: { collected: number; pending: number; cancelled: number; paymentCount: number };
+  maintenance: { open: number; high: number; medium: number; low: number };
+};
+
+// GET /dashboard/mine (ISS-049): totals over the caller's own records.
+export type TenantDashboardSummary = {
+  money: { balance: number };
+  nextDue: { id: string; dueDate: string; amount: number; status: string } | null;
+  recentPayments: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    invoiceNumber: string;
+    type: string;
+  }[];
+};
+
+export type VendorDashboardSummary = {
+  jobs: {
+    total: number;
+    scheduled: number;
+    inProgress: number;
+    completed: number;
+    completionRate: number;
+    onTimeRate: number | null;
+  };
+  earnings: {
+    completedThisMonth: number;
+    thisMonth: number;
+    completedThisWeek: number;
+    thisWeek: number;
+    pendingPayments: number;
+    totalPaid: number;
+  };
+  rating: { average: number | null; count: number };
+};
+
+// PRD §5.1 / §5.2 / ISS-012 "Bank-Transfer Reconciliation"
+export type BankTransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type BankTransferSubmission = {
+  id: string;
+  invoiceId: string;
+  submittedById: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string | null;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string | null;
+  notes?: string | null;
+  status: BankTransferStatus;
+  reconciledById?: string | null;
+  reconciledAt?: string | null;
+  rejectionReason?: string | null;
+  paymentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+    type: string;
+    dueDate: string;
+  };
+  submittedBy?: { id: string; name: string; email: string };
+  reconciledBy?: { id: string; name: string; role: string } | null;
+  payment?: { id: string; amount: number; paidAt: string; transactionRef: string | null } | null;
+};
+
+export type SubmitBankTransferInput = {
+  invoiceId: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string;
+  notes?: string;
+};
+
+// PRD §5.4 / §5.5 / ISS-012 "Vendor Payouts"
+export type VendorPayoutStatus =
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'FAILED';
+
+export type PayoutMethod = 'BANK_TRANSFER' | 'PAYSTACK_TRANSFER' | 'MANUAL';
+
+export type VendorPayout = {
+  id: string;
+  payoutNumber: string;
+  vendorId: string;
+  invoiceId?: string | null;
+  maintenanceRequestId?: string | null;
+  amount: number;
+  currency: string;
+  status: VendorPayoutStatus;
+  payoutMethod: PayoutMethod;
+  bankAccountId?: string | null;
+  reference?: string | null;
+  transferCode?: string | null;
+  failureReason?: string | null;
+  notes?: string | null;
+  initiatedById: string;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: { id: string; name: string; email: string; phone?: string | null };
+  bankAccount?: { id: string; bankName: string; accountName: string; accountNumber: string } | null;
+  invoice?: { id: string; invoiceNumber: string; amount: number; status: string } | null;
+  maintenanceRequest?: { id: string; title: string; status: string } | null;
+  initiatedBy?: { id: string; name: string; role: string };
+  approvedBy?: { id: string; name: string; role: string } | null;
+};
+
+export type InitiateVendorPayoutInput = {
+  vendorId: string;
+  invoiceId?: string;
+  maintenanceRequestId?: string;
+  amount: number;
+  bankAccountId?: string;
+  payoutMethod?: PayoutMethod;
+  notes?: string;
 };

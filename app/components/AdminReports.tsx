@@ -26,11 +26,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { useAdminUsers } from '@/hooks/useAdminUsers';
-import { useMyProperties } from '@/hooks/useProperties';
-import { useLeases } from '@/hooks/useLeases';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useAdminReports } from '@/hooks/useDashboardSummary';
 
 type ReportTab = 'overview' | 'financial' | 'users' | 'properties' | 'maintenance';
 
@@ -50,7 +46,6 @@ const ROLE_COLORS: Record<string, string> = {
   VENDOR: '#f59e0b',
 };
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function fmt(n: number) {
   if (n >= 1_000_000_000) return `₦${(n / 1_000_000_000).toFixed(1)}B`;
@@ -58,9 +53,9 @@ function fmt(n: number) {
   return `₦${n.toLocaleString()}`;
 }
 
-function monthKey(date: string) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${d.getMonth()}`;
+// Same 'YYYY-MM' keys the server buckets by.
+function keyOf(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function monthsForPeriod(period: string) {
@@ -70,7 +65,7 @@ function monthsForPeriod(period: string) {
     for (let m = 0; m < 12; m++) {
       const d = new Date(now.getFullYear() - 1, m, 1);
       months.push({
-        key: `${d.getFullYear()}-${d.getMonth()}`,
+        key: keyOf(d),
         label: d.toLocaleDateString('en-US', { month: 'short' }),
       });
     }
@@ -88,7 +83,7 @@ function monthsForPeriod(period: string) {
   for (let i = count - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({
-      key: `${d.getFullYear()}-${d.getMonth()}`,
+      key: keyOf(d),
       label: d.toLocaleDateString('en-US', { month: 'short' }),
     });
   }
@@ -134,146 +129,72 @@ export function AdminReports() {
   const [period, setPeriod] = useState('Last 6 Months');
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
 
-  const { data: users, loading: usersLoading, refetch: refetchUsers } = useAdminUsers();
-  const {
-    data: properties,
-    loading: propertiesLoading,
-    refetch: refetchProperties,
-  } = useMyProperties();
-  const { data: leases } = useLeases();
-  const { data: invoices, loading: invoicesLoading, refetch: refetchInvoices } = useInvoices();
-  const {
-    data: maintenanceRequests,
-    loading: maintenanceLoading,
-    refetch: refetchMaintenance,
-  } = useMaintenanceRequests();
-
-  const loading = usersLoading || propertiesLoading || invoicesLoading || maintenanceLoading;
-  const handleRefresh = () => {
-    refetchUsers();
-    refetchProperties();
-    refetchInvoices();
-    refetchMaintenance();
-  };
   const periods = ['Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'This Year', 'Last Year'];
-
-  // ---- Shared real computations (platform-wide -- ADMIN sees everything) ----
-  const allPayments = invoices.flatMap((invoice) =>
-    invoice.payments.map((payment) => ({ invoice, payment })),
-  );
-  const collectedTotal = allPayments.reduce((sum, p) => sum + p.payment.amount, 0);
-  const pendingTotal = invoices
-    .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
-    .reduce(
-      (sum, i) => sum + Math.max(0, i.amount - i.payments.reduce((s, p) => s + p.amount, 0)),
-      0,
-    );
-  const cancelledInvoices = invoices.filter((i) => i.status === 'CANCELLED');
-  const cancelledRate =
-    invoices.length > 0 ? (cancelledInvoices.length / invoices.length) * 100 : 0;
-  const avgTransactionValue = allPayments.length > 0 ? collectedTotal / allPayments.length : 0;
-
-  const completedMaintenance = maintenanceRequests.filter((r) => r.status === 'COMPLETED');
-  const resolutionDays = completedMaintenance
-    .filter((r) => r.completedAt)
-    .map(
-      (r) => (new Date(r.completedAt!).getTime() - new Date(r.createdAt).getTime()) / MS_PER_DAY,
-    );
-  const avgResolutionDays =
-    resolutionDays.length > 0
-      ? resolutionDays.reduce((s, d) => s + d, 0) / resolutionDays.length
-      : 0;
-  const openMaintenance = maintenanceRequests.filter(
-    (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED',
-  );
-  const highPriorityOpen = openMaintenance.filter(
-    (r) => r.priority === 'HIGH' || r.priority === 'EMERGENCY',
-  ).length;
-
   const months = monthsForPeriod(period);
+
+  // Every figure is computed by the server (ISS-049); the period only picks the
+  // month range for the charts.
+  const {
+    data: report,
+    loading,
+    error,
+    refetch: handleRefresh,
+  } = useAdminReports(months[0].key, months[months.length - 1].key);
+
+  const collectedTotal = report?.totals.collected ?? 0;
+  const pendingTotal = report?.totals.pending ?? 0;
+  const avgTransactionValue = report?.totals.avgTransactionValue ?? 0;
+  const cancelledRate =
+    report && report.totals.invoiceCount > 0
+      ? (report.totals.cancelledInvoices / report.totals.invoiceCount) * 100
+      : 0;
+
   const revenueTrend = months.map(({ key, label }) => ({
     month: label,
-    billed: invoices
-      .filter((i) => monthKey(i.dueDate) === key)
-      .reduce((sum, i) => sum + i.amount, 0),
-    collected: allPayments
-      .filter((p) => monthKey(p.payment.paidAt) === key)
-      .reduce((sum, p) => sum + p.payment.amount, 0),
+    billed: report?.series.billed[key] ?? 0,
+    collected: report?.series.collected[key] ?? 0,
   }));
   const newUsersByMonth = months.map(({ key, label }) => {
     const row: Record<string, number | string> = { month: label };
     for (const role of ['MANAGER', 'LANDLORD', 'TENANT', 'VENDOR']) {
-      row[role.toLowerCase()] = users.filter(
-        (u) => u.role === role && monthKey(u.createdAt) === key,
-      ).length;
+      row[role.toLowerCase()] = report?.series.newUsers[key]?.[role] ?? 0;
     }
     return row;
   });
   const maintenanceByMonth = months.map(({ key, label }) => ({
     month: label,
-    created: maintenanceRequests.filter((r) => monthKey(r.createdAt) === key).length,
-    resolved: maintenanceRequests.filter((r) => r.completedAt && monthKey(r.completedAt) === key)
-      .length,
+    created: report?.series.maintenanceCreated[key] ?? 0,
+    resolved: report?.series.maintenanceResolved[key] ?? 0,
   }));
 
-  const revenueByType = Object.entries(
-    allPayments.reduce<Record<string, number>>((acc, p) => {
-      acc[p.invoice.type] = (acc[p.invoice.type] ?? 0) + p.payment.amount;
-      return acc;
-    }, {}),
-  ).map(([type, amount], i) => ({ type, amount, fill: CHART_COLORS[i % CHART_COLORS.length] }));
+  const revenueByType = (report?.revenueByType ?? []).map((r, i) => ({
+    ...r,
+    fill: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+  const recentPayments = report?.recentPayments ?? [];
 
-  const usersByRole = ['ADMIN', 'MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => ({
+  const ROLES = ['ADMIN', 'MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'];
+  const roleCount = (role: string) => report?.users.byRole[role] ?? 0;
+  const usersByRole = ROLES.map((role) => ({
     name: role,
-    value: users.filter((u) => u.role === role).length,
+    value: roleCount(role),
     fill: ROLE_COLORS[role],
   }));
-
-  const units = properties.flatMap((p) => p.units);
-  const occupiedUnits = units.filter((u) => u.status === 'OCCUPIED').length;
-  const avgOccupancy = units.length > 0 ? (occupiedUnits / units.length) * 100 : 0;
-  const avgRent =
-    units.length > 0 ? units.reduce((sum, u) => sum + u.rentAmount, 0) / units.length : 0;
-  const propertiesByState = Object.entries(
-    properties.reduce<Record<string, number>>((acc, p) => {
-      const state = p.state ?? 'Unknown';
-      acc[state] = (acc[state] ?? 0) + 1;
-      return acc;
-    }, {}),
-  ).map(([name, value], i) => ({ name, value, fill: CHART_COLORS[i % CHART_COLORS.length] }));
-  const stateDetail = Object.entries(
-    properties.reduce<
-      Record<string, { total: number; approved: number; pending: number; units: typeof units }>
-    >((acc, p) => {
-      const state = p.state ?? 'Unknown';
-      acc[state] ??= { total: 0, approved: 0, pending: 0, units: [] };
-      acc[state].total += 1;
-      if (p.moderationStatus === 'APPROVED') acc[state].approved += 1;
-      if (p.moderationStatus === 'PENDING_REVIEW') acc[state].pending += 1;
-      acc[state].units.push(...p.units);
-      return acc;
-    }, {}),
-  ).map(([state, s]) => ({
-    state,
-    ...s,
-    avgRent:
-      s.units.length > 0 ? s.units.reduce((sum, u) => sum + u.rentAmount, 0) / s.units.length : 0,
-    occupancy:
-      s.units.length > 0
-        ? (s.units.filter((u) => u.status === 'OCCUPIED').length / s.units.length) * 100
-        : 0,
+  const statusByRole = ROLES.map((role) => ({
+    role,
+    ...(report?.users.statusByRole[role] ?? { active: 0, pending: 0, other: 0 }),
   }));
 
-  const statusByRole = ['ADMIN', 'MANAGER', 'LANDLORD', 'TENANT', 'VENDOR'].map((role) => {
-    const roleUsers = users.filter((u) => u.role === role);
-    return {
-      role,
-      active: roleUsers.filter((u) => u.status === 'ACTIVE').length,
-      pending: roleUsers.filter((u) => u.status === 'PENDING_VERIFICATION').length,
-      other: roleUsers.filter((u) => u.status !== 'ACTIVE' && u.status !== 'PENDING_VERIFICATION')
-        .length,
-    };
-  });
+  const avgOccupancy = report?.units.avgOccupancy ?? 0;
+  const avgRent = report?.units.avgRent ?? 0;
+  const propertiesByState = (report?.properties.byState ?? []).map((r, i) => ({
+    name: r.state,
+    value: r.total,
+    fill: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+  const stateDetail = report?.properties.byState ?? [];
+  const avgResolutionDays = report?.maintenance.avgResolutionDays ?? 0;
+  const highPriorityOpen = report?.maintenance.highPriorityOpen ?? 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -340,6 +261,7 @@ export function AdminReports() {
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading platform data…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* OVERVIEW */}
       {activeTab === 'overview' && (
@@ -354,21 +276,21 @@ export function AdminReports() {
             />
             <KpiCard
               label="Total Users"
-              value={loading ? '—' : String(users.length)}
+              value={loading ? '—' : String(report?.users.total ?? 0)}
               icon={Users}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
             />
             <KpiCard
               label="Properties Listed"
-              value={loading ? '—' : String(properties.length)}
+              value={loading ? '—' : String(report?.properties.total ?? 0)}
               icon={Building2}
               iconBg="bg-purple-50"
               iconColor="text-purple-600"
             />
             <KpiCard
               label="Maintenance Resolved"
-              value={loading ? '—' : String(completedMaintenance.length)}
+              value={loading ? '—' : String(report?.maintenance.completed ?? 0)}
               icon={Wrench}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
@@ -544,6 +466,7 @@ export function AdminReports() {
           <div className="rounded-xl border border-gray-200 bg-white">
             <div className="flex items-center justify-between border-b border-gray-200 p-5">
               <h3 className="font-semibold text-gray-900">Revenue Ledger</h3>
+              <span className="text-xs text-gray-500">Latest 50 payments</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -560,29 +483,22 @@ export function AdminReports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {allPayments
-                    .sort(
-                      (a, b) =>
-                        new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime(),
-                    )
-                    .map(({ invoice, payment }) => (
-                      <tr key={payment.id} className="transition-colors hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-800">
-                          {invoice.lease?.tenant.name ?? 'Unknown'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {invoice.lease?.unit.property.name ?? '—'}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">
-                          {fmt(payment.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{invoice.type}</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {new Date(payment.paidAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  {allPayments.length === 0 && (
+                  {recentPayments.map((payment) => (
+                    <tr key={payment.id} className="transition-colors hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">
+                        {payment.tenant ?? 'Unknown'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{payment.property ?? '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">
+                        {fmt(payment.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{payment.type}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {new Date(payment.paidAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                  {recentPayments.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                         No payments recorded yet.
@@ -602,28 +518,28 @@ export function AdminReports() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               label="Property Managers"
-              value={loading ? '—' : String(users.filter((u) => u.role === 'MANAGER').length)}
+              value={loading ? '—' : String(roleCount('MANAGER'))}
               icon={Users}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
             />
             <KpiCard
               label="Landlords"
-              value={loading ? '—' : String(users.filter((u) => u.role === 'LANDLORD').length)}
+              value={loading ? '—' : String(roleCount('LANDLORD'))}
               icon={Users}
               iconBg="bg-purple-50"
               iconColor="text-purple-600"
             />
             <KpiCard
               label="Tenants"
-              value={loading ? '—' : String(users.filter((u) => u.role === 'TENANT').length)}
+              value={loading ? '—' : String(roleCount('TENANT'))}
               icon={Users}
               iconBg="bg-green-50"
               iconColor="text-green-600"
             />
             <KpiCard
               label="Service Providers"
-              value={loading ? '—' : String(users.filter((u) => u.role === 'VENDOR').length)}
+              value={loading ? '—' : String(roleCount('VENDOR'))}
               icon={Users}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
@@ -733,18 +649,14 @@ export function AdminReports() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               label="Total Listed"
-              value={loading ? '—' : String(properties.length)}
+              value={loading ? '—' : String(report?.properties.total ?? 0)}
               icon={Building2}
               iconBg="bg-purple-50"
               iconColor="text-purple-600"
             />
             <KpiCard
               label="Approved"
-              value={
-                loading
-                  ? '—'
-                  : String(properties.filter((p) => p.moderationStatus === 'APPROVED').length)
-              }
+              value={loading ? '—' : String(report?.properties.approved ?? 0)}
               icon={Building2}
               iconBg="bg-green-50"
               iconColor="text-green-600"
@@ -800,7 +712,7 @@ export function AdminReports() {
                 <BarChart
                   data={['RESIDENTIAL', 'COMMERCIAL', 'INDUSTRIAL', 'MIXED_USE'].map((type) => ({
                     type,
-                    count: properties.filter((p) => p.type === type).length,
+                    count: report?.properties.byType[type] ?? 0,
                   }))}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -879,7 +791,7 @@ export function AdminReports() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               label="Total Requests (All-Time)"
-              value={loading ? '—' : String(maintenanceRequests.length)}
+              value={loading ? '—' : String(report?.maintenance.total ?? 0)}
               icon={Wrench}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
@@ -900,7 +812,7 @@ export function AdminReports() {
               value={
                 loading
                   ? '—'
-                  : resolutionDays.length > 0
+                  : avgResolutionDays > 0
                     ? `${avgResolutionDays.toFixed(1)} days`
                     : 'N/A'
               }

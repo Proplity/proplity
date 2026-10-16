@@ -71,13 +71,15 @@ export function useNotifications() {
       } catch {
         setError('Failed to delete notification');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [data],
   );
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return {
