@@ -58,13 +58,13 @@ function getTabsForRole(role: Role) {
           shortLabel: 'Browse',
           icon: Search,
         },
-        { href: '/dashboard/rentals', label: 'My Rentals', icon: Building2 },
         {
           href: '/dashboard/payment-history',
           label: 'Payment History',
           shortLabel: 'Payments',
           icon: Receipt,
         },
+        { href: '/dashboard/rentals', label: 'My Rentals', icon: Building2 },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
     case 'landlord':
