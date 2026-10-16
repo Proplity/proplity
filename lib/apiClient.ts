@@ -61,7 +61,14 @@ import type {
   UpdateMaintenanceRequestInput,
   Vendor,
   Violation,
+  BankTransferStatus,
+  BankTransferSubmission,
+  SubmitBankTransferInput,
+  VendorPayoutStatus,
+  VendorPayout,
+  InitiateVendorPayoutInput,
 } from './api/types';
+import type { UploadFolder } from '@/lib/fileRef';
 
 export const apiClient = axios.create({
   headers: {
@@ -447,12 +454,7 @@ export const api = {
     },
   },
   uploads: {
-    sign: (body: {
-      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
-      fileName: string;
-      contentType: string;
-      size: number;
-    }) =>
+    sign: (body: { folder: UploadFolder; fileName: string; contentType: string; size: number }) =>
       apiClient.post<{ data: { file: { id: string; url: string }; plan: UploadPlan } }>(
         '/api/v1/uploads/sign',
         body,
@@ -502,5 +504,49 @@ export const api = {
       apiClient.post<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads`, body),
     cancel: (propertyId: string, adId: string) =>
       apiClient.patch<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads/${adId}`),
+  },
+  bankTransfers: {
+    list: (params?: {
+      status?: BankTransferStatus;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) => apiClient.get<Paginated<BankTransferSubmission>>('/api/v1/bank-transfers', { params }),
+    get: (id: string) =>
+      apiClient.get<{ data: BankTransferSubmission }>(`/api/v1/bank-transfers/${id}`),
+    submit: (body: SubmitBankTransferInput) =>
+      apiClient.post<{ data: BankTransferSubmission }>('/api/v1/bank-transfers', body),
+    reconcile: (
+      id: string,
+      body: { action: 'APPROVE' | 'REJECT'; notes?: string; rejectionReason?: string },
+    ) =>
+      apiClient.post<{
+        data: {
+          submission: BankTransferSubmission;
+          payment?: unknown;
+          newStatus?: string;
+        };
+      }>(`/api/v1/bank-transfers/${id}/reconcile`, body),
+  },
+  vendorPayouts: {
+    list: (params?: {
+      status?: VendorPayoutStatus;
+      vendorId?: string;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) => apiClient.get<Paginated<VendorPayout>>('/api/v1/vendor-payouts', { params }),
+    get: (id: string) => apiClient.get<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`),
+    initiate: (body: InitiateVendorPayoutInput) =>
+      apiClient.post<{ data: VendorPayout }>('/api/v1/vendor-payouts', body),
+    patch: (
+      id: string,
+      body: {
+        action: 'APPROVE' | 'PROCESS' | 'REJECT';
+        reason?: string;
+        externalReference?: string;
+        manualNote?: string;
+      },
+    ) => apiClient.patch<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`, body),
   },
 };

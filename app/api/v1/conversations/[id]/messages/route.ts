@@ -7,6 +7,7 @@ import { parseCursorPagination, buildCursorMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { safeUrlList } from '@/lib/api/urlField';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -70,6 +71,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const validated = await validateBody(req, createMessageSchema);
     if (!validated.success) return validated.response;
+
+    if (validated.data.attachmentUrls?.length) {
+      await assertOwnsFileUrls(validated.data.attachmentUrls, session.sub, 'communications');
+    }
 
     const [message] = await prisma.$transaction([
       prisma.message.create({

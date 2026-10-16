@@ -62,6 +62,7 @@ model MaintenanceRequest {
   costEstimate       Float?
   finalCost          Float?
   invoices           Invoice[]
+  vendorPayouts      VendorPayout[]
   conversation       Conversation?
   vendorRating       VendorRating?
   createdAt          DateTime             @default(now())
