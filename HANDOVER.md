@@ -10,7 +10,7 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 - The domain API roadmap, the frontend, the background workers and the test suites are built. 89 route handlers, 41 models, 23 migrations.
 - The issue register (`docs/issues/issues.md`) is worked through: everything that can be done without outside input is built and merged to `dev`.
-- **Tests:** `pnpm test` runs 370 Vitest tests in 25 files, all passing on `dev` (real HTTP against a spawned `next dev` and a recreated `proplity_test_db`). Playwright E2E: 52 tests across 15 spec files, CI uses one worker. `pnpm lint`: 0 errors, 0 warnings (all 138 lint warnings completely eliminated with 0 `@typescript-eslint/no-explicit-any` and 0 React Compiler warnings).
+- **Tests:** `pnpm test` runs 370 Vitest integration tests in 25 files (`tests/api/`), `pnpm test:unit` runs 71 fast unit/fuzz/security/anomaly tests in 12 files (~2.8s). Stryker mutation testing achieves 85.71% mutation score (`pnpm test:mutation`). Autocannon load testing (`pnpm test:load`) and 100k units query scaling benchmark (`pnpm benchmark:100k`). Playwright E2E: 52 tests across 15 spec files. `pnpm lint`: 0 errors, 0 warnings.
 - **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. All stale local and remote feature branches merged into `dev` have been pruned.
 - **Repo and CI:** GitHub `Proplity/proplity`. CI runs typecheck, lint, format check, build, the API integration suite and Playwright. Vercel's GitHub integration posts preview deployments (the custom preview workflow was removed).
 
@@ -23,17 +23,17 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 3. Smoke-test uploads on staging.
 4. Confirm the production environment variables (see `DEPLOYMENT.md`).
 5. Compliance sign-off on the identity-document retention periods before setting `RETENTION_ENABLED=true`.
-6. Run the production migrations and confirm before deploying. New since the last release: `20261014090000_payment_ref_unique`, `20261014120000_trust_score_computed` (nulls the old placeholder trust score), `20261014150000_one_active_autopay_per_lease` (soft-cancels duplicate active auto-pay mandates, keeping the newest), `20261014180000_listing_hash_backfill`, `20261014200000_property_photo_urls`.
+6. Run the production migrations and confirm before deploying. New since the last release: `20261014090000_payment_ref_unique`, `20261014120000_trust_score_computed` (nulls the old placeholder trust score), `20261014150000_one_active_autopay_per_lease` (soft-cancels duplicate active auto-pay mandates, keeping the newest), `20261014180000_listing_hash_backfill`, `20261014200000_property_photo_urls`, `20261016100000_perf_scale_indexes`.
 7. Promote `dev` into `main` (staging) and then into `prod` (production).
 
 ### Blocked on something outside the code
 
 - **ISS-010, 011, 012:** live Paystack calls, auto-pay charging (a stored mandate is never charged today) and bank-transfer reconciliation / vendor payouts. Need a Paystack account and product decisions.
 - **ISS-035, ISS-038:** storage providers. Need real credentials.
-- **ISS-030:** load testing. Needs a proper environment.
 
 ### Completed in current pass (previously pending)
 
+- **Rigorous Testing Suite, Mutation Testing, Security Hardening & 100k Unit Load Benchmarks (ISS-030, ISS-058):** Stryker mutation testing (85.71% mutation score), 1,000+ adversarial fuzz tests, security RBAC & protocol smuggling tests (open redirect backslash smuggling fix in `safeRedirect.ts`), workflow and financial anomaly tests, 10 scaling indexes deployed via migration `20261016100000_perf_scale_indexes` (101 indexes total, sub-millisecond query plan seek), and autocannon load & stress testing harness.
 - **Photo Management on Existing Listings:** UI modal/panel (`PropertyPhotoManager.tsx`) built and wired into `PropertyDetail.tsx` (allowing landlords and managers to add, reorder, delete, and set cover/exterior photos for existing listings via PATCH).
 - **Duplicate Listing Merge & Undo Merge Workflow:** Implemented `POST/DELETE /api/v1/properties/[id]/merge` and `POST /api/v1/properties/[id]/unmerge` using `Property.mergedIntoId`, audit logs (`PROPERTY_MERGE`, `PROPERTY_UNMERGE`), exclusion from public listings, admin `MergeDuplicateModal.tsx`, Merged filter tab, and 5 new integration tests.
 - **Lint Refactoring:** 100% elimination of all 138 ESLint warnings down to 0 errors and 0 warnings (eliminated 65 `any` types, 15 static component declarations, 7 unused vars, 3 purity violations, 3 immutability violations, and 45 effect set-state warnings).

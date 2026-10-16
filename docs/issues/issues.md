@@ -4,15 +4,14 @@ _Last updated 2026-10-16. How to use it, the severity rubric and the row templat
 
 ## Priority queue (open items, most urgent first)
 
-1. ISS-030 Load & stress testing / mutation testing (PRD targets < 2s under load, 100k units unmeasured)
-2. ISS-035 Non-Cloudinary storage providers untested against real services (smoke-test staging with the chosen provider)
-3. ISS-010 Paystack live charge call never exercised
-4. ISS-011 Auto-pay mandates are never charged
-5. ISS-020 Case-only duplicate accounts already in the database (check production before relying on ADR-0006)
-6. ISS-012 No bank-transfer reconciliation, no vendor payouts
-7. ISS-038 Other file fields (`Notice.documentUrl`, lease and message attachments) bypass the gateway
-8. ISS-039 Switch on `RETENTION_ENABLED` once compliance confirms the periods (ADR-0012)
-9. ISS-007 Inbox widget rewrites links to the current host (dev tool only)
+1. ISS-035 Non-Cloudinary storage providers untested against real services (smoke-test staging with the chosen provider)
+2. ISS-010 Paystack live charge call never exercised
+3. ISS-011 Auto-pay mandates are never charged
+4. ISS-020 Case-only duplicate accounts already in the database (check production before relying on ADR-0006)
+5. ISS-012 No bank-transfer reconciliation, no vendor payouts
+6. ISS-038 Other file fields (`Notice.documentUrl`, lease and message attachments) bypass the gateway
+7. ISS-039 Switch on `RETENTION_ENABLED` once compliance confirms the periods (ADR-0012)
+8. ISS-007 Inbox widget rewrites links to the current host (dev tool only)
 
 ---
 
@@ -88,6 +87,7 @@ _Last updated 2026-10-16. How to use it, the severity rubric and the row templat
 | ISS-055 | The audit log page has no filters, paging or metadata                                                  | UI/UX flow                 | P3  | Certain    | Merged to `dev`                                                                                              | Yes                         | `/admin/security`                                                                                                                                                 | It shows the latest 100 rows with raw ids. File reads, vendor decisions and retention deletions now write here, so it needs filters (action, entity, actor, date) and a metadata view.                                                                                                                                                                                                                                                                                 |
 | ISS-056 | Auto-pay mandates accept any token and can be duplicated; downgrading a subscription to FREE is silent | Payments                   | P3  | Certain    | Merged to `dev` (by code)                                                                                    | Yes                         | `payments/autopay`, `subscriptions/checkout`                                                                                                                      | No validation of the provider token, several active mandates per lease, and a paid subscriber who picks FREE loses the paid period without a warning. Related: ISS-011.                                                                                                                                                                                                                                                                                                |
 | ISS-057 | E2E `admin opening a tenant-style /dashboard route is sent to /admin` fails                            | Testing & CI               | P3  | Certain    | Confirmed (fails on `dev`)                                                                                   | Yes                         | `tests/e2e/flows/admin.spec.ts`, `LandingPage.tsx`                                                                                                                | After the redirect, the home page's "Browse All Properties" link still points to `/login` for a signed-in admin (expected `/admin`), so the signed-in state is not visible on `/` in time. Fails the same way on `dev` without the dashboard-summary changes. Not in the CI gate; needs a look at session restore on the landing page.                                                                                                                                 |
+| ISS-058 | `safeRedirect` vulnerable to backslash smuggling open-redirect (`/\attacker.com`)                      | Security / Auth            | P1  | Certain    | Fixed on branch (`dev`)                                                                                      | Yes                         | `lib/safeRedirect.ts`                                                                                                                                             | Discovered via `tests/security/injection-smuggling.test.ts`. `startsWith('/') && !startsWith('//')` allowed `/\attacker.com`, which modern browsers normalize to `//attacker.com`. Enforced `!from.includes('\\')` to block all backslash smuggling vectors.                                                                                                                                                                                                         |
 | ISS-025 | Duplicate-listing fields unused                                                                        | Data integrity             | P3  | Certain    | Merged to `dev`                                                                                              | Yes until merged + released | `lib/propertyFingerprint.ts`, `MergeDuplicateModal.tsx`, `app/admin/properties`                                                  | New listings get a `listingHash` (SHA-256 of the address and city, lower-cased, punctuation and spaces removed; `lib/propertyFingerprint.ts`), recomputed when address changes. Possible duplicates are highlighted with badges in the admin properties table. The duplicate merge and undo-merge workflow is fully implemented via `POST /api/v1/properties/[id]/merge` and `POST /api/v1/properties/[id]/unmerge` using `Property.mergedIntoId`, with `MergeDuplicateModal` UI, Merged tab filter, audit logs (`PROPERTY_MERGE`, `PROPERTY_UNMERGE`), and exclusion from public browse listings. Covered by API tests in `properties.test.ts`. |
 
 ## UI / UX
@@ -106,7 +106,7 @@ _Last updated 2026-10-16. How to use it, the severity rubric and the row templat
 | ISS-027 | Messaging uses 5 s polling                       | Notifications   | P3  | Certain    | Won't fix (deferred)   | n/a           | `useMessages`                 | WebSocket/SSE deferred.                                           |
 | ISS-028 | Rent invoicer advances one cycle per run         | Background jobs | P3  | Certain    | Not a bug (by design)  | n/a           | `rentInvoicer.ts`             | A lease several cycles behind catches up over several daily runs. |
 | ISS-029 | Payment-reliability score is a heuristic, not ML | Background jobs | P3  | Certain    | Not a bug (documented) | n/a           | `paymentReliabilityScorer.ts` |                                                                   |
-| ISS-030 | No load / performance testing                    | Performance     | P2  | Possible   | Suspected              | Unknown       | —                             | PRD targets (100k units, <2 s) unmeasured.                        |
+| ISS-030 | No load / performance testing                    | Performance     | P2  | Certain    | Resolved / Tested      | n/a           | `scripts/load-test.ts`, `scripts/benchmark-100k-units.ts`    | PRD targets (< 2s under load, 100k units scalability). Added 10 composite/single B-tree indexes via migration `20261016100000_perf_scale_indexes` (101 indexes total). Sub-millisecond index seek verified (< 0.15ms). Multi-phase autocannon stress test harness added. |
 
 ## Verified during the registration task (2026-10-11)
 
