@@ -214,12 +214,12 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API suite (Vitest)** — `pnpm test`. 365 tests across 25 files in
+- **API suite (Vitest)** — `pnpm test`. 370 tests across 25 files in
   `tests/api/`, real HTTP against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 36 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 52 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
   the dev email widget, and the mobile tab bar. Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
