@@ -1,12 +1,12 @@
 # 0003: StoredFile, File Gateway and Storage Providers (ISS-034 and follow-ups)
 
 - **Period / Focus:** 2026-10-11
-- **Status:** In Progress
+- **Status:** Completed
 - **Priority:** Medium
 - **Assignee:** Claude
-- **Target Branch / PR:** `feat/storage-owner-prefix` (PR #40, stacked on `feature/registration-ux-and-e2e`, PR #38)
+- **Target Branch / PR:** `feat/storage-owner-prefix` (merged into `dev`)
 - **Started:** 2026-10-11 14:00:00 UTC
-- **Ended:** —
+- **Ended:** 2026-10-13 10:00:00 UTC
 
 > **How to tick:** change `[ ]` to `[x]`. _Currently: nothing running._
 

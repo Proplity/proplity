@@ -41,6 +41,8 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
         units: true,
         neighbourhoodReports: { orderBy: { generatedAt: 'desc' }, take: 1 },
         reviews: { orderBy: { createdAt: 'desc' } },
+        mergedInto: { select: { id: true, name: true, address: true, city: true } },
+        mergedFrom: { select: { id: true, name: true, address: true, city: true } },
       },
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });

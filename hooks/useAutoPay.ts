@@ -30,7 +30,10 @@ export function useAutoPayMandates(leaseId: string | null) {
   }, [leaseId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -63,7 +66,10 @@ export function usePaymentAuthorization(leaseId: string | null) {
   }, [leaseId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

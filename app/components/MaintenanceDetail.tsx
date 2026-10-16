@@ -15,6 +15,7 @@ import {
   X,
   UserCheck,
   MessageSquare,
+  type LucideIcon,
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useVendors } from '@/hooks/useVendors';
@@ -33,7 +34,7 @@ const priorityConfig: Record<string, { color: string; label: string }> = {
   LOW: { color: 'green', label: 'Low Priority' },
 };
 
-const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
+const statusConfig: Record<string, { color: string; label: string; icon: LucideIcon }> = {
   SUBMITTED: { color: 'orange', label: 'New', icon: AlertCircle },
   IN_PROGRESS: { color: 'blue', label: 'In Progress', icon: Clock },
   SCHEDULED: { color: 'blue', label: 'Scheduled', icon: Clock },
@@ -80,7 +81,7 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const handlePay = async (invoiceId: string) => {
     try {
       const result = await payInvoice(invoiceId);
-      window.location.href = result.authorizationUrl;
+      window.location.assign(result.authorizationUrl);
     } catch {
       // surfaced through payError
     }

@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
           include: {
             units: true,
             manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
+            mergedInto: { select: { id: true, name: true, address: true, city: true } },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const minBedrooms = searchParams.get('minBedrooms');
 
-    const where: Record<string, unknown> = { isPublished: true };
+    const where: Record<string, unknown> = { isPublished: true, mergedIntoId: null };
     if (city) where.city = city;
     if (state) where.state = state;
     if (type) where.type = type as PropertyType;

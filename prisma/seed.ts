@@ -20,6 +20,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { listingHash } from '../lib/propertyFingerprint';
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -179,6 +180,7 @@ async function main() {
       city: 'Lagos',
       state: 'Lagos',
       zipCode: '105102',
+      listingHash: listingHash('12 Admiralty Way, Lekki Phase 1', 'Lagos'),
       type: PropertyType.RESIDENTIAL,
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',

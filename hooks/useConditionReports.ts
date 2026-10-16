@@ -27,7 +27,10 @@ export function useConditionReports(propertyId: string | null, unitId: string | 
   }, [propertyId, unitId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

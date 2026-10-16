@@ -17,9 +17,10 @@ import {
   AlertTriangle,
   Calendar,
 } from 'lucide-react';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface PropertyDiscoveryProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 // Real ad status + the Create/Cancel button for one property card. A
@@ -111,6 +112,7 @@ function cardFields(property: Property) {
 }
 
 export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
+  const [now] = useState(() => Date.now());
   const { user } = useAuth();
   const { data: properties, loading, error } = useProperties();
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,7 +177,7 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
     if (selectedFilter === 'verified') return property.moderationStatus === 'APPROVED';
     if (selectedFilter === 'high-trust') return (property.trustScore ?? 0) >= 80;
     if (selectedFilter === 'new')
-      return Date.now() - new Date(property.createdAt).getTime() < NEW_LISTING_WINDOW_MS;
+      return now - new Date(property.createdAt).getTime() < NEW_LISTING_WINDOW_MS;
     return true;
   });
 

@@ -61,7 +61,10 @@ export function useMaintenanceRequests(params?: { status?: string }) {
   }, [params?.status]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -93,7 +96,10 @@ export function useMaintenanceRequest(id: string | null) {
   }, [id]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

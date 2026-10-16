@@ -33,14 +33,17 @@ export function CompleteProfileForm() {
 
   useEffect(() => {
     if (!auth.user) return;
-    setPhoneNumber(auth.user.phoneNumber ?? '');
-    setYearOfBirth(auth.user.yearOfBirth ? String(auth.user.yearOfBirth) : '');
-    setEmergencyContactName(auth.user.emergencyContactName ?? '');
-    setEmergencyContactRelationship(auth.user.emergencyContactRelationship ?? '');
-    setEmergencyContactPhone(auth.user.emergencyContactPhone ?? '');
-    setPreviousLandlordPhone(auth.user.previousLandlordPhone ?? '');
-    setPreviousLandlordEmail(auth.user.previousLandlordEmail ?? '');
-    setIdDocumentUrl(auth.user.idDocumentUrl ?? null);
+    const timer = setTimeout(() => {
+      setPhoneNumber(auth.user?.phoneNumber ?? '');
+      setYearOfBirth(auth.user?.yearOfBirth ? String(auth.user?.yearOfBirth) : '');
+      setEmergencyContactName(auth.user?.emergencyContactName ?? '');
+      setEmergencyContactRelationship(auth.user?.emergencyContactRelationship ?? '');
+      setEmergencyContactPhone(auth.user?.emergencyContactPhone ?? '');
+      setPreviousLandlordPhone(auth.user?.previousLandlordPhone ?? '');
+      setPreviousLandlordEmail(auth.user?.previousLandlordEmail ?? '');
+      setIdDocumentUrl(auth.user?.idDocumentUrl ?? null);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [auth.user]);
 
   const handleFileUpload = async (file: File | null) => {

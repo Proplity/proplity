@@ -12,9 +12,10 @@ import {
 } from 'lucide-react';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import type { MaintenanceRequest } from '@/lib/api/types';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface TenantMaintenanceRequestsProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const statusConfig = {
