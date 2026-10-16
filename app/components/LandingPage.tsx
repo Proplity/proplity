@@ -696,7 +696,9 @@ export function LandingPage() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <p className="mt-3 text-sm text-gray-600">
-              Join free to view all available properties and apply online
+              {user
+                ? 'Browse available properties and view full listings'
+                : 'Join free to view all available properties and apply online'}
             </p>
           </div>
         </div>

@@ -63,9 +63,15 @@ function normalizeUser(
   };
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}) {
+  const [user, setUser] = useState<User | null>(normalizeUser(initialUser));
+  const [loading, setLoading] = useState(initialUser ? false : true);
 
   // Mount proactive silent refresh interval — only when authenticated
   useAuthRefresh(!!user);
@@ -97,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchUser();
+      void fetchUser();
     }, 0);
     return () => clearTimeout(timer);
   }, []);
