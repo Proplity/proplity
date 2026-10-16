@@ -16,6 +16,8 @@ const PRO_PRICING = { monthly: 29_999, annual: 23_999 * 12 };
 const checkoutSchema = z.object({
   tier: z.enum(['FREE', 'PRO']),
   billingCycle: z.enum(['monthly', 'yearly']).optional(),
+  // Needed to switch to FREE while a paid period is still running.
+  confirmDowngrade: z.boolean().optional(),
 });
 
 export const POST = withAuth(
@@ -27,9 +29,48 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, checkoutSchema);
       if (!validated.success) return validated.response;
-      const { tier, billingCycle = 'monthly' } = validated.data;
+      const { tier, billingCycle = 'monthly', confirmDowngrade } = validated.data;
 
       if (tier === 'FREE') {
+        // Someone who has already paid for the current period keeps it: choosing
+        // FREE ends the plan at the end of that period, never straight away, and
+        // only after they confirm (ISS-056).
+        const current = await prisma.subscription.findUnique({ where: { userId: session.sub } });
+        const paidUntil = current?.currentPeriodEnd;
+        if (
+          current &&
+          current.tier !== 'FREE' &&
+          current.status === 'ACTIVE' &&
+          paidUntil &&
+          paidUntil > new Date()
+        ) {
+          if (!confirmDowngrade) {
+            return NextResponse.json(
+              {
+                error: `You have paid for ${current.tier} until ${paidUntil.toISOString().slice(0, 10)}. Switching to Free keeps your plan until then and then ends it.`,
+                code: 'DOWNGRADE_NEEDS_CONFIRMATION',
+                paidUntil,
+              },
+              { status: 409 },
+            );
+          }
+          const scheduled = await prisma.subscription.update({
+            where: { userId: session.sub },
+            data: { cancelAtPeriodEnd: true },
+          });
+          return NextResponse.json(
+            {
+              data: {
+                activated: false,
+                scheduled: true,
+                endsAt: paidUntil,
+                subscription: scheduled,
+              },
+            },
+            { status: 200 },
+          );
+        }
+
         // No payment at all -- activate directly.
         const subscription = await prisma.subscription.upsert({
           where: { userId: session.sub },

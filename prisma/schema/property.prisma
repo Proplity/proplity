@@ -68,10 +68,15 @@ model Property {
   imageUrl              String?
   video360Url           String?
   exteriorPhotoUrl      String?
+  // Gallery: every room and exterior photo uploaded with the listing (ISS-014).
+  // imageUrl / exteriorPhotoUrl stay as the cover and exterior picks.
+  photoUrls             String[]
   isPublished           Boolean               @default(false)
   moderationStatus      ModerationStatus      @default(PENDING_REVIEW)
   moderationNotes       String?
-  trustScore            Float?                @default(100.0)
+  // 0-100, computed daily by lib/workers/propertyTrustScorer.ts; null until a
+  // property has been scored (ISS-013).
+  trustScore            Float?
   powerReliabilityScore Float?
   floodRiskScore        Float?
   securityRating        Float?
@@ -99,6 +104,10 @@ model Property {
   adCampaigns           AdCampaign[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+
+  @@index([listingHash])
+  @@index([isPublished, createdAt(sort: Desc)])
+  @@index([mergedIntoId])
 }
 
 enum AdCampaignStatus {
@@ -161,6 +170,9 @@ model Unit {
   updatedAt              DateTime              @updatedAt
 
   @@unique([propertyId, unitNumber])
+  @@index([propertyId])
+  @@index([status])
+  @@index([rentAmount])
 }
 
 // PRD §6.2.2 Neighbourhood Intelligence Layer. Property already carries four

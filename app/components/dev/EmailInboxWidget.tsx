@@ -122,10 +122,14 @@ export function EmailInboxWidget() {
   // Polls whether or not the panel is open -- otherwise the badge count on
   // the closed button would only ever update the moment you open it.
   useEffect(() => {
-    refresh();
+    const timer = setTimeout(() => {
+      refresh();
+    }, 0);
     const interval = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleClear = async () => {

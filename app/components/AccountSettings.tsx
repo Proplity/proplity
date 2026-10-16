@@ -60,9 +60,12 @@ function ProfileCard() {
   // mount) -- the fields above start empty and need to pick up the real
   // values once it lands, same pattern BankAccountsCard's own hooks use.
   useEffect(() => {
-    setName(auth.user?.name ?? '');
-    setPhoneNumber(auth.user?.phoneNumber ?? '');
-    setBio(auth.user?.bio ?? '');
+    const timer = setTimeout(() => {
+      setName(auth.user?.name ?? '');
+      setPhoneNumber(auth.user?.phoneNumber ?? '');
+      setBio(auth.user?.bio ?? '');
+    }, 0);
+    return () => clearTimeout(timer);
   }, [auth.user?.name, auth.user?.phoneNumber, auth.user?.bio]);
 
   const handleSubmit = async () => {
@@ -230,7 +233,7 @@ function ChangePasswordCard() {
           {submitting ? 'Updating…' : 'Update Password'}
         </button>
         <p className="text-xs text-gray-400">
-          You'll be signed out on other devices and asked to log in again.
+          You&apos;ll be signed out on other devices and asked to log in again.
         </p>
       </div>
     </div>

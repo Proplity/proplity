@@ -5,9 +5,15 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { appUrl } from '@/lib/appUrl';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 import { paymentsMockEnabled } from '@/lib/payments/mockGateway';
 
-const initializeSchema = z.object({ invoiceId: z.string() });
+// `amount` (naira) is optional: omitted means "the whole outstanding balance",
+// which is what the tenant dashboard sends. A smaller amount is a part payment.
+const initializeSchema = z.object({
+  invoiceId: z.string(),
+  amount: z.number().positive().optional(),
+});
 
 // NOTE: the plan calls for "a pending Payment row" here, but Payment has no
 // status field and a required, defaulted `paidAt` -- the schema models a
@@ -23,16 +29,47 @@ export const POST = withAuth(async (req, { session }) => {
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: validated.data.invoiceId },
-      include: { lease: true },
+      include: {
+        lease: true,
+        payments: { select: { amount: true } },
+        maintenanceRequest: { include: { unit: { include: { property: true } } } },
+      },
     });
     if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    const isPayer = invoice.userId === session.sub || invoice.lease?.tenantId === session.sub;
+    // A vendor's job invoice has no lease and no user: the party who pays it is
+    // whoever runs the property (its manager or landlord, ISS-051).
+    const isPropertySidePayer =
+      !invoice.leaseId &&
+      !invoice.userId &&
+      !!invoice.maintenanceRequest &&
+      canManageProperty(session, invoice.maintenanceRequest.unit.property);
+    const isPayer =
+      invoice.userId === session.sub ||
+      invoice.lease?.tenantId === session.sub ||
+      isPropertySidePayer;
     if (!isPayer && session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     if (invoice.status === 'PAID') {
       return NextResponse.json({ error: 'Invoice is already paid' }, { status: 409 });
+    }
+    if (invoice.status === 'CANCELLED') {
+      return NextResponse.json({ error: 'This invoice was cancelled' }, { status: 409 });
+    }
+
+    // Charge what is still owed, not the original total (ISS-052).
+    const paidSoFar = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = Math.round((invoice.amount - paidSoFar) * 100) / 100;
+    if (outstanding <= 0) {
+      return NextResponse.json({ error: 'Invoice is already paid' }, { status: 409 });
+    }
+    const chargeAmount = validated.data.amount ?? outstanding;
+    if (chargeAmount > outstanding) {
+      return NextResponse.json(
+        { error: `Amount is more than the outstanding balance of ₦${outstanding}` },
+        { status: 400 },
+      );
     }
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
@@ -53,7 +90,7 @@ export const POST = withAuth(async (req, { session }) => {
       const mockUrl = new URL('/dev/mock-checkout', appUrl(''));
       mockUrl.searchParams.set('reference', reference);
       mockUrl.searchParams.set('invoiceId', invoice.id);
-      mockUrl.searchParams.set('amount', String(invoice.amount));
+      mockUrl.searchParams.set('amount', String(chargeAmount));
       mockUrl.searchParams.set('email', user!.email);
       return NextResponse.json(
         { data: { authorizationUrl: mockUrl.toString(), reference } },
@@ -67,9 +104,9 @@ export const POST = withAuth(async (req, { session }) => {
       body: JSON.stringify({
         // Paystack amounts are in kobo (smallest currency unit).
         email: user!.email,
-        amount: Math.round(invoice.amount * 100),
+        amount: Math.round(chargeAmount * 100),
         reference,
-        metadata: { invoiceId: invoice.id },
+        metadata: { invoiceId: invoice.id, expectedAmount: chargeAmount },
       }),
     });
     const paystackData = await paystackRes.json();

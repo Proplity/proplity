@@ -7,14 +7,12 @@ import {
   Bath,
   Square,
   DollarSign,
-  User,
-  Phone,
-  Mail,
   CheckCircle,
   Zap,
   Droplet,
   Shield,
   X,
+  GitMerge,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
@@ -28,14 +26,17 @@ import {
   useImportUnits,
   usePropertyViewings,
   useUpdateViewing,
+  useUnmergeProperty,
 } from '@/hooks/useProperties';
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
+import { PropertyPhotoManager } from './PropertyPhotoManager';
+import type { Page } from '../dashboard/navigateToPage';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
 
 interface PropertyDetailProps {
   propertyId: string;
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const MANAGE_ROLES = ['manager', 'landlord', 'admin'];
@@ -177,7 +178,7 @@ function AnnouncementsCard({ propertyId, canManage }: { propertyId: string; canM
       <div className="flex items-center justify-between border-b border-gray-200 p-6">
         <div>
           <h2 className="font-semibold">Announcements</h2>
-          <p className="text-sm text-gray-500">Posted by the property's manager or landlord</p>
+          <p className="text-sm text-gray-500">Posted by the property&apos;s manager or landlord</p>
         </div>
         {canManage && (
           <button
@@ -387,10 +388,11 @@ function ImportUnitsControl({
 function ViewingRequestsCard({ propertyId }: { propertyId: string }) {
   const { data: viewings, refetch } = usePropertyViewings(propertyId);
   const { submit, submitting } = useUpdateViewing(propertyId);
+  const [now] = useState(() => Date.now());
   const open = viewings.filter(
     (v) =>
       (v.status === 'REQUESTED' || v.status === 'CONFIRMED') &&
-      new Date(v.scheduledAt).getTime() > Date.now(),
+      new Date(v.scheduledAt).getTime() > now,
   );
 
   const act = async (viewingId: string, status: 'CONFIRMED' | 'CANCELLED') => {
@@ -526,6 +528,23 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
     status: 'PENDING',
   });
   const { data: approvedApplications } = useApplications({ status: 'APPROVED' });
+  const { submit: unmergeProperty, submitting: unmerging } = useUnmergeProperty(propertyId);
+
+  const handleUnmerge = async () => {
+    if (
+      !window.confirm(
+        `Undo merge for "${property?.name}"? The listing will return to pending review.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await unmergeProperty();
+      refetchProperty();
+    } catch {
+      // error surfaced via hook
+    }
+  };
 
   if (loading) {
     return <div className="p-6 text-gray-500">Loading property…</div>;
@@ -609,6 +628,49 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
         <ArrowLeft className="h-5 w-5" />
         Back
       </Link>
+
+      {/* Merged Listing Banner */}
+      {property.mergedIntoId && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-purple-200 bg-purple-50 p-4 text-purple-900">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
+              <GitMerge className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">
+                This listing was merged into{' '}
+                {property.mergedInto?.name ? `"${property.mergedInto.name}"` : 'another property'}.
+              </p>
+              <p className="text-xs text-purple-700">
+                It is currently unpublished and marked as rejected in moderation.
+              </p>
+            </div>
+          </div>
+          {auth.user?.role === 'admin' && (
+            <button
+              onClick={handleUnmerge}
+              disabled={unmerging}
+              className="rounded-lg border border-purple-300 bg-white px-3 py-1.5 text-xs font-semibold text-purple-800 hover:bg-purple-100 disabled:opacity-50"
+            >
+              {unmerging ? 'Undoing…' : 'Undo Merge'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Merged Duplicates Notice (if canonical property has duplicates merged into it) */}
+      {property.mergedFrom && property.mergedFrom.length > 0 && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
+          <div className="flex items-center gap-2">
+            <GitMerge className="h-4 w-4 text-blue-600" />
+            <p className="text-xs font-medium">
+              Canonical listing: {property.mergedFrom.length} duplicate listing
+              {property.mergedFrom.length === 1 ? '' : 's'} merged into this property:{' '}
+              {property.mergedFrom.map((p) => p.name).join(', ')}.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
@@ -710,6 +772,13 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Photos & Media management */}
+          <PropertyPhotoManager
+            property={property}
+            onUpdated={refetchProperty}
+            canManage={canManage}
+          />
+
           {/* Units & Tenants -- manager/landlord/admin only */}
           {canManage && (
             <div className="rounded-lg border border-gray-200 bg-white">
@@ -912,6 +981,17 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
           <div className="space-y-6">
             <ListingStatusCard property={property} onRefetch={refetchProperty} />
             <EquipmentCard propertyId={property.id} />
+            <Link
+              href={`/dashboard/properties/${property.id}/neighbourhood`}
+              className="block rounded-lg border border-gray-200 bg-white p-6 hover:bg-gray-50"
+            >
+              <h2 className="font-semibold">Neighbourhood report</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {property.neighbourhoodReports?.length
+                  ? 'Update what tenants and applicants see.'
+                  : 'No report yet. Add one for tenants and applicants.'}
+              </p>
+            </Link>
 
             {/* Financial Summary */}
             <div className="rounded-lg border border-gray-200 bg-white p-6">

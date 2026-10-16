@@ -107,7 +107,10 @@ export function TenantPaymentHistory() {
   });
 
   useEffect(() => {
-    setCurrentPage(1);
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [search, statusFilter, pageSize]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);

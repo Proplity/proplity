@@ -594,17 +594,22 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
     const lease = await createLease(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const created = await apiFetch(`/api/v1/leases/${lease.id}/notes`, {
-      method: 'POST',
-      cookie,
-      body: { body: 'Called tenant about late rent.' },
-    });
+    const created = await apiFetch<{ data: { authorId: string } }>(
+      `/api/v1/leases/${lease.id}/notes`,
+      {
+        method: 'POST',
+        cookie,
+        body: { body: 'Called tenant about late rent.' },
+      },
+    );
     expect(created.status).toBe(201);
     expect(created.body.data.authorId).toBe(manager.id);
 
-    const list = await apiFetch(`/api/v1/leases/${lease.id}/notes`, { cookie });
+    const list = await apiFetch<{ data: { body: string }[] }>(`/api/v1/leases/${lease.id}/notes`, {
+      cookie,
+    });
     expect(list.status).toBe(200);
-    expect(list.body.data.map((n: any) => n.body)).toContain('Called tenant about late rent.');
+    expect(list.body.data.map((n) => n.body)).toContain('Called tenant about late rent.');
   });
 });
 

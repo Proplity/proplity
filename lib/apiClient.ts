@@ -28,6 +28,15 @@ import type {
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  MergePropertyInput,
+  UpdatePropertyInput,
+  OwnerDashboardSummary,
+  OwnerBreakdownSummary,
+  TenantDashboardSummary,
+  VendorDashboardSummary,
+  AdminBreakdownSummary,
+  AdminDashboardSummary,
+  AdminReportsSummary,
   PropertyViewing,
   LinkedLandlord,
   CreateViolationInput,
@@ -52,7 +61,14 @@ import type {
   UpdateMaintenanceRequestInput,
   Vendor,
   Violation,
+  BankTransferStatus,
+  BankTransferSubmission,
+  SubmitBankTransferInput,
+  VendorPayoutStatus,
+  VendorPayout,
+  InitiateVendorPayoutInput,
 } from './api/types';
+import type { UploadFolder } from '@/lib/fileRef';
 
 export const apiClient = axios.create({
   headers: {
@@ -92,6 +108,7 @@ apiClient.interceptors.response.use(
       if (refreshed) {
         return apiClient(originalRequest);
       } else if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
         window.location.href = '/login';
       }
     }
@@ -111,6 +128,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     if (refreshed) {
       return fetch(url, options);
     } else if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
       window.location.href = '/login';
     }
   }
@@ -130,10 +148,17 @@ export const api = {
   properties: {
     list: (params?: { city?: string; state?: string; minBedrooms?: number }) =>
       apiClient.get<Paginated<Property>>('/api/v1/properties', { params }),
-    mine: () =>
-      apiClient.get<Paginated<Property>>('/api/v1/properties', { params: { scope: 'mine' } }),
+    mine: (params?: { page?: number; limit?: number }) =>
+      apiClient.get<Paginated<Property>>('/api/v1/properties', {
+        params: { scope: 'mine', ...params },
+      }),
     get: (propertyId: string) =>
       apiClient.get<{ data: Property }>(`/api/v1/properties/${propertyId}`),
+    saveNeighbourhoodReport: (propertyId: string, body: Record<string, Record<string, unknown>>) =>
+      apiClient.put<{ data: unknown }>(
+        `/api/v1/properties/${propertyId}/neighbourhood-report`,
+        body,
+      ),
     create: (body: CreatePropertyInput) =>
       apiClient.post<{ data: Property }>('/api/v1/properties', body),
     listUnits: (propertyId: string, status?: string) =>
@@ -167,6 +192,17 @@ export const api = {
       ),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
+    update: (propertyId: string, body: UpdatePropertyInput) =>
+      apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, body),
+    merge: (propertyId: string, targetPropertyIdOrBody: string | MergePropertyInput) => {
+      const body: MergePropertyInput =
+        typeof targetPropertyIdOrBody === 'string'
+          ? { targetPropertyId: targetPropertyIdOrBody }
+          : targetPropertyIdOrBody;
+      return apiClient.post<{ data: Property }>(`/api/v1/properties/${propertyId}/merge`, body);
+    },
+    unmerge: (propertyId: string) =>
+      apiClient.post<{ data: Property }>(`/api/v1/properties/${propertyId}/unmerge`),
     moderate: (
       propertyId: string,
       body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string },
@@ -248,7 +284,7 @@ export const api = {
   maintenance: {
     categories: () =>
       apiClient.get<{ data: MaintenanceCategory[] }>('/api/v1/maintenance/categories'),
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<MaintenanceRequest>>('/api/v1/maintenance/requests', { params }),
     get: (id: string) =>
       apiClient.get<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`),
@@ -261,7 +297,7 @@ export const api = {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
   leases: {
-    list: (params?: { status?: string }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
     get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
     create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
@@ -285,11 +321,30 @@ export const api = {
         apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
     },
   },
+  dashboard: {
+    summary: () => apiClient.get<{ data: OwnerDashboardSummary }>('/api/v1/dashboard/summary'),
+    breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
+    mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
+    mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
+  },
   invoices: {
-    list: (params?: { type?: string; status?: string }) =>
+    list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
+    recordPayment: (
+      invoiceId: string,
+      body: {
+        amount: number;
+        method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+        reference?: string;
+        notes?: string;
+      },
+    ) =>
+      apiClient.post<{ data: { status: string; paidTotal: number } }>(
+        `/api/v1/invoices/${invoiceId}/payments`,
+        body,
+      ),
   },
   accessCodes: {
     list: (unitId: string) =>
@@ -313,16 +368,43 @@ export const api = {
   },
   admin: {
     users: {
-      list: (params?: { role?: string; limit?: number }) =>
-        apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
+      list: (params?: {
+        role?: string;
+        status?: string;
+        vendorStatus?: string;
+        q?: string;
+        limit?: number;
+        page?: number;
+      }) => apiClient.get<Paginated<AdminUser>>('/api/v1/admin/users', { params }),
     },
+    updateUser: (
+      userId: string,
+      body: { status?: 'ACTIVE' | 'SUSPENDED'; role?: string; reason: string },
+    ) => apiClient.patch(`/api/v1/admin/users/${userId}`, body),
+    summary: () => apiClient.get<{ data: AdminDashboardSummary }>('/api/v1/admin/summary'),
+    breakdown: () => apiClient.get<{ data: AdminBreakdownSummary }>('/api/v1/admin/breakdown'),
+    reports: (params: { from: string; to: string }) =>
+      apiClient.get<{ data: AdminReportsSummary }>('/api/v1/admin/reports', { params }),
     vendors: {
       verify: (userId: string, body: { status: 'VERIFIED' | 'REJECTED'; note?: string }) =>
         apiClient.patch(`/api/v1/admin/vendors/${userId}`, body),
     },
     auditLogs: {
-      list: (params?: { entityType?: string; limit?: number; page?: number }) =>
-        apiClient.get<Paginated<AuditLog>>('/api/v1/admin/audit-logs', { params }),
+      list: (params?: {
+        action?: string;
+        entityType?: string;
+        entityId?: string;
+        actor?: string;
+        q?: string;
+        from?: string;
+        to?: string;
+        facets?: 1;
+        limit?: number;
+        page?: number;
+      }) =>
+        apiClient.get<
+          Paginated<AuditLog> & { facets?: { actions: string[]; entityTypes: string[] } }
+        >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
       get: () =>
@@ -373,7 +455,7 @@ export const api = {
   },
   uploads: {
     sign: (body: {
-      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+      folder: UploadFolder;
       fileName: string;
       contentType: string;
       size: number;
@@ -393,7 +475,9 @@ export const api = {
     checkout: (body: CheckoutSubscriptionInput) =>
       apiClient.post<{
         data:
-          { activated: true; subscription: Subscription } | { invoiceId: string; amount: number };
+          | { activated: true; subscription: Subscription }
+          | { activated: false; scheduled: true; endsAt: string; subscription: Subscription }
+          | { invoiceId: string; amount: number };
       }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {
@@ -425,5 +509,53 @@ export const api = {
       apiClient.post<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads`, body),
     cancel: (propertyId: string, adId: string) =>
       apiClient.patch<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads/${adId}`),
+  },
+  bankTransfers: {
+    list: (params?: {
+      status?: BankTransferStatus;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) =>
+      apiClient.get<Paginated<BankTransferSubmission>>('/api/v1/bank-transfers', { params }),
+    get: (id: string) =>
+      apiClient.get<{ data: BankTransferSubmission }>(`/api/v1/bank-transfers/${id}`),
+    submit: (body: SubmitBankTransferInput) =>
+      apiClient.post<{ data: BankTransferSubmission }>('/api/v1/bank-transfers', body),
+    reconcile: (
+      id: string,
+      body: { action: 'APPROVE' | 'REJECT'; notes?: string; rejectionReason?: string },
+    ) =>
+      apiClient.post<{
+        data: {
+          submission: BankTransferSubmission;
+          payment?: unknown;
+          newStatus?: string;
+        };
+      }>(`/api/v1/bank-transfers/${id}/reconcile`, body),
+  },
+  vendorPayouts: {
+    list: (params?: {
+      status?: VendorPayoutStatus;
+      vendorId?: string;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) =>
+      apiClient.get<Paginated<VendorPayout>>('/api/v1/vendor-payouts', { params }),
+    get: (id: string) =>
+      apiClient.get<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`),
+    initiate: (body: InitiateVendorPayoutInput) =>
+      apiClient.post<{ data: VendorPayout }>('/api/v1/vendor-payouts', body),
+    patch: (
+      id: string,
+      body: {
+        action: 'APPROVE' | 'PROCESS' | 'REJECT';
+        reason?: string;
+        externalReference?: string;
+        manualNote?: string;
+      },
+    ) =>
+      apiClient.patch<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`, body),
   },
 };

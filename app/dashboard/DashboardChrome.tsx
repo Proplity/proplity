@@ -64,13 +64,8 @@ function getTabsForRole(role: Role) {
           shortLabel: 'Payments',
           icon: Receipt,
         },
-        { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
-        // Placed after Messages, not 3rd -- MobileTabBar shows only the
-        // first 3 tabs directly (the rest fold into "More"), and Dashboard/
-        // Browse/Payments as that primary trio is an existing, tested
-        // assumption (tests/e2e/responsive/mobile-nav.spec.ts). Rental
-        // history is checked far less often than "did my rent go through."
         { href: '/dashboard/rentals', label: 'My Rentals', icon: Building2 },
+        { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
       ];
     case 'landlord':
       return [
@@ -123,7 +118,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="focus:outline-none">
-            <Logo />
+            <Logo compactOnMobile />
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">

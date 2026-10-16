@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { findReusableAuthorization } from '@/lib/payments/authorization';
 
 export const GET = withAuth(
   async (req, { session }) => {
@@ -50,7 +51,34 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const mandate = await prisma.autoPayMandate.create({ data: { leaseId, ...rest } });
+      if (lease.status !== 'ACTIVE') {
+        return NextResponse.json(
+          { error: 'Auto-pay can only be set up on an active lease' },
+          { status: 409 },
+        );
+      }
+
+      // The token must be one Paystack itself gave us for a card payment on this
+      // lease -- never a value the client made up or took from someone else.
+      const known = await findReusableAuthorization(leaseId);
+      if (!known || known.authorizationCode !== rest.paymentMethodToken) {
+        return NextResponse.json(
+          {
+            error:
+              'That card is not saved for this lease. Pay one invoice by card first, then set up auto-pay with that card.',
+          },
+          { status: 400 },
+        );
+      }
+
+      // One active mandate per lease: a new one replaces the old.
+      const mandate = await prisma.$transaction(async (tx) => {
+        await tx.autoPayMandate.updateMany({
+          where: { leaseId, status: 'ACTIVE' },
+          data: { status: 'CANCELLED' },
+        });
+        return tx.autoPayMandate.create({ data: { leaseId, ...rest } });
+      });
       return NextResponse.json({ data: mandate }, { status: 201 });
     } catch (err) {
       return handleApiError(err);

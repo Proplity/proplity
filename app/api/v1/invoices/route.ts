@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { InvoiceStatus, InvoiceType, Prisma } from '@prisma/client';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
@@ -121,6 +122,61 @@ export const POST = withAuth(
         });
         if (!request || request.vendorId !== session.sub) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+
+      // MANAGER (ISS-050): may bill only leases and maintenance requests on
+      // properties they manage. They cannot bill an arbitrary user, create
+      // subscription invoices, or create an invoice that is already paid.
+      // ADMIN is unrestricted; VENDOR was checked above.
+      if (session.role === 'MANAGER') {
+        if (userId || rest.type === 'SUBSCRIPTION') {
+          return NextResponse.json(
+            { error: 'Managers can only invoice leases and maintenance requests they manage' },
+            { status: 403 },
+          );
+        }
+        if (rest.status && rest.status !== 'UNPAID') {
+          return NextResponse.json({ error: 'New invoices must start as UNPAID' }, { status: 400 });
+        }
+        if (leaseId) {
+          const lease = await prisma.lease.findUnique({
+            where: { id: leaseId },
+            include: { unit: { include: { property: true } } },
+          });
+          if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+          if (!canManageProperty(session, lease.unit.property)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          }
+        }
+        if (maintenanceRequestId) {
+          const request = await prisma.maintenanceRequest.findUnique({
+            where: { id: maintenanceRequestId },
+            include: { unit: { include: { property: true } } },
+          });
+          if (!request) {
+            return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+          }
+          if (!canManageProperty(session, request.unit.property)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+          }
+        }
+      }
+
+      // One live invoice per job (ISS-051): a vendor cannot bill the same work
+      // twice. A cancelled invoice frees the job for a corrected one.
+      if (maintenanceRequestId && rest.type === 'MAINTENANCE') {
+        const open = await prisma.invoice.findFirst({
+          where: { maintenanceRequestId, type: 'MAINTENANCE', status: { not: 'CANCELLED' } },
+          select: { invoiceNumber: true },
+        });
+        if (open) {
+          return NextResponse.json(
+            {
+              error: `This job already has an invoice (${open.invoiceNumber}). Cancel it first to send a corrected one.`,
+            },
+            { status: 409 },
+          );
         }
       }
 

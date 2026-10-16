@@ -16,12 +16,12 @@ import {
   InvoiceStatus,
   PaymentMethod,
   PaymentProvider,
-  ViewingStatus,
   AccessCodeStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { listingHash } from '../lib/propertyFingerprint';
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -274,6 +274,7 @@ async function main() {
       city: 'Lagos',
       state: 'Lagos',
       zipCode: '105102',
+      listingHash: listingHash('12 Admiralty Way, Lekki Phase 1', 'Lagos'),
       type: PropertyType.RESIDENTIAL,
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
@@ -328,6 +329,7 @@ async function main() {
       city: 'Lagos',
       state: 'Lagos',
       zipCode: '105102',
+      listingHash: listingHash('Block 15, Flat 203, Lekki Phase 1', 'Lagos'),
       type: PropertyType.RESIDENTIAL,
       description:
         'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security.',
@@ -373,6 +375,7 @@ async function main() {
       city: 'Lagos',
       state: 'Lagos',
       zipCode: '101241',
+      listingHash: listingHash('Plot 4, Marina District, Eko Atlantic', 'Lagos'),
       type: PropertyType.RESIDENTIAL,
       description:
         'Ultra-exclusive luxury penthouse suite offering panoramic views of the ocean, custom marble finishes, and private pool.',
@@ -411,6 +414,7 @@ async function main() {
       city: 'Lagos',
       state: 'Lagos',
       zipCode: '100252',
+      listingHash: listingHash('22 Herbert Macaulay Way, Yaba', 'Lagos'),
       type: PropertyType.RESIDENTIAL,
       description:
         'Comfortable student and young professional self-contain units in the heart of Yaba tech corridor.',
@@ -503,7 +507,7 @@ async function main() {
     },
   });
 
-  const gateCodePermanent = await prisma.accessCode.create({
+  await prisma.accessCode.create({
     data: {
       unitId: unitHighland4B.id,
       createdById: tenantJordan.id,
@@ -579,7 +583,7 @@ async function main() {
   });
 
   // 8. Maintenance Request Board (Active, Completed, Rated)
-  const reqSink = await prisma.maintenanceRequest.create({
+  await prisma.maintenanceRequest.create({
     data: {
       unitId: unitHighland4B.id,
       tenantId: tenantJordan.id,
@@ -695,7 +699,7 @@ async function main() {
     },
   });
 
-  const invUtilityAdewale = await prisma.invoice.create({
+  await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1002',
       leaseId: leaseAdewale.id,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, DollarSign, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Send, AlertCircle } from 'lucide-react';
 import { useCreateInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
@@ -43,7 +43,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
-  const updateLineItem = (id: number, field: string, value: any) => {
+  const updateLineItem = (id: number, field: string, value: string | number) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.id === id) {

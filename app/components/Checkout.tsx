@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { LogoIcon } from './Logo';
 import { useCheckoutSubscription } from '@/hooks/useSubscription';
 import { usePayInvoice } from '@/hooks/useInvoices';
+import { useMySubscription } from '@/hooks/useSubscription';
 
 interface CheckoutProps {
   plan: {
@@ -16,9 +17,86 @@ interface CheckoutProps {
   onComplete: () => void;
 }
 
+interface DowngradeConfirmModalProps {
+  paidUntil: Date;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+function DowngradeConfirmModal({
+  paidUntil,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}: DowngradeConfirmModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Cancel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50">
+          <AlertCircle className="h-6 w-6 text-amber-600" />
+        </div>
+
+        <h2 className="mb-2 text-lg font-semibold text-gray-900">Confirm Subscription Downgrade</h2>
+        <p className="mb-4 text-sm text-gray-600">
+          You have already paid for your current subscription until{' '}
+          <span className="font-semibold text-gray-900">
+            {paidUntil.toLocaleDateString(undefined, { dateStyle: 'medium' })}
+          </span>
+          .
+        </p>
+        <div className="mb-6 space-y-1 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+          <p>
+            • Switching to <strong>Free</strong> keeps your current plan active until the end of
+            your billing period.
+          </p>
+          <p>
+            • Your account will not be billed again, and will transition to Free on{' '}
+            {paidUntil.toLocaleDateString(undefined, { dateStyle: 'medium' })}.
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+          >
+            Keep My Plan
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
+          >
+            {isLoading ? 'Downgrading…' : 'Confirm Downgrade'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
   const [step, setStep] = useState(1);
   const [billingCycle, setBillingCycle] = useState('monthly');
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     companyName: '',
@@ -37,13 +115,14 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     error: checkoutError,
   } = useCheckoutSubscription();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { data: currentPlan } = useMySubscription();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeCheckout = async (confirmedDowngrade = false) => {
     try {
       const result = await checkoutSubscription({
         tier: plan.tier,
         billingCycle: billingCycle === 'yearly' ? 'yearly' : 'monthly',
+        ...(confirmedDowngrade ? { confirmDowngrade: true } : {}),
       });
 
       if ('activated' in result) {
@@ -62,6 +141,20 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     } catch {
       // error state is already surfaced via the hooks' `error`
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Switching to Free while a paid period is still running keeps the paid plan
+    // until that period ends; ask first so nobody thinks it stops today.
+    const paidUntil = currentPlan?.currentPeriodEnd ? new Date(currentPlan.currentPeriodEnd) : null;
+    const downgrading =
+      plan.tier === 'FREE' && currentPlan?.tier !== 'FREE' && !!paidUntil && paidUntil > new Date();
+    if (downgrading) {
+      setShowDowngradeModal(true);
+      return;
+    }
+    await executeCheckout(false);
   };
 
   const calculatePrice = () => {
@@ -86,11 +179,11 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
             </p>
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm text-blue-800">
-                We've sent a confirmation email to <strong>{formData.email}</strong>
+                We&apos;ve sent a confirmation email to <strong>{formData.email}</strong>
               </p>
             </div>
             <p className="mb-6 text-sm text-gray-500">
-              You'll be redirected to your dashboard in a moment...
+              You&apos;ll be redirected to your dashboard in a moment...
             </p>
           </div>
         </div>
@@ -431,6 +524,18 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
           </div>
         </div>
       </div>
+
+      {showDowngradeModal && currentPlan?.currentPeriodEnd && (
+        <DowngradeConfirmModal
+          paidUntil={new Date(currentPlan.currentPeriodEnd)}
+          onConfirm={async () => {
+            setShowDowngradeModal(false);
+            await executeCheckout(true);
+          }}
+          onCancel={() => setShowDowngradeModal(false)}
+          isLoading={checkingOut}
+        />
+      )}
     </div>
   );
 }

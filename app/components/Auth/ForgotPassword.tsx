@@ -51,10 +51,10 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps = {}) {
             </div>
             <h2 className="mb-2 text-2xl font-bold">Check Your Email</h2>
             <p className="mb-6 text-gray-600">
-              We've sent password reset instructions to <strong>{email}</strong>
+              We&apos;ve sent password reset instructions to <strong>{email}</strong>
             </p>
             <p className="mb-6 text-sm text-gray-500">
-              Didn't receive the email? Check your spam folder or try again.
+              Didn&apos;t receive the email? Check your spam folder or try again.
             </p>
             <Link
               href="/login"
@@ -84,7 +84,7 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps = {}) {
             </Link>
           </div>
           <h1 className="mb-2 text-3xl font-bold">Forgot Password?</h1>
-          <p className="text-gray-600">No worries, we'll send you reset instructions</p>
+          <p className="text-gray-600">No worries, we&apos;ll send you reset instructions</p>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">

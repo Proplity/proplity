@@ -95,6 +95,34 @@ test.describe('admin sidebar drawer (needs a reachable, seeded database)', () =>
     await expect(page.locator('aside')).not.toBeInViewport();
   });
 
+  // The header used to be 513px wide on a phone, pushing the settings and
+  // logout buttons off screen on every admin page; the user table was also cut
+  // off by an overflow-hidden box with no way to scroll to Status and Actions.
+  test('admin pages do not scroll sideways and keep the logout button on screen', async ({
+    page,
+  }) => {
+    await loginAs(page, 'admin');
+    for (const path of ['/admin', '/admin/users', '/admin/properties']) {
+      await page.goto(path);
+      await page.waitForLoadState('networkidle');
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, path).toBeLessThanOrEqual(1);
+    }
+    await expect(page.getByRole('button', { name: 'Sign Out' })).toBeInViewport();
+
+    // The users table scrolls inside its own box instead of cutting columns off.
+    await page.goto('/admin/users');
+    const table = page.locator('table').first();
+    await expect(table).toBeVisible();
+    const scrolls = await table.evaluate((el) => {
+      const box = el.parentElement as HTMLElement;
+      return getComputedStyle(box).overflowX === 'auto' && box.scrollWidth > box.clientWidth;
+    });
+    expect(scrolls).toBe(true);
+  });
+
   test('desktop viewport keeps the sidebar static with no hamburger', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAs(page, 'admin');

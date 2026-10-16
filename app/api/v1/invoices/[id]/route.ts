@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { InvoiceStatus, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -55,8 +55,11 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
   }
 });
 
+// What a manager can change by hand (ISS-053). PAID and PARTIALLY_PAID are never
+// set directly: they follow from recorded payments (POST /invoices/[id]/payments).
+// An invoice with payments on it keeps its amount and cannot be cancelled.
 const patchSchema = z.object({
-  status: z.nativeEnum(InvoiceStatus).optional(),
+  status: z.enum(['UNPAID', 'OVERDUE', 'CANCELLED']).optional(),
   amount: z.number().positive().optional(),
 });
 
@@ -81,7 +84,40 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, patchSchema);
       if (!validated.success) return validated.response;
 
-      const updated = await prisma.invoice.update({ where: { id }, data: validated.data });
+      const { status, amount } = validated.data;
+      const hasPayments = invoice.payments.length > 0;
+      if (hasPayments && (amount !== undefined || status !== undefined)) {
+        return NextResponse.json(
+          {
+            error:
+              'This invoice already has payments on it, so its amount and status can no longer be changed',
+          },
+          { status: 409 },
+        );
+      }
+      if (invoice.status === 'CANCELLED' || invoice.status === 'PAID') {
+        return NextResponse.json(
+          { error: `A ${invoice.status.toLowerCase()} invoice cannot be edited` },
+          { status: 409 },
+        );
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const row = await tx.invoice.update({ where: { id }, data: validated.data });
+        await tx.auditLog.create({
+          data: {
+            actorId: session.sub,
+            action: 'INVOICE_EDITED',
+            entityType: 'Invoice',
+            entityId: id,
+            metadata: {
+              from: { status: invoice.status, amount: invoice.amount },
+              to: { status: row.status, amount: row.amount },
+            },
+          },
+        });
+        return row;
+      });
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);

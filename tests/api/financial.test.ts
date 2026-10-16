@@ -42,18 +42,24 @@ describe('invoices: list scoping', () => {
     await createInvoice({ userId: otherTenant.id, description: 'direct invoice, unrelated' });
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantRes = await apiFetch('/api/v1/invoices', { cookie: tenantCookie });
-    expect(tenantRes.body.data.map((i: any) => i.description).sort()).toEqual(
+    const tenantRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: tenantCookie,
+    });
+    expect(tenantRes.body.data.map((i) => i.description).sort()).toEqual(
       ['job invoice', 'rent invoice'].sort(),
     );
 
     const vendorCookie = await authCookie(vendor.id, vendor.role);
-    const vendorRes = await apiFetch('/api/v1/invoices', { cookie: vendorCookie });
-    expect(vendorRes.body.data.map((i: any) => i.description)).toEqual(['job invoice']);
+    const vendorRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: vendorCookie,
+    });
+    expect(vendorRes.body.data.map((i) => i.description)).toEqual(['job invoice']);
 
     const managerCookie = await authCookie(manager.id, manager.role);
-    const managerRes = await apiFetch('/api/v1/invoices', { cookie: managerCookie });
-    expect(managerRes.body.data.map((i: any) => i.description).sort()).toEqual(
+    const managerRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: managerCookie,
+    });
+    expect(managerRes.body.data.map((i) => i.description).sort()).toEqual(
       ['job invoice', 'rent invoice'].sort(),
     );
 
@@ -140,6 +146,97 @@ describe('invoices: create', () => {
     });
     expect(ok.status).toBe(201);
     expect(ok.body.data.invoiceNumber).toMatch(/^INV-/);
+  });
+});
+
+describe('invoices: create is scoped for managers (ISS-050)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function setup() {
+    const manager = await createUser(Role.MANAGER);
+    const otherManager = await createUser(Role.MANAGER);
+    const tenant = await createUser(Role.TENANT);
+    const mine = await createProperty({ managerId: manager.id });
+    const theirs = await createProperty({ managerId: otherManager.id });
+    const myLease = await createLease((await createUnit(mine.id)).id, tenant.id);
+    const theirLease = await createLease((await createUnit(theirs.id)).id, tenant.id);
+    const theirJob = await createMaintenanceRequest((await createUnit(theirs.id)).id, tenant.id);
+    return {
+      manager,
+      tenant,
+      myLease,
+      theirLease,
+      theirJob,
+      cookie: await authCookie(manager.id, manager.role),
+    };
+  }
+
+  const body = (extra: Record<string, unknown>) => ({
+    type: 'UTILITY',
+    amount: 5000,
+    dueDate: new Date().toISOString(),
+    ...extra,
+  });
+
+  it('lets a manager invoice a lease on a property they manage', async () => {
+    const { cookie, myLease } = await setup();
+    const res = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id }),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("refuses another manager's lease and maintenance request", async () => {
+    const { cookie, theirLease, theirJob } = await setup();
+    const a = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: theirLease.id }),
+    });
+    expect(a.status).toBe(403);
+    const b = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ type: 'MAINTENANCE', maintenanceRequestId: theirJob.id }),
+    });
+    expect(b.status).toBe(403);
+  });
+
+  it('refuses billing an arbitrary user, subscription invoices and pre-paid invoices', async () => {
+    const { cookie, tenant, myLease } = await setup();
+    const user = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ userId: tenant.id }),
+    });
+    expect(user.status).toBe(403);
+    const sub = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id, type: 'SUBSCRIPTION' }),
+    });
+    expect(sub.status).toBe(403);
+    const paid = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: body({ leaseId: myLease.id, status: 'PAID' }),
+    });
+    expect(paid.status).toBe(400);
+  });
+
+  it('still lets an admin invoice any user', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const tenant = await createUser(Role.TENANT);
+    const res = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie: await authCookie(admin.id, admin.role),
+      body: body({ userId: tenant.id }),
+    });
+    expect(res.status).toBe(201);
   });
 });
 
@@ -374,6 +471,192 @@ describe('payments: webhook (HMAC-SHA512 verification)', () => {
   });
 });
 
+describe('vendor invoices: who pays, one per job (ISS-051)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function setup() {
+    const manager = await createUser(Role.MANAGER);
+    const landlord = await createUser(Role.LANDLORD);
+    const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const vendor = await createUser(Role.VENDOR);
+    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    return { manager, landlord, tenant, vendor, request };
+  }
+
+  const post = (cookie: string, maintenanceRequestId: string, amount = 5000) =>
+    apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        maintenanceRequestId,
+        type: 'MAINTENANCE',
+        amount,
+        dueDate: new Date().toISOString(),
+      },
+    });
+
+  it("lets the property's manager and landlord start payment, but not others", async () => {
+    const { manager, landlord, tenant, vendor, request } = await setup();
+    const invoice = await post(await authCookie(vendor.id, vendor.role), request.id);
+    expect(invoice.status).toBe(201);
+    const invoiceId = invoice.body.data.id;
+
+    const outsider = await createUser(Role.MANAGER);
+    for (const [who, allowed] of [
+      [manager, true],
+      [landlord, true],
+      [outsider, false],
+      [tenant, false],
+      [vendor, false],
+    ] as const) {
+      const res = await apiFetch('/api/v1/payments/initialize', {
+        method: 'POST',
+        cookie: await authCookie(who.id, who.role),
+        body: { invoiceId },
+      });
+      // Authorised callers get past the permission check and are then stopped by
+      // the provider (503 not configured, 502 rejected the test key); others get 403.
+      if (allowed) expect([502, 503], who.role).toContain(res.status);
+      else expect(res.status, who.role).toBe(403);
+    }
+  });
+
+  it('allows one live invoice per job; a cancelled one frees it', async () => {
+    const { vendor, request } = await setup();
+    const cookie = await authCookie(vendor.id, vendor.role);
+    const first = await post(cookie, request.id);
+    expect(first.status).toBe(201);
+    expect((await post(cookie, request.id)).status).toBe(409);
+
+    await testPrisma.invoice.update({
+      where: { id: first.body.data.id },
+      data: { status: 'CANCELLED' },
+    });
+    expect((await post(cookie, request.id, 6000)).status).toBe(201);
+  });
+
+  it('does not create a second invoice when completing a job that already has one', async () => {
+    const { vendor, request } = await setup();
+    const cookie = await authCookie(vendor.id, vendor.role);
+    await testPrisma.systemSettings
+      .updateMany({ data: { autoCompleteMaintenanceOnInvoice: false } })
+      .catch(() => undefined);
+    expect((await post(cookie, request.id, 4000)).status).toBe(201);
+    const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+    });
+    expect(done.status).toBe(200);
+    expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(1);
+  });
+});
+
+describe('payments: amounts, part payments and concurrent delivery (ISS-052)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function deliver(invoiceId: string, reference: string, naira: number, extra = {}) {
+    const rawBody = JSON.stringify({
+      event: 'charge.success',
+      data: {
+        reference,
+        amount: naira * 100,
+        channel: 'card',
+        paid_at: new Date().toISOString(),
+        metadata: { invoiceId, ...extra },
+      },
+    });
+    return apiFetch('/api/v1/payments/webhook', {
+      method: 'POST',
+      headers: { 'x-paystack-signature': signWebhookBody(rawBody) },
+      rawBody,
+    });
+  }
+
+  it('marks an invoice PARTIALLY_PAID, then PAID once the balance is cleared', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 100_000 });
+
+    expect((await deliver(invoice.id, `p1-${invoice.id}`, 40_000)).status).toBe(200);
+    let row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('PARTIALLY_PAID');
+
+    expect((await deliver(invoice.id, `p2-${invoice.id}`, 60_000)).status).toBe(200);
+    row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('PAID');
+  });
+
+  it('credits once when the same event is delivered concurrently', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 30_000 });
+    const ref = `race-${invoice.id}`;
+    const results = await Promise.all([1, 2, 3, 4].map(() => deliver(invoice.id, ref, 30_000)));
+    expect(results.every((r) => r.status === 200)).toBe(true);
+    expect(await testPrisma.payment.count({ where: { transactionRef: ref } })).toBe(1);
+  });
+
+  it('flags an amount that differs from what was requested, and an overpayment', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({ userId: owner.id, amount: 50_000 });
+    await deliver(invoice.id, `mm-${invoice.id}`, 70_000, { expectedAmount: 50_000 });
+    const actions = (await testPrisma.auditLog.findMany({ where: { entityId: invoice.id } })).map(
+      (a) => a.action,
+    );
+    expect(actions).toContain('PAYMENT_AMOUNT_MISMATCH');
+    expect(actions).toContain('PAYMENT_EXCEEDS_INVOICE');
+  });
+
+  it('keeps a cancelled invoice cancelled, records the money and flags it', async () => {
+    const owner = await createUser(Role.TENANT);
+    const invoice = await createInvoice({
+      userId: owner.id,
+      amount: 20_000,
+      status: 'CANCELLED',
+    });
+    await deliver(invoice.id, `cx-${invoice.id}`, 20_000);
+    const row = await testPrisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(row?.status).toBe('CANCELLED');
+    expect(await testPrisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(1);
+    const flagged = await testPrisma.auditLog.findFirst({
+      where: { entityId: invoice.id, action: 'PAYMENT_ON_CANCELLED_INVOICE' },
+    });
+    expect(flagged).not.toBeNull();
+  });
+
+  it('initialize refuses a cancelled invoice and charges only the outstanding balance', async () => {
+    const owner = await createUser(Role.TENANT);
+    const cancelled = await createInvoice({
+      userId: owner.id,
+      amount: 10_000,
+      status: 'CANCELLED',
+    });
+    const cookie = await authCookie(owner.id, owner.role);
+    const refused = await apiFetch('/api/v1/payments/initialize', {
+      method: 'POST',
+      cookie,
+      body: { invoiceId: cancelled.id },
+    });
+    expect(refused.status).toBe(409);
+
+    const partly = await createInvoice({ userId: owner.id, amount: 80_000 });
+    await testPrisma.payment.create({ data: { invoiceId: partly.id, amount: 30_000 } });
+    const tooMuch = await apiFetch('/api/v1/payments/initialize', {
+      method: 'POST',
+      cookie,
+      body: { invoiceId: partly.id, amount: 60_000 },
+    });
+    // 503 when no provider key is configured in this environment; the
+    // balance check runs before that, so an excessive amount is a 400.
+    expect(tooMuch.status).toBe(400);
+  });
+});
+
 describe('subscriptions: checkout, me, and webhook activation', () => {
   beforeAll(async () => {
     await resetDb();
@@ -492,6 +775,26 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
   });
 });
 
+// A card payment on a lease whose signed webhook body carries a reusable
+// Paystack authorization -- the only thing auto-pay may be set up with (ISS-056).
+async function seedCardAuthorization(leaseId: string, code = 'AUTH_test_123') {
+  const invoice = await createInvoice({ leaseId, amount: 10_000, status: 'PAID' });
+  await testPrisma.payment.create({
+    data: {
+      invoiceId: invoice.id,
+      amount: 10_000,
+      provider: 'PAYSTACK',
+      transactionRef: `seed-${invoice.id}`,
+      rawProviderPayload: JSON.stringify({
+        data: {
+          authorization: { reusable: true, authorization_code: code, last4: '4081' },
+        },
+      }),
+    },
+  });
+  return code;
+}
+
 describe('payments: autopay', () => {
   beforeAll(async () => {
     await resetDb();
@@ -527,16 +830,22 @@ describe('payments: autopay', () => {
     const lease = await createLease(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
 
-    const created = await apiFetch('/api/v1/payments/autopay', {
-      method: 'POST',
-      cookie,
-      body: { leaseId: lease.id, paymentMethodToken: 'tok_test_123' },
-    });
+    const token = await seedCardAuthorization(lease.id);
+    const created = await apiFetch<{ data: { id: string; status: string } }>(
+      '/api/v1/payments/autopay',
+      {
+        method: 'POST',
+        cookie,
+        body: { leaseId: lease.id, paymentMethodToken: token },
+      },
+    );
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('ACTIVE');
 
-    const list = await apiFetch('/api/v1/payments/autopay', { cookie });
-    expect(list.body.data.map((m: any) => m.id)).toEqual([created.body.data.id]);
+    const list = await apiFetch<{ data: { id: string }[] }>('/api/v1/payments/autopay', {
+      cookie,
+    });
+    expect(list.body.data.map((m) => m.id)).toEqual([created.body.data.id]);
 
     const deleted = await apiFetch(`/api/v1/payments/autopay?id=${created.body.data.id}`, {
       method: 'DELETE',
@@ -555,5 +864,120 @@ describe('payments: autopay', () => {
     // A cancelled mandate no longer shows up in the active list.
     const listAfter = await apiFetch('/api/v1/payments/autopay', { cookie });
     expect(listAfter.body.data.length).toBe(0);
+  });
+
+  it('only accepts a card token Paystack gave us for this lease, and only on an active lease (ISS-056)', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const post = (token: string, leaseId = lease.id) =>
+      apiFetch('/api/v1/payments/autopay', {
+        method: 'POST',
+        cookie,
+        body: { leaseId, paymentMethodToken: token },
+      });
+
+    // No card payment yet: nothing to set up with.
+    expect((await post('AUTH_made_up')).status).toBe(400);
+
+    const real = await seedCardAuthorization(lease.id, 'AUTH_real_card');
+    expect((await post('AUTH_made_up')).status).toBe(400);
+    expect((await post(real)).status).toBe(201);
+
+    // Another tenant's lease token is not valid here either.
+    const other = await createLease((await createUnit(property.id)).id, tenant.id);
+    const otherToken = await seedCardAuthorization(other.id, 'AUTH_other_card');
+    expect((await post(otherToken)).status).toBe(400);
+
+    // An ended lease cannot take a mandate.
+    await testPrisma.lease.update({ where: { id: other.id }, data: { status: 'TERMINATED' } });
+    expect((await post(otherToken, other.id)).status).toBe(409);
+  });
+
+  it('keeps one active mandate per lease: a new one replaces the old', async () => {
+    const property = await createProperty();
+    const unit = await createUnit(property.id);
+    const tenant = await createUser(Role.TENANT);
+    const lease = await createLease(unit.id, tenant.id);
+    const cookie = await authCookie(tenant.id, tenant.role);
+    const token = await seedCardAuthorization(lease.id);
+    const post = () =>
+      apiFetch('/api/v1/payments/autopay', {
+        method: 'POST',
+        cookie,
+        body: { leaseId: lease.id, paymentMethodToken: token },
+      });
+
+    const first = await post();
+    const second = await post();
+    expect(second.status).toBe(201);
+    const rows = await testPrisma.autoPayMandate.findMany({ where: { leaseId: lease.id } });
+    expect(rows.filter((r) => r.status === 'ACTIVE')).toHaveLength(1);
+    expect(rows.find((r) => r.id === first.body.data.id)?.status).toBe('CANCELLED');
+    expect(rows.find((r) => r.id === second.body.data.id)?.status).toBe('ACTIVE');
+
+    // The database itself refuses a second active one.
+    await expect(
+      testPrisma.autoPayMandate.create({
+        data: { leaseId: lease.id, paymentMethodToken: token, status: 'ACTIVE' },
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe('subscriptions: downgrading to FREE keeps the paid period (ISS-056)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const free = (cookie: string, confirmDowngrade?: boolean) =>
+    apiFetch('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+      cookie,
+      body: { tier: 'FREE', ...(confirmDowngrade ? { confirmDowngrade } : {}) },
+    });
+
+  it('asks for confirmation, then keeps the paid plan until the period ends and reverts after', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const paidUntil = new Date(Date.now() + 20 * 86_400_000);
+    await testPrisma.subscription.create({
+      data: { userId: landlord.id, tier: 'PRO', status: 'ACTIVE', currentPeriodEnd: paidUntil },
+    });
+
+    const asked = await free(cookie);
+    expect(asked.status).toBe(409);
+    expect(asked.body.code).toBe('DOWNGRADE_NEEDS_CONFIRMATION');
+    expect(
+      (await testPrisma.subscription.findUnique({ where: { userId: landlord.id } }))?.tier,
+    ).toBe('PRO');
+
+    const confirmed = await free(cookie, true);
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.data.scheduled).toBe(true);
+    const row = await testPrisma.subscription.findUnique({ where: { userId: landlord.id } });
+    expect(row?.tier).toBe('PRO'); // still paid
+    expect(row?.cancelAtPeriodEnd).toBe(true);
+
+    const during = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(during.body.data.tier).toBe('PRO');
+
+    // After the paid period, the plan is Free.
+    await testPrisma.subscription.update({
+      where: { userId: landlord.id },
+      data: { currentPeriodEnd: new Date(Date.now() - 1000) },
+    });
+    const after = await apiFetch('/api/v1/subscriptions/me', { cookie });
+    expect(after.body.data.tier).toBe('FREE');
+  });
+
+  it('switches straight to FREE when nothing is paid for', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const res = await free(cookie);
+    expect(res.status).toBe(201);
+    expect(res.body.data.activated).toBe(true);
   });
 });

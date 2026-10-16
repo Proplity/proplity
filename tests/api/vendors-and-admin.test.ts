@@ -59,21 +59,30 @@ describe('vendors: list (reputation computed at query time -- rule 8)', () => {
     const noJobsVendor = await createUser(Role.VENDOR, { name: 'Brand New Vendor' });
 
     const cookie = await authCookie(manager.id, manager.role);
-    const res = await apiFetch('/api/v1/vendors', { cookie });
+    const res = await apiFetch<{
+      data: {
+        id: string;
+        businessName: string;
+        totalJobs: number;
+        jobsDone: number;
+        completionRate: number | null;
+        rating: number | null;
+      }[];
+    }>('/api/v1/vendors', { cookie });
     expect(res.status).toBe(200);
 
-    expect(res.body.data.find((v: any) => v.id === suspendedVendor.id)).toBeUndefined();
+    expect(res.body.data.find((v) => v.id === suspendedVendor.id)).toBeUndefined();
 
-    const found = res.body.data.find((v: any) => v.id === vendor.id);
-    expect(found.businessName).toBe('Reliable Repairs'); // no VendorProfile -> falls back to name
-    expect(found.totalJobs).toBe(3);
-    expect(found.jobsDone).toBe(2);
-    expect(found.completionRate).toBe(67);
-    expect(found.rating).toBe(4);
+    const found = res.body.data.find((v) => v.id === vendor.id);
+    expect(found?.businessName).toBe('Reliable Repairs'); // no VendorProfile -> falls back to name
+    expect(found?.totalJobs).toBe(3);
+    expect(found?.jobsDone).toBe(2);
+    expect(found?.completionRate).toBe(67);
+    expect(found?.rating).toBe(4);
 
-    const freshVendor = res.body.data.find((v: any) => v.id === noJobsVendor.id);
-    expect(freshVendor.completionRate).toBeNull();
-    expect(freshVendor.rating).toBeNull();
+    const freshVendor = res.body.data.find((v) => v.id === noJobsVendor.id);
+    expect(freshVendor?.completionRate).toBeNull();
+    expect(freshVendor?.rating).toBeNull();
   });
 });
 
@@ -97,15 +106,17 @@ describe('admin/users: list (ADMIN only)', () => {
     const tenant = await createUser(Role.TENANT);
 
     const cookie = await authCookie(admin.id, admin.role);
-    const res = await apiFetch('/api/v1/admin/users', { cookie });
+    const res = await apiFetch<{
+      data: { id: string; passwordHash?: string; propertiesCount: number }[];
+    }>('/api/v1/admin/users', { cookie });
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBeGreaterThanOrEqual(3);
     expect(res.body.data[0].passwordHash).toBeUndefined();
 
-    const managerRow = res.body.data.find((u: any) => u.id === manager.id);
-    expect(managerRow.propertiesCount).toBe(2);
-    const tenantRow = res.body.data.find((u: any) => u.id === tenant.id);
-    expect(tenantRow.propertiesCount).toBe(0);
+    const managerRow = res.body.data.find((u) => u.id === manager.id);
+    expect(managerRow?.propertiesCount).toBe(2);
+    const tenantRow = res.body.data.find((u) => u.id === tenant.id);
+    expect(tenantRow?.propertiesCount).toBe(0);
   });
 
   it('filters by ?role=', async () => {
@@ -114,8 +125,10 @@ describe('admin/users: list (ADMIN only)', () => {
     await createUser(Role.TENANT);
     const cookie = await authCookie(admin.id, admin.role);
 
-    const res = await apiFetch('/api/v1/admin/users?role=VENDOR', { cookie });
-    expect(res.body.data.every((u: any) => u.role === 'VENDOR')).toBe(true);
+    const res = await apiFetch<{
+      data: { role: string }[];
+    }>('/api/v1/admin/users?role=VENDOR', { cookie });
+    expect(res.body.data.every((u) => u.role === 'VENDOR')).toBe(true);
     expect(res.body.data.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -389,5 +402,196 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(lateFee).not.toBeNull();
     expect(lateFee?.amount).toBe(15_000);
     expect(lateFee?.description).toContain(`[late-fee-for:${invoice.id}]`);
+  });
+});
+
+describe('admin: suspend, reactivate and change role (ISS-054)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const patch = (cookie: string, id: string, body: object) =>
+    apiFetch(`/api/v1/admin/users/${id}`, { method: 'PATCH', cookie, body });
+
+  it('suspends a user, locks them out at once, revokes sessions and audits it', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const tenant = await createUser(Role.TENANT);
+    const adminCookie = await authCookie(admin.id, admin.role);
+    const tenantCookie = await authCookie(tenant.id, tenant.role);
+    await testPrisma.refreshToken.create({
+      data: {
+        userId: tenant.id,
+        tokenHash: `h-${tenant.id}`,
+        familyId: tenant.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
+
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+
+    const res = await patch(adminCookie, tenant.id, {
+      status: 'SUSPENDED',
+      reason: 'Fraud report',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('SUSPENDED');
+
+    // The still-valid access token stops working immediately.
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(403);
+    const token = await testPrisma.refreshToken.findUnique({
+      where: { tokenHash: `h-${tenant.id}` },
+    });
+    expect(token?.revokedAt).not.toBeNull();
+    const audit = await testPrisma.auditLog.findFirst({
+      where: { entityId: tenant.id, action: 'USER_SUSPENDED' },
+    });
+    expect(audit?.actorId).toBe(admin.id);
+
+    const back = await patch(adminCookie, tenant.id, { status: 'ACTIVE', reason: 'Resolved' });
+    expect(back.status).toBe(200);
+    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+  });
+
+  it('protects admins and the caller, and needs a reason', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const other = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    expect((await patch(cookie, admin.id, { status: 'SUSPENDED', reason: 'oops' })).status).toBe(
+      403,
+    );
+    expect((await patch(cookie, other.id, { status: 'SUSPENDED', reason: 'no' })).status).toBe(400);
+    expect((await patch(cookie, other.id, { status: 'SUSPENDED', reason: 'testing' })).status).toBe(
+      403,
+    );
+    const unverified = await createUser(Role.TENANT, { status: 'PENDING_VERIFICATION' });
+    expect(
+      (await patch(cookie, unverified.id, { status: 'ACTIVE', reason: 'by hand' })).status,
+    ).toBe(409);
+  });
+
+  it('changes the role of someone with no records, but not someone who has some', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const fresh = await createUser(Role.TENANT);
+    const ok = await patch(cookie, fresh.id, { role: 'LANDLORD', reason: 'Signed up wrong' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.role).toBe('LANDLORD');
+
+    const manager = await createUser(Role.MANAGER);
+    await createProperty({ managerId: manager.id });
+    const blocked = await patch(cookie, manager.id, { role: 'TENANT', reason: 'Switching' });
+    expect(blocked.status).toBe(409);
+  });
+
+  it('is admin-only, and the user list filters and pages in the database', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const target = await createUser(Role.TENANT);
+    expect(
+      (
+        await patch(await authCookie(manager.id, manager.role), target.id, {
+          role: 'VENDOR',
+          reason: 'abc',
+        })
+      ).status,
+    ).toBe(403);
+
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    await createUser(Role.TENANT, { name: 'Zed Searchable', status: 'SUSPENDED' });
+    const byName = await apiFetch('/api/v1/admin/users?q=searchable', { cookie });
+    expect(byName.body.data.map((u: { name: string }) => u.name)).toEqual(['Zed Searchable']);
+    const suspended = await apiFetch('/api/v1/admin/users?status=SUSPENDED', { cookie });
+    expect(suspended.body.meta.total).toBeGreaterThanOrEqual(1);
+    expect(suspended.body.data.every((u: { status: string }) => u.status === 'SUSPENDED')).toBe(
+      true,
+    );
+    const paged = await apiFetch('/api/v1/admin/users?limit=2&page=2', { cookie });
+    expect(paged.body.data).toHaveLength(2);
+  });
+});
+
+describe('admin: audit log filters, paging and names (ISS-055)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('filters by action, entity, actor and date, pages, and names the subject', async () => {
+    const admin = await createUser(Role.ADMIN, { name: 'Ada Admin' });
+    const other = await createUser(Role.ADMIN, { name: 'Bola Other' });
+    const tenant = await createUser(Role.TENANT, { name: 'Tunde Tenant' });
+    const cookie = await authCookie(admin.id, admin.role);
+
+    for (let i = 0; i < 30; i++) {
+      await testPrisma.auditLog.create({
+        data: {
+          actorId: admin.id,
+          action: 'USER_SUSPENDED',
+          entityType: 'User',
+          entityId: tenant.id,
+          metadata: { reason: `r${i}` },
+        },
+      });
+    }
+    await testPrisma.auditLog.create({
+      data: {
+        actorId: other.id,
+        action: 'INVOICE_EDITED',
+        entityType: 'Invoice',
+        entityId: 'gone',
+      },
+    });
+    await testPrisma.auditLog.create({
+      data: {
+        actorId: null,
+        action: 'FILE_RETENTION_DELETED',
+        entityType: 'StoredFile',
+        entityId: 'f1',
+        createdAt: new Date('2020-01-15T10:00:00Z'),
+      },
+    });
+
+    const all = await apiFetch('/api/v1/admin/audit-logs?limit=10&facets=1', { cookie });
+    expect(all.status).toBe(200);
+    expect(all.body.meta.total).toBe(32);
+    expect(all.body.data).toHaveLength(10);
+    expect(all.body.facets.actions).toEqual(
+      expect.arrayContaining(['USER_SUSPENDED', 'INVOICE_EDITED', 'FILE_RETENTION_DELETED']),
+    );
+    expect(all.body.facets.entityTypes).toEqual(
+      expect.arrayContaining(['User', 'Invoice', 'StoredFile']),
+    );
+
+    const byAction = await apiFetch('/api/v1/admin/audit-logs?action=USER_SUSPENDED&limit=100', {
+      cookie,
+    });
+    expect(byAction.body.meta.total).toBe(30);
+    // The subject is named, not just an id.
+    expect(byAction.body.data[0].entityLabel).toBe(`Tunde Tenant (${tenant.email})`);
+
+    const byActor = await apiFetch('/api/v1/admin/audit-logs?actor=bola', { cookie });
+    expect(byActor.body.data.map((l: { action: string }) => l.action)).toEqual(['INVOICE_EDITED']);
+    // A subject that no longer exists has no label rather than an error.
+    expect(byActor.body.data[0].entityLabel).toBeNull();
+
+    const byDate = await apiFetch('/api/v1/admin/audit-logs?from=2020-01-15&to=2020-01-15', {
+      cookie,
+    });
+    expect(byDate.body.data.map((l: { action: string }) => l.action)).toEqual([
+      'FILE_RETENTION_DELETED',
+    ]);
+
+    const byEntity = await apiFetch('/api/v1/admin/audit-logs?entityType=Invoice', { cookie });
+    expect(byEntity.body.meta.total).toBe(1);
+
+    const page3 = await apiFetch('/api/v1/admin/audit-logs?limit=10&page=4', { cookie });
+    expect(page3.body.data).toHaveLength(2);
+  });
+
+  it('is admin-only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const res = await apiFetch('/api/v1/admin/audit-logs', {
+      cookie: await authCookie(manager.id, manager.role),
+    });
+    expect(res.status).toBe(403);
   });
 });

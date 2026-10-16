@@ -46,14 +46,14 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 ### 3.1 Property & unit management
 
-| Requirement                                     | Status | As built                                                                                                                                                                                                                     |
-| ----------------------------------------------- | :----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create/manage properties and units              |   ✅   | Listing form with **multiple units** per property (per-unit number, bedrooms, bathrooms, rent, service charge, size), partial-failure handling with "Retry Failed Units". Property detail, unit editing, My Properties list. |
-| Assign tenants, owners, service providers       |   ✅   | Owner and manager fields on properties; tenants via leases; vendors per maintenance request. Managers join via landlord-issued invite codes.                                                                                 |
-| Import / export (CSV, Excel)                    |   ✅   | Unit import from file on property detail; property export (CSV/XLSX) from the dashboard breakdown; landlord "Download Report" CSV.                                                                                           |
-| Listing moderation                              |   ✅   | New listings start `PENDING_REVIEW`; **admin queue** (`/admin/properties`) approves/rejects/flags with notes and emails the owner. Only approved listings can be published; owners toggle publish.                           |
-| Listing media                                   |   🟡   | Real upload of photos and a 360° video to Cloudinary when configured. Only three media slots persist (cover photo, 360° video, exterior photo) — extra room photos are not stored. No media authenticity checks (see §6).    |
-| Property announcements, equipment, ad campaigns |   ✅   | Announcements and equipment records on property detail; ad campaigns shown in discovery.                                                                                                                                     |
+| Requirement                                     | Status | As built                                                                                                                                                                                                                                                                 |
+| ----------------------------------------------- | :----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Create/manage properties and units              |   ✅   | Listing form with **multiple units** per property (per-unit number, bedrooms, bathrooms, rent, service charge, size), partial-failure handling with "Retry Failed Units". Property detail, unit editing, My Properties list.                                             |
+| Assign tenants, owners, service providers       |   ✅   | Owner and manager fields on properties; tenants via leases; vendors per maintenance request. Managers join via landlord-issued invite codes.                                                                                                                             |
+| Import / export (CSV, Excel)                    |   ✅   | Unit import from file on property detail; property export (CSV/XLSX) from the dashboard breakdown; landlord "Download Report" CSV.                                                                                                                                       |
+| Listing moderation                              |   ✅   | New listings start `PENDING_REVIEW`; **admin queue** (`/admin/properties`) approves/rejects/flags with notes and emails the owner. Only approved listings can be published; owners toggle publish.                                                                       |
+| Listing media                                   |   🟡   | Real upload of photos and a 360° video to Cloudinary when configured. All uploaded photos are stored (`photoUrls`) and shown in the public gallery, plus the 360° video link; no screen yet to add photos to an existing listing. No media authenticity checks (see §6). |
+| Property announcements, equipment, ad campaigns |   ✅   | Announcements and equipment records on property detail; ad campaigns shown in discovery.                                                                                                                                                                                 |
 
 ### 3.2 Rent, leases & renewals
 
@@ -103,21 +103,21 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 ## 4. Tenant features (PRD §5.2)
 
-| Requirement                      | Status | As built                                                                                                                                                                 |
-| -------------------------------- | :----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Secure tenant portal             |   ✅   | Mobile-responsive dashboard with a bottom tab bar on phones.                                                                                                             |
-| Find & view properties           |   ✅   | Public property pages and in-dashboard discovery (filters: verified, trust, newest); schedule a viewing with email confirmation; featured listings on the homepage.      |
-| **Tenant profile**               |   ✅   | One-time "Complete Your Profile" gate before applying: phone, year of birth, emergency contact, ID document upload; previous landlord optional.                          |
-| **Rental application**           |   ✅   | 3 steps — profile (read-only), employment, review and submit. Managers review applications on property detail.                                                           |
-| My Rentals                       |   ✅   | Current and past leases, each linking to its property.                                                                                                                   |
-| Rent payment & receipts          |   ✅   | Pay an invoice by card; payment history; combined rent + service-charge display.                                                                                         |
-| Auto-pay setup                   |   🟡   | See §3.3 — authorisation recorded, no automatic charging.                                                                                                                |
-| Maintenance reporting & tracking |   ✅   | Submit, track status, rate the vendor on completion.                                                                                                                     |
-| Digital agreements & notices     |   ✅   | E-sign a lease; notices sent by management are visible to the tenant.                                                                                                    |
-| Access-code management           |   ✅   | Time-bound gate/garage/amenity codes with **single-use by default**, soft revoke, verification endpoint and an access log. Codes expire automatically.                   |
-| Messaging with management        |   ✅   | See §3.5.                                                                                                                                                                |
-| Rent balance visibility          |   ✅   | Dashboard shows current lease, next rent due and outstanding amounts.                                                                                                    |
-| Neighbourhood report             |   🟡   | Displayed for a property (security, power, water, roads, flooding, amenities, demographics). Content is stored data; **no external data integrations or maps** (see §6). |
+| Requirement                      | Status | As built                                                                                                                                                                                                                                                   |
+| -------------------------------- | :----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secure tenant portal             |   ✅   | Mobile-responsive dashboard with a bottom tab bar on phones.                                                                                                                                                                                               |
+| Find & view properties           |   ✅   | Public property pages and in-dashboard discovery (filters: verified, trust, newest); schedule a viewing with email confirmation; featured listings on the homepage.                                                                                        |
+| **Tenant profile**               |   ✅   | One-time "Complete Your Profile" gate before applying: phone, year of birth, emergency contact, ID document upload; previous landlord optional.                                                                                                            |
+| **Rental application**           |   ✅   | 3 steps — profile (read-only), employment, review and submit. Managers review applications on property detail.                                                                                                                                             |
+| My Rentals                       |   ✅   | Current and past leases, each linking to its property.                                                                                                                                                                                                     |
+| Rent payment & receipts          |   ✅   | Pay an invoice by card; payment history; combined rent + service-charge display.                                                                                                                                                                           |
+| Auto-pay setup                   |   🟡   | See §3.3 — authorisation recorded, no automatic charging.                                                                                                                                                                                                  |
+| Maintenance reporting & tracking |   ✅   | Submit, track status, rate the vendor on completion.                                                                                                                                                                                                       |
+| Digital agreements & notices     |   ✅   | E-sign a lease; notices sent by management are visible to the tenant.                                                                                                                                                                                      |
+| Access-code management           |   ✅   | Time-bound gate/garage/amenity codes with **single-use by default**, soft revoke, verification endpoint and an access log. Codes expire automatically.                                                                                                     |
+| Messaging with management        |   ✅   | See §3.5.                                                                                                                                                                                                                                                  |
+| Rent balance visibility          |   ✅   | Dashboard shows current lease, next rent due and outstanding amounts.                                                                                                                                                                                      |
+| Neighbourhood report             |   🟡   | Displayed for a property (security, power, water, roads, flooding, amenities, demographics). Managers, landlords and admins edit it on the property's Neighbourhood report screen (versions are kept); **no external data integrations or maps** (see §6). |
 
 ## 5. Service-provider (vendor) features (PRD §5.4)
 
@@ -129,7 +129,7 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 | Messaging with stakeholders |   ✅   | See §3.5.                                                                        |
 | Job status tracking         |   ✅   | In progress → completed from the job page.                                       |
 | Invoice generation          |   ✅   | Itemised invoice for a completed job.                                            |
-| Online payments to vendors  |   ❌   | Vendors invoice, but there is no payout/payment flow to the vendor.              |
+| Online payments to vendors  |   ✅   | Vendor payouts flow built (ISS-012): initiation from invoices/jobs, approval, settlement via Paystack transfer API / mock gateway, and status tracking. |
 | Work history & reputation   |   ✅   | Ratings from tenants; reputation computed on demand from ratings (never cached). |
 
 ## 6. Community, estate, AI and discovery (PRD §5.3, §6)
@@ -148,7 +148,7 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 | 6.2.1 AI-verified listing media                   |   🟡   | The goal (no fake listings) is served by **mandatory manual admin moderation** before anything goes live, and a verified badge that reflects that review. No automated media validation, stock/AI-image detection or media-required blocking. `trustScore` exists on a property but is not computed.                                |
 | 6.2.2 Neighbourhood intelligence                  |   🟡   | Per-property report is displayed; data is entered/seeded, with no satellite, flood-map, power-grid or community-reporting integrations and no map overlays.                                                                                                                                                                         |
 | 6.2.3 Payment-linked availability                 |   🟡   | Unit status moves to **occupied** when a lease is activated and back to vacant when it ends. Listings are **not** automatically deactivated on lease + payment, and there are no stale-listing penalties.                                                                                                                           |
-| 6.2.4 Fingerprinting & de-duplication             |   ❌   | Schema fields exist (`listingHash`, `mergedInto`); no detection logic. Duplicates are caught only by an admin during review.                                                                                                                                                                                                        |
+| 6.2.4 Fingerprinting & de-duplication             |   🟡   | Address fingerprint (`listingHash`) on every listing; a new listing at an existing address is flagged in its review notes and badged "Possible duplicate" in the admin queue. Photo fingerprinting and a merge action (`mergedInto`) are not built; an admin decides by hand.                                                       |
 | 6.2.5 Conversational AI search                    |   ❌   | Discovery uses filters, not natural language.                                                                                                                                                                                                                                                                                       |
 | 6.2.6 Structured condition reports                |   🟡   | Condition-report records per unit and structured water/electrical fields on a property exist; there is no AI validation of claims against evidence.                                                                                                                                                                                 |
 | 6.3 Estate & community AI                         |   ❌   | Not built.                                                                                                                                                                                                                                                                                                                          |
@@ -157,9 +157,9 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 - **Overview dashboard** with platform totals and tiles that navigate to User Management, Security and Settings (the Database tile explains there is no in-app database console).
 - **Properties**: moderation queue with filters, search and per-listing review.
-- **User management**: all accounts across roles.
+- **User management**: all accounts across roles, searchable and paged, filterable by role and status. An admin can suspend or reactivate a non-admin account and change the role of someone with no records yet; each change needs a reason, is audit-logged, signs the person out and takes effect immediately.
 - **Reports and breakdown pages** (platform-wide drill-downs).
-- **Security**: audit-log viewer (currently only the setup wizard writes entries, so the log is nearly empty).
+- **Security**: audit-log viewer with filters (what happened, about what, done by whom, dates), paging, readable names and an expandable details view. Entries come from the setup wizard, account suspensions and role changes, manual payments and invoice edits, payment anomalies, vendor decisions, file reads and retention deletions.
 - **Platform settings**: toggles for platform-wide behaviour.
 - **Subscriptions** (not in the PRD): plan/checkout code exists but is **off by default**; it shows "Coming Soon".
 
@@ -173,18 +173,18 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 ## 9. Non-functional requirements
 
-| PRD requirement                      | Status | As built                                                                                                       |
-| ------------------------------------ | :----: | -------------------------------------------------------------------------------------------------------------- |
-| Role-based access control            |   ✅   | Enforced server-side on every route and tested (RBAC boundaries covered in the API suite).                     |
-| Audit logs                           |   🟡   | Access-code activity is fully logged; the general audit log has one writer (setup).                            |
-| Secure payment handling              |   ✅   | No card data touches Proplity; payments run on Paystack, with signed-webhook verification.                     |
-| Security hardening                   |   ✅   | See §2; independently reviewed 2026-09-30 and fixed.                                                           |
-| End-to-end encryption                |   ❌   | Not implemented. Transport is HTTPS via the host; passwords are hashed; messages are not end-to-end encrypted. |
-| NDPR alignment                       |   ❌   | Not assessed.                                                                                                  |
-| Mobile-responsive portals            |   ✅   | Tenant/vendor/manager dashboards work on phones (bottom tab bar). No offline mode.                             |
-| Performance (100k+ units, <2 s)      |   ❌   | Not measured or load-tested.                                                                                   |
-| 99.5 % uptime / graceful degradation |   🟡   | Missing provider keys degrade features with clear messages; no SLA monitoring is in place.                     |
-| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 73 routes) behind one typed client.                                             |
+| PRD requirement                      | Status | As built                                                                                                                                    |
+| ------------------------------------ | :----: | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Role-based access control            |   ✅   | Enforced server-side on every route and tested (RBAC boundaries covered in the API suite).                                                  |
+| Audit logs                           |   🟡   | Access-code activity, account changes, manual payments, payment anomalies, vendor decisions, file reads and retention deletions are logged. |
+| Secure payment handling              |   ✅   | No card data touches Proplity; payments run on Paystack, with signed-webhook verification.                                                  |
+| Security hardening                   |   ✅   | See §2; independently reviewed 2026-09-30 and fixed.                                                                                        |
+| End-to-end encryption                |   ❌   | Not implemented. Transport is HTTPS via the host; passwords are hashed; messages are not end-to-end encrypted.                              |
+| NDPR alignment                       |   ❌   | Not assessed.                                                                                                                               |
+| Mobile-responsive portals            |   ✅   | Tenant/vendor/manager dashboards work on phones (bottom tab bar). No offline mode.                                                          |
+| Performance (100k+ units, <2 s)      |   ❌   | Not measured or load-tested.                                                                                                                |
+| 99.5 % uptime / graceful degradation |   🟡   | Missing provider keys degrade features with clear messages; no SLA monitoring is in place.                                                  |
+| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 73 routes) behind one typed client.                                                                          |
 
 ## 10. Quality & operations
 
@@ -198,6 +198,6 @@ Built and behaving as the PRD intends: property and unit management, moderated l
 
 Partly built: Paystack (live call untested), auto-pay (authorisation only), notices (manual), neighbourhood and condition data (no integrations), payment-linked availability, smart rent scoring (heuristic).
 
-Not built: every AI capability (assistant, triage, document drafting, media validation, conversational search, fingerprinting, community AI), WhatsApp, push notifications, bank-transfer reconciliation, vendor payouts, resident directory / discussion boards, maintenance approval workflows, ID-verification API, end-to-end encryption, performance targets.
+Not built: every AI capability (assistant, triage, document drafting, media validation, conversational search, fingerprinting, community AI), WhatsApp, push notifications, resident directory / discussion boards, maintenance approval workflows, ID-verification API, end-to-end encryption, performance targets (bank-transfer reconciliation and vendor payouts built in ISS-012).
 
 The next milestones that close the most visible gaps are listed under "What's next" in [`CLAUDE.md`](../CLAUDE.md): charging auto-pay mandates, a manager-facing application inbox, and a real-account Paystack test run.

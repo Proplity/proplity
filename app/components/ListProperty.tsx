@@ -5,14 +5,12 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Upload,
-  MapPin,
   Home,
   DollarSign,
   Bed,
   Bath,
   Square,
   CheckCircle,
-  Loader,
   Camera,
   Video,
   AlertCircle,
@@ -264,6 +262,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
           imageUrl: uploadedMedia.photos[0]?.url,
           video360Url: uploadedMedia.video360?.url,
           exteriorPhotoUrl: uploadedMedia.exteriorPhotos[0]?.url,
+          photoUrls: [...uploadedMedia.photos, ...uploadedMedia.exteriorPhotos].map((f) => f.url),
         });
         propertyId = property.id;
         setCreatedPropertyId(propertyId);
@@ -322,7 +321,11 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     unitStatuses.every((s) => s === 'created');
   const anyUnitFailed = unitStatuses.some((s) => s === 'failed');
 
-  const toggleArrayItem = (array: string[], item: string, setter: (val: any) => void) => {
+  const toggleArrayItem = (
+    array: string[],
+    item: string,
+    setter: React.Dispatch<React.SetStateAction<typeof formData>>,
+  ) => {
     if (array.includes(item)) {
       setter({
         ...formData,
@@ -775,7 +778,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <p className="text-sm text-yellow-800">
                 <strong>Note:</strong> Our team reviews every submission for authenticity before it
-                can be published. Listings that don't pass review will be rejected.
+                can be published. Listings that don&apos;t pass review will be rejected.
               </p>
             </div>
           </div>
@@ -905,8 +908,8 @@ export function ListProperty({ userRole }: ListPropertyProps) {
                 <h3 className="mb-2 font-semibold text-blue-900">What Happens Next?</h3>
                 <ol className="list-inside list-decimal space-y-1 text-sm text-blue-800">
                   <li>Our team reviews the listing details and media</li>
-                  <li>You'll get an email once it's approved or if changes are needed</li>
-                  <li>Once approved, you can publish it from the property's page</li>
+                  <li>You&apos;ll get an email once it&apos;s approved or if changes are needed</li>
+                  <li>Once approved, you can publish it from the property&apos;s page</li>
                 </ol>
               </div>
             </div>

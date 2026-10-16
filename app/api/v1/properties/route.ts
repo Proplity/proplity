@@ -8,6 +8,8 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { serializeUnit } from '@/lib/api/propertyAccess';
+import { safeUrl, safeUrlList } from '@/lib/api/urlField';
+import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest) {
           include: {
             units: true,
             manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
+            mergedInto: { select: { id: true, name: true, address: true, city: true } },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -60,7 +63,7 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const minBedrooms = searchParams.get('minBedrooms');
 
-    const where: Record<string, unknown> = { isPublished: true };
+    const where: Record<string, unknown> = { isPublished: true, mergedIntoId: null };
     if (city) where.city = city;
     if (state) where.state = state;
     if (type) where.type = type as PropertyType;
@@ -110,9 +113,10 @@ const createPropertySchema = z.object({
   zipCode: z.string().optional(),
   type: z.nativeEnum(PropertyType).optional(),
   description: z.string().optional(),
-  imageUrl: z.string().optional(),
-  video360Url: z.string().optional(),
-  exteriorPhotoUrl: z.string().optional(),
+  imageUrl: safeUrl.optional(),
+  video360Url: safeUrl.optional(),
+  exteriorPhotoUrl: safeUrl.optional(),
+  photoUrls: safeUrlList.optional(),
   isPublished: z.boolean().optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
@@ -131,15 +135,31 @@ export const POST = withAuth(
     const { isPublished: _isPublished, ...data } = validated.data;
 
     try {
+      // ISS-025: a listing whose address and city match an existing one is
+      // still accepted, but its review notes point the moderator at the match.
+      // Nothing is merged or rejected automatically.
+      const hash = listingHash(data.address, data.city);
+      const duplicates = await findPossibleDuplicates(hash);
       const property = await prisma.property.create({
         data: {
           ...data,
+          listingHash: hash,
+          ...(duplicates.length > 0
+            ? {
+                moderationNotes: `Possible duplicate of: ${duplicates
+                  .map((d) => `${d.name} (${d.id})`)
+                  .join(', ')}`,
+              }
+            : {}),
           isPublished: false,
           ...(session.role === 'MANAGER' && !data.managerId ? { managerId: session.sub } : {}),
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },
       });
-      return NextResponse.json({ data: property }, { status: 201 });
+      return NextResponse.json(
+        { data: property, possibleDuplicates: duplicates.length },
+        { status: 201 },
+      );
     } catch (err) {
       return handleApiError(err);
     }

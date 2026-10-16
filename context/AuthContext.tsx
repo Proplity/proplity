@@ -53,17 +53,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function normalizeUser(rawUser: any): User | null {
+function normalizeUser(
+  rawUser: (Partial<User> & { role?: string }) | null | undefined,
+): User | null {
   if (!rawUser) return null;
   return {
-    ...rawUser,
+    ...(rawUser as User),
     role: (rawUser.role || 'tenant').toLowerCase() as UserRole,
   };
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}) {
+  const [user, setUser] = useState<User | null>(normalizeUser(initialUser));
+  const [loading, setLoading] = useState(initialUser ? false : true);
 
   // Mount proactive silent refresh interval — only when authenticated
   useAuthRefresh(!!user);
@@ -86,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
       }
-    } catch (err) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -94,7 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUser();
+    const timer = setTimeout(() => {
+      void fetchUser();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
@@ -114,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalized = normalizeUser(data.user);
       setUser(normalized);
       return { success: true, user: normalized || undefined };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Network error during login' };
     }
   };
@@ -149,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // account is PENDING_VERIFICATION until the emailed link is used, so
       // there's no `user` to log in as yet (setUser would just be wrong).
       return { success: true, requiresVerification: true };
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Network error during registration' };
     }
   };
