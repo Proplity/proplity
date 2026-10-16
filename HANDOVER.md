@@ -8,9 +8,9 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 ## Where things stand (2026-10-16)
 
-- The domain API roadmap, the frontend, the background workers and the test suites are built. 89 route handlers, 41 models, 23 migrations.
+- The domain API roadmap, the frontend, the background workers and the test suites are built. 94 route handlers, 43 models, 25 migrations.
 - The issue register (`docs/issues/issues.md`) is worked through: everything that can be done without outside input is built and merged to `dev`.
-- **Tests:** `pnpm test` runs 370 Vitest integration tests in 25 files (`tests/api/`), `pnpm test:unit` runs 71 fast unit/fuzz/security/anomaly tests in 12 files (~2.8s). Stryker mutation testing achieves 85.71% mutation score (`pnpm test:mutation`). Autocannon load testing (`pnpm test:load`) and 100k units query scaling benchmark (`pnpm benchmark:100k`). Playwright E2E: 52 tests across 15 spec files. `pnpm lint`: 0 errors, 0 warnings.
+- **Tests:** `pnpm test` runs 375 Vitest integration tests in 26 files (`tests/api/`), `pnpm test:unit` runs 73 fast unit/fuzz/security/anomaly tests in 12 files (~2.8s). Stryker mutation testing achieves 85.71% mutation score (`pnpm test:mutation`). Autocannon load testing (`pnpm test:load`) and 100k units query scaling benchmark (`pnpm benchmark:100k`). Playwright E2E: 52 tests across 15 spec files. `pnpm lint`: 0 errors, 0 warnings.
 - **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. All stale local and remote feature branches merged into `dev` have been pruned.
 - **Repo and CI:** GitHub `Proplity/proplity`. CI runs typecheck, lint, format check, build, the API integration suite and Playwright. Vercel's GitHub integration posts preview deployments (the custom preview workflow was removed).
 
@@ -23,13 +23,13 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 3. Smoke-test uploads on staging.
 4. Confirm the production environment variables (see `DEPLOYMENT.md`).
 5. Compliance sign-off on the identity-document retention periods before setting `RETENTION_ENABLED=true`.
-6. Run the production migrations and confirm before deploying. New since the last release: `20261014090000_payment_ref_unique`, `20261014120000_trust_score_computed` (nulls the old placeholder trust score), `20261014150000_one_active_autopay_per_lease` (soft-cancels duplicate active auto-pay mandates, keeping the newest), `20261014180000_listing_hash_backfill`, `20261014200000_property_photo_urls`, `20261016100000_perf_scale_indexes`.
+6. Run the production migrations and confirm before deploying. New since the last release: `20261014090000_payment_ref_unique`, `20261014120000_trust_score_computed` (nulls the old placeholder trust score), `20261014150000_one_active_autopay_per_lease` (soft-cancels duplicate active auto-pay mandates, keeping the newest), `20261014180000_listing_hash_backfill`, `20261014200000_property_photo_urls`, `20261016100000_perf_scale_indexes`, `20261016122746_bank_reconciliation_and_vendor_payouts`.
 7. Promote `dev` into `main` (staging) and then into `prod` (production).
 
 ### Blocked on something outside the code
 
-- **ISS-010, 012:** live Paystack calls and bank-transfer reconciliation / vendor payouts. Need a Paystack account and product decisions.
-- **ISS-035:** storage providers. Need real credentials.
+- **ISS-010:** live Paystack calls. Needs a real Paystack account / test-mode keys.
+- **ISS-035:** storage providers. Need real credentials for non-Cloudinary drivers.
 - **ISS-011, ISS-039:** background workers built; require environment flags (`AUTOPAY_WORKER_ENABLED=true`, `RETENTION_ENABLED=true`) once live operations and NDPR sign-offs are finalized.
 
 ### Completed in current pass (previously pending)
@@ -37,6 +37,7 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 - **Landing Page Session Restore (ISS-057):** Resolved session state latency by reading `getServerSession()` in `RootLayout` and passing `initialUser` directly to `AuthProvider`. Eliminates all flash of login state for authenticated visitors and ensures action links immediately point to `/admin` or `/dashboard`.
 - **Auto-Pay Mandate Recurring Charging Worker (ISS-011):** Built `runAutopayCharger` in `lib/workers/autopayCharger.ts`, runner script `scripts/workers/autopayCharger.ts`, and wired into daily cron dependency chain at `/api/v1/cron/[job]`. Charges open due invoices for active leases with active mandates (via Paystack charge authorization or mock gateway), updates invoice status to PAID, and records audit logs. Safely defaults to disabled until `AUTOPAY_WORKER_ENABLED=true`. Covered by unit/anomaly tests in `tests/anomaly/financial-anomalies.test.ts`.
 - **Sliding-Window Rate Limiter (ISS-021):** Upgraded `reserveAttempt` in `lib/auth/rateLimit.ts` from fixed-window counting to a true advisory-locked sliding-window log. Automatically purges expired attempt rows outside `[now - windowMs, now]` to prevent database bloat, eliminates window-edge burst doubling, and computes exact `remaining`, `resetAt`, and `retryAfterSeconds` values.
+- **Bank-Transfer Reconciliation & Vendor Payouts (ISS-012):** Built full offline bank transfer submission flow (`/api/v1/bank-transfers`) and statement reconciliation approval/rejection (`/api/v1/bank-transfers/[id]/reconcile`) with row-locking, payment creation, and file proof gateway verification in `reconciliation` folder. Built end-to-end vendor payout lifecycle (`/api/v1/vendor-payouts`, `vendor-payouts/[id]`) with invoice balance checks, verified bank account validation, landlord approval, and Paystack/mock transfer settlement. Covered by 5 new tests in `tests/api/bank-reconciliation-and-payouts.test.ts`.
 - **File Gateway Unification (ISS-038):** Extended secure file gateway (`lib/fileRef.ts`, `lib/uploadPolicy.ts`) with `notices`, `leases`, and `communications` folders. Enforced `assertOwnsFileUrls` on `Notice.documentUrl`, `Lease.signedAgreementUrl`, `Message.attachmentUrls`, `Violation.evidenceUrls`, and `User.avatarUrl`. Added multi-role read authorization in `canReadFile()` and unit tests in `fileRef.test.ts` and `uploadPolicy.test.ts`.
 - **Manager Invite Code Rate Limiting:** Protected public `GET /api/v1/manager-codes/check` endpoint against brute-force invite code enumeration using atomic advisory-locked DB rate limiter (10 attempts / 5 mins per IP), with quota release on valid code checks. Added test in `tests/api/manager-links.test.ts`.
 - **App-Wide Responsive File Viewer:** Global context (`FileViewerContext`) and responsive viewer modal (`FileViewerModal`) supporting images (pan, zoom up to 400%, 90° rotation), PDFs, videos (speed control, PiP), audio, monospace syntax-styled code/text/CSV with 1-click clipboard copy, and formatted document cards with keyboard navigation (Esc, Arrow keys, + / -). Integrated into Tenant Dashboard and Tenant Detail views for signed lease agreements.

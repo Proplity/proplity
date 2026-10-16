@@ -8,7 +8,8 @@ export type UploadFolder =
   | 'properties'
   | 'notices'
   | 'leases'
-  | 'communications';
+  | 'communications'
+  | 'reconciliation';
 export type StorageAccess = 'private' | 'public';
 
 /**
@@ -24,6 +25,7 @@ export const FOLDER_ACCESS: Record<UploadFolder, StorageAccess> = {
   notices: 'private',
   leases: 'private',
   communications: 'private',
+  reconciliation: 'private',
 };
 
 export function accessForFolder(folder: UploadFolder): StorageAccess {
