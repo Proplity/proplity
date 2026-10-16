@@ -102,6 +102,12 @@ export function ProplityGuideClient() {
         {/* ROLE JUMP PILLS */}
         <nav className="hidden items-center gap-1 overflow-x-auto text-xs font-medium lg:flex">
           <a
+            href="#all-features"
+            className="rounded-md px-2.5 py-1 font-semibold text-blue-400 transition hover:bg-slate-800 hover:text-blue-300"
+          >
+            📋 All Features
+          </a>
+          <a
             href="#setup"
             className="rounded-md px-2.5 py-1 text-slate-300 transition hover:bg-slate-800 hover:text-white"
           >

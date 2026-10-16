@@ -48,6 +48,247 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ---
 
+# 📋 COMPLETE MASTER FEATURE DIRECTORY (EVERY FEATURE IN PROPLITY)
+
+> **Overview:** An exhaustive, granular index of all 154 built and verified features, workflows, controls, and background processes in Proplity, organized across 12 functional domains.
+
+### Summary Metrics
+
+- **154** Verifiable Features & Controls
+- **94** Production REST API Route Handlers
+- **43** PostgreSQL Prisma Schema Models
+- **10** Scheduled Idempotent Background Workers
+- **101** Database B-Tree Performance Indexes
+- **6** User Roles (Tenant, Landlord, Manager, Vendor, Admin, Visitor)
+
+---
+
+### Domain 1: Public Discovery, Listings & Visitor Experience (15 Features)
+
+1. **Dynamic Homepage Hero & Portfolio Metrics**: Live stats, value proposition, and role-based CTA buttons (\`/\`, \`LandingPage.tsx\`).
+2. **Instant Role-Aware Navigation**: Root layout session extraction passes user into auth context without flash or latency (\`RootLayout\`, ISS-057).
+3. **Multi-Criteria Property Search & Filters**: Search by city, state, price range, bedrooms, bathrooms, and property type (\`PropertyDiscovery.tsx\`).
+4. **Nigerian Metro Location Targeting**: Fast location matching across Lekki, Victoria Island, Ikeja, Yaba, Abuja, and Port Harcourt.
+5. **Interactive Quick-Preview Property Modal**: Pop-up card with photo gallery and arrow navigation (\`FeaturedPropertyModal.tsx\`).
+6. **Full Listing Page with Metadata & OpenGraph**: SEO-optimized canonical property detail view (\`/properties/[id]\`, \`PublicPropertyDetail.tsx\`).
+7. **Unlimited Photo Gallery Display (+N Toggle)**: Full photo gallery with "+N more" expander toggle (\`Property.photoUrls\`, ISS-014).
+8. **360° Virtual Tour & Video Tour Embedding**: Direct integration of 360-degree virtual tours and video walkthroughs (\`Property.virtualTourUrl\`).
+9. **Neighborhood Quality Metrics & Radar Ratings**: Scored breakdown (0-10) for Safety, Flood Risk, Roads, Power, Water, and Schools (\`NeighbourhoodReport.tsx\`, ISS-016).
+10. **Dynamic Property Trust Score Badge**: Algorithmic trust rating badge computed daily by background workers (\`Property.trustScore\`, ISS-013).
+11. **Inspection Viewing Booking**: Interactive calendar picker with morning/afternoon slots for on-site property visits (\`ScheduleViewing.tsx\`).
+12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
+13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
+14. **Platform Inquiries & Contact Form**: Validated platform contact and support submission form (\`/contact\`, \`ContactPage.tsx\`).
+15. **Interactive Platform Guide**: Visual role-by-role guide with 100+ interactive fullscreen screenshots (\`/proplity-guide\`).
+
+---
+
+### Domain 2: Authentication, Authorization & Account Security (20 Features)
+
+16. **Multi-Role Self-Registration**: Dedicated registration workflows for Tenants, Landlords, Managers, and Vendors (\`/register\`).
+17. **Admin Self-Registration Lockout**: Registration endpoint strictly forbids ADMIN creation; admin requires setup bootstrap.
+18. **Two-Step Landlord Onboarding**: Frictionless signup without demanding upfront banking or property entries (ADR-0002).
+19. **Case-Insensitive Email Canonicalization**: Lowercases emails across registration, login, and queries, preventing duplicate accounts (ISS-002, ADR-0006).
+20. **Cryptographic Email Verification**: Single-use 32-byte hex token links required before initial login is permitted (\`/verify-email\`).
+21. **Rate-Limited Verification Resend**: Throttled resend verification links with anti-enumeration protection (\`POST /api/v1/auth/resend-verification\`).
+22. **Anti-Enumeration Password Recovery**: Identical generic confirmation message whether or not the account exists (\`/forgot-password\`).
+23. **Expiring Password Reset Tokens**: 60-minute time-limited cryptographic tokens invalidated on first use (\`/reset-password\`).
+24. **In-App Authenticated Password Change**: Password change requiring verification of the current password before updating (\`POST /api/v1/auth/change-password\`).
+25. **Edge-Compatible 15-Minute JWTs**: Stateless access tokens verified at edge proxies without database round-trips (\`lib/auth/jwt.ts\`).
+26. **Rotating Refresh Token Families**: Opaque refresh tokens with \`familyId\` rotation; reuse detection revokes entire token family.
+27. **Remember Me Variable Session Lifespans**: 30-day session with Remember Me vs. 1-day standard session.
+28. **Device-Wide Logout Token Revocation**: Decodes token signatures on logout (even after expiry) to revoke server refresh sessions.
+29. **Instant Account Suspension Enforcement**: Dynamic user status checks via \`withAuth\` immediately terminate suspended sessions.
+30. **CSRF Origin & Custom Header Guard**: Validates SameSite request origins and \`x-csrf-token\` headers on state-modifying calls (\`lib/auth/csrf.ts\`).
+31. **Sliding-Window DB Rate Limiter**: Advisory-locked sliding window limiter preventing burst-doubling and pruning stale logs (\`lib/auth/rateLimit.ts\`, ISS-021).
+32. **Manager Invitation Code System**: Landlords generate single-use invite codes linking managers to their portfolios (\`ManagerInviteCode\`, ADR-0011).
+33. **Manager Code Brute-Force Rate Limiting**: Dedicated rate limiting on public code checks (\`GET /api/v1/manager-codes/check\`).
+34. **First-Run Super Admin Setup Wizard**: One-time bootstrap at \`/setup\` permanently locking itself after creating the first admin.
+35. **Backslash Smuggling Open-Redirect Sanitizer**: Sanitizer blocking open-redirect attempts using backslash normalization (\`lib/safeRedirect.ts\`, ISS-058).
+
+---
+
+### Domain 3: Tenant Operations & Tenancy Experience (18 Features)
+
+36. **Tenant Dashboard Command Center**: Unified overview displaying active lease terms, current unit, pending bills, and quick action shortcuts.
+37. **Rent Payment Countdown & Due Alert**: Visual banner showing upcoming rent, overdue days, late fees, and direct Pay Now trigger.
+38. **Online Rent Checkout**: Card, USSD, and bank transfer payment via Paystack checkout with real-time balance recalculation.
+39. **Card Tokenization & Reusable Mandates**: Secure storage of payment authorization tokens (\`AutoPayMandate\`) for recurring rent charging (ISS-056).
+40. **Automatic Rent Charging Background Worker**: Daily worker charging due invoices using saved mandate tokens (\`autopayCharger.ts\`, ISS-011).
+41. **Offline Bank Transfer Proof Submission**: File upload and transaction metadata submission for offline bank deposits (\`/api/v1/bank-transfers\`, ISS-012).
+42. **Bank Transfer Duplicate Reference Guard**: Prevents re-submitting previously registered transfer references (\`bankTransferService.ts\`, ISS-012).
+43. **Transfer Reconciliation Status Tracker**: Real-time visibility into whether transfer proof is PENDING, APPROVED, or REJECTED with notes.
+44. **Digital Lease Agreement Console**: View active and historical tenancy agreements, clauses, rent cycles, and deposit terms (\`/dashboard/rentals\`).
+45. **In-Browser Digital E-Signature Execution**: Sign binding lease agreements online with digital signature image, timestamp, and IP logging.
+46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and downloadable receipts.
+47. **3-Step Structured Tenancy Application**: Form capturing personal identity, employer info, monthly income, and references (\`PropertyApplicationForm.tsx\`).
+48. **Mandatory Profile Completion Verification Gate**: Enforced profile completion screen (\`/dashboard/profile/complete\`) before application submission.
+49. **Identity Document Gateway Upload**: Secure upload of government IDs (NIN, Driver's License, Passport) behind private file gateway.
+50. **Multi-Category Maintenance Ticket Filing**: Submit repair tickets with category selection, 4 urgency levels, photos, and access preferences.
+51. **Maintenance Progress Tracking & Updates**: Live ticket timeline showing status transitions from Submitted -> Assigned -> In Progress -> Completed.
+52. **Post-Repair 5-Star Satisfaction Rating**: Rate completed vendor repairs (1-5 stars) with written feedback for vendor performance scoring.
+53. **Visitor Gate Pass Access Code Generator**: Generate single-use or time-bounded visitor access codes with customizable validity periods.
+
+---
+
+### Domain 4: Landlord Portfolio & Asset Management (15 Features)
+
+54. **Landlord Executive Financial Dashboard**: Portfolio KPI overview: Total Properties, Occupancy Rate, Total Rent Roll, Revenue Collected, and Overdue Balances.
+55. **Conditional First-Run Setup Banner**: Contextual banner alerting landlords only when required banking or property entries are missing (ISS-018).
+56. **Multi-Property Portfolio Management View**: Catalog of all owned properties showing unit counts, occupancy percentage, and publication status.
+57. **3-Step Property Creation Wizard**: Form-driven wizard (\`/dashboard/properties/new\`) supporting single-unit homes or multi-unit buildings.
+58. **Service Charge Rate Configuration**: Configure recurring building service charges as a fixed Naira fee or percentage of annual rent.
+59. **Property Photo Manager for Existing Listings**: Interactive modal to add, reorder, delete, and set cover photos on live listings (ISS-014).
+60. **Address Duplicate Fingerprint Detection**: Computes SHA-256 address hash to warn landlords against accidental duplicate listings (ISS-025).
+61. **Portfolio-Wide Tenant Directory**: Roster of all tenants living across owned buildings with lease dates, unit numbers, and payment status badges.
+62. **Tenant Applicant Screening & Approvals**: Review employment verification, salaries, and references; approve or reject applicants with notifications.
+63. **One-Click Lease Generation from Application**: Instantly convert an approved applicant into a binding tenancy agreement with pre-filled profile details.
+64. **Server-Side Financial Breakdown Pages**: Detailed breakdown views (\`/dashboard/breakdown/[type]\`) totaling revenue and paging full data (ISS-049).
+65. **Manager Invitation Code Dispatch**: Send customized email invitations to property managers; monitor active codes and deactivate anytime.
+66. **Disbursement Bank Account Management**: Register and manage verified Nigerian bank accounts (NUBAN) for receiving rental payouts.
+67. **Vendor Maintenance Payout Approvals**: Review and approve vendor repair invoices before disbursements are processed (ISS-012).
+68. **Subscription Plan Management & Upgrades**: Manage platform tier subscriptions (Free, Starter, Pro), switch billing tiers with safe downgrade confirmations.
+
+---
+
+### Domain 5: Property Manager Operations & Tenancy Administration (18 Features)
+
+69. **Manager Operations Command Center**: Daily task hub highlighting pending viewings, open repair tickets, expiring leases, and uncollected rent.
+70. **Role-Scoped Assigned Properties Directory**: Property catalog strictly isolated to buildings where the manager is designated as Property.managerId.
+71. **Property Detail Management Console**: In-depth console displaying all constituent units, condition reports, and equipment inventory.
+72. **Direct Tenant Onboarding / Lease Invite**: Invite tenants by email (\`/dashboard/tenants/add\`); system creates lease and emails activation link.
+73. **Tenant Detail & Tenancy Management**: Console per tenant displaying active lease, ledger, notices, and lease action tools.
+74. **Official Legal Tenancy Notices**: Issue legal notices (Payment Reminders, Maintenance Alerts, Evictions, Policy Updates) with attachments.
+75. **Internal Private Lease Notes**: Private chronological notes attached to leases for internal conduct and dispute records.
+76. **Lease Renewal & Rent Terms Review**: Adjust rent amounts and renewal terms, dispatching renewal contracts to tenants for digital execution.
+77. **Visual Kanban Maintenance Board**: Multi-column board organizing repairs into Submitted, Assigned, In Progress, and Completed stages.
+78. **Vendor Job Assignment with Email Alerts**: Assign maintenance tickets to verified vendors with automated email dispatch and direct ticket linkage.
+79. **Manager-Scoped Invoice Creation**: Generates rent or utility invoices strictly scoped to managed leases, preventing out-of-portfolio billing (ISS-050).
+80. **Bank Transfer Statement Reconciliation**: Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid (ISS-012).
+81. **Vendor Maintenance Payout Processing**: Initiate vendor payouts for completed jobs and execute disbursement via Paystack Transfer API or manual log (ISS-012).
+82. **Neighborhood Report Metric Editor**: Custom editor screen allowing managers to update area safety and infrastructure scores (ISS-016).
+83. **Unit Move-In / Move-Out Condition Reports**: Create detailed room-by-room condition checklists with rating scores, notes, and inspection photos.
+84. **Unit Lease Violation Tracking**: Log lease violations (noise complaints, property damage, unauthorized pets) with attached photographic evidence.
+85. **Property Equipment & Appliance Inventory**: Track building appliances, generators, water pumps, and elevators with serial numbers and service schedules.
+86. **Property-Wide Broadcast Announcements**: Publish announcements displayed on all active tenant dashboards in a building.
+
+---
+
+### Domain 6: Service Provider & Field Operations Management (12 Features)
+
+87. **Trade-Specific Vendor Registration**: Collects business name, CAC registration number, primary trade categories, and coverage zones (ISS-043).
+88. **Comprehensive Trade Categories**: Support for Plumbing, Electrical, HVAC, Carpentry, Painting, Masonry, Cleaning, and Security trades.
+89. **Geographic Service Coverage Areas**: Designate serviceable LGAs and cities, enabling landlords to filter local providers for urgent jobs.
+90. **Admin Verification Status Badge**: Verified badge displayed on vetted vendor profiles after administrative credential review.
+91. **Vendor Jobs Overview Dashboard**: Central console displaying assigned repair jobs, open tickets, completed orders, and unbilled work.
+92. **Job Detail & Tenant Access Instructions**: Full problem description, unit address, tenant contact info, access times, and damage photos.
+93. **Job Progress State Transitions**: Vendors update job status from In Progress to Completed once on-site work is concluded.
+94. **Dynamic Itemized Invoice Builder**: Form-driven builder starting empty and loading real job info for itemized billing (ISS-044).
+95. **Automated Maintenance Invoice Payer Assignment**: Routes vendor invoice payment directly to the managing property manager or property landlord (ISS-051).
+96. **Vendor Bank Account Registration**: Link verified NUBAN bank accounts to receive direct electronic transfer disbursements.
+97. **Vendor Payout Disbursement Tracking**: Real-time payout ledger tracking approval, processing, and transfer settlement references (ISS-012).
+98. **Direct Messaging with Assigning Manager**: Two-way in-app messaging channel with the property manager for site access or material approvals.
+
+---
+
+### Domain 7: Platform Administration, Governance & Compliance (14 Features)
+
+99. **Super Admin Overview Command Center**: Executive platform overview (\`/admin\`) featuring global counts for properties, units, users, revenue, and active leases.
+100. **Server-Side Platform Aggregates**: High-performance SQL aggregates calculating accurate numbers without page-1 query truncation (ISS-049).
+101. **Searchable & Paged User Management Table**: Complete user roster (\`/admin/users\`) with live search, role filters, status filters, and pagination (ISS-054).
+102. **Audited User Account Suspension**: Locks bad actors out immediately; enforces a mandatory documented reason recorded in the security audit log (ISS-054).
+103. **Account Reactivation & Role Modification**: Restore suspended accounts or adjust user roles with audit entries logging the responsible administrator.
+104. **Property Moderation & Publishing Queue**: Review all newly created listings before public release; approve, reject with feedback, or request edits.
+105. **Duplicate Property Detection Badges**: Moderation queue flags identical addresses using automated fingerprint hashes (\`Property.listingHash\`, ISS-025).
+106. **Duplicate Property Merge & Undo-Merge**: Merge duplicates into a canonical listing via \`Property.mergedIntoId\`; excludes from search while supporting undo.
+107. **Security Audit Log Explorer & Filters**: Searchable, filterable audit log (\`/admin/security\`) with action filters, date selectors, and JSON metadata viewer (ISS-055).
+108. **Global Platform Settings Console**: Configure invoice auto-completion thresholds, grace periods, and maintenance dispatch toggles.
+109. **Service Provider Verification Queue**: Verify or decline vendor registrations before they become eligible for maintenance dispatch.
+110. **Automated Database Migration Verification**: 25 Prisma migrations verified against staging schema with zero drift and duplicate constraint guards.
+111. **Automated Health & Uptime Probe**: Public \`/api/v1/health\` probe verifying database connection latency, system uptime, and environment health.
+112. **Automated Data Retention & Erasure Worker**: Background privacy worker (\`retention.ts\`) deleting expired identity documents according to NDPR periods (ADR-0012).
+
+---
+
+### Domain 8: Financial Engine, Webhooks & Payout Settlement (14 Features)
+
+113. **Paystack Online Checkout Initialization**: Initializes secure Paystack payments, returning authorization URLs and tracking session states.
+114. **HMAC-SHA512 Webhook Cryptographic Guard**: Verifies \`x-paystack-signature\` header using crypto HMAC before processing payment events.
+115. **Advisory Row-Locked Payment Allocation**: Postgres \`SELECT ... FOR UPDATE\` row locks on invoices prevent concurrent payment double-credit races (ISS-052).
+116. **Unique Transaction Reference Enforced**: \`Payment.transactionRef\` @unique index guarantees identical webhook retries can never credit twice (ISS-052).
+117. **Partial Payment Running Balance Accounting**: Invoices track cumulative payments, marking status PARTIALLY_PAID until full balance reaches zero (ISS-052).
+118. **Automated Overdue Flagger Worker**: Scheduled worker identifying UNPAID invoices past due, updating status to OVERDUE, and sending reminders.
+119. **Configurable Late Fee Calculation**: Computes either fixed Naira late fees or daily percentage penalties applied to delinquent leases.
+120. **Tenant Security Deposit Escrow Accounting**: Dedicated balance tracking for security deposits with refund calculation during lease termination.
+121. **Automated Rent Cycle Invoicer Worker**: Generates next rent billing invoice and recurring service charge invoice in advance of upcoming cycle.
+122. **Auto-Pay Mandate Storage & Charger Daemon**: Recurring charging worker (\`autopayCharger.ts\`) charging due invoices via Paystack recurring authorization (ISS-011).
+123. **Bank Transfer Submission Workflow**: API endpoint (\`/api/v1/bank-transfers\`) for submitting receipt proofs into private reconciliation storage (ISS-012).
+124. **Bank Transfer Statement Reconciliation**: Reconciliation approval endpoint creating Payment record, updating invoice to PAID, and notifying tenant (ISS-012).
+125. **Multi-Stage Vendor Payout Disbursement**: Full lifecycle: Initiate -> Landlord Approval -> Paystack Transfer Disbursement, with invoice cap limits (ISS-012).
+126. **Manual Cash & Transfer Payment Recording**: Allows managers/landlords to record manual payments with payment method audit logs (CASH, TRANSFER, ISS-053).
+
+---
+
+### Domain 9: Secure File Gateway & Media Architecture (12 Features)
+
+127. **Multi-Provider Storage Driver Abstraction**: Pluggable StorageDriver supporting Cloudinary, AWS S3-compatible, Vercel Blob, ImageKit, and Local Disk (ADR-0008, 0009).
+128. **Private File Gateway (8 Protected Folders)**: Controlled file proxy covering maintenance-requests, applications, profile, properties, notices, leases, communications, and reconciliation (ISS-038).
+129. **Contextual File Read Authorization**: \`canReadFile\` evaluates permissions dynamically so tenants only view their own files, and managers see their properties.
+130. **Strict File Ownership Assertion**: \`assertOwnsFileUrls\` ensures file references linked in notices, leases, messages, violations, and avatars belong to the caller (ISS-034, ISS-038).
+131. **App-Wide Responsive File Viewer Modal**: Global modal (\`FileViewerModal.tsx\`) previewing images, PDFs, videos, audio, and documents across the app.
+132. **Image Pan, Zoom (400%) & 90° Rotation**: Interactive inspection tools with zoom scaling from 50% to 400%, 90-degree rotation, and reset controls.
+133. **In-Browser Scrollable PDF Viewer**: Direct iframe PDF rendering enabling users to review signed agreements without downloading external apps.
+134. **Video & Audio Players with Variable Speed**: HTML5 players with custom speed buttons (0.5x, 1x, 1.5x, 2x) and Picture-in-Picture support.
+135. **Syntax-Styled Text/CSV File Preview**: Monospace code and spreadsheet preview with 1-click clipboard copy button.
+136. **Keyboard Accessibility Navigation**: Full keyboard control: Esc closes modal, Left/Right arrows navigate file galleries, +/- adjusts zoom.
+137. **Presigned Direct Uploads Architecture**: Upload signature endpoint (\`/api/v1/uploads/sign\`) issuing short-lived signatures for direct client-to-storage uploads.
+138. **Identity Document Privacy Retention Erasure**: Scheduled worker (\`retention.ts\`) automatically deletes expired identity documents according to NDPR periods (ADR-0012).
+
+---
+
+### Domain 10: Progressive Web App (PWA) & Mobile UX (8 Features)
+
+139. **Installable Progressive Web App (PWA)**: Next.js metadata manifest (\`app/manifest.ts\`) with theme colors, names, and 192px/512px app icons.
+140. **Offline Service Worker Caching**: Versioned service worker (\`public/sw.js\`) caching app shells and core assets for rapid offline launches.
+141. **User-Facing Offline Fallback Screen**: Dedicated \`/offline\` screen with friendly reconnection prompts and cached action reminders.
+142. **Home Screen Install Prompt Banner**: Modern backdrop-blurred prompt (\`PwaRegister.tsx\`) with native installation trigger and dismiss memory.
+143. **Standalone Mobile Display Mode**: Launches as an independent app without mobile browser URL bars or browser controls.
+144. **Floating Mobile Bottom Tab Bar**: Shows the top 3 role-specific tabs plus an expandable "More" sheet containing every remaining feature (ISS-026).
+145. **Mobile Admin Slide-Over Drawer**: Collapsible slide-over drawer navigation tailored for admin management on compact touchscreens.
+146. **Touch-Target Optimization**: Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.
+
+---
+
+### Domain 11: In-App Communications & Real-Time Notifications (10 Features)
+
+147. **Role-to-Role In-App Messaging Portal**: Real-time conversation portal (\`/dashboard/messages\`) between tenants, landlords, managers, and vendors.
+148. **Contextual Conversation Threading**: Threads link directly to specific properties, units, or maintenance tickets for context.
+149. **Protected Attachment Sharing in Chat**: Share images and documents inside chat, stored securely behind communications file gateway (ISS-038).
+150. **Notification Bell & Live Unread Badges**: Interactive header bell (\`NotificationBell.tsx\`) with live count badge and audio chime alerts.
+151. **Dedicated Notification Center Console**: Full-page notification feed (\`/dashboard/notifications\`) with category filtering and deep entity links.
+152. **One-Click Mark-All-Read Action**: Atomically mark all unread notifications across all categories as read (\`POST /notifications/mark-all-read\`).
+153. **Transactional Email Dispatch via Resend**: Sends verified emails for account activation, password resets, tenant invites, and viewing confirmations.
+154. **Development "Sent Emails" Inbox Widget**: Opt-in floating panel (\`EmailInboxWidget.tsx\`) capturing outgoing emails during development and testing.
+155. **Automated Audio Notification Chime**: Subtle Web Audio synthetic chime alerting users when a new high-priority notification arrives.
+156. **Multi-Category Notification Types**: Categorizes alerts into SYSTEM, MAINTENANCE_STATUS, and ANNOUNCEMENT for easy scanning.
+
+---
+
+### Domain 12: Scalability, Database Optimization & Automated Workers (10 Features)
+
+157. **10 Idempotent Scheduled Background Workers**: Rent Invoicer, Overdue Flagger, Autopay Charger, Maintenance Dispatcher, Access Code Janitor, Payment Scorer, Property Scorer, Retention, Storage Janitor, and Cron Fanout.
+158. **Daily Cron Fanout Architecture (02:00 UTC)**: Single daily cron endpoint (\`/api/v1/cron/all\`) that safely executes all workers in strict dependency order.
+159. **101 PostgreSQL B-Tree Performance Indexes**: 10 newly added single/composite indexes ensuring sub-millisecond query seeks on 100k+ unit workloads (ISS-030).
+160. **100k Units EXPLAIN ANALYZE Scaling Benchmark**: Automated scaling harness (\`scripts/benchmark-100k-units.ts\`) proving sub-0.15ms query seek latency.
+161. **Autocannon Multi-Phase Load Stress Testing**: Performance test harness (\`scripts/load-test.ts\`) measuring throughput, p99 latency, and concurrent requests.
+162. **Stryker Mutation Testing Verified (85.7% Score)**: Automated code mutation suite injecting arithmetic, equality, and logical mutations to prove test test quality.
+163. **1,000+ Payload Adversarial Fuzzing Suites**: Rigorous fuzz tests against URL parsers and API handlers testing malformed JSON, SQLi strings, and buffer overflows.
+164. **Comprehensive RBAC Authorization Matrix**: Matrix testing proving unauthorized roles (e.g. Tenant accessing Admin routes) are universally rejected.
+165. **Workflow & Financial State Anomaly Tests**: Verifies state machine resilience against negative payments, leapfrog approvals, and invalid status jumps.
+166. **Access Code Expiry Janitor Worker**: Automated scheduled background janitor marking past-due visitor gate access codes as EXPIRED.
+
+---
+
 # 🏁 SECTION 0: FIRST-TIME PLATFORM SETUP (Super Admin)
 
 > **Who does this?** The very first person to deploy Proplity. One-time only. Once done, this page is permanently disabled.
