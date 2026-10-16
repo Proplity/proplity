@@ -9,12 +9,14 @@ import type {
   Property,
   PropertyDetail,
   Unit,
+  UpdatePropertyInput,
 } from '@/lib/api/types';
 
 export function useProperties(filters?: { city?: string; state?: string; minBedrooms?: number }) {
   const [data, setData] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const filterKey = JSON.stringify(filters);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -30,10 +32,13 @@ export function useProperties(filters?: { city?: string; state?: string; minBedr
     // filters is a plain object literal at call sites -- stringify to avoid
     // an effect loop from a new object reference every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(filters)]);
+  }, [filterKey]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -65,7 +70,10 @@ export function useProperty(propertyId: string | null) {
   }, [propertyId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -93,7 +101,10 @@ export function useMyProperties() {
   }, []);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -124,7 +135,10 @@ export function useUnits(propertyId: string | null, status?: string) {
   }, [propertyId, status]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -158,6 +172,22 @@ export function useSetPropertyPublished(propertyId: string) {
   );
 }
 
+export function useUpdateProperty(propertyId: string) {
+  return useApiSubmit((body: UpdatePropertyInput) =>
+    api.properties.update(propertyId, body).then((res) => res.data.data),
+  );
+}
+
+export function useMergeProperty(propertyId: string) {
+  return useApiSubmit((targetPropertyId: string) =>
+    api.properties.merge(propertyId, targetPropertyId).then((res) => res.data.data),
+  );
+}
+
+export function useUnmergeProperty(propertyId: string) {
+  return useApiSubmit(() => api.properties.unmerge(propertyId).then((res) => res.data.data));
+}
+
 export function useModerateProperty(propertyId: string) {
   return useApiSubmit(
     (body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string }) =>
@@ -184,7 +214,10 @@ export function usePropertyViewings(propertyId: string | null) {
   }, [propertyId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, refetch };

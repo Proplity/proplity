@@ -19,10 +19,24 @@ import {
 import { useActiveLease } from '@/hooks/useLeases';
 import { useProperty } from '@/hooks/useProperties';
 
-// Each section is a loosely-typed JSON blob (NeighbourhoodReport model,
-// property.prisma) -- read fields defensively since nothing enforces their
-// exact shape at the DB layer beyond "however it was entered".
-type Section = Record<string, any>;
+interface Section {
+  rating?: number;
+  status?: string;
+  notes?: string;
+  features?: string[];
+  historicalFlooding?: { year: string | number; severity: string; duration: string }[];
+  mitigationMeasures?: string[];
+  schools?: string[];
+  hospitals?: string[];
+  shopping?: string[];
+  recreation?: string[];
+  population?: string;
+  averageAge?: string;
+  familyFriendly?: string;
+  expatCommunity?: string;
+  noiseLevel?: string;
+  [key: string]: unknown;
+}
 
 function num(section: Section | null, key: string): number | undefined {
   const v = section?.[key];
@@ -537,11 +551,11 @@ export function NeighbourhoodReport() {
                     ['Expat Community', demographics.expatCommunity],
                     ['Noise Level', demographics.noiseLevel],
                   ]
-                    .filter(([, value]) => value)
+                    .filter(([, value]) => Boolean(value))
                     .map(([label, value]) => (
-                      <div key={label}>
+                      <div key={label as string}>
                         <p className="mb-1 text-sm text-gray-600">{label}</p>
-                        <p className="font-medium">{value}</p>
+                        <p className="font-medium">{value as string}</p>
                       </div>
                     ))}
                 </div>

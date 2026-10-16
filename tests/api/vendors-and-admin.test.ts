@@ -59,21 +59,30 @@ describe('vendors: list (reputation computed at query time -- rule 8)', () => {
     const noJobsVendor = await createUser(Role.VENDOR, { name: 'Brand New Vendor' });
 
     const cookie = await authCookie(manager.id, manager.role);
-    const res = await apiFetch('/api/v1/vendors', { cookie });
+    const res = await apiFetch<{
+      data: {
+        id: string;
+        businessName: string;
+        totalJobs: number;
+        jobsDone: number;
+        completionRate: number | null;
+        rating: number | null;
+      }[];
+    }>('/api/v1/vendors', { cookie });
     expect(res.status).toBe(200);
 
-    expect(res.body.data.find((v: any) => v.id === suspendedVendor.id)).toBeUndefined();
+    expect(res.body.data.find((v) => v.id === suspendedVendor.id)).toBeUndefined();
 
-    const found = res.body.data.find((v: any) => v.id === vendor.id);
-    expect(found.businessName).toBe('Reliable Repairs'); // no VendorProfile -> falls back to name
-    expect(found.totalJobs).toBe(3);
-    expect(found.jobsDone).toBe(2);
-    expect(found.completionRate).toBe(67);
-    expect(found.rating).toBe(4);
+    const found = res.body.data.find((v) => v.id === vendor.id);
+    expect(found?.businessName).toBe('Reliable Repairs'); // no VendorProfile -> falls back to name
+    expect(found?.totalJobs).toBe(3);
+    expect(found?.jobsDone).toBe(2);
+    expect(found?.completionRate).toBe(67);
+    expect(found?.rating).toBe(4);
 
-    const freshVendor = res.body.data.find((v: any) => v.id === noJobsVendor.id);
-    expect(freshVendor.completionRate).toBeNull();
-    expect(freshVendor.rating).toBeNull();
+    const freshVendor = res.body.data.find((v) => v.id === noJobsVendor.id);
+    expect(freshVendor?.completionRate).toBeNull();
+    expect(freshVendor?.rating).toBeNull();
   });
 });
 
@@ -97,15 +106,17 @@ describe('admin/users: list (ADMIN only)', () => {
     const tenant = await createUser(Role.TENANT);
 
     const cookie = await authCookie(admin.id, admin.role);
-    const res = await apiFetch('/api/v1/admin/users', { cookie });
+    const res = await apiFetch<{
+      data: { id: string; passwordHash?: string; propertiesCount: number }[];
+    }>('/api/v1/admin/users', { cookie });
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBeGreaterThanOrEqual(3);
     expect(res.body.data[0].passwordHash).toBeUndefined();
 
-    const managerRow = res.body.data.find((u: any) => u.id === manager.id);
-    expect(managerRow.propertiesCount).toBe(2);
-    const tenantRow = res.body.data.find((u: any) => u.id === tenant.id);
-    expect(tenantRow.propertiesCount).toBe(0);
+    const managerRow = res.body.data.find((u) => u.id === manager.id);
+    expect(managerRow?.propertiesCount).toBe(2);
+    const tenantRow = res.body.data.find((u) => u.id === tenant.id);
+    expect(tenantRow?.propertiesCount).toBe(0);
   });
 
   it('filters by ?role=', async () => {
@@ -114,8 +125,10 @@ describe('admin/users: list (ADMIN only)', () => {
     await createUser(Role.TENANT);
     const cookie = await authCookie(admin.id, admin.role);
 
-    const res = await apiFetch('/api/v1/admin/users?role=VENDOR', { cookie });
-    expect(res.body.data.every((u: any) => u.role === 'VENDOR')).toBe(true);
+    const res = await apiFetch<{
+      data: { role: string }[];
+    }>('/api/v1/admin/users?role=VENDOR', { cookie });
+    expect(res.body.data.every((u) => u.role === 'VENDOR')).toBe(true);
     expect(res.body.data.length).toBeGreaterThanOrEqual(1);
   });
 });

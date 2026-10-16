@@ -138,8 +138,8 @@ export const mockMaintenanceBoardRequests = {
 
 export function getMockMaintenanceDetailRequest(
   requestId: number,
-  assignedVendor: any,
-  assignedVendorId: any,
+  assignedVendor: { name?: string } | null | undefined,
+  assignedVendorId: string | number | null | undefined,
 ) {
   return {
     id: requestId,

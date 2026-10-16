@@ -14,9 +14,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAdminSummary } from '@/hooks/useDashboardSummary';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface AdminDashboardProps {
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const ROLE_COLOR: Record<string, string> = {

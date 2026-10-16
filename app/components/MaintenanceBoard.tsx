@@ -8,12 +8,14 @@ import {
   User,
   MapPin,
   Wind,
+  type LucideIcon,
 } from 'lucide-react';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import type { MaintenanceRequest } from '@/lib/api/types';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface MaintenanceBoardProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const priorityColors: Record<string, string> = {
@@ -33,9 +35,9 @@ function Column({
 }: {
   title: string;
   requests: MaintenanceRequest[];
-  icon: any;
+  icon: LucideIcon;
   color: string;
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
   loading: boolean;
 }) {
   return (

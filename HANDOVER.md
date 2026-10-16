@@ -10,7 +10,7 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 - The domain API roadmap, the frontend, the background workers and the test suites are built. 87 route handlers, 41 models, 23 migrations.
 - The issue register (`docs/issues/issues.md`) is worked through: everything that can be done without outside input is built and merged to `dev`.
-- **Tests:** `pnpm test` runs 365 Vitest tests in 25 files, all passing on `dev` (real HTTP against a spawned `next dev` and a recreated `proplity_test_db`). Playwright E2E: 15 spec files, CI uses one worker. `pnpm lint`: 0 errors, 132 warnings (65 `any`, 67 React-compiler hints; these need real refactors).
+- **Tests:** `pnpm test` runs 370 Vitest tests in 25 files, all passing on `dev` (real HTTP against a spawned `next dev` and a recreated `proplity_test_db`). Playwright E2E: 15 spec files, CI uses one worker. `pnpm lint`: 0 errors, 0 warnings (all 138 lint warnings completely eliminated with 0 `@typescript-eslint/no-explicit-any` and 0 React Compiler warnings).
 - **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. At the time of writing, PRs up to #83 are merged or open into `dev`; `main` and `prod` do not yet have everything after #71 (PR #71 was the last `main` → `prod` release).
 - **Repo and CI:** GitHub `Proplity/proplity`. CI runs typecheck, lint, format check, build, the API integration suite and Playwright. Vercel's GitHub integration posts preview deployments (the custom preview workflow was removed).
 
@@ -32,12 +32,12 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 - **ISS-035, ISS-038:** storage providers. Need real credentials.
 - **ISS-030:** load testing. Needs a proper environment.
 
-### Optional, not started
+### Completed in current pass (previously pending)
 
-- A merge action for duplicate listings (`Property.mergedIntoId` is still unused) and photo fingerprinting. Detection by address fingerprint (`listingHash`) is done.
-- A screen to add photos to an existing listing (the API accepts `photoUrls` on edit; only the create form sends them).
-- The 132 lint warnings.
-- A guide screenshot for the subscription downgrade confirmation (it is a native `window.confirm`).
+- **Photo Management on Existing Listings:** UI modal/panel (`PropertyPhotoManager.tsx`) built and wired into `PropertyDetail.tsx` (allowing landlords and managers to add, reorder, delete, and set cover/exterior photos for existing listings via PATCH).
+- **Duplicate Listing Merge & Undo Merge Workflow:** Implemented `POST/DELETE /api/v1/properties/[id]/merge` and `POST /api/v1/properties/[id]/unmerge` using `Property.mergedIntoId`, audit logs (`PROPERTY_MERGE`, `PROPERTY_UNMERGE`), exclusion from public listings, admin `MergeDuplicateModal.tsx`, Merged filter tab, and 5 new integration tests.
+- **Lint Refactoring:** 100% elimination of all 138 ESLint warnings down to 0 errors and 0 warnings (eliminated 65 `any` types, 15 static component declarations, 7 unused vars, 3 purity violations, 3 immutability violations, and 45 effect set-state warnings).
+- **Subscription Downgrade Confirmation:** Replaced native `window.confirm` in `Checkout.tsx` with a custom modal.
 
 ## How to work in this repo
 

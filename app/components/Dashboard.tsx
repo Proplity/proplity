@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { DollarSign, Home, Users, AlertCircle, CheckCircle, KeyRound } from 'lucide-react';
 import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface DashboardProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function Dashboard({ onNavigate }: DashboardProps) {
+  const [now] = useState(() => Date.now());
   // Totals come from the server (ISS-049): summing the first page of each list
   // in the browser was wrong past 20 rows.
   const { data: summary, loading } = useOwnerSummary();
@@ -147,7 +149,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="divide-y divide-gray-200">
             {upcomingRenewals.map((lease) => {
               const daysLeft = Math.ceil(
-                (new Date(lease.endDate).getTime() - Date.now()) / MS_PER_DAY,
+                (new Date(lease.endDate).getTime() - now) / MS_PER_DAY,
               );
               return (
                 <div

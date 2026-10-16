@@ -31,9 +31,10 @@ import {
 import { useCreateConversation } from '@/hooks/useConversations';
 import { api } from '@/lib/apiClient';
 import { toCsv } from '@/lib/csv';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface LandlordDashboardProps {
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 function timeAgo(iso: string) {

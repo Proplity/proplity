@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Building2,
   Search,
@@ -11,8 +12,12 @@ import {
   XCircle,
   Flag,
   Copy,
+  GitMerge,
+  RotateCcw,
 } from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
+import { api } from '@/lib/apiClient';
+import { MergeDuplicateModal } from './MergeDuplicateModal';
 import type { Property } from '@/lib/api/types';
 
 const STATUS_META: Record<
@@ -29,27 +34,35 @@ const STATUS_META: Record<
   FLAGGED: { label: 'Flagged', icon: Flag, className: 'bg-orange-100 text-orange-800' },
 };
 
-const ALL_STATUSES = ['ALL', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FLAGGED'] as const;
+const ALL_STATUSES = ['ALL', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FLAGGED', 'MERGED'] as const;
 
 export default function AdminPropertiesPage() {
   const router = useRouter();
-  const { data: properties, loading, error } = useMyProperties();
+  const { data: properties, loading, error, refetch } = useMyProperties();
   const [search, setSearch] = useState('');
-  // Pending listings are the ones an admin actually needs to act on -- default
-  // to that filter instead of "ALL" so the queue this page exists for is
-  // what's visible the moment it loads.
   const [statusFilter, setStatusFilter] = useState<(typeof ALL_STATUSES)[number]>('PENDING_REVIEW');
+  const [mergeCandidate, setMergeCandidate] = useState<Property | null>(null);
+  const [unmergingId, setUnmergingId] = useState<string | null>(null);
 
-  // ISS-025: listings that share an address fingerprint with another live
-  // listing. Merged-away ones are not in the list's fingerprint groups.
+  // ISS-025: listings that share an address fingerprint with another live listing.
+  // Merged-away ones are excluded from the active duplicate groups.
   const duplicateCounts = properties.reduce<Record<string, number>>((acc, p) => {
-    if (p.listingHash) acc[p.listingHash] = (acc[p.listingHash] ?? 0) + 1;
+    if (p.listingHash && !p.mergedIntoId) {
+      acc[p.listingHash] = (acc[p.listingHash] ?? 0) + 1;
+    }
     return acc;
   }, {});
-  const isDuplicate = (p: Property) => !!p.listingHash && duplicateCounts[p.listingHash] > 1;
+
+  const isDuplicate = (p: Property) => !p.mergedIntoId && !!p.listingHash && duplicateCounts[p.listingHash] > 1;
 
   const filtered = properties.filter((p) => {
-    const matchesStatus = statusFilter === 'ALL' || p.moderationStatus === statusFilter;
+    let matchesStatus = true;
+    if (statusFilter === 'MERGED') {
+      matchesStatus = Boolean(p.mergedIntoId);
+    } else if (statusFilter !== 'ALL') {
+      matchesStatus = !p.mergedIntoId && p.moderationStatus === statusFilter;
+    }
+
     const term = search.toLowerCase();
     const matchesSearch =
       !term ||
@@ -57,13 +70,38 @@ export default function AdminPropertiesPage() {
       p.address.toLowerCase().includes(term) ||
       p.city.toLowerCase().includes(term) ||
       (p.manager?.name.toLowerCase().includes(term) ?? false);
+
     return matchesStatus && matchesSearch;
   });
 
   const statusCounts = ALL_STATUSES.slice(1).reduce<Record<string, number>>((acc, status) => {
-    acc[status] = properties.filter((p) => p.moderationStatus === status).length;
+    if (status === 'MERGED') {
+      acc[status] = properties.filter((p) => Boolean(p.mergedIntoId)).length;
+    } else {
+      acc[status] = properties.filter((p) => !p.mergedIntoId && p.moderationStatus === status).length;
+    }
     return acc;
   }, {});
+
+  const handleUnmerge = async (property: Property) => {
+    if (!confirm(`Undo merge for "${property.name}"? The listing will return to pending review.`)) {
+      return;
+    }
+    setUnmergingId(property.id);
+    try {
+      await api.properties.unmerge(property.id);
+      toast.success(`Merge undone for "${property.name}"`);
+      refetch();
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : 'Failed to undo merge';
+      toast.error(msg || 'Failed to undo merge');
+    } finally {
+      setUnmergingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -94,19 +132,22 @@ export default function AdminPropertiesPage() {
         >
           All ({properties.length})
         </button>
-        {(ALL_STATUSES.slice(1) as Property['moderationStatus'][]).map((status) => {
-          const meta = STATUS_META[status];
+        {ALL_STATUSES.slice(1).map((status) => {
+          const isMerged = status === 'MERGED';
+          const label = isMerged ? 'Merged' : STATUS_META[status as Property['moderationStatus']].label;
           return (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 statusFilter === status
-                  ? 'bg-blue-600 text-white'
+                  ? isMerged
+                    ? 'bg-purple-700 text-white'
+                    : 'bg-blue-600 text-white'
                   : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {meta.label} ({statusCounts[status] ?? 0})
+              {label} ({statusCounts[status] ?? 0})
             </button>
           );
         })}
@@ -158,7 +199,9 @@ export default function AdminPropertiesPage() {
                 <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                   {statusFilter === 'PENDING_REVIEW'
                     ? 'Nothing is waiting on review right now.'
-                    : 'No properties match your filters.'}
+                    : statusFilter === 'MERGED'
+                      ? 'No merged properties found.'
+                      : 'No properties match your filters.'}
                 </td>
               </tr>
             )}
@@ -167,6 +210,8 @@ export default function AdminPropertiesPage() {
               filtered.map((property) => {
                 const meta = STATUS_META[property.moderationStatus];
                 const StatusIcon = meta.icon;
+                const isMerged = Boolean(property.mergedIntoId);
+
                 return (
                   <tr key={property.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -186,9 +231,28 @@ export default function AdminPropertiesPage() {
                                 Possible duplicate
                               </span>
                             )}
+                            {isMerged && (
+                              <span
+                                className="ml-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+                                title={
+                                  property.mergedInto
+                                    ? `Merged into ${property.mergedInto.name}`
+                                    : 'Merged listing'
+                                }
+                              >
+                                <GitMerge className="h-3 w-3 text-purple-600" />
+                                Merged
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs text-gray-500">
                             {property.address}, {property.city}
+                            {isMerged && property.mergedInto && (
+                              <span className="text-purple-600">
+                                {' '}
+                                · Merged into: {property.mergedInto.name}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -198,12 +262,19 @@ export default function AdminPropertiesPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">{property.units.length}</td>
                     <td className="px-6 py-4">
-                      <div
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}
-                      >
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        {meta.label}
-                      </div>
+                      {isMerged ? (
+                        <div className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                          <GitMerge className="h-3.5 w-3.5" />
+                          Merged
+                        </div>
+                      ) : (
+                        <div
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}
+                        >
+                          <StatusIcon className="h-3.5 w-3.5" />
+                          {meta.label}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(property.createdAt).toLocaleDateString('en-GB', {
@@ -213,12 +284,36 @@ export default function AdminPropertiesPage() {
                       })}
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => router.push(`/dashboard/properties/${property.id}`)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        {property.moderationStatus === 'PENDING_REVIEW' ? 'Review' : 'View'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => router.push(`/dashboard/properties/${property.id}`)}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
+                            ? 'Review'
+                            : 'View'}
+                        </button>
+                        {isMerged ? (
+                          <button
+                            onClick={() => handleUnmerge(property)}
+                            disabled={unmergingId === property.id}
+                            className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                            title="Undo merge and return listing to pending review"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            {unmergingId === property.id ? 'Undoing…' : 'Undo Merge'}
+                          </button>
+                        ) : isDuplicate(property) ? (
+                          <button
+                            onClick={() => setMergeCandidate(property)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1.5 text-xs font-medium text-purple-800 hover:bg-purple-100"
+                            title="Merge this duplicate listing into a canonical property"
+                          >
+                            <GitMerge className="h-3 w-3" />
+                            Merge
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -232,6 +327,20 @@ export default function AdminPropertiesPage() {
           </div>
         )}
       </div>
+
+      {/* Merge Duplicate Modal */}
+      {mergeCandidate && (
+        <MergeDuplicateModal
+          sourceProperty={mergeCandidate}
+          allProperties={properties}
+          onClose={() => setMergeCandidate(null)}
+          onMerged={() => {
+            setMergeCandidate(null);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }
+

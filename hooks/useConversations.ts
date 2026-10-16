@@ -31,7 +31,10 @@ export function useConversations() {
   }, []);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -66,11 +69,16 @@ export function useMessages(conversationId: string | null) {
   }, [conversationId]);
 
   useEffect(() => {
-    setLoading(true);
-    refetch();
-    if (!conversationId) return;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      refetch();
+    }, 0);
+    if (!conversationId) return () => clearTimeout(timer);
     const interval = setInterval(refetch, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, [conversationId, refetch]);
 
   return { data, loading, error, refetch };
