@@ -44,6 +44,27 @@ enum AutoPayStatus {
   CANCELLED
 }
 
+enum BankTransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VendorPayoutStatus {
+  PENDING_APPROVAL
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+enum PayoutMethod {
+  BANK_TRANSFER
+  PAYSTACK_TRANSFER
+  MANUAL
+}
+
 // PRD §5.1 / §5.2 "Auto-pay for tenants" — a standing authorization to charge
 // automatically each cycle. Stores only a provider-side payment method token,
 // never raw card/account data.
@@ -63,7 +84,7 @@ model AutoPayMandate {
 }
 
 model Invoice {
-  id                   String              @id @default(uuid())
+  id                      String                   @id @default(uuid())
   // DB-generated at insert time — no application code or counter table
   // needed, and no race condition possible since gen_random_uuid() can't
   // produce a predictable collision. Trade-off vs. a period-scoped sequence:
@@ -71,47 +92,120 @@ model Invoice {
   // but it's simpler and needs zero extra infrastructure. gen_random_uuid()
   // is native to Postgres 13+; confirm your DB version supports it, or
   // enable pgcrypto if targeting an older version.
-  invoiceNumber        String              @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
-  leaseId              String?
-  lease                Lease?              @relation(fields: [leaseId], references: [id])
-  maintenanceRequestId String?
-  maintenanceRequest   MaintenanceRequest? @relation(fields: [maintenanceRequestId], references: [id])
+  invoiceNumber           String                   @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
+  leaseId                 String?
+  lease                   Lease?                   @relation(fields: [leaseId], references: [id])
+  maintenanceRequestId    String?
+  maintenanceRequest      MaintenanceRequest?      @relation(fields: [maintenanceRequestId], references: [id])
   // Direct charge to a person, for invoices that aren't scoped to a lease or
   // maintenance ticket — e.g. an ASSOCIATION_FEE billed estate-wide. At least
   // one of leaseId / maintenanceRequestId / userId should be set; enforce
   // that in application code, Prisma can't express an "at least one of" constraint.
-  userId               String?
-  user                 User?               @relation(fields: [userId], references: [id])
-  type                 InvoiceType         @default(RENT)
-  amount               Float
-  dueDate              DateTime
-  status               InvoiceStatus       @default(UNPAID)
-  description          String?
-  payments             Payment[]
-  notices              Notice[]
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  userId                  String?
+  user                    User?                    @relation(fields: [userId], references: [id])
+  type                    InvoiceType              @default(RENT)
+  amount                  Float
+  dueDate                 DateTime
+  status                  InvoiceStatus            @default(UNPAID)
+  description             String?
+  payments                Payment[]
+  notices                 Notice[]
+  bankTransferSubmissions BankTransferSubmission[]
+  vendorPayouts           VendorPayout[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
   @@index([status])
   @@index([leaseId])
 }
 
 model Payment {
-  id                   String          @id @default(uuid())
-  invoiceId            String
-  invoice              Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount               Float
-  paymentMethod        PaymentMethod   @default(BANK_TRANSFER)
-  provider             PaymentProvider @default(PAYSTACK)
-  virtualAccountNumber String?
+  id                     String                  @id @default(uuid())
+  invoiceId              String
+  invoice                Invoice                 @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount                 Float
+  paymentMethod          PaymentMethod           @default(BANK_TRANSFER)
+  provider               PaymentProvider         @default(PAYSTACK)
+  virtualAccountNumber   String?
   // Unique so a redelivered webhook can never credit twice (ISS-052); NULLs
   // (manual payments) are not compared.
-  transactionRef       String?         @unique
-  rawProviderPayload   String?
-  paidAt               DateTime        @default(now())
-  notes                String?
-  createdAt            DateTime        @default(now())
+  transactionRef         String?                 @unique
+  rawProviderPayload     String?
+  paidAt                 DateTime                @default(now())
+  notes                  String?
+  bankTransferSubmission BankTransferSubmission?
+  createdAt              DateTime                @default(now())
 
   @@index([invoiceId])
   @@index([paidAt])
+}
+
+// PRD §5.1 / §5.2 / ISS-012 "Bank-Transfer Reconciliation" — records tenant offline
+// bank transfer submissions against due invoices, supporting manager/landlord/admin
+// statement verification, reconciliation approval into a Payment, or rejection with reason.
+model BankTransferSubmission {
+  id                  String             @id @default(uuid())
+  invoiceId           String
+  invoice             Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  submittedById       String
+  submittedBy         User               @relation("BankTransfersSubmitted", fields: [submittedById], references: [id], onDelete: Cascade)
+  amount              Float
+  bankName            String
+  senderAccountName   String
+  senderAccountNumber String?
+  referenceNumber     String
+  paymentDate         DateTime
+  proofFileUrl        String?
+  notes               String?
+  status              BankTransferStatus @default(PENDING)
+  reconciledById      String?
+  reconciledBy        User?              @relation("BankTransfersReconciled", fields: [reconciledById], references: [id], onDelete: SetNull)
+  reconciledAt        DateTime?
+  rejectionReason     String?
+  paymentId           String?            @unique
+  payment             Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([invoiceId, status])
+  @@index([submittedById])
+  @@index([status])
+  @@index([referenceNumber])
+}
+
+// PRD §5.4 / §5.5 / ISS-012 "Vendor Payouts" — manages payouts to verified vendors
+// for completed maintenance jobs and paid invoices. Supports multi-level approval,
+// Paystack transfer integration, or direct bank transfer settlement.
+model VendorPayout {
+  id                   String              @id @default(uuid())
+  payoutNumber         String              @unique @default(dbgenerated("('PO-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
+  vendorId             String
+  vendor               User                @relation("VendorPayoutsReceived", fields: [vendorId], references: [id], onDelete: Cascade)
+  invoiceId            String?
+  invoice              Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  maintenanceRequestId String?
+  maintenanceRequest   MaintenanceRequest? @relation(fields: [maintenanceRequestId], references: [id], onDelete: SetNull)
+  amount               Float
+  currency             String              @default("NGN")
+  status               VendorPayoutStatus  @default(PENDING_APPROVAL)
+  payoutMethod         PayoutMethod        @default(BANK_TRANSFER)
+  bankAccountId        String?
+  bankAccount          BankAccount?        @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  reference            String?             @unique
+  transferCode         String?
+  failureReason        String?
+  notes                String?
+  initiatedById        String
+  initiatedBy          User                @relation("VendorPayoutsInitiated", fields: [initiatedById], references: [id], onDelete: Cascade)
+  approvedById         String?
+  approvedBy           User?               @relation("VendorPayoutsApproved", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt           DateTime?
+  processedAt          DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([vendorId, status])
+  @@index([status])
+  @@index([invoiceId])
+  @@index([maintenanceRequestId])
 }

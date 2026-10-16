@@ -80,7 +80,10 @@ await row().getByRole('button', { name: 'Suspend' }).waitFor();
 await shot('admin_08_security', async () => {
   await page.goto('/admin/security');
   await page.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: /User reactivated/ }).first().click();
+  await page
+    .getByRole('button', { name: /User reactivated/ })
+    .first()
+    .click();
 });
 
 console.log(results.join('\n'));

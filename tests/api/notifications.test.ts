@@ -42,18 +42,18 @@ describe('notifications: GET /api/v1/notifications', () => {
     }
     const cookie = await authCookie(user.id, user.role);
 
-    const firstPage = await apiFetch<{ data: { id: string }[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
-      '/api/v1/notifications?limit=2',
-      { cookie },
-    );
+    const firstPage = await apiFetch<{
+      data: { id: string }[];
+      meta: { hasMore: boolean; nextCursor: string | null };
+    }>('/api/v1/notifications?limit=2', { cookie });
     expect(firstPage.body.data.length).toBe(2);
     expect(firstPage.body.meta.hasMore).toBe(true);
     expect(firstPage.body.meta.nextCursor).toBeTruthy();
 
-    const secondPage = await apiFetch<{ data: { id: string }[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
-      `/api/v1/notifications?limit=2&cursor=${firstPage.body.meta.nextCursor}`,
-      { cookie },
-    );
+    const secondPage = await apiFetch<{
+      data: { id: string }[];
+      meta: { hasMore: boolean; nextCursor: string | null };
+    }>(`/api/v1/notifications?limit=2&cursor=${firstPage.body.meta.nextCursor}`, { cookie });
     expect(secondPage.body.data.length).toBe(1);
     expect(secondPage.body.meta.hasMore).toBe(false);
     expect(secondPage.body.meta.nextCursor).toBeNull();

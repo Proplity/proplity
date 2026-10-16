@@ -37,7 +37,8 @@ describe('auth jwt utilities', () => {
 
   it('allows expired tokens through verifyTokenAllowExpired for session cleanup', async () => {
     const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'dev_proplity_jwt_secret_key_2026_only_for_local_testing_environment',
+      process.env.JWT_SECRET ||
+        'dev_proplity_jwt_secret_key_2026_only_for_local_testing_environment',
     );
     const expiredToken = await new SignJWT({ sub: 'user-expired', role: 'TENANT' })
       .setProtectedHeader({ alg: 'HS256' })
@@ -70,7 +71,9 @@ describe('auth jwt utilities', () => {
   });
 
   it('rejects token signed with wrong secret key in verifyTokenAllowExpired', async () => {
-    const wrongSecret = new TextEncoder().encode('completely_different_secret_key_for_testing_123456');
+    const wrongSecret = new TextEncoder().encode(
+      'completely_different_secret_key_for_testing_123456',
+    );
     const wrongToken = await new SignJWT({ sub: 'user-attacker', role: 'ADMIN' })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt(Math.floor(Date.now() / 1000) - 1000)

@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -65,6 +66,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const validated = await validateBody(req, bodySchema);
     if (!validated.success) return validated.response;
     const { id, type, invoiceId, content, documentUrl, proposedTerms, status } = validated.data;
+
+    if (documentUrl) {
+      await assertOwnsFileUrls([documentUrl], session.sub, 'notices');
+    }
 
     const isOwnerTenant = session.role === 'TENANT' && lease.tenantId === session.sub;
     const canManage = canManageProperty(session, lease.unit.property);

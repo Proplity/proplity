@@ -92,4 +92,23 @@ describe('a manager can link to several landlords (ISS-040)', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]);
   });
+
+  it('rate limits brute-force code enumeration attempts on check endpoint', async () => {
+    // 10 failed attempts from the same IP exhausts the limit
+    for (let i = 0; i < 10; i++) {
+      const res = await apiFetch(`/api/v1/manager-codes/check?code=INVALID-${i}`, {
+        headers: { 'x-forwarded-for': '198.51.100.42' },
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.valid).toBe(false);
+    }
+
+    // 11th attempt must be 429 rate limited
+    const blocked = await apiFetch('/api/v1/manager-codes/check?code=INVALID-11', {
+      headers: { 'x-forwarded-for': '198.51.100.42' },
+    });
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.valid).toBe(false);
+    expect(blocked.body.error).toContain('Too many verification attempts');
+  });
 });

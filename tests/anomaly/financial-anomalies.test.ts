@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runOverdueFlagger } from '@/lib/workers/overdueFlagger';
+import { runAutopayCharger } from '@/lib/workers/autopayCharger';
 import { prisma } from '@/lib/db';
 
-vi.mock('@/lib/db', () => ({
-  prisma: {
+vi.mock('@/lib/db', () => {
+  const mockDb = {
     invoice: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -14,8 +15,21 @@ vi.mock('@/lib/db', () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
     },
-  },
-}));
+    autoPayMandate: {
+      update: vi.fn(),
+    },
+    payment: {
+      create: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
+    },
+    $transaction: vi.fn(async (callback: (tx: typeof mockDb) => Promise<unknown>) =>
+      callback(mockDb),
+    ),
+  };
+  return { prisma: mockDb };
+});
 
 type InvoicesFindMany = Awaited<ReturnType<typeof prisma.invoice.findMany>>;
 type InvoiceFindFirst = Awaited<ReturnType<typeof prisma.invoice.findFirst>>;
@@ -46,7 +60,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
 
     const result = await runOverdueFlagger();
     expect(result.flagged).toBe(0);
@@ -73,7 +89,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null); // No existing late fee
 
@@ -115,7 +133,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
 
     const result = await runOverdueFlagger();
@@ -146,7 +166,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateMaintenance] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateMaintenance,
+    ] as unknown as InvoicesFindMany);
 
     const result = await runOverdueFlagger();
     expect(result.flagged).toBe(1);
@@ -171,7 +193,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     // Simulate that late fee already exists with marker
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce({
       id: 'fee-existing',
@@ -181,5 +205,94 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
     const result = await runOverdueFlagger();
     expect(result.lateFeesCreated).toBe(0);
     expect(prisma.invoice.create).not.toHaveBeenCalled();
+  });
+
+  describe('Auto-Pay Mandate Recurring Charging Worker (ISS-011)', () => {
+    it('runs in disabled mode by default: audits eligible invoices and makes zero mutations', async () => {
+      const originalEnv = process.env.AUTOPAY_WORKER_ENABLED;
+      delete process.env.AUTOPAY_WORKER_ENABLED;
+
+      const dueInvoice = {
+        id: 'inv-due-1',
+        amount: 250_000,
+        leaseId: 'lease-autopay-1',
+        status: 'UNPAID',
+        dueDate: new Date(Date.now() - MS_PER_DAY),
+        payments: [],
+        lease: {
+          id: 'lease-autopay-1',
+          status: 'ACTIVE',
+          tenantId: 'tenant-123',
+          tenant: { id: 'tenant-123', email: 'tenant@example.com', name: 'Test Tenant' },
+          autoPayMandates: [
+            {
+              id: 'mandate-1',
+              status: 'ACTIVE',
+              paymentMethodToken: 'AUTH_test_card_token_123',
+            },
+          ],
+        },
+      };
+
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        dueInvoice,
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runAutopayCharger();
+
+      expect(result.enabled).toBe(false);
+      expect(result.eligibleCount).toBe(1);
+      expect(result.processedCount).toBe(0);
+      expect(result.successfulCount).toBe(0);
+      expect(result.details[0].status).toBe('DISABLED');
+      expect(result.details[0].amount).toBe(250_000);
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+
+      process.env.AUTOPAY_WORKER_ENABLED = originalEnv;
+    });
+
+    it('processes eligible due invoice when enabled in mock gateway environment', async () => {
+      const originalEnv = process.env.AUTOPAY_WORKER_ENABLED;
+      const originalMock = process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED;
+      process.env.AUTOPAY_WORKER_ENABLED = 'true';
+      process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED = 'true';
+
+      const dueInvoice = {
+        id: 'inv-due-2',
+        amount: 300_000,
+        leaseId: 'lease-autopay-2',
+        status: 'OVERDUE',
+        dueDate: new Date(Date.now() - 3 * MS_PER_DAY),
+        payments: [],
+        lease: {
+          id: 'lease-autopay-2',
+          status: 'ACTIVE',
+          tenantId: 'tenant-456',
+          tenant: { id: 'tenant-456', email: 'autopay@example.com', name: 'Autopay User' },
+          autoPayMandates: [
+            {
+              id: 'mandate-2',
+              status: 'ACTIVE',
+              paymentMethodToken: 'AUTH_valid_token_456',
+            },
+          ],
+        },
+      };
+
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        dueInvoice,
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runAutopayCharger();
+
+      expect(result.enabled).toBe(true);
+      expect(result.processedCount).toBe(1);
+      expect(result.successfulCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+      expect(result.details[0].status).toBe('SUCCESS');
+
+      process.env.AUTOPAY_WORKER_ENABLED = originalEnv;
+      process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED = originalMock;
+    });
   });
 });

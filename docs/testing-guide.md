@@ -214,12 +214,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 370 tests across 25 files in
-  `tests/api/`, real HTTP against a spawned `next dev` server and a dedicated
+- **API Integration suite (Vitest)** — `pnpm test`. 375 tests across 26 files in
+  `tests/api/` (including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`),
+  real HTTP against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (71 tests across 12 files, executes in ~2.8s without DB drops).
+  (73 tests across 12 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
