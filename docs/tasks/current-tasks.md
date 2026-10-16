@@ -15,7 +15,7 @@
 | 3   | [TASK-0003](0003-owner-namespaced-uploads-and-storage-driver.md) | Owner-namespaced Uploads and Storage Driver (ISS-034)               | [x] Completed   | 2026-10-11 14:00:00 UTC | 2026-10-13 10:00:00 UTC | Merged to `dev`                   |
 | 4   | [TASK-0004](0004-listing-quality-photos-and-duplicates.md)       | Photo Manager, Duplicate Detection & Merging, Neighbourhood Editor  | [x] Completed   | 2026-10-14 10:00:00 UTC | 2026-10-15 22:00:00 UTC | Merged to `dev`                   |
 | 5   | [TASK-0005](0005-dashboard-aggregates-and-audit-logging.md)      | Dashboard Aggregates, Admin Suspension & Audit Logging              | [x] Completed   | 2026-10-15 12:00:00 UTC | 2026-10-16 02:00:00 UTC | Merged to `dev`                   |
-| 6   | [TASK-0006](0006-load-testing-and-mutation-testing.md)           | Load & Stress Testing, Mutation Testing (ISS-030)                   | [/] In Progress | 2026-10-16 08:00:00 UTC | —                       | `dev`                             |
+| 6   | [TASK-0006](0006-load-testing-and-mutation-testing.md)           | Rigorous Testing Suite, Mutation Testing, Security Hardening & 100k Benchmarks (ISS-030) | [x] Completed   | 2026-10-16 08:00:00 UTC | 2026-10-16 09:50:00 UTC | `dev`                             |
 
 ---
 
