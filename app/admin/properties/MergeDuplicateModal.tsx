@@ -2,15 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import {
-  GitMerge,
-  X,
-  Building2,
-  AlertTriangle,
-  CheckCircle2,
-  Loader2,
-  Search,
-} from 'lucide-react';
+import { GitMerge, X, Building2, AlertTriangle, CheckCircle2, Loader2, Search } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import type { Property } from '@/lib/api/types';
 
@@ -36,9 +28,7 @@ export function MergeDuplicateModal({
       p.listingHash === sourceProperty.listingHash,
   );
 
-  const [selectedTargetId, setSelectedTargetId] = useState<string>(
-    fingerprintMatches[0]?.id ?? '',
-  );
+  const [selectedTargetId, setSelectedTargetId] = useState<string>(fingerprintMatches[0]?.id ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +118,7 @@ export function MergeDuplicateModal({
 
           {/* Source property banner */}
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">
+            <p className="text-xs font-semibold tracking-wider text-amber-800 uppercase">
               Duplicate to be merged (Will be unpublished & marked rejected)
             </p>
             <div className="mt-2 flex items-start gap-3">
@@ -136,7 +126,8 @@ export function MergeDuplicateModal({
               <div>
                 <p className="font-semibold text-gray-900">{sourceProperty.name}</p>
                 <p className="text-xs text-gray-600">
-                  {sourceProperty.address}, {sourceProperty.city} · {sourceProperty.units.length} unit
+                  {sourceProperty.address}, {sourceProperty.city} · {sourceProperty.units.length}{' '}
+                  unit
                   {sourceProperty.units.length === 1 ? '' : 's'}
                 </p>
                 <p className="mt-1 text-[11px] text-gray-500">
@@ -229,9 +220,7 @@ export function MergeDuplicateModal({
                           </p>
                         </div>
                       </div>
-                      {isSelected && (
-                        <CheckCircle2 className="h-5 w-5 shrink-0 text-purple-600" />
-                      )}
+                      {isSelected && <CheckCircle2 className="h-5 w-5 shrink-0 text-purple-600" />}
                     </div>
                   );
                 })
@@ -240,10 +229,13 @@ export function MergeDuplicateModal({
           </div>
 
           {/* Explanation Banner */}
-          <div className="rounded-lg bg-gray-50 p-3.5 text-xs text-gray-600 space-y-1">
+          <div className="space-y-1 rounded-lg bg-gray-50 p-3.5 text-xs text-gray-600">
             <p className="font-medium text-gray-800">What happens when you merge:</p>
             <p>• The duplicate listing will be set to unpublished and marked as rejected.</p>
-            <p>• It will be linked to the canonical property via <code className="text-purple-700">mergedIntoId</code>.</p>
+            <p>
+              • It will be linked to the canonical property via{' '}
+              <code className="text-purple-700">mergedIntoId</code>.
+            </p>
             <p>• Prospective tenants and search queries will only see the canonical listing.</p>
             <p>• You can undo this merge at any time from the admin properties list.</p>
           </div>

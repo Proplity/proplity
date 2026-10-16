@@ -34,7 +34,14 @@ const STATUS_META: Record<
   FLAGGED: { label: 'Flagged', icon: Flag, className: 'bg-orange-100 text-orange-800' },
 };
 
-const ALL_STATUSES = ['ALL', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'FLAGGED', 'MERGED'] as const;
+const ALL_STATUSES = [
+  'ALL',
+  'PENDING_REVIEW',
+  'APPROVED',
+  'REJECTED',
+  'FLAGGED',
+  'MERGED',
+] as const;
 
 export default function AdminPropertiesPage() {
   const router = useRouter();
@@ -53,7 +60,8 @@ export default function AdminPropertiesPage() {
     return acc;
   }, {});
 
-  const isDuplicate = (p: Property) => !p.mergedIntoId && !!p.listingHash && duplicateCounts[p.listingHash] > 1;
+  const isDuplicate = (p: Property) =>
+    !p.mergedIntoId && !!p.listingHash && duplicateCounts[p.listingHash] > 1;
 
   const filtered = properties.filter((p) => {
     let matchesStatus = true;
@@ -78,7 +86,9 @@ export default function AdminPropertiesPage() {
     if (status === 'MERGED') {
       acc[status] = properties.filter((p) => Boolean(p.mergedIntoId)).length;
     } else {
-      acc[status] = properties.filter((p) => !p.mergedIntoId && p.moderationStatus === status).length;
+      acc[status] = properties.filter(
+        (p) => !p.mergedIntoId && p.moderationStatus === status,
+      ).length;
     }
     return acc;
   }, {});
@@ -134,7 +144,9 @@ export default function AdminPropertiesPage() {
         </button>
         {ALL_STATUSES.slice(1).map((status) => {
           const isMerged = status === 'MERGED';
-          const label = isMerged ? 'Merged' : STATUS_META[status as Property['moderationStatus']].label;
+          const label = isMerged
+            ? 'Merged'
+            : STATUS_META[status as Property['moderationStatus']].label;
           return (
             <button
               key={status}
@@ -343,4 +355,3 @@ export default function AdminPropertiesPage() {
     </div>
   );
 }
-

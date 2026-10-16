@@ -72,9 +72,7 @@ export function PropertyPhotoManager({
     setErrorMessage(null);
     setUploading(true);
     try {
-      const uploadedFiles = await Promise.all(
-        files.map((file) => uploadFile(file, 'properties')),
-      );
+      const uploadedFiles = await Promise.all(files.map((file) => uploadFile(file, 'properties')));
       const newUrls = uploadedFiles.map((u) => u.url);
 
       // If no cover photo is set yet, default the first uploaded photo as cover
@@ -83,7 +81,9 @@ export function PropertyPhotoManager({
       }
 
       setPhotoUrls((prev) => [...prev, ...newUrls]);
-      toast.success(`${uploadedFiles.length} photo${uploadedFiles.length === 1 ? '' : 's'} uploaded`);
+      toast.success(
+        `${uploadedFiles.length} photo${uploadedFiles.length === 1 ? '' : 's'} uploaded`,
+      );
     } catch {
       setErrorMessage('One or more photos failed to upload. Please try again.');
       toast.error('Upload failed');
@@ -124,9 +124,7 @@ export function PropertyPhotoManager({
 
     // Collect all distinct photos including cover and exterior
     const distinctPhotos = Array.from(
-      new Set(
-        [imageUrl, exteriorPhotoUrl, ...photoUrls].filter((u): u is string => Boolean(u)),
-      ),
+      new Set([imageUrl, exteriorPhotoUrl, ...photoUrls].filter((u): u is string => Boolean(u))),
     );
 
     try {
@@ -281,8 +279,8 @@ export function PropertyPhotoManager({
                 <label
                   className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors ${
                     uploading
-                      ? 'border-blue-300 bg-blue-50/50 cursor-not-allowed'
-                      : 'border-gray-300 bg-gray-50/50 hover:bg-gray-50 hover:border-blue-400'
+                      ? 'cursor-not-allowed border-blue-300 bg-blue-50/50'
+                      : 'border-gray-300 bg-gray-50/50 hover:border-blue-400 hover:bg-gray-50'
                   }`}
                 >
                   <input
@@ -361,7 +359,7 @@ export function PropertyPhotoManager({
                         <div
                           key={`modal-${url}-${i}`}
                           className={`group relative aspect-4/3 overflow-hidden rounded-xl border bg-gray-100 ${
-                            isCover ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-200'
+                            isCover ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-200'
                           }`}
                         >
                           <ImageWithFallback

@@ -531,7 +531,11 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const { submit: unmergeProperty, submitting: unmerging } = useUnmergeProperty(propertyId);
 
   const handleUnmerge = async () => {
-    if (!window.confirm(`Undo merge for "${property?.name}"? The listing will return to pending review.`)) {
+    if (
+      !window.confirm(
+        `Undo merge for "${property?.name}"? The listing will return to pending review.`,
+      )
+    ) {
       return;
     }
     try {
@@ -633,8 +637,9 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
               <GitMerge className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold text-sm">
-                This listing was merged into {property.mergedInto?.name ? `"${property.mergedInto.name}"` : 'another property'}.
+              <p className="text-sm font-semibold">
+                This listing was merged into{' '}
+                {property.mergedInto?.name ? `"${property.mergedInto.name}"` : 'another property'}.
               </p>
               <p className="text-xs text-purple-700">
                 It is currently unpublished and marked as rejected in moderation.
@@ -659,8 +664,9 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
           <div className="flex items-center gap-2">
             <GitMerge className="h-4 w-4 text-blue-600" />
             <p className="text-xs font-medium">
-              Canonical listing: {property.mergedFrom.length} duplicate listing{property.mergedFrom.length === 1 ? '' : 's'} merged into this property:
-              {' '}{property.mergedFrom.map((p) => p.name).join(', ')}.
+              Canonical listing: {property.mergedFrom.length} duplicate listing
+              {property.mergedFrom.length === 1 ? '' : 's'} merged into this property:{' '}
+              {property.mergedFrom.map((p) => p.name).join(', ')}.
             </p>
           </div>
         </div>
