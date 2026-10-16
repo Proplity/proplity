@@ -12,14 +12,16 @@ import {
   Clock,
   Image as ImageIcon,
   MessageSquare,
+  type LucideIcon,
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes } from '@/hooks/useAccessCodes';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface VendorJobDetailProps {
   jobId: string;
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
@@ -29,7 +31,7 @@ const priorityConfig: Record<string, { color: string; label: string }> = {
   LOW: { color: 'green', label: 'Low Priority' },
 };
 
-const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
+const statusConfig: Record<string, { color: string; label: string; icon: LucideIcon }> = {
   SCHEDULED: { color: 'orange', label: 'Scheduled', icon: Calendar },
   IN_PROGRESS: { color: 'blue', label: 'In Progress', icon: Clock },
   COMPLETED: { color: 'green', label: 'Completed', icon: CheckCircle },

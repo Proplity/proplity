@@ -1,12 +1,12 @@
 # 0001: Registration Flow Refactoring, Native Links, Email URLs & E2E Tests
 
 - **Period / Focus:** 2026-10-10 to 2026-10-11 (Registration UX, Friction Elimination, URL Normalization & E2E Suite)
-- **Status:** In Progress
+- **Status:** Completed
 - **Priority:** Critical
 - **Assignee:** Antigravity (initial work) / Claude (review fixes)
-- **Target Branch / PR:** `feature/registration-ux-and-e2e` / PR not yet opened
+- **Target Branch / PR:** `feature/registration-ux-and-e2e` (merged into `dev`)
 - **Started:** 2026-10-10 20:30:00 UTC
-- **Ended:** —
+- **Ended:** 2026-10-12 18:00:00 UTC
 - **Duration:** —
 
 > **How to tick:** change `[ ]` to `[x]`. The table shows the characters, not a clickable box.

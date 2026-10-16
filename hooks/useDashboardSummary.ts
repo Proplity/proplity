@@ -31,7 +31,10 @@ function useSummary<T>(load: () => Promise<T>) {
   }, []);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };
@@ -65,7 +68,10 @@ export function useAdminReports(from: string, to: string) {
   }, [from, to]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

@@ -28,6 +28,8 @@ import type {
   CreatePropertyInput,
   CreateUnitInput,
   CreateViewingInput,
+  MergePropertyInput,
+  UpdatePropertyInput,
   OwnerDashboardSummary,
   OwnerBreakdownSummary,
   TenantDashboardSummary,
@@ -183,6 +185,17 @@ export const api = {
       ),
     setPublished: (propertyId: string, isPublished: boolean) =>
       apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, { isPublished }),
+    update: (propertyId: string, body: UpdatePropertyInput) =>
+      apiClient.patch<{ data: Property }>(`/api/v1/properties/${propertyId}`, body),
+    merge: (propertyId: string, targetPropertyIdOrBody: string | MergePropertyInput) => {
+      const body: MergePropertyInput =
+        typeof targetPropertyIdOrBody === 'string'
+          ? { targetPropertyId: targetPropertyIdOrBody }
+          : targetPropertyIdOrBody;
+      return apiClient.post<{ data: Property }>(`/api/v1/properties/${propertyId}/merge`, body);
+    },
+    unmerge: (propertyId: string) =>
+      apiClient.post<{ data: Property }>(`/api/v1/properties/${propertyId}/unmerge`),
     moderate: (
       propertyId: string,
       body: { status: 'APPROVED' | 'REJECTED' | 'FLAGGED'; moderationNotes?: string },

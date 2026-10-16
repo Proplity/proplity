@@ -1,4 +1,4 @@
-export const mockPropertyDetails: Record<number, any> = {
+export const mockPropertyDetails: Record<number, Record<string, unknown>> = {
   1: {
     id: 1,
     title: '3 Bedroom Luxury Apartment',

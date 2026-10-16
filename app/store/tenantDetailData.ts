@@ -1,4 +1,4 @@
-export const mockTenantDetails: Record<number, any> = {
+export const mockTenantDetails: Record<number, Record<string, unknown>> = {
   1: {
     id: 1,
     name: 'Adewale Johnson',

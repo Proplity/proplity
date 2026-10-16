@@ -45,6 +45,9 @@ export type Property = {
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   moderationNotes?: string | null;
   listingHash?: string | null;
+  mergedIntoId?: string | null;
+  mergedInto?: { id: string; name: string; address?: string; city?: string } | null;
+  mergedFrom?: { id: string; name: string; address?: string; city?: string }[];
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
   createdAt: string;
@@ -87,6 +90,25 @@ export type CreatePropertyInput = {
   video360Url?: string;
   exteriorPhotoUrl?: string;
   photoUrls?: string[];
+};
+
+export type UpdatePropertyInput = {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  type?: string;
+  description?: string;
+  imageUrl?: string | null;
+  video360Url?: string | null;
+  exteriorPhotoUrl?: string | null;
+  photoUrls?: string[];
+  isPublished?: boolean;
+};
+
+export type MergePropertyInput = {
+  targetPropertyId: string;
 };
 
 export type CreateUnitInput = {

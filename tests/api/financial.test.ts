@@ -42,18 +42,24 @@ describe('invoices: list scoping', () => {
     await createInvoice({ userId: otherTenant.id, description: 'direct invoice, unrelated' });
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantRes = await apiFetch('/api/v1/invoices', { cookie: tenantCookie });
-    expect(tenantRes.body.data.map((i: any) => i.description).sort()).toEqual(
+    const tenantRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: tenantCookie,
+    });
+    expect(tenantRes.body.data.map((i) => i.description).sort()).toEqual(
       ['job invoice', 'rent invoice'].sort(),
     );
 
     const vendorCookie = await authCookie(vendor.id, vendor.role);
-    const vendorRes = await apiFetch('/api/v1/invoices', { cookie: vendorCookie });
-    expect(vendorRes.body.data.map((i: any) => i.description)).toEqual(['job invoice']);
+    const vendorRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: vendorCookie,
+    });
+    expect(vendorRes.body.data.map((i) => i.description)).toEqual(['job invoice']);
 
     const managerCookie = await authCookie(manager.id, manager.role);
-    const managerRes = await apiFetch('/api/v1/invoices', { cookie: managerCookie });
-    expect(managerRes.body.data.map((i: any) => i.description).sort()).toEqual(
+    const managerRes = await apiFetch<{ data: { description: string }[] }>('/api/v1/invoices', {
+      cookie: managerCookie,
+    });
+    expect(managerRes.body.data.map((i) => i.description).sort()).toEqual(
       ['job invoice', 'rent invoice'].sort(),
     );
 
@@ -825,16 +831,21 @@ describe('payments: autopay', () => {
     const cookie = await authCookie(tenant.id, tenant.role);
 
     const token = await seedCardAuthorization(lease.id);
-    const created = await apiFetch('/api/v1/payments/autopay', {
-      method: 'POST',
-      cookie,
-      body: { leaseId: lease.id, paymentMethodToken: token },
-    });
+    const created = await apiFetch<{ data: { id: string; status: string } }>(
+      '/api/v1/payments/autopay',
+      {
+        method: 'POST',
+        cookie,
+        body: { leaseId: lease.id, paymentMethodToken: token },
+      },
+    );
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('ACTIVE');
 
-    const list = await apiFetch('/api/v1/payments/autopay', { cookie });
-    expect(list.body.data.map((m: any) => m.id)).toEqual([created.body.data.id]);
+    const list = await apiFetch<{ data: { id: string }[] }>('/api/v1/payments/autopay', {
+      cookie,
+    });
+    expect(list.body.data.map((m) => m.id)).toEqual([created.body.data.id]);
 
     const deleted = await apiFetch(`/api/v1/payments/autopay?id=${created.body.data.id}`, {
       method: 'DELETE',

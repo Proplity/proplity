@@ -73,12 +73,15 @@ export function NeighbourhoodReportEditor({ propertyId }: { propertyId: string }
 
   useEffect(() => {
     if (!property) return;
-    setDrafts(
-      Object.fromEntries(SECTIONS.map((s) => [s.key, toDraft(report?.[s.key])])) as Record<
-        SectionKey,
-        Draft
-      >,
-    );
+    const timer = setTimeout(() => {
+      setDrafts(
+        Object.fromEntries(SECTIONS.map((s) => [s.key, toDraft(report?.[s.key])])) as Record<
+          SectionKey,
+          Draft
+        >,
+      );
+    }, 0);
+    return () => clearTimeout(timer);
   }, [property, report]);
 
   const update = (key: SectionKey, field: keyof Draft, value: string) => {
