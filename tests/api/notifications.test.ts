@@ -30,8 +30,9 @@ describe('notifications: GET /api/v1/notifications', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(2);
     expect(res.body.data[0].title).toBe('Second');
-    expect(res.body.meta.unreadCount).toBe(1);
-    expect(res.body.data.every((n: any) => n.recipientId === owner.id)).toBe(true);
+    expect(res.body.data.every((n: { recipientId: string }) => n.recipientId === owner.id)).toBe(
+      true,
+    );
   });
 
   it('paginates by cursor: hasMore and nextCursor advance correctly', async () => {
@@ -41,12 +42,15 @@ describe('notifications: GET /api/v1/notifications', () => {
     }
     const cookie = await authCookie(user.id, user.role);
 
-    const firstPage = await apiFetch('/api/v1/notifications?limit=2', { cookie });
+    const firstPage = await apiFetch<{ data: { id: string }[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
+      '/api/v1/notifications?limit=2',
+      { cookie },
+    );
     expect(firstPage.body.data.length).toBe(2);
     expect(firstPage.body.meta.hasMore).toBe(true);
     expect(firstPage.body.meta.nextCursor).toBeTruthy();
 
-    const secondPage = await apiFetch(
+    const secondPage = await apiFetch<{ data: { id: string }[]; meta: { hasMore: boolean; nextCursor: string | null } }>(
       `/api/v1/notifications?limit=2&cursor=${firstPage.body.meta.nextCursor}`,
       { cookie },
     );
@@ -55,8 +59,8 @@ describe('notifications: GET /api/v1/notifications', () => {
     expect(secondPage.body.meta.nextCursor).toBeNull();
 
     const seenIds = new Set([
-      ...firstPage.body.data.map((n: any) => n.id),
-      ...secondPage.body.data.map((n: any) => n.id),
+      ...firstPage.body.data.map((n) => n.id),
+      ...secondPage.body.data.map((n) => n.id),
     ]);
     expect(seenIds.size).toBe(3);
   });

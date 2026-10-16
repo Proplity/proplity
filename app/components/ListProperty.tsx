@@ -321,7 +321,11 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     unitStatuses.every((s) => s === 'created');
   const anyUnitFailed = unitStatuses.some((s) => s === 'failed');
 
-  const toggleArrayItem = (array: string[], item: string, setter: (val: any) => void) => {
+  const toggleArrayItem = (
+    array: string[],
+    item: string,
+    setter: React.Dispatch<React.SetStateAction<typeof formData>>,
+  ) => {
     if (array.includes(item)) {
       setter({
         ...formData,

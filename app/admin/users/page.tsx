@@ -95,10 +95,16 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [load]);
   useEffect(() => {
-    loadPendingVendors();
+    const timer = setTimeout(() => {
+      loadPendingVendors();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadPendingVendors]);
 
   const decide = async (id: string, status: 'VERIFIED' | 'REJECTED') => {

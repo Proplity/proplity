@@ -1,12 +1,12 @@
 # 0002: Private Document Uploads (ISS-031 / ISS-032)
 
 - **Period / Focus:** 2026-10-11 (Sensitive document exposure)
-- **Status:** In Progress
+- **Status:** Completed
 - **Priority:** High
 - **Assignee:** Claude
-- **Target Branch / PR:** `fix/private-uploads` (stacked on `feature/registration-ux-and-e2e`, PR #38)
+- **Target Branch / PR:** `fix/private-uploads` (merged into `dev`)
 - **Started:** 2026-10-11 12:00:00 UTC
-- **Ended:** —
+- **Ended:** 2026-10-12 21:00:00 UTC
 
 > **How to tick:** change `[ ]` to `[x]`. _Currently: nothing running._
 

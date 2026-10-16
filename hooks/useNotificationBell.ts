@@ -39,9 +39,14 @@ export function useNotificationBell() {
   }, []);
 
   useEffect(() => {
-    poll();
+    const timer = setTimeout(() => {
+      poll();
+    }, 0);
     const interval = setInterval(poll, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, [poll]);
 
   const clearNewlyArrived = useCallback(() => setNewlyArrived([]), []);

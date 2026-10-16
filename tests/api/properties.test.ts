@@ -14,9 +14,9 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     await createProperty({ name: 'Published One', isPublished: true });
     await createProperty({ name: 'Unpublished One', isPublished: false });
 
-    const res = await apiFetch('/api/v1/properties');
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties');
     expect(res.status).toBe(200);
-    const names = res.body.data.map((p: any) => p.name);
+    const names = res.body.data.map((p) => p.name);
     expect(names).toContain('Published One');
     expect(names).not.toContain('Unpublished One');
   });
@@ -25,10 +25,12 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     const property = await createProperty({ name: 'Sqft Property', isPublished: true });
     await createUnit(property.id, { squareFeet: 850 });
 
-    const res = await apiFetch('/api/v1/properties');
-    const found = res.body.data.find((p: any) => p.name === 'Sqft Property');
-    expect(found.units[0].sqft).toBe(850);
-    expect(found.units[0].squareFeet).toBeUndefined();
+    const res = await apiFetch<{
+      data: { name: string; units: { sqft: number; squareFeet?: number }[] }[];
+    }>('/api/v1/properties');
+    const found = res.body.data.find((p) => p.name === 'Sqft Property');
+    expect(found?.units[0].sqft).toBe(850);
+    expect(found?.units[0].squareFeet).toBeUndefined();
   });
 
   it('filters by price through Unit.rentAmount, not a Property-level column', async () => {
@@ -37,8 +39,8 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     const pricey = await createProperty({ name: 'Pricey Property', isPublished: true });
     await createUnit(pricey.id, { rentAmount: 5_000_000 });
 
-    const res = await apiFetch('/api/v1/properties?minPrice=1000000');
-    const names = res.body.data.map((p: any) => p.name);
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties?minPrice=1000000');
+    const names = res.body.data.map((p) => p.name);
     expect(names).toContain('Pricey Property');
     expect(names).not.toContain('Cheap Property');
   });
@@ -68,9 +70,11 @@ describe('properties: scope=mine', () => {
     await createProperty({ name: "Someone Else's", managerId: otherManager.id, isPublished: true });
 
     const cookie = await authCookie(manager.id, manager.role);
-    const res = await apiFetch('/api/v1/properties?scope=mine', { cookie });
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties?scope=mine', {
+      cookie,
+    });
     expect(res.status).toBe(200);
-    const names = res.body.data.map((p: any) => p.name);
+    const names = res.body.data.map((p) => p.name);
     expect(names).toContain('Mine Unpublished');
     expect(names).not.toContain("Someone Else's");
   });
@@ -81,9 +85,11 @@ describe('properties: scope=mine', () => {
     await createProperty({ name: 'Admin Sees This Too', landlordId: someoneElse.id });
 
     const cookie = await authCookie(admin.id, admin.role);
-    const res = await apiFetch('/api/v1/properties?scope=mine', { cookie });
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties?scope=mine', {
+      cookie,
+    });
     expect(res.status).toBe(200);
-    expect(res.body.data.map((p: any) => p.name)).toContain('Admin Sees This Too');
+    expect(res.body.data.map((p) => p.name)).toContain('Admin Sees This Too');
   });
 });
 
@@ -440,8 +446,8 @@ describe('properties: moderation (ADMIN review queue) + publish gating', () => {
     expect(allowed.body.data.isPublished).toBe(true);
 
     // Now real end-to-end: it must actually show up in public browsing.
-    const publicList = await apiFetch('/api/v1/properties');
-    expect(publicList.body.data.map((p: any) => p.id)).toContain(property.id);
+    const publicList = await apiFetch<{ data: { id: string }[] }>('/api/v1/properties');
+    expect(publicList.body.data.map((p) => p.id)).toContain(property.id);
   });
 
   it('rejecting a previously-approved-and-published listing unpublishes it too', async () => {
@@ -462,8 +468,8 @@ describe('properties: moderation (ADMIN review queue) + publish gating', () => {
     expect(res.body.data.moderationStatus).toBe('REJECTED');
     expect(res.body.data.isPublished).toBe(false);
 
-    const publicList = await apiFetch('/api/v1/properties');
-    expect(publicList.body.data.map((p: any) => p.id)).not.toContain(property.id);
+    const publicList = await apiFetch<{ data: { id: string }[] }>('/api/v1/properties');
+    expect(publicList.body.data.map((p) => p.id)).not.toContain(property.id);
   });
 });
 
@@ -502,9 +508,11 @@ describe('properties: verified reviews (leaseId provenance)', () => {
 
   it('supports filtering the reviews list to verified only', async () => {
     const property = await createProperty({ isPublished: true });
-    const res = await apiFetch(`/api/v1/properties/${property.id}/reviews?verified=true`);
+    const res = await apiFetch<{ data: { verified: boolean }[] }>(
+      `/api/v1/properties/${property.id}/reviews?verified=true`,
+    );
     expect(res.status).toBe(200);
-    expect(res.body.data.every((r: any) => r.verified)).toBe(true);
+    expect(res.body.data.every((r) => r.verified)).toBe(true);
   });
 });
 
@@ -633,3 +641,126 @@ describe('neighbourhood report: save and keep history (ISS-016)', () => {
     expect((await put(manager, { water: { blob: 'x'.repeat(25_000) } })).status).toBe(400);
   });
 });
+
+describe('properties: merge & unmerge duplicate listings (ISS-025)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('allows an ADMIN to merge a duplicate property into a canonical property', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+
+    const canonical = await createProperty({ name: 'Canonical Building', isPublished: true });
+    const duplicate = await createProperty({ name: 'Duplicate Building', isPublished: true });
+
+    const res = await apiFetch(`/api/v1/properties/${duplicate.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: canonical.id },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.mergedIntoId).toBe(canonical.id);
+    expect(res.body.data.isPublished).toBe(false);
+    expect(res.body.data.moderationStatus).toBe('REJECTED');
+
+    // Canonical property should still be published and active
+    const canonicalDb = await testPrisma.property.findUnique({ where: { id: canonical.id } });
+    expect(canonicalDb?.isPublished).toBe(true);
+    expect(canonicalDb?.mergedIntoId).toBeNull();
+
+    // Duplicate property in DB
+    const duplicateDb = await testPrisma.property.findUnique({ where: { id: duplicate.id } });
+    expect(duplicateDb?.mergedIntoId).toBe(canonical.id);
+    expect(duplicateDb?.isPublished).toBe(false);
+
+    // Audit log was recorded
+    const audit = await testPrisma.auditLog.findFirst({
+      where: { entityId: duplicate.id, action: 'PROPERTY_MERGE' },
+    });
+    expect(audit).not.toBeNull();
+    expect(audit?.actorId).toBe(admin.id);
+  });
+
+  it('excludes merged properties from public browsing and search', async () => {
+    const res = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties');
+    const names = res.body.data.map((p) => p.name);
+    expect(names).toContain('Canonical Building');
+    expect(names).not.toContain('Duplicate Building');
+  });
+
+  it('rejects merge from non-ADMIN users', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const cookie = await authCookie(manager.id, manager.role);
+    const p1 = await createProperty({ name: 'Prop 1' });
+    const p2 = await createProperty({ name: 'Prop 2' });
+
+    const res = await apiFetch(`/api/v1/properties/${p1.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: p2.id },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('refuses to merge a property into itself or into an already-merged property', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+
+    const prop = await createProperty({ name: 'Self Merge Prop' });
+    const selfRes = await apiFetch(`/api/v1/properties/${prop.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: prop.id },
+    });
+    expect(selfRes.status).toBe(400);
+  });
+
+  it('allows an ADMIN to undo a merge', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+
+    const canonical = await createProperty({ name: 'Keep Property', isPublished: true });
+    const duplicate = await createProperty({ name: 'Merged Property', isPublished: true });
+
+    // First merge
+    await apiFetch(`/api/v1/properties/${duplicate.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: canonical.id },
+    });
+
+    // Undo merge via DELETE
+    const undoRes = await apiFetch(`/api/v1/properties/${duplicate.id}/merge`, {
+      method: 'DELETE',
+      cookie,
+    });
+    expect(undoRes.status).toBe(200);
+    expect(undoRes.body.data.mergedIntoId).toBeNull();
+    expect(undoRes.body.data.moderationStatus).toBe('PENDING_REVIEW');
+
+    const dbRestored = await testPrisma.property.findUnique({ where: { id: duplicate.id } });
+    expect(dbRestored?.mergedIntoId).toBeNull();
+
+    // Audit log recorded
+    const audit = await testPrisma.auditLog.findFirst({
+      where: { entityId: duplicate.id, action: 'PROPERTY_UNMERGE' },
+    });
+    expect(audit).not.toBeNull();
+
+    // Also test POST /unmerge convenience route
+    await apiFetch(`/api/v1/properties/${duplicate.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: canonical.id },
+    });
+    const postUndoRes = await apiFetch(`/api/v1/properties/${duplicate.id}/unmerge`, {
+      method: 'POST',
+      cookie,
+    });
+    expect(postUndoRes.status).toBe(200);
+    expect(postUndoRes.body.data.mergedIntoId).toBeNull();
+  });
+});
+

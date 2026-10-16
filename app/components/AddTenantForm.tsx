@@ -48,6 +48,29 @@ export function AddTenantForm() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [tenantInfo, setTenantInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    nin: '',
+    occupation: '',
+    employer: '',
+  });
+
+  const [leaseDetails, setLeaseDetails] = useState({
+    startDate: '',
+    endDate: '',
+    rentAmount: '',
+    serviceCharge: '',
+    rentFrequency: 'yearly',
+    paymentDueDay: '1',
+    gracePeriodDays: '7',
+    lateFeeType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
+    lateFeePercentage: '0',
+    lateFeeFlatAmount: '0',
+  });
+
   const { data: vacantUnits } = useUnits(selectedPropertyId, 'VACANT');
 
   // Opened from an approved application (ISS-046): preselect its property and
@@ -82,16 +105,20 @@ export function AddTenantForm() {
   useEffect(() => {
     if (!applicationId || !selectedUnitId) return;
     const unit = vacantUnits.find((u) => u.id === selectedUnitId);
-    if (unit)
-      setLeaseDetails((s) =>
-        s.rentAmount
-          ? s
-          : {
-              ...s,
-              rentAmount: String(unit.rentAmount),
-              serviceCharge: String(unit.serviceCharge ?? 0),
-            },
-      );
+    if (unit) {
+      const timer = setTimeout(() => {
+        setLeaseDetails((s) =>
+          s.rentAmount
+            ? s
+            : {
+                ...s,
+                rentAmount: String(unit.rentAmount),
+                serviceCharge: String(unit.serviceCharge ?? 0),
+              },
+        );
+      }, 0);
+      return () => clearTimeout(timer);
+    }
   }, [applicationId, selectedUnitId, vacantUnits]);
 
   // Auto-select the only vacant unit -- most properties in the seeded data
@@ -99,37 +126,17 @@ export function AddTenantForm() {
   // for no reason.
   useEffect(() => {
     if (vacantUnits.length === 1) {
-      setSelectedUnitId(vacantUnits[0].id);
-      setLeaseDetails((s) => ({
-        ...s,
-        rentAmount: String(vacantUnits[0].rentAmount),
-        serviceCharge: String(vacantUnits[0].serviceCharge ?? 0),
-      }));
+      const timer = setTimeout(() => {
+        setSelectedUnitId(vacantUnits[0].id);
+        setLeaseDetails((s) => ({
+          ...s,
+          rentAmount: String(vacantUnits[0].rentAmount),
+          serviceCharge: String(vacantUnits[0].serviceCharge ?? 0),
+        }));
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [vacantUnits]);
-
-  const [tenantInfo, setTenantInfo] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    nin: '',
-    occupation: '',
-    employer: '',
-  });
-
-  const [leaseDetails, setLeaseDetails] = useState({
-    startDate: '',
-    endDate: '',
-    rentAmount: '',
-    serviceCharge: '',
-    rentFrequency: 'yearly',
-    paymentDueDay: '1',
-    gracePeriodDays: '7',
-    lateFeeType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
-    lateFeePercentage: '0',
-    lateFeeFlatAmount: '0',
-  });
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const selectedUnit = vacantUnits.find((u) => u.id === selectedUnitId);

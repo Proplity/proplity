@@ -246,19 +246,28 @@ describe('messages: participant gating, and the unreadCount lifecycle (Phase 9.5
     });
     expect(sent.status).toBe(201);
 
-    const recipientList = await apiFetch('/api/v1/conversations', { cookie: recipientCookie });
-    const recipientView = recipientList.body.data.find((c: any) => c.id === conversation.id);
-    expect(recipientView.unreadCount).toBe(1);
+    const recipientList = await apiFetch<{ data: { id: string; unreadCount: number }[] }>(
+      '/api/v1/conversations',
+      { cookie: recipientCookie },
+    );
+    const recipientView = recipientList.body.data.find((c) => c.id === conversation.id);
+    expect(recipientView?.unreadCount).toBe(1);
 
     // Reading the thread marks it read (the Phase 9.5 fix).
-    const read = await apiFetch(`/api/v1/conversations/${conversation.id}/messages`, {
-      cookie: recipientCookie,
-    });
+    const read = await apiFetch<{ data: { body: string }[] }>(
+      `/api/v1/conversations/${conversation.id}/messages`,
+      {
+        cookie: recipientCookie,
+      },
+    );
     expect(read.status).toBe(200);
-    expect(read.body.data.map((m: any) => m.body)).toContain('Hello there');
+    expect(read.body.data.map((m) => m.body)).toContain('Hello there');
 
-    const afterRead = await apiFetch('/api/v1/conversations', { cookie: recipientCookie });
-    expect(afterRead.body.data.find((c: any) => c.id === conversation.id).unreadCount).toBe(0);
+    const afterRead = await apiFetch<{ data: { id: string; unreadCount: number }[] }>(
+      '/api/v1/conversations',
+      { cookie: recipientCookie },
+    );
+    expect(afterRead.body.data.find((c) => c.id === conversation.id)?.unreadCount).toBe(0);
 
     // A reply from the recipient should now show up as unread for the
     // original sender.
@@ -267,7 +276,10 @@ describe('messages: participant gating, and the unreadCount lifecycle (Phase 9.5
       cookie: recipientCookie,
       body: { body: 'Hi back' },
     });
-    const senderList = await apiFetch('/api/v1/conversations', { cookie: senderCookie });
-    expect(senderList.body.data.find((c: any) => c.id === conversation.id).unreadCount).toBe(1);
+    const senderList = await apiFetch<{ data: { id: string; unreadCount: number }[] }>(
+      '/api/v1/conversations',
+      { cookie: senderCookie },
+    );
+    expect(senderList.body.data.find((c) => c.id === conversation.id)?.unreadCount).toBe(1);
   });
 });

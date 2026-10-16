@@ -11,6 +11,7 @@ type ApiFetchOptions = {
   headers?: Record<string, string>;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ApiResponse<T = any> = {
   status: number;
   body: T;
@@ -24,6 +25,7 @@ export type ApiResponse<T = any> = {
  * so mutating routes pass validateCSRF() (Node's fetch doesn't send Origin
  * the way a browser does).
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function apiFetch<T = any>(
   pathAndQuery: string,
   opts: ApiFetchOptions = {},
@@ -55,9 +57,10 @@ export async function apiFetch<T = any>(
     redirect: 'manual',
   });
 
+  const headersWithSetCookie = res.headers as Headers & { getSetCookie?: () => string[] };
   const setCookies =
-    typeof (res.headers as any).getSetCookie === 'function'
-      ? (res.headers as any).getSetCookie()
+    typeof headersWithSetCookie.getSetCookie === 'function'
+      ? headersWithSetCookie.getSetCookie()
       : ([res.headers.get('set-cookie')].filter(Boolean) as string[]);
 
   let responseBody: T;

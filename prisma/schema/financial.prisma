@@ -91,6 +91,9 @@ model Invoice {
   notices              Notice[]
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
+
+  @@index([status])
+  @@index([leaseId])
 }
 
 model Payment {
@@ -108,4 +111,7 @@ model Payment {
   paidAt               DateTime        @default(now())
   notes                String?
   createdAt            DateTime        @default(now())
+
+  @@index([invoiceId])
+  @@index([paidAt])
 }

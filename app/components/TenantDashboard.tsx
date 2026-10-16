@@ -25,9 +25,10 @@ import {
   useCancelAutoPayMandate,
 } from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface TenantDashboardProps {
-  onNavigate?: (page: any) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const maintenanceStatusColor: Record<string, string> = {
