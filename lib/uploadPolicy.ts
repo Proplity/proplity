@@ -8,6 +8,9 @@ export const FOLDER_ROLES: Record<UploadFolder, Role[]> = {
   applications: [Role.TENANT],
   profile: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR],
   properties: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
+  notices: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
+  leases: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
+  communications: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR, Role.ADMIN],
 };
 
 export const UPLOAD_FOLDERS = Object.keys(FOLDER_ROLES) as [UploadFolder, ...UploadFolder[]];
@@ -20,10 +23,21 @@ export const IMAGE_AND_PDF_TYPES = [
   'application/pdf',
 ] as const;
 export const VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
+export const AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm'] as const;
+export const DOCUMENT_TYPES = [
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'text/csv',
+] as const;
 
-/** Property listings may also carry the 360° walkthrough video. */
+/** Property listings allow video walkthroughs; communications allow media & documents. */
 export function allowedTypes(folder: UploadFolder): readonly string[] {
-  return folder === 'properties' ? [...IMAGE_AND_PDF_TYPES, ...VIDEO_TYPES] : IMAGE_AND_PDF_TYPES;
+  if (folder === 'properties') return [...IMAGE_AND_PDF_TYPES, ...VIDEO_TYPES];
+  if (folder === 'communications') {
+    return [...IMAGE_AND_PDF_TYPES, ...VIDEO_TYPES, ...AUDIO_TYPES, ...DOCUMENT_TYPES];
+  }
+  return IMAGE_AND_PDF_TYPES;
 }
 
 /**
@@ -44,6 +58,8 @@ export function maxBytes(contentType: string, mode: 'direct' | 'proxy'): number 
 export function isInlineSafe(contentType: string): boolean {
   return (
     (IMAGE_AND_PDF_TYPES as readonly string[]).includes(contentType) ||
-    contentType.startsWith('video/')
+    contentType.startsWith('video/') ||
+    contentType.startsWith('audio/') ||
+    (contentType.startsWith('text/') && contentType !== 'text/html')
   );
 }

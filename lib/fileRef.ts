@@ -1,7 +1,14 @@
 // Client-safe (no Node crypto, no server-only) description of uploaded files.
 // Server-side storage lives in lib/storage/.
 
-export type UploadFolder = 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+export type UploadFolder =
+  | 'maintenance-requests'
+  | 'applications'
+  | 'profile'
+  | 'properties'
+  | 'notices'
+  | 'leases'
+  | 'communications';
 export type StorageAccess = 'private' | 'public';
 
 /**
@@ -14,6 +21,9 @@ export const FOLDER_ACCESS: Record<UploadFolder, StorageAccess> = {
   applications: 'private',
   profile: 'private',
   properties: 'public',
+  notices: 'private',
+  leases: 'private',
+  communications: 'private',
 };
 
 export function accessForFolder(folder: UploadFolder): StorageAccess {

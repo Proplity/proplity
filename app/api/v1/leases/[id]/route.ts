@@ -6,6 +6,8 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { safeUrl } from '@/lib/api/urlField';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -90,6 +92,7 @@ const patchSchema = z.object({
   lateFeeType: z.nativeEnum(LateFeeType).optional(),
   lateFeePercentage: z.number().nonnegative().optional(),
   lateFeeFlatAmount: z.number().nonnegative().optional(),
+  signedAgreementUrl: safeUrl.nullable().optional(),
 });
 
 export const PATCH = withAuth(
@@ -108,8 +111,19 @@ export const PATCH = withAuth(
 
       const validated = await validateBody(req, patchSchema);
       if (!validated.success) return validated.response;
-      const { status, renew, gracePeriodDays, lateFeeType, lateFeePercentage, lateFeeFlatAmount } =
-        validated.data;
+      const {
+        status,
+        renew,
+        gracePeriodDays,
+        lateFeeType,
+        lateFeePercentage,
+        lateFeeFlatAmount,
+        signedAgreementUrl,
+      } = validated.data;
+
+      if (signedAgreementUrl) {
+        await assertOwnsFileUrls([signedAgreementUrl], session.sub, 'leases');
+      }
 
       // Renewal (rule 6): a NEW Lease row linked via renewedFromId, old
       // lease set to EXPIRED -- never a PENDING_RENEWAL status, it doesn't
@@ -155,6 +169,7 @@ export const PATCH = withAuth(
         ...(lateFeeType !== undefined ? { lateFeeType } : {}),
         ...(lateFeePercentage !== undefined ? { lateFeePercentage } : {}),
         ...(lateFeeFlatAmount !== undefined ? { lateFeeFlatAmount } : {}),
+        ...(signedAgreementUrl !== undefined ? { signedAgreementUrl } : {}),
       };
 
       if (status || Object.keys(termsUpdate).length > 0) {

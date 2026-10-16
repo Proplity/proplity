@@ -62,6 +62,7 @@ import type {
   Vendor,
   Violation,
 } from './api/types';
+import type { UploadFolder } from '@/lib/fileRef';
 
 export const apiClient = axios.create({
   headers: {
@@ -448,7 +449,7 @@ export const api = {
   },
   uploads: {
     sign: (body: {
-      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
+      folder: UploadFolder;
       fileName: string;
       contentType: string;
       size: number;

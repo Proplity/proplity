@@ -26,6 +26,7 @@ import {
 } from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { useFileViewer } from '@/context/FileViewerContext';
 
 interface TenantDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -40,6 +41,7 @@ const maintenanceStatusColor: Record<string, string> = {
 };
 
 export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
+  const { openFile } = useFileViewer();
   const { data: lease, loading: leaseLoading } = useActiveLease();
   // Balance, next due date and recent payments are summed on the server, so
   // they stay right past the first page of invoices (ISS-049).
@@ -492,20 +494,25 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
             </div>
             <div className="p-6">
               {lease.signedAgreementUrl ? (
-                <a
-                  href={lease.signedAgreementUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openFile({
+                      url: lease.signedAgreementUrl!,
+                      name: 'Signed Lease Agreement.pdf',
+                      type: 'application/pdf',
+                    })
+                  }
+                  className="flex items-center justify-between w-full text-left rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-medium">Signed Lease Agreement</p>
+                    <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
                     <p className="text-xs text-gray-500">
                       Since {new Date(lease.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <FileText className="h-4 w-4 text-gray-600" />
-                </a>
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </button>
               ) : (
                 <p className="text-sm text-gray-400">No documents on file yet.</p>
               )}
