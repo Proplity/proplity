@@ -1,6 +1,7 @@
 # Proplity — Complete Step-by-Step Role Guide
 
-> **Version:** 3.0 · **Updated:** 2026-10-04 · **Platform:** Proplity — AI-Powered Nigerian Property Management
+> **Version:** 3.0 · **Updated:** 2026-10-04 · **Platform:** Proplity — AI-Powered Nigerian Property Management  
+> **Master Walkthrough Video:** [Watch Full 1440p Video Walkthrough (2m 21s)](videos/proplity-complete-userflow.webm) · [Interactive Player with Chapters](userflow-video.html)
 
 ---
 
