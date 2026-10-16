@@ -28,7 +28,10 @@ export function useAccessCodes(unitId: string | null) {
   }, [unitId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

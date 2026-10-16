@@ -27,7 +27,10 @@ export function useAnnouncements(propertyId: string | null) {
   }, [propertyId]);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, loading, error, refetch };

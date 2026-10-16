@@ -14,9 +14,10 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/apiClient';
 import { useVendorSummary } from '@/hooks/useDashboardSummary';
 import { usePagedList } from '@/hooks/usePagedList';
+import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface VendorDashboardProps {
-  onNavigate: (page: any) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const statusConfig = {

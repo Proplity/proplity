@@ -43,7 +43,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
-  const updateLineItem = (id: number, field: string, value: any) => {
+  const updateLineItem = (id: number, field: string, value: string | number) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.id === id) {

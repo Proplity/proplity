@@ -53,10 +53,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function normalizeUser(rawUser: any): User | null {
+function normalizeUser(
+  rawUser: (Partial<User> & { role?: string }) | null | undefined,
+): User | null {
   if (!rawUser) return null;
   return {
-    ...rawUser,
+    ...(rawUser as User),
     role: (rawUser.role || 'tenant').toLowerCase() as UserRole,
   };
 }
@@ -94,7 +96,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUser();
+    const timer = setTimeout(() => {
+      fetchUser();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {

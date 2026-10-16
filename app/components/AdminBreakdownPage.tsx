@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Users, Building2, DollarSign, AlertCircle, Search, Clock } from 'lucide-react';
+import {
+  ArrowLeft,
+  Users,
+  Building2,
+  DollarSign,
+  AlertCircle,
+  Search,
+  Clock,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { useModerateProperty } from '@/hooks/useProperties';
 import { useAdminBreakdown } from '@/hooks/useDashboardSummary';
@@ -12,7 +21,7 @@ interface AdminBreakdownPageProps {
   breakdownType: AdminBreakdownType;
 }
 
-const ICONS: Record<AdminBreakdownType, any> = {
+const ICONS: Record<AdminBreakdownType, LucideIcon> = {
   users: Users,
   properties: Building2,
   transactions: DollarSign,

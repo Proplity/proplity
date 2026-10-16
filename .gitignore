@@ -21,10 +21,12 @@ package-lock.json
 install.log
 .vercel
 
-# Playwright
+# Playwright & test reports
 /test-results
 /playwright-report
 /blob-report
 /playwright/.cache
+/reports
+/.stryker-tmp
 .env*
 /.local-storage

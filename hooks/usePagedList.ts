@@ -42,7 +42,10 @@ export function usePagedList<T>(
   }, []);
 
   useEffect(() => {
-    refetch();
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [refetch]);
 
   return { data, total, loading, error, truncated: total > data.length, refetch };

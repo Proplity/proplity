@@ -135,6 +135,9 @@ model Lease {
   signatures         LeaseSignature[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+
+  @@index([unitId, status])
+  @@index([tenantId])
 }
 
 // PRD §5.1/§5.2's "E-signature support for the rent agreement" -- click-wrap

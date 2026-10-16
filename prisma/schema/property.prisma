@@ -106,6 +106,8 @@ model Property {
   updatedAt             DateTime              @updatedAt
 
   @@index([listingHash])
+  @@index([isPublished, createdAt(sort: Desc)])
+  @@index([mergedIntoId])
 }
 
 enum AdCampaignStatus {
@@ -168,6 +170,9 @@ model Unit {
   updatedAt              DateTime              @updatedAt
 
   @@unique([propertyId, unitNumber])
+  @@index([propertyId])
+  @@index([status])
+  @@index([rentAmount])
 }
 
 // PRD §6.2.2 Neighbourhood Intelligence Layer. Property already carries four
