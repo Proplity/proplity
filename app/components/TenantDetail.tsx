@@ -28,6 +28,7 @@ import { useCreateInvoice, useRecordPayment } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
+import { useFileViewer } from '@/context/FileViewerContext';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
 import type { Lease, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
 
@@ -303,6 +304,7 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
 
 export function TenantDetail({ leaseId }: TenantDetailProps) {
   const router = useRouter();
+  const { openFile } = useFileViewer();
   const { data: lease, loading, refetch: refetchLease } = useLease(leaseId);
   const { data: notes, refetch: refetchNotes } = useLeaseNotes(leaseId);
   const { data: allRequests } = useMaintenanceRequests();
@@ -1315,15 +1317,20 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             </div>
             <div className="p-4">
               {lease.signedAgreementUrl ? (
-                <a
-                  href={lease.signedAgreementUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg p-2 hover:bg-gray-50"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openFile({
+                      url: lease.signedAgreementUrl!,
+                      name: 'Signed Lease Agreement.pdf',
+                      type: 'application/pdf',
+                    })
+                  }
+                  className="flex items-center justify-between w-full text-left rounded-lg p-2 hover:bg-gray-50 transition-colors"
                 >
-                  <p className="text-sm font-medium">Signed Lease Agreement</p>
-                  <FileText className="h-4 w-4 text-gray-600" />
-                </a>
+                  <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </button>
               ) : (
                 <p className="text-sm text-gray-400">No documents on file yet.</p>
               )}

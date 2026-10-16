@@ -262,6 +262,53 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     });
     return Boolean(request);
   }
+
+  if (file.folder === 'notices') {
+    const url = fileUrl(file.id);
+    const notice = await prisma.notice.findFirst({
+      where: { documentUrl: url },
+      include: { lease: { include: { unit: { include: { property: true } } } } },
+    });
+    if (!notice) return false;
+    if (notice.lease.tenantId === actor.sub) return true;
+    if (!scope) return false;
+    return (
+      notice.lease.unit.property.managerId === actor.sub ||
+      notice.lease.unit.property.landlordId === actor.sub
+    );
+  }
+
+  if (file.folder === 'leases') {
+    const url = fileUrl(file.id);
+    const lease = await prisma.lease.findFirst({
+      where: { signedAgreementUrl: url },
+      include: { unit: { include: { property: true } } },
+    });
+    if (!lease) return false;
+    if (lease.tenantId === actor.sub) return true;
+    if (!scope) return false;
+    return (
+      lease.unit.property.managerId === actor.sub ||
+      lease.unit.property.landlordId === actor.sub
+    );
+  }
+
+  if (file.folder === 'communications') {
+    const url = fileUrl(file.id);
+    const message = await prisma.message.findFirst({
+      where: { attachmentUrls: { has: url } },
+      select: { conversationId: true },
+    });
+    if (!message) return false;
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId: message.conversationId, userId: actor.sub },
+      },
+      select: { id: true },
+    });
+    return Boolean(participant);
+  }
+
   return false;
 }
 
