@@ -141,6 +141,7 @@ async function main() {
   // Smooth move to center of element
   async function moveToElement(locator, steps = 16, delayMs = 15) {
     try {
+      await locator.scrollIntoViewIfNeeded({ timeout: 4000 });
       const box = await locator.boundingBox();
       if (box) {
         const targetX = Math.round(box.x + box.width / 2);
@@ -152,13 +153,20 @@ async function main() {
     return false;
   }
 
-  // Smooth click with visual ripple
+  // Smooth click with visual ripple and guaranteed DOM dispatch
   async function smoothClick(locator) {
+    try {
+      await locator.scrollIntoViewIfNeeded({ timeout: 4000 });
+    } catch {}
     await moveToElement(locator);
     await page.waitForTimeout(120);
-    await page.mouse.down();
-    await page.waitForTimeout(90);
-    await page.mouse.up();
+    try {
+      await locator.click({ timeout: 4000 });
+    } catch {
+      await page.mouse.down();
+      await page.waitForTimeout(90);
+      await page.mouse.up();
+    }
     await page.waitForTimeout(250);
   }
 
@@ -188,11 +196,17 @@ async function main() {
     );
   }
 
-  // Smooth window scroll
+  // Smooth scroll helper (handles both window and dashboard <main> container)
   async function smoothScroll(deltaY, steps = 16, delayMs = 20) {
     const stepY = deltaY / steps;
     for (let i = 0; i < steps; i++) {
-      await page.evaluate((y) => window.scrollBy({ top: y, behavior: 'instant' }), stepY);
+      await page.evaluate((y) => {
+        window.scrollBy({ top: y, behavior: 'instant' });
+        const main = document.querySelector('main');
+        if (main && main.scrollHeight > main.clientHeight) {
+          main.scrollBy({ top: y, behavior: 'instant' });
+        }
+      }, stepY);
       await page.waitForTimeout(delayMs);
     }
     await page.waitForTimeout(300);
@@ -515,32 +529,60 @@ async function main() {
     // the utilities checkboxes, previous button, next button!
     await page.waitForTimeout(1600);
 
-    // Click Next Step
-    await smoothClick(page.locator('button:has-text("Next Step")'));
-    await page.waitForTimeout(1200);
+    // Advance to Step 3
+    const nextStep2Btn = page.locator('button:has-text("Next Step")');
+    await smoothClick(nextStep2Btn);
+    await page
+      .getByRole('heading', { name: 'Media Upload' })
+      .waitFor({ state: 'visible', timeout: 8000 });
+    await page.waitForTimeout(1000);
 
     // Step 3: Media Upload & Quality Guidelines
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await page.evaluate(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const main = document.querySelector('main');
+      if (main) main.scrollTo({ top: 0, behavior: 'instant' });
+    });
     await setHud('📸 Step 3/4: Media Upload & Verification Guidelines', '#f59e0b');
-    await smoothScroll(350);
-    await page.waitForTimeout(1000);
-    await smoothScroll(350);
-    await page.waitForTimeout(1200);
-    await smoothClick(page.locator('button:has-text("Next Step")'));
     await page.waitForTimeout(1200);
 
-    // Step 4: Review & Submit Listing
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-    await setHud('🚀 Step 4/4: Submission & Verification Pipeline', '#f59e0b');
+    // View 360 Walkthrough card
     await smoothScroll(350);
-    await page.waitForTimeout(1000);
-    await smoothScroll(450);
     await page.waitForTimeout(1200);
+
+    // View Room Photos & Exterior building view cards and Admin Review Note
+    await smoothScroll(400);
+    await page.waitForTimeout(1500);
+
+    // Advance to Step 4
+    const nextStep3Btn = page.locator('button:has-text("Next Step")');
+    await smoothClick(nextStep3Btn);
+    await page
+      .getByRole('heading', { name: 'Review Your Listing' })
+      .waitFor({ state: 'visible', timeout: 8000 });
+    await page.waitForTimeout(1000);
+
+    // Step 4: Review & Submit Listing
+    await page.evaluate(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const main = document.querySelector('main');
+      if (main) main.scrollTo({ top: 0, behavior: 'instant' });
+    });
+    await setHud('🚀 Step 4/4: Listing Summary, Multi-Unit & Media Audit', '#f59e0b');
+    await page.waitForTimeout(1200);
+
+    // Scroll to see Unit breakdown & Amenities
+    await smoothScroll(350);
+    await page.waitForTimeout(1200);
+
+    // Scroll further to see Media Status & What Happens Next guidelines
+    await smoothScroll(450);
+    await page.waitForTimeout(1500);
 
     const submitListingBtn = page.locator('button:has-text("Submit for Verification")');
     if (await submitListingBtn.isVisible()) {
       await smoothClick(submitListingBtn);
-      await page.waitForTimeout(2500);
+      await page.waitForTimeout(3000);
     }
 
     // View Landlord Properties Directory
