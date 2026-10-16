@@ -57,10 +57,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { error: 'Bank transfer submission not found' },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: 'Bank transfer submission not found' }, { status: 404 });
     }
 
     const isSubmitter = submission.submittedById === session.sub;
@@ -69,8 +66,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       submission.invoice.maintenanceRequest?.unit.property;
 
     const canManage =
-      session.role === 'ADMIN' ||
-      (property && canManageProperty(session, property));
+      session.role === 'ADMIN' || (property && canManageProperty(session, property));
 
     if (!isSubmitter && !canManage) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

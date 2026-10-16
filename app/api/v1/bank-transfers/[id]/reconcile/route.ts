@@ -3,10 +3,7 @@ import { z } from 'zod';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import {
-  reconcileBankTransfer,
-  BankTransferError,
-} from '@/lib/payments/bankTransferService';
+import { reconcileBankTransfer, BankTransferError } from '@/lib/payments/bankTransferService';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 

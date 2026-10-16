@@ -288,8 +288,7 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (lease.tenantId === actor.sub) return true;
     if (!scope) return false;
     return (
-      lease.unit.property.managerId === actor.sub ||
-      lease.unit.property.landlordId === actor.sub
+      lease.unit.property.managerId === actor.sub || lease.unit.property.landlordId === actor.sub
     );
   }
 

@@ -45,7 +45,9 @@ async function runScenario(baseUrl: string, scenario: LoadScenario): Promise<Res
   console.log(`▶ Running Scenario: ${scenario.name}`);
   console.log(`  ${scenario.description}`);
   console.log(`  URL: ${baseUrl}${scenario.endpoint}`);
-  console.log(`  Concurrency: ${scenario.connections} connections | Duration: ${scenario.duration}s`);
+  console.log(
+    `  Concurrency: ${scenario.connections} connections | Duration: ${scenario.duration}s`,
+  );
   console.log(`======================================================`);
 
   return new Promise((resolve, reject) => {
@@ -78,7 +80,8 @@ function printSummary(results: { scenario: LoadScenario; result: Result }[]) {
   console.log(`======================================================`);
 
   const summaryRows = results.map(({ scenario, result }) => {
-    const p95 = (result.latency as unknown as Record<string, number>)['p95'] ?? result.latency.p97_5;
+    const p95 =
+      (result.latency as unknown as Record<string, number>)['p95'] ?? result.latency.p97_5;
     const p99 = result.latency.p99;
     const rps = result.requests.average;
     const errorCount = result.errors + result.timeouts;
@@ -86,12 +89,12 @@ function printSummary(results: { scenario: LoadScenario; result: Result }[]) {
 
     return {
       Scenario: scenario.name,
-      'Conns': scenario.connections,
+      Conns: scenario.connections,
       'Req/s': rps.toFixed(1),
       'p50 (ms)': result.latency.p50,
       'p95 (ms)': p95,
       'p99 (ms)': p99,
-      'Errors': errorCount,
+      Errors: errorCount,
       'PRD SLA (<2s)': prdTargetPassed ? '✅ PASS' : '❌ FAIL',
     };
   });
@@ -99,7 +102,9 @@ function printSummary(results: { scenario: LoadScenario; result: Result }[]) {
   console.table(summaryRows);
 
   const allPassed = summaryRows.every((r) => r['PRD SLA (<2s)'].includes('PASS'));
-  console.log(`\nOverall PRD Conformance: ${allPassed ? '✅ ALL BENCHMARKS WITHIN 2S SLA' : '❌ VIOLATIONS DETECTED'}\n`);
+  console.log(
+    `\nOverall PRD Conformance: ${allPassed ? '✅ ALL BENCHMARKS WITHIN 2S SLA' : '❌ VIOLATIONS DETECTED'}\n`,
+  );
 }
 
 async function main() {
@@ -109,7 +114,9 @@ async function main() {
   const isUp = await verifyServer(baseUrl);
   if (!isUp) {
     console.error(`\n❌ Error: Target server at ${baseUrl} is unreachable.`);
-    console.error(`   Please ensure the server is running (e.g. 'pnpm dev' or test server) before executing load tests.`);
+    console.error(
+      `   Please ensure the server is running (e.g. 'pnpm dev' or test server) before executing load tests.`,
+    );
     console.error(`   Usage: pnpm tsx scripts/load-test.ts --url http://localhost:3000\n`);
     process.exit(1);
   }
@@ -140,10 +147,14 @@ async function main() {
       name: 'Auth Concurrency & Rate Limiting',
       endpoint: '/api/v1/auth/login',
       method: 'POST',
-      body: JSON.stringify({ email: 'load-test@proplity.internal', password: 'IncorrectPassword123!' }),
+      body: JSON.stringify({
+        email: 'load-test@proplity.internal',
+        password: 'IncorrectPassword123!',
+      }),
       connections: 20,
       duration: Math.max(4, Math.round(6 * durationMultiplier)),
-      description: 'Tests PostgreSQL advisory lock serialization and 429 rate limit behavior under burst load.',
+      description:
+        'Tests PostgreSQL advisory lock serialization and 429 rate limit behavior under burst load.',
     },
     {
       name: 'High Concurrency Spike',
