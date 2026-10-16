@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Proplity — Complete Step-by-Step Role Guide</title>
-<meta name="description" content="Comprehensive visual guide to every page, feature, role, and workflow in the Proplity property management platform.">
+<title>Proplity Complete Platform Guide</title>
 <style>
 
 :root {
@@ -569,6 +568,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
   <div class="sidebar-section">
     <div class="sidebar-section-title">Getting Started</div>
     <a href="#setup" class="sidebar-link">⚙️ Platform Setup</a>
+    <a href="#all-features" class="sidebar-link" style="color:#60a5fa;font-weight:600;">📋 Master Feature Directory</a>
     <a href="#visitor" class="sidebar-link">🌍 Visitor / Public</a>
   </div>
   <div class="sidebar-section">
@@ -634,6 +634,1006 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <hr>
 
 <!-- SETUP SECTION -->
+
+<!-- MASTER FEATURE CATALOG -->
+<div id="all-features" class="section-header" style="border-left-color: #3b82f6; margin-top: 48px;">
+  <span class="section-icon">📋</span>
+  <div>
+    <div class="section-title">Complete Master Feature Directory</div>
+    <div class="section-subtitle">Exhaustive index of every single capability, operational workflow, security control, and background mechanism in Proplity — no matter how small</div>
+  </div>
+</div>
+
+<div class="step-card" style="border-color: rgba(59, 130, 246, 0.4); background: linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+    <div>
+      <h3 style="margin: 0; font-size: 20px; font-weight: 800; color: #fff;">System-Wide Functional Capabilities Matrix</h3>
+      <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted);">154 granular, verifiable features spanning 12 architectural domains across 6 supported user personas.</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 700;">154 Features</span>
+      <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 700;">94 REST APIs</span>
+      <span style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 700;">10 Scheduled Workers</span>
+      <span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 700;">43 Data Models</span>
+    </div>
+  </div>
+
+  <!-- DOMAIN 1 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #93c5fd; display: flex; align-items: center; gap: 8px;">
+        <span>🌍</span> 1. Public Discovery, Listings & Visitor Experience
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">15 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dynamic Homepage Hero & Quick Stats</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Showcases real platform rental metrics, quick call-to-action cards, and role onboarding buttons.</div>
+        <code>/</code> &bull; <code>LandingPage.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Instant Session-Restored Navigation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">SSR cookie extraction passing initial user session to header links, instantly pointing to /admin or /dashboard without delay.</div>
+        <code>RootLayout</code> &bull; <code>ISS-057</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Criteria Property Search & Filtering</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Filter listings in real-time by city, state, price range, bedrooms, bathrooms, and property type.</div>
+        <code>PropertyDiscovery.tsx</code> &bull; <code>GET /properties</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Nigerian Metro Location Targeting</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Full-text location search across primary metros: Lekki, Victoria Island, Ikeja, Yaba, Abuja, and Port Harcourt.</div>
+        <code>propertyFilter.ts</code> &bull; <code>PostgreSQL ILIKE</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Interactive Property Quick-Preview Modal</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Pop-up modal overlay for browsing property highlights and cycling cards with keyboard arrow navigation.</div>
+        <code>FeaturedPropertyModal.tsx</code> &bull; <code>Esc dismiss</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Full Listing Page with Metadata & OpenGraph</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">SEO-optimized standalone property page with canonical URLs, rich social sharing tags, and microdata.</div>
+        <code>/properties/[id]</code> &bull; <code>PublicPropertyDetail.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Unlimited Photo Gallery Display (+N Toggle)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Showcases cover, exterior, and interior photos with a "+N more" expander toggle for extensive galleries.</div>
+        <code>Property.photoUrls</code> &bull; <code>ISS-014</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">360° Virtual Tour & Video Tour Embedding</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Embedded interactive 360-degree tour viewer and external video walkthrough links on property profiles.</div>
+        <code>Property.virtualTourUrl</code> &bull; <code>SafeUrl</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Neighborhood Quality Metrics & Radar Ratings</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Detailed 0–10 scores for Safety, Flood Risk, Roads, Power Reliability, Water Supply, and School Proximity.</div>
+        <code>NeighbourhoodReport.tsx</code> &bull; <code>ISS-016</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dynamic Property Trust Score Badge</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Automated rating badge computed daily by background workers reflecting verification and compliance history.</div>
+        <code>Property.trustScore</code> &bull; <code>ISS-013</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Viewing Appointment Scheduling Calendar</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Prospective tenants select from upcoming manager-defined dates and time slots for on-site inspection.</div>
+        <code>ScheduleViewing.tsx</code> &bull; <code>POST /viewings</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dedicated Role Landing & Marketing Pages</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Feature highlights specifically tailored for Landlords (/for-landlords), Tenants (/for-tenants), and Vendors (/for-vendors).</div>
+        <code>/for-landlords</code> &bull; <code>/for-tenants</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tiered Subscription Pricing Matrix</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Transparent feature comparison table covering Free, Starter, Pro, and Enterprise management tiers.</div>
+        <code>/pricing</code> &bull; <code>PricingPage.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Platform Inquiries & Contact Form</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Validated general support and sales inquiry submission form with toast confirmations.</div>
+        <code>/contact</code> &bull; <code>ContactPage.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Interactive Platform Guide & Lightbox Carousel</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Visual documentation portal (/proplity-guide) featuring 100+ high-resolution screenshots with modal zoom.</div>
+        <code>/proplity-guide</code> &bull; <code>ProplityGuideClient.tsx</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 2 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #a78bfa; display: flex; align-items: center; gap: 8px;">
+        <span>🔐</span> 2. Authentication, Authorization & Account Security
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">20 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Role Self-Registration Flow</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Role-gated account creation for Tenants, Landlords, Property Managers, and Service Providers.</div>
+        <code>/register</code> &bull; <code>POST /api/v1/auth/register</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Admin Self-Registration Lockout</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Registration endpoint explicitly rejects any attempt to register as ADMIN; admin role requires setup bootstrap.</div>
+        <code>auth/register</code> &bull; <code>403 Forbidden</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Two-Step Landlord Onboarding</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Simplified registration that defers banking and property setup until post-login dashboard access.</div>
+        <code>ADR-0002</code> &bull; <code>Frictionless Onboarding</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Case-Insensitive Email Canonicalization</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">All email addresses are lowercased on input and lookups, eliminating mobile-capitalization duplicate accounts.</div>
+        <code>ISS-002</code> &bull; <code>ADR-0006</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Cryptographic Email Verification Links</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Single-use 32-byte hex tokens required to activate accounts before initial login is permitted.</div>
+        <code>/verify-email</code> &bull; <code>POST /auth/verify-email</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Rate-Limited Verification Resend</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Enforces request throttling and anti-enumeration generic responses on resend requests.</div>
+        <code>POST /auth/resend-verification</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Anti-Enumeration Password Recovery</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Displays the identical success confirmation regardless of whether the requested email exists in the system.</div>
+        <code>/forgot-password</code> &bull; <code>Anti-Brute Force</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Expiring Password Reset Tokens (60 Min)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tokens expire automatically after 60 minutes and are invalidated immediately upon first use.</div>
+        <code>/reset-password</code> &bull; <code>PasswordResetToken</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">In-App Authenticated Password Change</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Password updates require verifying current password before hashing the new credentials with bcrypt.</div>
+        <code>POST /api/v1/auth/change-password</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Edge-Compatible 15-Minute JWTs</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Stateless JSON Web Tokens signed with jose library, verified in edge proxies without database queries.</div>
+        <code>lib/auth/jwt.ts</code> &bull; <code>proxy.ts</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Rotating Refresh Token Families</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Refresh tokens rotate on every refresh call; reusing a previously consumed token revokes the entire family.</div>
+        <code>RefreshToken.familyId</code> &bull; <code>Reuse Detection</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Remember Me Variable Session Lifespans</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">30-day refresh session when Remember Me is selected vs. 1-day standard expiration when unchecked.</div>
+        <code>30-Day vs 1-Day</code> &bull; <code>HttpOnly Cookies</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Device-Wide Logout Token Revocation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Decodes access token signatures on logout (even if expired) to revoke active refresh sessions on the server.</div>
+        <code>POST /api/v1/auth/logout</code> &bull; <code>getExpiredSession</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Instant Account Suspension Enforcement</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">withAuth reads the fresh database User row on every request, immediately rejecting suspended users.</div>
+        <code>withAuth.ts</code> &bull; <code>User.status === 'SUSPENDED'</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">CSRF Origin & Custom Header Guard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Validates SameSite request origins and x-csrf-token headers on all state-modifying requests.</div>
+        <code>lib/auth/csrf.ts</code> &bull; <code>403 on Header Mismatch</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Sliding-Window DB Rate Limiter</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Postgres advisory-locked sliding-window limiter; eliminates burst doubling and purges expired rows.</div>
+        <code>lib/auth/rateLimit.ts</code> &bull; <code>ISS-021</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager Invitation Code System</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Landlords generate single-use invite codes linking managers directly to their portfolios upon signup.</div>
+        <code>ManagerInviteCode</code> &bull; <code>ADR-0011</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Public Manager Code Rate Limiting</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Limits public /manager-codes/check calls to 10 attempts per 5 minutes per IP to block enumeration.</div>
+        <code>manager-codes/check</code> &bull; <code>Quota Release on Success</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">First-Run Super Admin Setup Wizard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">One-time wizard at /setup creating the initial super admin; permanently locks itself once complete.</div>
+        <code>/setup</code> &bull; <code>SystemSettings.setupComplete</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Backslash Smuggling Open-Redirect Sanitizer</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Blocks open-redirect payloads exploiting backslash normalization (e.g. /\\\\attacker.com).</div>
+        <code>lib/safeRedirect.ts</code> &bull; <code>ISS-058</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 3 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #34d399; display: flex; align-items: center; gap: 8px;">
+        <span>🏠</span> 3. Tenant Operations & Tenancy Experience
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">18 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tenant Dashboard Command Center</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Personalized home screen showing active lease terms, current unit, pending bills, and quick actions.</div>
+        <code>TenantDashboard.tsx</code> &bull; <code>/dashboard</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Rent Payment Countdown & Due Alert</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Visual alert banner highlighting upcoming rent, overdue days, late fee calculations, and instant pay trigger.</div>
+        <code>TenantDashboard.tsx</code> &bull; <code>Invoice Breakdown</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Online Rent Checkout (Card, USSD, Transfer)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Paystack checkout integration supporting debit cards, bank USSD codes, and direct virtual bank transfers.</div>
+        <code>POST /payments/initialize</code> &bull; <code>Paystack</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Card Tokenization & Reusable Mandates</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Saves authorized payment method tokens allowing recurring lease rent charging without re-entering card info.</div>
+        <code>AutoPayMandate</code> &bull; <code>ISS-056</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automatic Rent Charging Background Worker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Daily worker charging due invoices for leases with active auto-pay mandates via Paystack charge authorization.</div>
+        <code>autopayCharger.ts</code> &bull; <code>ISS-011</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Offline Bank Transfer Proof Submission</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Upload bank transfer payment receipts, input sender bank, amount, reference number, and date.</div>
+        <code>POST /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Duplicate Reference Guard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Validates against duplicate submission of identical transfer references across invoices.</div>
+        <code>bankTransferService.ts</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Transfer Reconciliation Status Tracker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants see real-time status of their offline submissions: PENDING, APPROVED (receipted), or REJECTED.</div>
+        <code>GET /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Digital Lease Agreement Console</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">View active and historical tenancy agreements, clauses, rent cycles, deposit terms, and signed documents.</div>
+        <code>/dashboard/rentals</code> &bull; <code>Lease View</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">In-Browser Digital E-Signature Execution</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Sign binding lease agreements online, capturing digital signature canvas image, timestamp, and IP address.</div>
+        <code>POST /leases/[id]/sign</code> &bull; <code>e-signature.test.ts</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Itemized Payment Ledger & Digital Receipts</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">History of all settled payments with transaction references, method badges, and downloadable receipts.</div>
+        <code>/dashboard/payment-history</code> &bull; <code>Receipts</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">3-Step Structured Tenancy Application</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Step-by-step form capturing personal identity, employer info, monthly income, and past landlord references.</div>
+        <code>PropertyApplicationForm.tsx</code> &bull; <code>3-Step Wizard</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Mandatory Profile Completion Verification Gate</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Blocks incomplete tenant applications, routing users to complete their verification profile first.</div>
+        <code>/dashboard/profile/complete</code> &bull; <code>Profile Gating</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Identity Document Gateway Upload</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Upload government IDs (NIN, Driver's License, Passport) stored in private folder with expiring access tokens.</div>
+        <code>profile/</code> folder &bull; <code>ISS-031, ISS-034</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Category Maintenance Ticket Filing</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Submit repair tickets with category selection, 4 urgency levels (Low to Emergency), photos, and access times.</div>
+        <code>MaintenanceRequestForm.tsx</code> &bull; <code>Private Uploads</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Maintenance Progress Tracking & Updates</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Live ticket timeline showing status transitions from Submitted -> Assigned -> In Progress -> Completed.</div>
+        <code>/dashboard/maintenance</code> &bull; <code>MaintenanceDetail.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Post-Repair 5-Star Satisfaction Rating</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants rate completed vendor work (1-5 stars) with comments, feeding into vendor performance metrics.</div>
+        <code>POST /maintenance/requests/[id]/rating</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Visitor Gate Pass Access Code Generator</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Generate single-use or time-bounded multi-use visitor access codes with customizable validity periods.</div>
+        <code>useAccessCodes.ts</code> &bull; <code>Gate Pass Generator</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 4 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 8px;">
+        <span>🏗</span> 4. Landlord Portfolio & Asset Management
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">15 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Landlord Executive Financial Dashboard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">KPI summary: Total Properties, Occupancy Rate, Total Rent Roll, Revenue Collected, and Overdue Balances.</div>
+        <code>LandlordDashboard.tsx</code> &bull; <code>Executive Stats</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Conditional First-Run Setup Banner</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Contextual setup helper alerting landlords only when required banking or property entries are genuinely missing.</div>
+        <code>ISS-018</code> &bull; <code>Accurate State Check</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Property Portfolio Management View</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Consolidated catalog of all owned properties showing unit counts, occupancy percentage, and publication status.</div>
+        <code>/dashboard/properties</code> &bull; <code>useMyProperties</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">3-Step Property Creation Wizard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Form-driven wizard (/dashboard/properties/new) supporting single-unit homes or multi-unit buildings.</div>
+        <code>ListProperty.tsx</code> &bull; <code>POST /properties</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Service Charge Rate Configuration</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Configure recurring building service charges as a fixed Naira fee or percentage of annual rent.</div>
+        <code>Property.serviceCharge</code> &bull; <code>Service Charge Invoicing</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Property Photo Manager for Existing Listings</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Interactive manager modal (PropertyPhotoManager.tsx) to add, reorder, delete, and set cover photos on live listings.</div>
+        <code>PropertyPhotoManager.tsx</code> &bull; <code>ISS-014</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Address Duplicate Fingerprint Detection</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Computes SHA-256 address hash to warn landlords against accidental duplicate listings.</div>
+        <code>lib/propertyFingerprint.ts</code> &bull; <code>ISS-025</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Portfolio-Wide Tenant Directory</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Roster of all tenants living across owned buildings with lease dates, unit numbers, and payment status badges.</div>
+        <code>/dashboard/tenants</code> &bull; <code>Tenant Roster</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tenant Applicant Screening & Approvals</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review employment verification, monthly salaries, and references; approve or reject applicant with notifications.</div>
+        <code>PATCH /applications/[id]</code> &bull; <code>Screening Pipeline</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">One-Click Lease Generation from Application</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Instantly convert an approved applicant into a binding tenancy agreement with pre-filled profile details.</div>
+        <code>Create Lease</code> &bull; <code>POST /leases</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Server-Side Financial Breakdown Pages</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Detailed breakdown views (/dashboard/breakdown/[type]) totaling revenue and paging full data from DB.</div>
+        <code>ISS-049</code> &bull; <code>useDashboardSummary</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager Invitation Code Dispatch</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Send customized email invitations to property managers; monitor active codes and deactivate anytime.</div>
+        <code>POST /api/v1/manager-codes</code> &bull; <code>ADR-0003</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Disbursement Bank Account Management</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Register and manage verified Nigerian bank accounts (NUBAN) with bank codes for receiving rental payouts.</div>
+        <code>POST /api/v1/bank-accounts</code> &bull; <code>NUBAN</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Maintenance Payout Approvals</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review and approve vendor repair invoices before disbursements are processed, with invoice balance guards.</div>
+        <code>PATCH /vendor-payouts/[id]</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Subscription Plan Management & Upgrades</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Manage platform tier subscriptions (Free, Starter, Pro), switch billing tiers, with safe downgrade confirmations.</div>
+        <code>/checkout</code> &bull; <code>useSubscription</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 5 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #60a5fa; display: flex; align-items: center; gap: 8px;">
+        <span>👔</span> 5. Property Manager Operations & Tenancy Administration
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">18 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager Operations Command Center</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Daily task hub highlighting pending viewings, open repair tickets, expiring leases, and uncollected rent.</div>
+        <code>Dashboard.tsx</code> &bull; <code>Operations Console</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Role-Scoped Assigned Properties Directory</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Property catalog strictly isolated to buildings where the manager is designated as Property.managerId.</div>
+        <code>Property.managerId</code> &bull; <code>RBAC Scope</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Property Detail Management Console</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">In-depth management console displaying all constituent units, condition reports, and equipment inventory.</div>
+        <code>PropertyDetail.tsx</code> &bull; <code>Units Roster</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Direct Tenant Onboarding / Lease Invite</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Invite tenants by email (/dashboard/tenants/add); system creates the lease and emails an account activation link.</div>
+        <code>AddTenantForm.tsx</code> &bull; <code>POST /leases</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tenant Detail & Tenancy Management</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Console per tenant (/dashboard/tenants/[id]) displaying active lease, ledger, notices, and lease action tools.</div>
+        <code>TenantDetail.tsx</code> &bull; <code>Tenancy Actions</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Official Legal Tenancy Notices</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Issue legal notices (Payment Reminders, Maintenance Alerts, Evictions, Policy Updates) with attachments.</div>
+        <code>POST /leases/[id]/notices</code> &bull; <code>ISS-038</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Internal Private Lease Notes</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Private manager/landlord chronological notes attached to leases for internal conduct and dispute records.</div>
+        <code>POST /leases/[id]/notes</code> &bull; <code>LeaseNote</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Lease Renewal & Rent Terms Review</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Adjust rent amounts and renewal terms, dispatching renewal contracts to tenants for digital execution.</div>
+        <code>Renew Lease Modal</code> &bull; <code>TenantDetail.tsx</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Visual Kanban Maintenance Board</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Drag-and-drop / column board organizing repairs into Submitted, Assigned, In Progress, and Completed.</div>
+        <code>MaintenanceBoard.tsx</code> &bull; <code>Kanban Stages</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Job Assignment with Email Alerts</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Assign maintenance tickets to verified vendors with automated email dispatch and direct ticket linkage.</div>
+        <code>PATCH /maintenance/requests/[id]</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager-Scoped Invoice Creation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Generates rent or utility invoices strictly scoped to managed leases, preventing out-of-portfolio billing.</div>
+        <code>POST /api/v1/invoices</code> &bull; <code>ISS-050</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Statement Reconciliation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid.</div>
+        <code>/api/v1/bank-transfers/[id]/reconcile</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Maintenance Payout Processing</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Initiate vendor payouts for completed jobs and execute disbursement via Paystack Transfer API or manual log.</div>
+        <code>POST /api/v1/vendor-payouts</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Neighborhood Report Metric Editor</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Custom editor (/dashboard/properties/[id]/neighbourhood) allowing managers to update area safety and infrastructure scores.</div>
+        <code>NeighbourhoodReportEditor.tsx</code> &bull; <code>ISS-016</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Unit Move-In / Move-Out Condition Reports</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Create detailed room-by-room condition checklists with rating scores, notes, and inspection photos.</div>
+        <code>ConditionReport</code> &bull; <code>Move-In/Move-Out</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Unit Lease Violation Tracking</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Log lease violations (noise complaints, property damage, unauthorized pets) with attached photographic evidence.</div>
+        <code>Violation</code> &bull; <code>assertOwnsFileUrls</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Property Equipment & Appliance Inventory</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Track building appliances, generators, water pumps, and elevators with serial numbers and service schedules.</div>
+        <code>Equipment</code> &bull; <code>Maintenance Alerts</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Property-Wide Broadcast Announcements</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Publish announcements (fumigation schedules, power maintenance) displayed on all active tenant dashboards.</div>
+        <code>Announcement</code> &bull; <code>Tenant Notification</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 6 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px;">
+        <span>🔧</span> 6. Service Provider & Field Operations Management
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">12 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Trade-Specific Vendor Registration</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Collects business name, CAC business number, primary trade categories, and coverage zones.</div>
+        <code>VendorProfile</code> &bull; <code>ISS-043</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Comprehensive Trade Categories</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Support for Plumbing, Electrical, HVAC, Carpentry, Painting, Masonry, Cleaning, and Security trades.</div>
+        <code>MaintenanceCategory</code> &bull; <code>Categories</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Geographic Service Coverage Areas</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Designate serviceable LGAs and cities, enabling landlords to filter local providers for urgent jobs.</div>
+        <code>coverageAreas</code> &bull; <code>Vendor Directory</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Admin Verification Status Badge</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Verified badge displayed on vetted vendor profiles after administrative credential review.</div>
+        <code>VendorProfile.verified</code> &bull; <code>Trust Badge</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Jobs Overview Dashboard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Central console displaying assigned repair jobs, open tickets, completed orders, and unbilled work.</div>
+        <code>VendorDashboard.tsx</code> &bull; <code>/dashboard</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Job Detail & Tenant Access Instructions</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Full problem description, unit address, tenant contact info, access times, and uploaded damage photos.</div>
+        <code>/dashboard/vendor/jobs/[id]</code> &bull; <code>Ticket Console</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Job Progress State Transitions</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Vendors update job status from In Progress to Completed once on-site work is concluded.</div>
+        <code>PATCH /maintenance/requests/[id]</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dynamic Itemized Invoice Builder</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Form-driven builder (/dashboard/vendor/jobs/[id]/invoice) starting empty and loading the real job info.</div>
+        <code>VendorCreateInvoice.tsx</code> &bull; <code>ISS-044</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Maintenance Invoice Payer Assignment</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Routes vendor invoice payment directly to the managing property manager or property landlord.</div>
+        <code>Invoice.payerId</code> &bull; <code>ISS-051</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Bank Account Registration</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Link verified NUBAN bank accounts to receive direct electronic transfer disbursements.</div>
+        <code>BankAccount</code> &bull; <code>NUBAN Validation</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Payout Disbursement Tracking</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Real-time payout ledger tracking approval, processing, and transfer settlement references.</div>
+        <code>/api/v1/vendor-payouts</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Direct Messaging with Assigning Manager</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Two-way in-app messaging channel with the property manager for site access or material approvals.</div>
+        <code>MessagingPortal.tsx</code> &bull; <code>Conversations</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 7 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #c084fc; display: flex; align-items: center; gap: 8px;">
+        <span>🛡</span> 7. Platform Administration, Governance & Compliance
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">14 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Super Admin Overview Command Center</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Platform-wide overview (/admin) featuring global counts for properties, units, users, revenue, and active leases.</div>
+        <code>AdminDashboard.tsx</code> &bull; <code>/admin</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Server-Side Platform Aggregates</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">High-performance SQL aggregates calculating accurate numbers without page-1 query truncation.</div>
+        <code>GET /api/v1/admin/summary</code> &bull; <code>ISS-049</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Searchable & Paged User Management Table</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Complete user roster (/admin/users) with live search, role filters, status filters, and pagination.</div>
+        <code>AdminDashboard.tsx</code> &bull; <code>ISS-054</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Audited User Account Suspension</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Locks bad actors out immediately; enforces a mandatory documented reason recorded in the security audit log.</div>
+        <code>PATCH /api/v1/admin/users/[id]</code> &bull; <code>ISS-054</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Account Reactivation & Role Modification</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Restore suspended accounts or adjust user roles with audit entries logging the responsible administrator.</div>
+        <code>PATCH /admin/users/[id]</code> &bull; <code>Audit Logging</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Property Moderation & Publishing Queue</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review all newly created listings before public release; approve, reject with feedback, or request edits.</div>
+        <code>/admin/properties</code> &bull; <code>PropertyModeration</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Duplicate Property Detection Badges</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Moderation queue flags identical addresses using automated fingerprint hashes (listingHash).</div>
+        <code>Property.listingHash</code> &bull; <code>ISS-025</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Duplicate Property Merge & Undo-Merge</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Merge duplicates into a canonical listing via Property.mergedIntoId; excludes from search while supporting undo.</div>
+        <code>MergeDuplicateModal.tsx</code> &bull; <code>ISS-025</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Security Audit Log Explorer & Filters</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Searchable, filterable audit log (/admin/security) with action filters, date selectors, and JSON metadata viewer.</div>
+        <code>/admin/security</code> &bull; <code>ISS-055</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Global Platform Settings Console</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Configure invoice auto-completion thresholds, grace periods, and maintenance dispatch toggles.</div>
+        <code>/admin/settings</code> &bull; <code>SystemSettings</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Service Provider Verification Queue</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Verify or decline vendor registrations before they become eligible for property manager maintenance dispatch.</div>
+        <code>PATCH /api/v1/admin/vendors/[id]</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Database Migration Verification</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">25 Prisma migrations verified against staging schema with zero drift and duplicate constraint guards.</div>
+        <code>prisma migrate status</code> &bull; <code>Zero Drift</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Health & Uptime Probe</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Public /api/v1/health probe verifying database connection latency, system uptime, and environment health.</div>
+        <code>GET /api/v1/health</code> &bull; <code>Uptime Monitoring</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Data Retention & Erasure Worker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Background privacy worker (retention.ts) deleting expired identification files in accordance with NDPR guidelines.</div>
+        <code>lib/workers/retention.ts</code> &bull; <code>ADR-0012</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 8 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+        <span>💳</span> 8. Financial Engine, Webhooks & Payout Settlement
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">14 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Paystack Online Checkout Initialization</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Initializes secure Paystack payments, returning authorization URLs and tracking payment session states.</div>
+        <code>POST /payments/initialize</code> &bull; <code>Paystack API</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">HMAC-SHA512 Webhook Cryptographic Guard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Verifies x-paystack-signature header using crypto.createHmac before processing any payment event.</div>
+        <code>POST /payments/webhook</code> &bull; <code>Signature Guard</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Advisory Row-Locked Payment Allocation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Postgres SELECT ... FOR UPDATE row locks on invoices prevent concurrent payment double-credit races.</div>
+        <code>SELECT ... FOR UPDATE</code> &bull; <code>ISS-052</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Unique Transaction Reference Enforced</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Payment.transactionRef @unique index guarantees identical webhook retries can never credit twice.</div>
+        <code>Payment.transactionRef</code> &bull; <code>ISS-052</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Partial Payment Running Balance Accounting</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Invoices track cumulative payments, marking status PARTIALLY_PAID until the full balance reaches zero.</div>
+        <code>InvoiceStatus.PARTIALLY_PAID</code> &bull; <code>ISS-052</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Overdue Flagger Worker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Scheduled worker identifying UNPAID invoices past due, updating status to OVERDUE, and sending reminders.</div>
+        <code>lib/workers/overdueFlagger.ts</code> &bull; <code>02:00 Daily Cron</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Configurable Late Fee Calculation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Computes either fixed Naira late fees or daily percentage penalties applied to delinquent leases.</div>
+        <code>Lease.lateFeeType</code> &bull; <code>Lease.lateFeeAmount</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tenant Security Deposit Escrow Accounting</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Dedicated balance tracking for security deposits with refund calculation during lease termination.</div>
+        <code>Lease.securityDeposit</code> &bull; <code>Escrow Accounting</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Rent Cycle Invoicer Worker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Generates next rent billing invoice and recurring service charge invoice in advance of upcoming cycle.</div>
+        <code>lib/workers/rentInvoicer.ts</code> &bull; <code>Cycle Advance</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Auto-Pay Mandate Storage & Charger Daemon</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Recurring charging worker (autopayCharger.ts) charging due invoices via Paystack recurring authorization API.</div>
+        <code>lib/workers/autopayCharger.ts</code> &bull; <code>ISS-011</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Submission Workflow</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">API endpoint (/api/v1/bank-transfers) for submitting receipt proofs into private reconciliation storage.</div>
+        <code>app/api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Statement Reconciliation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Reconciliation approval endpoint creating Payment record, updating invoice to PAID, and notifying tenant.</div>
+        <code>bank-transfers/[id]/reconcile</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Stage Vendor Payout Disbursement</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Full lifecycle: Initiate -> Landlord Approval -> Paystack Transfer Disbursement, with invoice cap limits.</div>
+        <code>app/api/v1/vendor-payouts</code> &bull; <code>ISS-012</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manual Cash & Transfer Payment Recording</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Allows managers/landlords to record manual payments with payment method audit logs (CASH, TRANSFER).</div>
+        <code>POST /invoices/[id]/payments</code> &bull; <code>ISS-053</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 9 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 8px;">
+        <span>📂</span> 9. Secure File Gateway & Media Architecture
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">12 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Provider Storage Driver Abstraction</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Pluggable StorageDriver supporting Cloudinary, AWS S3-compatible, Vercel Blob, ImageKit, and Local Disk.</div>
+        <code>lib/storage/service.ts</code> &bull; <code>ADR-0008, 0009</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Private File Gateway (8 Protected Folders)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Controlled file proxy covering maintenance-requests, applications, profile, properties, notices, leases, communications, and reconciliation.</div>
+        <code>lib/fileRef.ts</code> &bull; <code>ISS-038</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Contextual File Read Authorization</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">canReadFile evaluates permissions dynamically so tenants only view their own files, and managers see their properties.</div>
+        <code>canReadFile()</code> &bull; <code>RBAC Authorization</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Strict File Ownership Assertion</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">assertOwnsFileUrls ensures file references linked in notices, leases, messages, violations, and avatars belong to the caller.</div>
+        <code>assertOwnsFileUrls()</code> &bull; <code>ISS-034, ISS-038</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">App-Wide Responsive File Viewer Modal</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Global modal (FileViewerModal.tsx) previewing images, PDFs, videos, audio, and documents across the app.</div>
+        <code>FileViewerModal.tsx</code> &bull; <code>FileViewerContext</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Image Pan, Zoom (400%) & 90° Rotation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Interactive inspection tools with zoom scaling from 50% to 400%, 90-degree rotation, and reset controls.</div>
+        <code>Image Inspection</code> &bull; <code>Zoom & Rotate</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">In-Browser Scrollable PDF Viewer</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Direct iframe PDF rendering enabling users to review signed agreements without downloading or opening external apps.</div>
+        <code>Native PDF Preview</code> &bull; <code>Embedded Viewer</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Video & Audio Players with Variable Speed</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">HTML5 players with custom speed buttons (0.5x, 1x, 1.5x, 2x) and Picture-in-Picture support.</div>
+        <code>Media Player</code> &bull; <code>Speed & PiP</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Syntax-Styled Text/CSV File Preview</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Monospace code and spreadsheet preview with 1-click clipboard copy button.</div>
+        <code>Text Preview</code> &bull; <code>1-Click Copy</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Keyboard Accessibility Navigation</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Full keyboard control: Esc closes modal, Left/Right arrows navigate file galleries, +/- adjusts zoom.</div>
+        <code>Keyboard Navigation</code> &bull; <code>Esc, Arrows, +/-</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Presigned Direct Uploads Architecture</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Upload signature endpoint (/api/v1/uploads/sign) issuing short-lived signatures for direct client-to-storage uploads.</div>
+        <code>POST /uploads/sign</code> &bull; <code>Direct-to-Cloud</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Identity Document Privacy Retention Erasure</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Scheduled worker (retention.ts) automatically deletes expired identity documents according to NDPR periods.</div>
+        <code>lib/workers/retention.ts</code> &bull; <code>ADR-0012</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 10 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
+        <span>📱</span> 10. Progressive Web App (PWA) & Mobile UX
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">8 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Installable Progressive Web App (PWA)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Next.js metadata manifest (app/manifest.ts) with theme colors, names, and 192px/512px app icons.</div>
+        <code>app/manifest.ts</code> &bull; <code>PWA Manifest</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Offline Service Worker Caching</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Versioned service worker (public/sw.js) caching app shells and core assets for rapid offline launches.</div>
+        <code>public/sw.js</code> &bull; <code>Service Worker</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">User-Facing Offline Fallback Screen</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Dedicated /offline screen with friendly reconnection prompts and cached action reminders.</div>
+        <code>app/offline/page.tsx</code> &bull; <code>Offline UI</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Home Screen Install Prompt Banner</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Modern backdrop-blurred prompt (PwaRegister.tsx) with native installation trigger and dismiss memory.</div>
+        <code>PwaRegister.tsx</code> &bull; <code>Install Banner</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Standalone Mobile Display Mode</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Launches as an independent app without mobile browser URL bars or browser controls.</div>
+        <code>display: standalone</code> &bull; <code>Native Feel</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Floating Mobile Bottom Tab Bar</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Shows the top 3 role-specific tabs plus an expandable "More" sheet containing every remaining feature.</div>
+        <code>MobileTabBar.tsx</code> &bull; <code>ISS-026</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Mobile Admin Slide-Over Drawer</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Collapsible slide-over drawer navigation tailored for admin management on compact touchscreens.</div>
+        <code>AdminChrome.tsx</code> &bull; <code>Drawer Navigation</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Touch-Target Optimization</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.</div>
+        <code>mobile-nav.spec.ts</code> &bull; <code>Responsive Design</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 11 -->
+  <div style="margin-bottom: 32px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #f472b6; display: flex; align-items: center; gap: 8px;">
+        <span>💬</span> 11. In-App Communications & Real-Time Notifications
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">10 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Role-to-Role In-App Messaging Portal</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Real-time conversation portal (/dashboard/messages) between tenants, landlords, managers, and vendors.</div>
+        <code>MessagingPortal.tsx</code> &bull; <code>Conversations</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Contextual Conversation Threading</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Threads link directly to specific properties, units, or maintenance tickets for context.</div>
+        <code>Conversation.propertyId</code> &bull; <code>Thread Context</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Protected Attachment Sharing in Chat</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Share images and documents inside chat, stored securely behind communications file gateway.</div>
+        <code>communications/</code> folder &bull; <code>ISS-038</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Notification Bell & Live Unread Badges</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Interactive header bell (NotificationBell.tsx) with live count badge and audio chime alerts.</div>
+        <code>NotificationBell.tsx</code> &bull; <code>useNotificationBell</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dedicated Notification Center Console</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Full-page notification feed (/dashboard/notifications) with category filtering and deep entity links.</div>
+        <code>NotificationsPage.tsx</code> &bull; <code>Deep Links</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">One-Click Mark-All-Read Action</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Atomically mark all unread notifications across all categories as read.</div>
+        <code>POST /notifications/mark-all-read</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Transactional Email Dispatch via Resend</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Sends verified emails for account activation, password resets, tenant invites, and viewing confirmations.</div>
+        <code>lib/email.ts</code> &bull; <code>Resend API</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Development "Sent Emails" Inbox Widget</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Opt-in floating panel (EmailInboxWidget.tsx) capturing outgoing emails during development and testing.</div>
+        <code>EmailInboxWidget.tsx</code> &bull; <code>Dev Tool</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Audio Notification Chime</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Subtle Web Audio synthetic chime alerting users when a new high-priority notification arrives.</div>
+        <code>lib/notificationSound.ts</code> &bull; <code>Audio Chime</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Category Notification Types</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Categorizes alerts into SYSTEM, MAINTENANCE_STATUS, and ANNOUNCEMENT for easy scanning.</div>
+        <code>NotificationType</code> &bull; <code>Structured Alerts</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMAIN 12 -->
+  <div>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+      <h4 style="font-size: 16px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+        <span>⚙️</span> 12. Scalability, Database Optimization & Automated Workers
+      </h4>
+      <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">10 Features</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">10 Idempotent Scheduled Background Workers</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Rent Invoicer, Overdue Flagger, Autopay Charger, Maintenance Dispatcher, Access Code Janitor, Payment Scorer, Property Scorer, Retention, Storage Janitor, and Cron Fanout.</div>
+        <code>lib/workers/</code> &bull; <code>Idempotent</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Daily Cron Fanout Architecture (02:00 UTC)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Single daily cron endpoint (/api/v1/cron/all) that safely executes all workers in strict dependency order.</div>
+        <code>vercel.json</code> &bull; <code>CRON_SECRET</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">101 PostgreSQL B-Tree Performance Indexes</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">10 newly added single/composite indexes ensuring sub-millisecond query seeks on 100k+ unit workloads.</div>
+        <code>20261016100000_perf_scale_indexes</code> &bull; <code>ISS-030</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">100k Units EXPLAIN ANALYZE Scaling Benchmark</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Automated scaling harness (scripts/benchmark-100k-units.ts) proving sub-0.15ms query seek latency.</div>
+        <code>scripts/benchmark-100k-units.ts</code> &bull; <code>Sub-0.15ms</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Autocannon Multi-Phase Load Stress Testing</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Performance test harness (scripts/load-test.ts) measuring throughput, p99 latency, and concurrent requests.</div>
+        <code>pnpm test:load</code> &bull; <code>Throughput & p99</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Stryker Mutation Testing Verified (85.7% Score)</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Automated code mutation suite injecting arithmetic, equality, and logical mutations to prove test test quality.</div>
+        <code>stryker.config.mjs</code> &bull; <code>85.71% Mutation Score</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">1,000+ Payload Adversarial Fuzzing Suites</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Rigorous fuzz tests against URL parsers and API handlers testing malformed JSON, SQLi strings, and buffer overflows.</div>
+        <code>tests/fuzz/payloads.fuzz.test.ts</code> &bull; <code>Fuzzing</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Comprehensive RBAC Authorization Matrix</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Matrix testing proving unauthorized roles (e.g. Tenant accessing Admin routes) are universally rejected.</div>
+        <code>tests/security/rbac-matrix.test.ts</code> &bull; <code>RBAC Matrix</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Workflow & Financial State Anomaly Tests</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Verifies state machine resilience against negative payments, leapfrog approvals, and invalid status jumps.</div>
+        <code>tests/anomaly/financial-anomalies.test.ts</code> &bull; <code>Anomalies</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Access Code Expiry Janitor Worker</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Automated scheduled background janitor marking past-due visitor gate access codes as EXPIRED.</div>
+        <code>accessCodeExpiryJanitor.ts</code> &bull; <code>Gate Access Janitor</code>
+      </div>
+    </div>
+  </div>
+</div>
+<hr>
+
 <div id="setup" class="section-header">
   <span class="section-icon">🏁</span>
   <div>
@@ -1454,26 +2454,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     const label = item.querySelector('.screenshot-label');
     return {
       src: img ? img.getAttribute('src') : '',
-      alt: img ? img.getAttribute('alt') : 'Screenshot',
-      title: label ? label.innerText.replace('Desktop', ' (Desktop)').replace('Tablet', ' (Tablet)').replace('Mobile', ' (Mobile)') : (img ? img.getAttribute('alt') : 'Screenshot')
+      alt: img ? img.getAttribute('alt') : '',
+      title: label ? label.textContent.trim().replace(/\s+/g, ' ') : ''
     };
-  }).filter(item => item.src);
+  });
 
   let currentIndex = 0;
   const lightbox = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
-  const lbTitle = document.getElementById('lightbox-title');
   const lbCounter = document.getElementById('lightbox-counter');
+  const lbTitle = document.getElementById('lightbox-title');
   const lbOpenRaw = document.getElementById('lightbox-open-raw');
-  const lbBackdrop = document.getElementById('lightbox-backdrop');
   const lbClose = document.getElementById('lightbox-close');
   const lbPrev = document.getElementById('lightbox-prev');
   const lbNext = document.getElementById('lightbox-next');
+  const lbBackdrop = document.getElementById('lightbox-backdrop');
 
   function openLightbox(index) {
-    if (index < 0 || index >= screenshots.length) return;
     currentIndex = index;
-    renderImage();
+    updateLightbox();
     lightbox.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -1483,61 +2482,41 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     document.body.style.overflow = '';
   }
 
-  function renderImage() {
+  function updateLightbox() {
     const item = screenshots[currentIndex];
-    lbImg.style.opacity = '0';
-    setTimeout(() => {
-      lbImg.src = item.src;
-      lbImg.alt = item.alt;
-      lbTitle.textContent = item.title;
-      lbCounter.textContent = `${currentIndex + 1} / ${screenshots.length}`;
-      lbOpenRaw.href = item.src;
-      lbImg.style.opacity = '1';
-    }, 50);
+    if (!item) return;
+    lbImg.src = item.src;
+    lbImg.alt = item.alt;
+    lbCounter.textContent = (currentIndex + 1) + ' / ' + screenshots.length;
+    lbTitle.textContent = item.title;
+    lbOpenRaw.href = item.src;
   }
 
-  function showNext() {
+  function nextImage() {
     currentIndex = (currentIndex + 1) % screenshots.length;
-    renderImage();
+    updateLightbox();
   }
 
-  function showPrev() {
+  function prevImage() {
     currentIndex = (currentIndex - 1 + screenshots.length) % screenshots.length;
-    renderImage();
+    updateLightbox();
   }
 
-  screenshotItems.forEach((item, index) => {
-    item.addEventListener('click', () => openLightbox(index));
+  screenshotItems.forEach((item, idx) => {
+    item.addEventListener('click', () => openLightbox(idx));
   });
 
   lbClose.addEventListener('click', closeLightbox);
   lbBackdrop.addEventListener('click', closeLightbox);
-  lbNext.addEventListener('click', (e) => { e.stopPropagation(); showNext(); });
-  lbPrev.addEventListener('click', (e) => { e.stopPropagation(); showPrev(); });
+  lbNext.addEventListener('click', (e) => { e.stopPropagation(); nextImage(); });
+  lbPrev.addEventListener('click', (e) => { e.stopPropagation(); prevImage(); });
 
   window.addEventListener('keydown', (e) => {
-    if (lightbox.style.display === 'none') return;
+    if (lightbox.style.display !== 'flex') return;
     if (e.key === 'Escape') closeLightbox();
-    else if (e.key === 'ArrowRight' || e.key === 'Space') {
-      e.preventDefault();
-      showNext();
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      showPrev();
-    }
+    else if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextImage(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); prevImage(); }
   });
-
-  let touchStartX = 0;
-  let touchEndX = 0;
-  lightbox.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-  }, {passive: true});
-
-  lightbox.addEventListener('touchend', e => {
-    touchEndX = e.changedTouches[0].screenX;
-    if (touchEndX < touchStartX - 40) showNext();
-    if (touchEndX > touchStartX + 40) showPrev();
-  }, {passive: true});
 })();
 </script>
 
