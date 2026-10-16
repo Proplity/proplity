@@ -86,7 +86,18 @@ export function FileViewerProvider({ children }: { children: React.ReactNode }) 
       prevFile,
       setIndex,
     }),
-    [isOpen, activeFile, files, currentIndex, openFile, openGallery, closeViewer, nextFile, prevFile, setIndex],
+    [
+      isOpen,
+      activeFile,
+      files,
+      currentIndex,
+      openFile,
+      openGallery,
+      closeViewer,
+      nextFile,
+      prevFile,
+      setIndex,
+    ],
   );
 
   return <FileViewerContext.Provider value={value}>{children}</FileViewerContext.Provider>;

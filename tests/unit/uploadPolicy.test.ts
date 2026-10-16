@@ -21,23 +21,13 @@ describe('uploadPolicy', () => {
       Role.VENDOR,
     ]);
     expect(FOLDER_ROLES.applications).toEqual([Role.TENANT]);
-    expect(FOLDER_ROLES.profile).toEqual([
-      Role.TENANT,
-      Role.LANDLORD,
-      Role.MANAGER,
-      Role.VENDOR,
-    ]);
+    expect(FOLDER_ROLES.profile).toEqual([Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR]);
     expect(FOLDER_ROLES.properties).toContain(Role.LANDLORD);
     expect(FOLDER_ROLES.properties).toContain(Role.MANAGER);
     expect(FOLDER_ROLES.properties).toContain(Role.ADMIN);
     expect(FOLDER_ROLES.properties).not.toContain(Role.TENANT);
     expect(FOLDER_ROLES.notices).toEqual([Role.LANDLORD, Role.MANAGER, Role.ADMIN]);
-    expect(FOLDER_ROLES.leases).toEqual([
-      Role.TENANT,
-      Role.LANDLORD,
-      Role.MANAGER,
-      Role.ADMIN,
-    ]);
+    expect(FOLDER_ROLES.leases).toEqual([Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN]);
     expect(FOLDER_ROLES.communications).toEqual([
       Role.TENANT,
       Role.LANDLORD,

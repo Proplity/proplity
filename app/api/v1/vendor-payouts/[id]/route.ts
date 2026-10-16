@@ -109,10 +109,7 @@ export const PATCH = withAuth(
           });
         } else if (action === 'REJECT') {
           if (!reason) {
-            return NextResponse.json(
-              { error: 'A rejection reason is required' },
-              { status: 400 },
-            );
+            return NextResponse.json({ error: 'A rejection reason is required' }, { status: 400 });
           }
           updated = await rejectVendorPayout(session, id, reason);
         }

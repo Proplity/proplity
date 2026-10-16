@@ -23,20 +23,29 @@ async function analyzeQuery(label: string, sql: string) {
   console.log(`------------------------------------------------------`);
 
   try {
-    const plan = await prisma.$queryRawUnsafe<Array<{ 'QUERY PLAN': string }>>(`EXPLAIN (ANALYZE, BUFFERS) ${sql}`);
+    const plan = await prisma.$queryRawUnsafe<Array<{ 'QUERY PLAN': string }>>(
+      `EXPLAIN (ANALYZE, BUFFERS) ${sql}`,
+    );
     const planOutput = plan.map((p) => p['QUERY PLAN']).join('\n');
     console.log(planOutput);
 
     const isSeqScan = planOutput.includes('Seq Scan');
-    const isIndexScan = planOutput.includes('Index Scan') || planOutput.includes('Index Only Scan') || planOutput.includes('Bitmap Index Scan');
+    const isIndexScan =
+      planOutput.includes('Index Scan') ||
+      planOutput.includes('Index Only Scan') ||
+      planOutput.includes('Bitmap Index Scan');
 
     // Parse execution time
     const timeMatch = planOutput.match(/Execution Time: ([\d.]+) ms/);
     const executionTimeMs = timeMatch ? parseFloat(timeMatch[1]) : 0;
 
     console.log(`\n  ⚡ Execution Time: ${executionTimeMs} ms`);
-    console.log(`  🔎 Scan Type: ${isIndexScan ? '✅ Index-Assisted Scan' : isSeqScan ? '⚠️ Sequential Table Scan' : 'ℹ️ Direct Scan'}`);
-    console.log(`  🎯 PRD Target (<2000 ms SLA): ${executionTimeMs < 2000 ? '✅ COMPLIANT' : '❌ BREACHED'}`);
+    console.log(
+      `  🔎 Scan Type: ${isIndexScan ? '✅ Index-Assisted Scan' : isSeqScan ? '⚠️ Sequential Table Scan' : 'ℹ️ Direct Scan'}`,
+    );
+    console.log(
+      `  🎯 PRD Target (<2000 ms SLA): ${executionTimeMs < 2000 ? '✅ COMPLIANT' : '❌ BREACHED'}`,
+    );
 
     return { label, executionTimeMs, planOutput, isIndexScan, isSeqScan };
   } catch (err) {
@@ -70,7 +79,9 @@ async function main() {
   console.log(`Configured Schema Indexes (${indexes.length} total):`);
   const coreTables = ['Property', 'Unit', 'Lease', 'Invoice', 'Payment'];
   for (const table of coreTables) {
-    const tableIndexes = indexes.filter((idx) => idx.tablename.toLowerCase() === table.toLowerCase());
+    const tableIndexes = indexes.filter(
+      (idx) => idx.tablename.toLowerCase() === table.toLowerCase(),
+    );
     console.log(`  📌 Table "${table}" (${tableIndexes.length} indexes):`);
     for (const idx of tableIndexes) {
       console.log(`     - ${idx.indexname}: ${idx.indexdef}`);

@@ -82,7 +82,9 @@ test('paying through the mock checkout marks the invoice paid via the real webho
 
   const body = await page.evaluate(
     async (id) =>
-      (await (await fetch('/api/v1/invoices')).json()).data.find((i: { id: string }) => i.id === id),
+      (await (await fetch('/api/v1/invoices')).json()).data.find(
+        (i: { id: string }) => i.id === id,
+      ),
     invoice.id,
   );
   expect(body.status).toBe('PAID');
@@ -116,7 +118,9 @@ test('a simulated declined payment leaves the invoice unpaid', async ({
 
   const body = await page.evaluate(
     async (id) =>
-      (await (await fetch('/api/v1/invoices')).json()).data.find((i: { id: string }) => i.id === id),
+      (await (await fetch('/api/v1/invoices')).json()).data.find(
+        (i: { id: string }) => i.id === id,
+      ),
     invoice.id,
   );
   expect(body.status).toBe('UNPAID');

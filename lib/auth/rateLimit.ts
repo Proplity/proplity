@@ -87,7 +87,9 @@ export async function reserveAttempt(
         select: { createdAt: true },
       });
 
-      const resetAt = new Date((oldest ? oldest.createdAt.getTime() : windowStart.getTime()) + windowMs);
+      const resetAt = new Date(
+        (oldest ? oldest.createdAt.getTime() : windowStart.getTime()) + windowMs,
+      );
       const retryAfterSeconds = Math.max(1, Math.ceil((resetAt.getTime() - now) / 1000));
 
       return {

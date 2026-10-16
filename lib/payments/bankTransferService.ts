@@ -224,8 +224,7 @@ export async function reconcileBankTransfer(
 
   // Authorization check: Only ADMIN, or LANDLORD/MANAGER of the property can reconcile
   const property =
-    submission.invoice.lease?.unit.property ??
-    submission.invoice.maintenanceRequest?.unit.property;
+    submission.invoice.lease?.unit.property ?? submission.invoice.maintenanceRequest?.unit.property;
 
   const canManage = property ? canManageProperty(actor, property) : actor.role === 'ADMIN';
   if (!canManage) {
