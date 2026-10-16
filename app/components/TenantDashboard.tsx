@@ -503,7 +503,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                       type: 'application/pdf',
                     })
                   }
-                  className="flex items-center justify-between w-full text-left rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition-colors"
+                  className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50"
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>

@@ -87,12 +87,7 @@ describe('Security Testing: Injection, Protocol Smuggling & Open Redirects', () 
       expect(safeRedirect(target)).toBeNull();
     }
 
-    const safeRedirects = [
-      '/dashboard',
-      '/properties/12345',
-      '/admin/reports',
-      '/proplity-guide',
-    ];
+    const safeRedirects = ['/dashboard', '/properties/12345', '/admin/reports', '/proplity-guide'];
 
     for (const target of safeRedirects) {
       expect(safeRedirect(target)).toBe(target);

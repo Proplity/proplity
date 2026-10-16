@@ -47,9 +47,9 @@ describe('propertyFingerprint - listingHash', () => {
 describe('propertyFingerprint - findPossibleDuplicates', () => {
   it('queries prisma for active duplicates with matching hash', async () => {
     const mockFindMany = vi.mocked(prisma.property.findMany);
-    mockFindMany.mockResolvedValueOnce(
-      [{ id: 'prop-1', name: 'Duplicated Building' }] as unknown as Parameters<typeof mockFindMany.mockResolvedValueOnce>[0],
-    );
+    mockFindMany.mockResolvedValueOnce([
+      { id: 'prop-1', name: 'Duplicated Building' },
+    ] as unknown as Parameters<typeof mockFindMany.mockResolvedValueOnce>[0]);
 
     const results = await findPossibleDuplicates('hash-12345');
     expect(results).toEqual([{ id: 'prop-1', name: 'Duplicated Building' }]);

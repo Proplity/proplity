@@ -7,10 +7,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { safeUrl } from '@/lib/api/urlField';
-import {
-  submitBankTransferProof,
-  BankTransferError,
-} from '@/lib/payments/bankTransferService';
+import { submitBankTransferProof, BankTransferError } from '@/lib/payments/bankTransferService';
 
 const submitSchema = z.object({
   invoiceId: z.string().uuid(),
@@ -19,7 +16,10 @@ const submitSchema = z.object({
   senderAccountName: z.string().trim().min(2).max(120),
   senderAccountNumber: z.string().trim().max(30).optional(),
   referenceNumber: z.string().trim().min(2).max(120),
-  paymentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
+  paymentDate: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
   proofFileUrl: safeUrl.optional(),
   notes: z.string().trim().max(500).optional(),
 });

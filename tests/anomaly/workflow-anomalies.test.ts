@@ -93,7 +93,10 @@ describe('Anomaly Testing: Business Logic & Workflow State Machines', () => {
         amount: 250_000,
       };
 
-      const isEligibleForPayment = invoice.status === 'UNPAID' || invoice.status === 'PARTIALLY_PAID' || invoice.status === 'OVERDUE';
+      const isEligibleForPayment =
+        invoice.status === 'UNPAID' ||
+        invoice.status === 'PARTIALLY_PAID' ||
+        invoice.status === 'OVERDUE';
       expect(isEligibleForPayment).toBe(false);
     });
 

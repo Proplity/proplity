@@ -24,7 +24,9 @@ vi.mock('@/lib/db', () => {
     auditLog: {
       create: vi.fn(),
     },
-    $transaction: vi.fn(async (callback: (tx: typeof mockDb) => Promise<unknown>) => callback(mockDb)),
+    $transaction: vi.fn(async (callback: (tx: typeof mockDb) => Promise<unknown>) =>
+      callback(mockDb),
+    ),
   };
   return { prisma: mockDb };
 });
@@ -58,7 +60,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
 
     const result = await runOverdueFlagger();
     expect(result.flagged).toBe(0);
@@ -85,7 +89,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null); // No existing late fee
 
@@ -127,7 +133,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
 
     const result = await runOverdueFlagger();
@@ -158,7 +166,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateMaintenance] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateMaintenance,
+    ] as unknown as InvoicesFindMany);
 
     const result = await runOverdueFlagger();
     expect(result.flagged).toBe(1);
@@ -183,7 +193,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       },
     };
 
-    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([candidateInvoice] as unknown as InvoicesFindMany);
+    vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+      candidateInvoice,
+    ] as unknown as InvoicesFindMany);
     // Simulate that late fee already exists with marker
     vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce({
       id: 'fee-existing',
@@ -222,7 +234,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
         },
       };
 
-      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([dueInvoice] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        dueInvoice,
+      ] as unknown as InvoicesFindMany);
 
       const result = await runAutopayCharger();
 
@@ -265,7 +279,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
         },
       };
 
-      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([dueInvoice] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        dueInvoice,
+      ] as unknown as InvoicesFindMany);
 
       const result = await runAutopayCharger();
 

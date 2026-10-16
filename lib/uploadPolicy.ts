@@ -24,7 +24,13 @@ export const IMAGE_AND_PDF_TYPES = [
   'application/pdf',
 ] as const;
 export const VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
-export const AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm'] as const;
+export const AUDIO_TYPES = [
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/ogg',
+  'audio/webm',
+] as const;
 export const DOCUMENT_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

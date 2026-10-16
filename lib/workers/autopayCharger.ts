@@ -232,7 +232,10 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
               reference,
               amount: balanceDue,
               mandateId: mandate.id,
-              response: typeof rawResponse === 'object' && rawResponse !== null ? JSON.stringify(rawResponse) : String(rawResponse),
+              response:
+                typeof rawResponse === 'object' && rawResponse !== null
+                  ? JSON.stringify(rawResponse)
+                  : String(rawResponse),
             },
           },
         });
