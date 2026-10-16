@@ -827,6 +827,7 @@ Every photo uploaded with a listing now appears in the public gallery (cover, ex
 
 **Photo Management:**
 Landlords and property managers can manage images on any listing by clicking **Manage Photos** on the Property Details page. This opens the Photo Management dialog (`PropertyPhotoManager.tsx`), which supports:
+
 - Adding image URLs or uploading new photos directly
 - Dragging or moving photos to change their display order
 - Setting any photo as the **Cover photo** (`Property.imageUrl`) or **Exterior photo**
@@ -1366,6 +1367,7 @@ A listing at the same address and city as another live listing shows a **Possibl
 ![Possible duplicate listings](screenshots/admin_09_duplicate_listing.png)
 
 **Duplicate Detection, Merging & Undo Merge:**
+
 - **Automated Fingerprinting:** Each listing gets an automatic `listingHash` (SHA-256 of lowercase address & city, punctuation and spaces stripped; `lib/propertyFingerprint.ts`), recomputed whenever the address changes.
 - **Duplicate Badge:** If a new or updated listing matches an existing property, a **Possible duplicate** badge appears in the table.
 - **Merge Duplicates Dialog:** Admins can click **Merge** on flagged listings to open `MergeDuplicateModal.tsx`. The admin confirms the primary listing and the duplicate to merge. When merged (`POST /api/v1/properties/[id]/merge`), units, active leases, and applications are consolidated into the primary listing, `Property.mergedIntoId` is set, the duplicate is hidden from public browse listings, and an audited event (`PROPERTY_MERGE`) is written to the Security Audit Log.

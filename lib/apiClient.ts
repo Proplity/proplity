@@ -454,12 +454,7 @@ export const api = {
     },
   },
   uploads: {
-    sign: (body: {
-      folder: UploadFolder;
-      fileName: string;
-      contentType: string;
-      size: number;
-    }) =>
+    sign: (body: { folder: UploadFolder; fileName: string; contentType: string; size: number }) =>
       apiClient.post<{ data: { file: { id: string; url: string }; plan: UploadPlan } }>(
         '/api/v1/uploads/sign',
         body,
@@ -516,8 +511,7 @@ export const api = {
       invoiceId?: string;
       page?: number;
       limit?: number;
-    }) =>
-      apiClient.get<Paginated<BankTransferSubmission>>('/api/v1/bank-transfers', { params }),
+    }) => apiClient.get<Paginated<BankTransferSubmission>>('/api/v1/bank-transfers', { params }),
     get: (id: string) =>
       apiClient.get<{ data: BankTransferSubmission }>(`/api/v1/bank-transfers/${id}`),
     submit: (body: SubmitBankTransferInput) =>
@@ -541,10 +535,8 @@ export const api = {
       invoiceId?: string;
       page?: number;
       limit?: number;
-    }) =>
-      apiClient.get<Paginated<VendorPayout>>('/api/v1/vendor-payouts', { params }),
-    get: (id: string) =>
-      apiClient.get<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`),
+    }) => apiClient.get<Paginated<VendorPayout>>('/api/v1/vendor-payouts', { params }),
+    get: (id: string) => apiClient.get<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`),
     initiate: (body: InitiateVendorPayoutInput) =>
       apiClient.post<{ data: VendorPayout }>('/api/v1/vendor-payouts', body),
     patch: (
@@ -555,7 +547,6 @@ export const api = {
         externalReference?: string;
         manualNote?: string;
       },
-    ) =>
-      apiClient.patch<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`, body),
+    ) => apiClient.patch<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`, body),
   },
 };

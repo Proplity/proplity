@@ -924,12 +924,7 @@ export type SubmitBankTransferInput = {
 
 // PRD §5.4 / §5.5 / ISS-012 "Vendor Payouts"
 export type VendorPayoutStatus =
-  | 'PENDING_APPROVAL'
-  | 'APPROVED'
-  | 'PROCESSING'
-  | 'COMPLETED'
-  | 'REJECTED'
-  | 'FAILED';
+  'PENDING_APPROVAL' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED' | 'FAILED';
 
 export type PayoutMethod = 'BANK_TRANSFER' | 'PAYSTACK_TRANSFER' | 'MANUAL';
 

@@ -1326,7 +1326,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                       type: 'application/pdf',
                     })
                   }
-                  className="flex items-center justify-between w-full text-left rounded-lg p-2 hover:bg-gray-50 transition-colors"
+                  className="flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors hover:bg-gray-50"
                 >
                   <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
                   <FileText className="h-4 w-4 text-blue-600" />

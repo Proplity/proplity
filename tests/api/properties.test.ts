@@ -763,4 +763,3 @@ describe('properties: merge & unmerge duplicate listings (ISS-025)', () => {
     expect(postUndoRes.body.data.mergedIntoId).toBeNull();
   });
 });
-

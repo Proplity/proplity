@@ -341,6 +341,7 @@ is terminated immediately) or reactivate it, and change roles where eligible.
 **5. Properties** — the **moderation queue**. Filter chips (Pending Review
 by default, Approved, Rejected, Flagged, Merged) and search show who submitted each
 listing; open one to approve or reject it.
+
 - **Duplicate Detection & Merge**: listings sharing an address and city display a
   **Possible duplicate** badge. Admins can click **Merge** to designate a canonical
   listing and merge duplicates (`MergeDuplicateModal`), consolidating units, leases, and inquiries.

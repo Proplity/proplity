@@ -6,10 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import {
-  initiateVendorPayout,
-  VendorPayoutError,
-} from '@/lib/payments/payoutService';
+import { initiateVendorPayout, VendorPayoutError } from '@/lib/payments/payoutService';
 
 const initiateSchema = z.object({
   vendorId: z.string().uuid(),
@@ -65,8 +62,7 @@ export const GET = withAuth(async (req, { session }) => {
     }
     // ADMIN sees all
 
-    const where: Prisma.VendorPayoutWhereInput =
-      filters.length > 0 ? { AND: filters } : {};
+    const where: Prisma.VendorPayoutWhereInput = filters.length > 0 ? { AND: filters } : {};
 
     const [payouts, total] = await Promise.all([
       prisma.vendorPayout.findMany({

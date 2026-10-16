@@ -169,14 +169,11 @@ describe('ISS-012: Bank-Transfer Reconciliation & Vendor Payouts', () => {
       expect(forbiddenReconcile.status).toBe(403);
 
       // 2. Manager approves and reconciles
-      const approveRes = await apiFetch(
-        `/api/v1/bank-transfers/${submissionId}/reconcile`,
-        {
-          method: 'POST',
-          cookie: managerCookie,
-          body: { action: 'APPROVE', notes: 'Verified in bank statement' },
-        },
-      );
+      const approveRes = await apiFetch(`/api/v1/bank-transfers/${submissionId}/reconcile`, {
+        method: 'POST',
+        cookie: managerCookie,
+        body: { action: 'APPROVE', notes: 'Verified in bank statement' },
+      });
       expect(approveRes.status).toBe(200);
       expect(approveRes.body.data.newStatus).toBe('PAID');
       expect(approveRes.body.data.submission.status).toBe('APPROVED');
