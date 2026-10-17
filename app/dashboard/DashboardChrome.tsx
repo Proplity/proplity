@@ -26,10 +26,17 @@ import {
   LogOut,
 } from 'lucide-react';
 
-type Role = 'manager' | 'tenant' | 'landlord' | 'vendor';
+type Role = 'manager' | 'tenant' | 'landlord' | 'vendor' | 'admin';
 
 function getTabsForRole(role: Role) {
   switch (role) {
+    case 'admin':
+      return [
+        { href: '/admin', label: 'Admin Dashboard', icon: Home },
+        { href: '/admin/properties', label: 'Moderation Queue', icon: Building2 },
+        { href: '/admin/users', label: 'User Directory', icon: Users },
+        { href: '/admin/security', label: 'Security & Audit', icon: Settings },
+      ];
     case 'manager':
       return [
         { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -88,6 +95,7 @@ const AVATAR_COLOR: Record<Role, string> = {
   tenant: 'bg-green-600',
   landlord: 'bg-purple-600',
   vendor: 'bg-orange-600',
+  admin: 'bg-purple-700',
 };
 
 export function DashboardChrome({ children }: { children: React.ReactNode }) {

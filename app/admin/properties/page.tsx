@@ -298,7 +298,7 @@ export default function AdminPropertiesPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => router.push(`/dashboard/properties/${property.id}`)}
+                          onClick={() => router.push(`/admin/properties/${property.id}`)}
                           className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                         >
                           {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
