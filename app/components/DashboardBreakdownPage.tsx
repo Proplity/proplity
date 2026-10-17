@@ -56,7 +56,14 @@ const ICON_STYLES: Record<BreakdownType, { bg: string; color: string }> = {
   renewals: { bg: 'bg-purple-50', color: 'text-purple-600' },
 };
 
-export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
+export function DashboardBreakdownPage({
+  breakdownType: rawType,
+  onNavigate,
+}: DashboardBreakdownPageProps) {
+  const breakdownType: BreakdownType =
+    (rawType as string) === 'revenue' || !ICONS[rawType as BreakdownType]
+      ? 'rent'
+      : (rawType as BreakdownType);
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 

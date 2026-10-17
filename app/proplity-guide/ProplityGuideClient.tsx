@@ -160,6 +160,17 @@ export function ProplityGuideClient() {
         {/* RIGHT ACTIONS */}
         <div className="flex items-center gap-2">
           <a
+            href="/userflow-video.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-600/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/50"
+            title="Watch complete master userflow video walkthrough (from /setup, 2m 21s)"
+          >
+            <span>🎥</span>
+            <span>Watch Video</span>
+          </a>
+
+          <a
             href="/docs/proplity-step-by-step-role-guide.pdf"
             download="proplity-step-by-step-role-guide.pdf"
             className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-600/30 px-3 py-1.5 text-xs font-semibold text-indigo-300 shadow-sm transition hover:bg-indigo-600/50"
