@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proplity Master Userflow Video Walkthrough</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #060a12;
+        --surface: #0f172a;
+        --surface2: #1e293b;
+        --border: #1e2d45;
+        --accent: #3b82f6;
+        --accent2: #8b5cf6;
+        --success: #10b981;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', system-ui, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 18px 32px;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        text-decoration: none;
+      }
+      .brand span {
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .badge {
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: #60a5fa;
+        border-radius: 9999px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+      .btn-outline {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--border);
+        color: var(--text);
+      }
+      .btn-outline:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #3b82f6;
+      }
+      main {
+        flex: 1;
+        max-width: 1440px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 32px 24px;
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 32px;
+      }
+      @media (max-width: 1024px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      .theater-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+      }
+      .video-wrap {
+        position: relative;
+        background: #000;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+      }
+      .video-info {
+        padding: 24px 28px;
+      }
+      .video-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .video-desc {
+        font-size: 14px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+      .meta-pills {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      .meta-pill {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .meta-pill strong {
+        color: #fff;
+      }
+      .chapters-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        height: fit-content;
+      }
+      .chapters-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .chapter-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .chapter-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--surface2);
+        border: 1px solid transparent;
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .chapter-item:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+        transform: translateX(3px);
+      }
+      .chapter-item.active {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: var(--accent);
+        color: #60a5fa;
+        font-weight: 600;
+      }
+      .chapter-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chapter-time {
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <a href="/" class="brand">🏠 <span>Proplity</span></a>
+        <span class="badge">Master Walkthrough Video</span>
+      </div>
+      <div class="header-actions">
+        <a href="/proplity-guide" class="btn btn-outline">📋 Full Guide</a>
+        <a href="/videos/proplity-complete-userflow.webm" download class="btn btn-primary"
+          >📥 Download Video (11.8 MB)</a
+        >
+      </div>
+    </header>
+
+    <main>
+      <div class="theater-card">
+        <div class="video-wrap">
+          <video
+            id="player"
+            controls
+            autoplay
+            muted
+            playsinline
+            poster="/screenshots/setup_01_setup_page_desktop.png"
+          >
+            <source src="/videos/proplity-complete-userflow.webm" type="video/webm" />
+            Your browser does not support HTML5 WebM video.
+          </video>
+        </div>
+        <div class="video-info">
+          <h1 class="video-title">Complete End-to-End Userflow Walkthrough (from /setup)</h1>
+          <p class="video-desc">
+            Continuous single-take high-definition recording with animated mouse pointer, form
+            interactions, visual click ripples, and floating chapter HUD. Demonstrates platform
+            bootstrap, discovery, and every user persona workflow in sequential order.
+          </p>
+          <div class="meta-pills">
+            <div class="meta-pill">Duration: <strong id="dur-display">05:40</strong></div>
+            <div class="meta-pill">Resolution: <strong>1440 × 900 HD</strong></div>
+            <div class="meta-pill">Framerate: <strong>25 FPS</strong></div>
+            <div class="meta-pill">Size: <strong>28.33 MB</strong></div>
+            <div class="meta-pill">Roles: <strong>6 User Personas</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="chapters-panel">
+        <div class="chapters-title">
+          <span>📑</span>
+          <span>Chapters &amp; Milestones</span>
+        </div>
+        <ul class="chapter-list">
+          <li class="chapter-item" data-time="0">
+            <div class="chapter-name"><span>🏁</span> Act 0: Setup Wizard & Platform Bootstrap</div>
+            <div class="chapter-time">00:00</div>
+          </li>
+          <li class="chapter-item" data-time="28">
+            <div class="chapter-name">
+              <span>🔐</span> Act 1: Full Authentication, Register & Password Recovery
+            </div>
+            <div class="chapter-time">00:28</div>
+          </li>
+          <li class="chapter-item" data-time="101">
+            <div class="chapter-name">
+              <span>🏗</span> Act 2: Landlord Property Creation Wizard & Media
+            </div>
+            <div class="chapter-time">01:41</div>
+          </li>
+          <li class="chapter-item" data-time="198">
+            <div class="chapter-name">
+              <span>🛡</span> Act 3: Super Admin Moderation, Approval & Duplicates
+            </div>
+            <div class="chapter-time">03:18</div>
+          </li>
+          <li class="chapter-item" data-time="216">
+            <div class="chapter-name">
+              <span>🌍</span> Act 4: Public Discovery, Leases & Digital E-Signature
+            </div>
+            <div class="chapter-time">03:36</div>
+          </li>
+          <li class="chapter-item" data-time="245">
+            <div class="chapter-name">
+              <span>🛠</span> Act 5: Tenant Maintenance Request & Progress Tracking
+            </div>
+            <div class="chapter-time">04:05</div>
+          </li>
+          <li class="chapter-item" data-time="267">
+            <div class="chapter-name">
+              <span>👔</span> Act 6: Property Manager Kanban Board & Tenant Invite
+            </div>
+            <div class="chapter-time">04:27</div>
+          </li>
+          <li class="chapter-item" data-time="294">
+            <div class="chapter-name">
+              <span>🔧</span> Act 7: Service Provider Console & Itemized Invoicing
+            </div>
+            <div class="chapter-time">04:54</div>
+          </li>
+          <li class="chapter-item" data-time="309">
+            <div class="chapter-name">
+              <span>🏛</span> Act 8: Super Admin Governance, Audit Trail & Guide
+            </div>
+            <div class="chapter-time">05:09</div>
+          </li>
+        </ul>
+      </aside>
+    </main>
+
+    <script>
+      const player = document.getElementById('player');
+      const items = document.querySelectorAll('.chapter-item');
+
+      items.forEach((item) => {
+        item.addEventListener('click', () => {
+          const time = parseFloat(item.getAttribute('data-time'));
+          player.currentTime = time;
+          player.play();
+          updateActive(time);
+        });
+      });
+
+      player.addEventListener('timeupdate', () => {
+        updateActive(player.currentTime);
+      });
+
+      function updateActive(current) {
+        let activeIdx = 0;
+        items.forEach((item, idx) => {
+          const t = parseFloat(item.getAttribute('data-time'));
+          if (current >= t) activeIdx = idx;
+        });
+        items.forEach((item, idx) => {
+          item.classList.toggle('active', idx === activeIdx);
+        });
+      }
+
+      player.addEventListener('loadedmetadata', () => {
+        const mins = Math.floor(player.duration / 60);
+        const secs = Math.floor(player.duration % 60);
+        const dur = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        document.getElementById('dur-display').textContent = dur;
+      });
+    </script>
+  </body>
+</html>
