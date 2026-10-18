@@ -1,9 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Lock, Landmark, Star, Trash2, User as UserIcon } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowLeft,
+  Lock,
+  Landmark,
+  Star,
+  Trash2,
+  User as UserIcon,
+  BadgeCheck,
+  ClipboardCheck,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { isTenantProfileComplete, missingTenantProfileFields } from '@/lib/tenantProfile';
+import { CompleteProfileForm } from '@/app/components/CompleteProfileForm';
 import {
   useBankAccounts,
   useCreateBankAccount,
@@ -11,43 +24,167 @@ import {
   useDeleteBankAccount,
 } from '@/hooks/useBankAccounts';
 
-// Change password (app/api/v1/auth/change-password) and bank accounts
-// (app/api/v1/bank-accounts) both existed with zero UI before this page.
-// Profile editing (PATCH /auth/me) was added alongside this page's own
-// ProfileCard -- deliberately narrow (name/phone/bio only): no email
-// (needs its own re-verification flow) and no avatar (no file-storage
-// endpoint exists anywhere in this codebase to upload one to).
+export type SettingsTab = 'general' | 'completion' | 'banking';
+
 export function AccountSettings() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
+
   const showBankAccounts =
     auth.user && ['manager', 'landlord', 'vendor', 'admin'].includes(auth.user.role);
 
+  const initialTab = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    if (
+      initialTab === 'completion' ||
+      initialTab === 'setup' ||
+      initialTab === 'profile-completion'
+    ) {
+      return 'completion';
+    }
+    if (initialTab === 'banking' || initialTab === 'bank-accounts') {
+      return 'banking';
+    }
+    return 'general';
+  });
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'completion' || tab === 'setup' || tab === 'profile-completion') {
+      setActiveTab('completion');
+    } else if ((tab === 'banking' || tab === 'bank-accounts') && showBankAccounts) {
+      setActiveTab('banking');
+    } else if (tab === 'general' || tab === 'security') {
+      setActiveTab('general');
+    }
+  }, [searchParams, showBankAccounts]);
+
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.replace(`/dashboard/settings?${params.toString()}`, { scroll: false });
+  };
+
+  const isTenant = auth.user?.role === 'tenant';
+  const isTenantComplete = auth.user ? isTenantProfileComplete(auth.user) : false;
+  const missingTenantFields = auth.user ? missingTenantProfileFields(auth.user) : [];
+
+  const tabs: {
+    id: SettingsTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+    badgeColor?: string;
+  }[] = [
+    {
+      id: 'general',
+      label: 'General & Security',
+      icon: UserIcon,
+    },
+    {
+      id: 'completion',
+      label: isTenant ? 'Profile Completion' : 'Setup & Verification',
+      icon: isTenantComplete ? BadgeCheck : ClipboardCheck,
+      badge: isTenant
+        ? isTenantComplete
+          ? 'Complete'
+          : `${6 - missingTenantFields.length}/6`
+        : undefined,
+      badgeColor: isTenantComplete
+        ? 'bg-green-100 text-green-700'
+        : 'bg-amber-100 text-amber-700',
+    },
+    ...(showBankAccounts
+      ? [
+          {
+            id: 'banking' as SettingsTab,
+            label: 'Payout & Bank Accounts',
+            icon: Landmark,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
+          title="Go back"
         >
           <ArrowLeft className="h-5 w-5 text-gray-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-semibold">Account Settings</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">Account Settings</h1>
+            {auth.user?.role && (
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold capitalize text-blue-700">
+                {auth.user.role}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
             {auth.user?.name} · {auth.user?.email}
           </p>
         </div>
       </div>
 
-      <ProfileCard />
-      <ChangePasswordCard />
-      {showBankAccounts && <BankAccountsCard />}
+      {/* Tabs Bar */}
+      <div className="flex border-b border-gray-200">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tab.badgeColor}`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Panels */}
+      {activeTab === 'general' && (
+        <div className="space-y-6">
+          <ProfileCard onSwitchTab={handleTabChange} />
+          <ChangePasswordCard />
+        </div>
+      )}
+
+      {activeTab === 'completion' && (
+        <div className="space-y-6">
+          <CompleteProfileForm embedded={true} onSwitchTab={handleTabChange} />
+        </div>
+      )}
+
+      {activeTab === 'banking' && showBankAccounts && (
+        <div className="space-y-6">
+          <BankAccountsCard />
+        </div>
+      )}
     </div>
   );
 }
 
-function ProfileCard() {
+function ProfileCard({ onSwitchTab }: { onSwitchTab?: (tab: SettingsTab) => void }) {
   const auth = useAuth();
   const [name, setName] = useState(auth.user?.name ?? '');
   const [phoneNumber, setPhoneNumber] = useState(auth.user?.phoneNumber ?? '');
@@ -56,9 +193,8 @@ function ProfileCard() {
   const [saved, setSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // auth.user resolves asynchronously (AuthContext fetches /auth/me on
-  // mount) -- the fields above start empty and need to pick up the real
-  // values once it lands, same pattern BankAccountsCard's own hooks use.
+  const { data: bankAccounts } = useBankAccounts();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setName(auth.user?.name ?? '');
@@ -96,12 +232,58 @@ function ProfileCard() {
     }
   };
 
+  const isTenant = auth.user?.role === 'tenant';
+  const isTenantIncomplete = isTenant && auth.user && !isTenantProfileComplete(auth.user);
+  const isLandlordWithoutBanking =
+    auth.user?.role === 'landlord' && (bankAccounts ?? []).length === 0;
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <UserIcon className="h-5 w-5 text-gray-600" />
-        <h2 className="font-semibold">Profile</h2>
+    <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <UserIcon className="h-5 w-5 text-gray-600" />
+          <h2 className="font-semibold">Profile Overview</h2>
+        </div>
+        {auth.user?.role && (
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 capitalize">
+            Role: {auth.user.role}
+          </span>
+        )}
       </div>
+
+      {/* Helpful context banners */}
+      {isTenantIncomplete && onSwitchTab && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>Your tenant profile is missing emergency contact or ID verification details.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onSwitchTab('completion')}
+            className="shrink-0 font-semibold text-blue-600 hover:underline"
+          >
+            Complete Profile →
+          </button>
+        </div>
+      )}
+
+      {isLandlordWithoutBanking && onSwitchTab && (
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+          <div className="flex items-center gap-2">
+            <Landmark className="h-4 w-4 shrink-0 text-blue-600" />
+            <span>Add a payout bank account to enable rent collection & disbursements.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onSwitchTab('banking')}
+            className="shrink-0 font-semibold text-blue-600 hover:underline"
+          >
+            Configure Payouts →
+          </button>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">Full name</label>
@@ -146,7 +328,7 @@ function ProfileCard() {
         <button
           onClick={handleSubmit}
           disabled={submitting || !name.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Save Profile'}
         </button>
@@ -228,7 +410,7 @@ function ChangePasswordCard() {
         <button
           onClick={handleSubmit}
           disabled={submitting || !currentPassword || !newPassword || !confirmPassword}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
           {submitting ? 'Updating…' : 'Update Password'}
         </button>
@@ -240,9 +422,6 @@ function ChangePasswordCard() {
   );
 }
 
-// No Paystack/payout automation reads this table yet (CLAUDE.md's
-// documented gap) -- this is real storage for real bank details, honestly
-// not yet wired to any payout flow.
 function BankAccountsCard() {
   const { data: accounts, loading, refetch } = useBankAccounts();
   const {
@@ -329,7 +508,7 @@ function BankAccountsCard() {
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             {creating ? 'Adding…' : 'Add Bank Account'}
           </button>
