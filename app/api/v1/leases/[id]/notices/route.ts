@@ -9,6 +9,9 @@ import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 async function loadLeaseWithProperty(id: string) {
@@ -31,6 +34,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     }
 
     const notices = await prisma.notice.findMany({
+      take: LIST_LIMIT,
       where: { leaseId: id },
       orderBy: { createdAt: 'desc' },
     });

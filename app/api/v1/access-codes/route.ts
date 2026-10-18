@@ -7,6 +7,9 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 async function canAccessUnit(session: { sub: string; role: Role }, unitId: string) {
   const unit = await prisma.unit.findUnique({ where: { id: unitId }, include: { property: true } });
   if (!unit) return { unit: null, allowed: false };
@@ -30,6 +33,7 @@ export const GET = withAuth(async (req, { session }) => {
 
     const status = req.nextUrl.searchParams.get('status');
     const codes = await prisma.accessCode.findMany({
+      take: LIST_LIMIT,
       where: { unitId, ...(status ? { status: status as AccessCodeStatus } : {}) },
       orderBy: { createdAt: 'desc' },
     });

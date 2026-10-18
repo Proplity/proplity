@@ -7,6 +7,9 @@ import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
@@ -18,6 +21,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
 
     const canSeeAll = canManageProperty(session, property);
     const viewings = await prisma.propertyViewing.findMany({
+      take: LIST_LIMIT,
       where: { propertyId: id, ...(canSeeAll ? {} : { requestedById: session.sub }) },
       include: canSeeAll ? { requestedBy: { select: { name: true, email: true } } } : undefined,
       orderBy: { scheduledAt: 'asc' },

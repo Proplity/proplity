@@ -7,6 +7,9 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export const GET = withAuth(
@@ -24,6 +27,7 @@ export const GET = withAuth(
       // units) -- Equipment is one of "at least one of unitId/propertyId"
       // per CLAUDE.md's multi-FK rule, so both need querying.
       const equipment = await prisma.equipment.findMany({
+        take: LIST_LIMIT,
         where: { OR: [{ propertyId: id }, { unit: { propertyId: id } }] },
         orderBy: { createdAt: 'desc' },
       });

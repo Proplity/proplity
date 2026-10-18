@@ -5,6 +5,9 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 // MANAGER/ADMIN only, exactly as scoped in the plan -- unlike lease access
@@ -18,6 +21,7 @@ export const GET = withAuth(
       if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
 
       const notes = await prisma.note.findMany({
+        take: LIST_LIMIT,
         where: { leaseId: id },
         orderBy: { createdAt: 'desc' },
       });
