@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -172,6 +173,7 @@ export async function POST(req: NextRequest) {
         // tier/cycle have no dedicated column, encoded into the description
         // at checkout time (see subscriptions/checkout/route.ts).
         if (
+          subscriptionsEnabled() &&
           invoice.type === 'SUBSCRIPTION' &&
           invoice.userId &&
           outcome.status === 'PAID' &&

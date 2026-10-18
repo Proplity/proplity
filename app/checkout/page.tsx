@@ -27,7 +27,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!subscriptionsEnabled()) {
-      router.replace('/pricing');
+      router.replace('/');
     }
   }, [router]);
 

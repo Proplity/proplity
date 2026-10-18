@@ -8,6 +8,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { getSystemSettings } from '@/lib/systemSettings';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -104,6 +105,13 @@ export const POST = withAuth(
       if (!leaseId && !maintenanceRequestId && !userId) {
         return NextResponse.json(
           { error: 'At least one of leaseId, maintenanceRequestId, or userId is required' },
+          { status: 400 },
+        );
+      }
+
+      if (rest.type === 'SUBSCRIPTION' && !subscriptionsEnabled()) {
+        return NextResponse.json(
+          { error: 'Subscriptions are currently disabled' },
           { status: 400 },
         );
       }

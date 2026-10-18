@@ -24,6 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from './ConfirmDialog';
 import { api } from '@/lib/apiClient';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
@@ -987,20 +988,16 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   });
   const { data: approvedApplications } = useApplications({ status: 'APPROVED' });
   const { submit: unmergeProperty, submitting: unmerging } = useUnmergeProperty(propertyId);
+  const [showUnmergeConfirm, setShowUnmergeConfirm] = useState(false);
 
   const handleUnmerge = async () => {
-    if (
-      !window.confirm(
-        `Undo merge for "${property?.name}"? The listing will return to pending review.`,
-      )
-    ) {
-      return;
-    }
     try {
       await unmergeProperty();
+      setShowUnmergeConfirm(false);
       refetchProperty();
+      toast.success(`Unmerged "${property?.name}" -- listing returned to pending review.`);
     } catch {
-      // error surfaced via hook
+      toast.error('Failed to undo merge. Please try again.');
     }
   };
 
@@ -1152,7 +1149,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
           </div>
           {auth.user?.role === 'admin' && (
             <button
-              onClick={handleUnmerge}
+              onClick={() => setShowUnmergeConfirm(true)}
               disabled={unmerging}
               className="rounded-lg border border-purple-300 bg-white px-3 py-1.5 text-xs font-semibold text-purple-800 hover:bg-purple-100 disabled:opacity-50"
             >
@@ -1655,6 +1652,18 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
           onSaved={refetchProperty}
         />
       )}
+
+      <ConfirmDialog
+        open={showUnmergeConfirm}
+        title="Undo Merge?"
+        description={`Are you sure you want to undo merge for "${property.name}"? The listing will return to pending review.`}
+        confirmLabel="Undo Merge"
+        cancelLabel="Keep Merged"
+        variant="warning"
+        isLoading={unmerging}
+        onCancel={() => setShowUnmergeConfirm(false)}
+        onConfirm={handleUnmerge}
+      />
     </div>
   );
 }
