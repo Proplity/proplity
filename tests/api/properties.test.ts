@@ -797,7 +797,9 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
     // Staged in metadata.pendingChanges
     expect(res.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
     expect(res.body.data.metadata?.pendingChanges?.property?.name).toBe('Proposed New Name');
-    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe('Proposed New Description');
+    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe(
+      'Proposed New Description',
+    );
   });
 
   it('promotes draft to PENDING_REVIEW when submitted for review', async () => {
@@ -847,11 +849,14 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
     });
 
     // Attempting delete directly while PENDING_REVIEW must return 400
-    const delRes = await apiFetch<{ error: string; code: string }>(`/api/v1/properties/${prop.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { deletePendingEdits: true },
-    });
+    const delRes = await apiFetch<{ error: string; code: string }>(
+      `/api/v1/properties/${prop.id}`,
+      {
+        method: 'PATCH',
+        cookie,
+        body: { deletePendingEdits: true },
+      },
+    );
 
     expect(delRes.status).toBe(400);
     expect(delRes.body.code).toBe('UNDER_REVIEW_CANNOT_DELETE');
@@ -870,6 +875,8 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
         pendingChanges: {
           status: 'PENDING_REVIEW',
           property: { name: 'Proposed Edits' },
+          // recorded by the server when the edit left an approved listing
+          restoreTo: { moderationStatus: 'APPROVED', isPublished: true },
         },
       },
     });
@@ -917,3 +924,177 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
   });
 });
 
+describe('properties: staged edits cannot bypass moderation (ISS-059, ISS-060, ISS-061)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('cancelling pending edits does not approve or publish a rejected listing', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'REJECTED', isPublished: false },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, description: 'x' },
+    });
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.status).toBe(200);
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.moderationStatus).toBe('REJECTED');
+    expect(row?.isPublished).toBe(false);
+  });
+
+  it('cancelling a review request returns an approved listing to approved', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { name: 'Renamed' },
+    });
+    expect(edit.body.data.isPublished).toBe(false);
+    expect(edit.body.data.moderationStatus).toBe('PENDING_REVIEW');
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.body.data.isPublished).toBe(true);
+    expect(cancel.body.data.moderationStatus).toBe('APPROVED');
+  });
+
+  it('rejects a client-sent metadata field (it cannot carry staged unit edits)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const victimMgr = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: victimMgr.id });
+    const vUnit = await createUnit(victim.id, {});
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${mine.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        metadata: {
+          pendingChanges: { status: 'PENDING_REVIEW', units: { [vUnit.id]: { rentAmount: 1 } } },
+        },
+      },
+    });
+    await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const after = await testPrisma.unit.findUnique({ where: { id: vUnit.id } });
+    expect(after?.rentAmount).toBe(vUnit.rentAmount);
+  });
+
+  it('approval skips a staged unit that belongs to another property', async () => {
+    const m = await createUser(Role.MANAGER);
+    const other = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: other.id });
+    const vUnit = await createUnit(victim.id, {});
+    const myUnit = await createUnit(mine.id, {});
+    await testPrisma.property.update({
+      where: { id: mine.id },
+      data: {
+        metadata: {
+          pendingChanges: {
+            status: 'PENDING_REVIEW',
+            units: { [vUnit.id]: { rentAmount: 1 }, [myUnit.id]: { rentAmount: 777 } },
+          },
+        },
+      },
+    });
+    const res = await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(res.status).toBe(200);
+    expect((await testPrisma.unit.findUnique({ where: { id: vUnit.id } }))?.rentAmount).toBe(
+      vUnit.rentAmount,
+    );
+    expect((await testPrisma.unit.findUnique({ where: { id: myUnit.id } }))?.rentAmount).toBe(777);
+  });
+
+  it('an owner edit to an approved listing is staged, not applied, until an admin approves', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Before' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'Fake luxury penthouse' },
+    });
+    expect(edit.status).toBe(200);
+    let row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).not.toBe('Fake luxury penthouse');
+    expect(row?.isPublished).toBe(true); // minor edit: stays live as it was
+    expect(
+      (row?.metadata as { pendingChanges?: { property?: { description?: string } } })
+        ?.pendingChanges?.property?.description,
+    ).toBe('Fake luxury penthouse');
+
+    const appr = await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(appr.status).toBe(200);
+    row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).toBe('Fake luxury penthouse');
+  });
+
+  it('draft edits are applied when an admin approves them (not lost)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Old Name' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, name: 'New Name', address: '9 New Address', city: 'Abuja' },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { submitForReview: true },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.name).toBe('New Name');
+    expect(row?.address).toBe('9 New Address');
+    expect(row?.listingHash).toBeTruthy();
+    expect(row?.moderationStatus).toBe('APPROVED');
+  });
+});
