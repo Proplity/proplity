@@ -140,8 +140,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
               <FileText className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm font-medium">Generate Report</p>
-              <p className="text-xs text-gray-500">Neighbourhood insights</p>
+              <p className="text-sm font-medium">Neighbourhood Report</p>
+              <p className="text-xs text-gray-500">View area insights & scores</p>
             </div>
           </button>
           <button
