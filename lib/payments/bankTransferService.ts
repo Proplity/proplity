@@ -241,14 +241,21 @@ export async function reconcileBankTransfer(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      const row = await tx.bankTransferSubmission.update({
-        where: { id: submissionId },
+      // Only a still-pending proof can be rejected: a racing approval must not be overwritten.
+      const claimed = await tx.bankTransferSubmission.updateMany({
+        where: { id: submissionId, status: 'PENDING' },
         data: {
           status: 'REJECTED',
           reconciledById: actor.sub,
           reconciledAt: new Date(),
           rejectionReason: reason,
         },
+      });
+      if (claimed.count === 0) {
+        throw new BankTransferError('This transfer submission has already been reconciled', 409);
+      }
+      const row = await tx.bankTransferSubmission.findUniqueOrThrow({
+        where: { id: submissionId },
       });
 
       await tx.auditLog.create({
@@ -302,6 +309,22 @@ export async function reconcileBankTransfer(
     if (outstanding <= 0) {
       throw new BankTransferError('Invoice is already paid in full', 409);
     }
+    if (submission.amount > outstanding + 0.005) {
+      throw new BankTransferError(
+        `The transfer (₦${submission.amount.toLocaleString()}) is more than the outstanding balance of ₦${outstanding.toLocaleString()}. Reject it or ask the tenant to resubmit.`,
+        409,
+      );
+    }
+
+    // Claim the submission under the invoice lock: a second approval or a reject that
+    // raced this one finds it already settled.
+    const claimed = await tx.bankTransferSubmission.updateMany({
+      where: { id: submissionId, status: 'PENDING' },
+      data: { status: 'APPROVED', reconciledById: actor.sub, reconciledAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new BankTransferError('This transfer submission has already been reconciled', 409);
+    }
 
     // Create the confirmed Payment record
     const payment = await tx.payment.create({
@@ -328,12 +351,7 @@ export async function reconcileBankTransfer(
 
     const updatedSubmission = await tx.bankTransferSubmission.update({
       where: { id: submissionId },
-      data: {
-        status: 'APPROVED',
-        reconciledById: actor.sub,
-        reconciledAt: new Date(),
-        paymentId: payment.id,
-      },
+      data: { paymentId: payment.id },
     });
 
     await tx.auditLog.create({
