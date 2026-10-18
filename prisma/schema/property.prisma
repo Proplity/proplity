@@ -74,6 +74,7 @@ model Property {
   isPublished           Boolean               @default(false)
   moderationStatus      ModerationStatus      @default(PENDING_REVIEW)
   moderationNotes       String?
+  metadata              Json?
   // 0-100, computed daily by lib/workers/propertyTrustScorer.ts; null until a
   // property has been scored (ISS-013).
   trustScore            Float?

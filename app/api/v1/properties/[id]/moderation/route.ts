@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
@@ -34,13 +35,62 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, moderationSchema);
       if (!validated.success) return validated.response;
 
+      const isApproved = validated.data.status === 'APPROVED';
+      const approvalDateIso = new Date().toISOString();
+      let updatedNotes = validated.data.moderationNotes ?? property.moderationNotes ?? '';
+      const currentMeta = (property.metadata as Record<string, unknown>) || {};
+      const pendingChanges = currentMeta.pendingChanges as Record<string, unknown> | undefined;
+
+      if (isApproved) {
+        // Tag with approval timestamp and clear EDITED tag
+        const cleanedNotes = updatedNotes
+          .replace(/\[APPROVED:[^\]]+\]\s*/g, '')
+          .replace(/\[EDITED[^\]]*\]\s*/g, '')
+          .trim();
+        updatedNotes = `[APPROVED:${approvalDateIso}]${cleanedNotes ? ` ${cleanedNotes}` : ''}`;
+
+        // If pending changes included unit modifications, apply them to the live units
+        if (pendingChanges?.units && typeof pendingChanges.units === 'object') {
+          const unitsDict = pendingChanges.units as Record<string, Record<string, unknown>>;
+          for (const [unitId, unitChanges] of Object.entries(unitsDict)) {
+            const { sqft, ...fields } = unitChanges;
+            await prisma.unit.update({
+              where: { id: unitId },
+              data: {
+                ...fields,
+                ...(sqft !== undefined ? { squareFeet: sqft as number } : {}),
+              },
+            });
+          }
+        }
+
+        // Approve any pending units for this property by removing 'approval:pending'
+        const pendingUnits = await prisma.unit.findMany({
+          where: { propertyId: id, amenities: { has: 'approval:pending' } },
+          select: { id: true, amenities: true },
+        });
+        for (const u of pendingUnits) {
+          await prisma.unit.update({
+            where: { id: u.id },
+            data: {
+              amenities: u.amenities.filter((a) => a !== 'approval:pending'),
+            },
+          });
+        }
+      }
+
+      // Clear pendingChanges on approval or rejection
+      const { pendingChanges: _removed, ...restMeta } = currentMeta;
+
       const data: {
         moderationStatus: 'APPROVED' | 'REJECTED' | 'FLAGGED';
         moderationNotes?: string;
         isPublished?: boolean;
+        metadata?: Prisma.InputJsonObject;
       } = {
         moderationStatus: validated.data.status,
-        moderationNotes: validated.data.moderationNotes,
+        moderationNotes: updatedNotes,
+        metadata: restMeta as Prisma.InputJsonObject,
       };
       // A property rejected or flagged after having been published (e.g. a
       // later re-review) must not stay publicly visible -- unpublish it in
@@ -51,25 +101,31 @@ export const PATCH = withAuth(
 
       const updated = await prisma.property.update({ where: { id }, data });
 
-      // ListProperty.tsx tells the submitting manager/landlord "you will be
-      // notified once approved" -- make that literally true, same
-      // console-transport sendEmail() the tenant-invite flow already uses.
-      const recipient = property.manager ?? property.landlord;
-      if (recipient && validated.data.status !== 'FLAGGED') {
-        const approved = validated.data.status === 'APPROVED';
-        await sendEmail({
-          to: recipient.email,
-          subject: approved
-            ? 'Your Proplity listing was approved'
-            : 'Your Proplity listing needs changes',
-          body: approved
-            ? `Hi ${recipient.name},\n\n"${property.name}" has been approved and can now be published.\n\nSign in to Proplity to publish it: ${appUrl(`/dashboard/properties/${property.id}`)}`
-            : `Hi ${recipient.name},\n\n"${property.name}" was not approved.${
-                validated.data.moderationNotes
-                  ? `\n\nReviewer notes: ${validated.data.moderationNotes}`
-                  : ''
-              }\n\nSign in to Proplity for details: ${appUrl(`/dashboard/properties/${property.id}`)}`,
-        });
+      // Notify BOTH the manager and the landlord by email
+      const recipients = [property.manager, property.landlord].filter(
+        (u): u is NonNullable<typeof u> => Boolean(u?.email),
+      );
+      const uniqueRecipients = [
+        ...new Map(recipients.map((r) => [r.email, r])).values(),
+      ];
+
+      for (const recipient of uniqueRecipients) {
+        if (validated.data.status !== 'FLAGGED') {
+          const approved = validated.data.status === 'APPROVED';
+          await sendEmail({
+            to: recipient.email,
+            subject: approved
+              ? `Your Proplity listing was approved: ${property.name}`
+              : `Your Proplity listing needs changes: ${property.name}`,
+            body: approved
+              ? `Hi ${recipient.name},\n\n"${property.name}" has been approved by admin and can now be published.\n\nSign in to Proplity to publish it: ${appUrl(`/dashboard/properties/${property.id}`, req)}`
+              : `Hi ${recipient.name},\n\n"${property.name}" was not approved.${
+                  validated.data.moderationNotes
+                    ? `\n\nReviewer notes: ${validated.data.moderationNotes}`
+                    : ''
+                }\n\nSign in to Proplity for details: ${appUrl(`/dashboard/properties/${property.id}`, req)}`,
+          });
+        }
       }
 
       return NextResponse.json({ data: updated });

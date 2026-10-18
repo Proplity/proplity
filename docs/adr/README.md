@@ -18,6 +18,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0010](0010-uploads-are-storedfile-rows-behind-one-file-gateway.md)             | Uploads are StoredFile rows served through one file gateway                               | Accepted           | 2026-10-11 | roji-tech  |
 | [0011](0011-managers-sign-up-without-a-landlord-and-link-to-many.md)            | Managers can sign up without a landlord and link to several                               | Accepted           | 2026-10-13 | roji-tech  |
 | [0012](0012-identity-documents-are-deleted-after-a-retention-period.md)         | Identity documents are deleted after a retention period                                   | Accepted           | 2026-10-13 | roji-tech  |
+| [0013](0013-staged-property-and-unit-edits-are-stored-in-metadata-json.md)      | Staged Property and Unit Edits Are Stored in Property Metadata JSON                       | Accepted           | 2026-10-18 | roji-tech  |
 
 ---
 
