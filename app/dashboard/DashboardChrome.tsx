@@ -24,6 +24,7 @@ import {
   Receipt,
   Plus,
   LogOut,
+  ChevronUp,
 } from 'lucide-react';
 
 type Role = 'manager' | 'tenant' | 'landlord' | 'vendor' | 'admin';
@@ -106,6 +107,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -218,56 +220,149 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-64 border-r border-gray-200 bg-white p-4 lg:block">
-          {(role === 'manager' || role === 'landlord') && (
-            <Link
-              href="/dashboard/properties/new"
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-4 py-3 font-medium text-white hover:from-blue-700 hover:to-green-700"
-            >
-              <Plus className="h-5 w-5" />
-              List Property
-            </Link>
-          )}
+        <aside className="hidden w-64 flex-col justify-between border-r border-gray-200 bg-white p-4 lg:flex">
+          <div className="flex-1 overflow-y-auto pr-1">
+            {(role === 'manager' || role === 'landlord') && (
+              <Link
+                href="/dashboard/properties/new"
+                className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-4 py-3 font-medium text-white hover:from-blue-700 hover:to-green-700"
+              >
+                <Plus className="h-5 w-5" />
+                List Property
+              </Link>
+            )}
 
-          <nav className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active =
-                tab.href === '/dashboard'
-                  ? pathname === '/dashboard'
-                  : pathname.startsWith(tab.href);
-              return (
-                <Link
-                  key={tab.label}
-                  href={tab.href}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
-                    active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+            <nav className="space-y-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const active =
+                  tab.href === '/dashboard'
+                    ? pathname === '/dashboard'
+                    : pathname.startsWith(tab.href);
+                return (
+                  <Link
+                    key={tab.label}
+                    href={tab.href}
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
+                      active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{tab.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {role !== 'vendor' && aiAssistantDemoEnabled && (
+              <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
+                <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
+                <p className="mb-3 text-xs text-gray-600">
+                  {role === 'tenant'
+                    ? 'Get instant help with payments, maintenance, and lease questions'
+                    : 'Get instant help with tenant queries, rent tracking, and more'}
+                </p>
+                <button
+                  onClick={() => setShowAIAssistant(!showAIAssistant)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Open AI Chat
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Fixed bottom avatar & logout menu */}
+          <div className="relative mt-auto pt-3 border-t border-gray-200 shrink-0">
+            {sidebarMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setSidebarMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  role="menu"
+                  aria-label="User account options"
+                  className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
+                >
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {auth.user?.name || 'My Account'}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 capitalize">
+                      {auth.user?.email || (role ? `${role} account` : 'Logged in')}
+                    </p>
+                  </div>
+
+                  <div className="mt-1 space-y-0.5">
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setSidebarMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-gray-500" />
+                      <span>Settings</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarMenuOpen(false);
+                        setShowLogout(true);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 text-red-500" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-2 rounded-xl p-2 hover:bg-gray-100/80 transition-colors">
+              <button
+                type="button"
+                onClick={() => setSidebarMenuOpen((prev) => !prev)}
+                className="flex flex-1 items-center gap-3 min-w-0 text-left focus:outline-none"
+                aria-label="Account options"
+                aria-expanded={sidebarMenuOpen}
+              >
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-xs ${
+                    role ? AVATAR_COLOR[role] : 'bg-gray-400'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{tab.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900 leading-tight">
+                    {auth.user?.name || 'Account'}
+                  </p>
+                  <p className="truncate text-xs text-gray-500 capitalize leading-tight">
+                    {role || 'User'}
+                  </p>
+                </div>
+                <ChevronUp
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${
+                    sidebarMenuOpen ? 'rotate-180 text-blue-600' : ''
+                  }`}
+                />
+              </button>
 
-          {role !== 'vendor' && aiAssistantDemoEnabled && (
-            <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
-              <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
-              <p className="mb-3 text-xs text-gray-600">
-                {role === 'tenant'
-                  ? 'Get instant help with payments, maintenance, and lease questions'
-                  : 'Get instant help with tenant queries, rent tracking, and more'}
-              </p>
               <button
-                onClick={() => setShowAIAssistant(!showAIAssistant)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                type="button"
+                onClick={() => setShowLogout(true)}
+                title="Log Out"
+                aria-label="Log Out"
+                className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
               >
-                <MessageSquare className="h-4 w-4" />
-                Open AI Chat
+                <LogOut className="h-4 w-4" />
               </button>
             </div>
-          )}
+          </div>
         </aside>
 
         <main className="flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
