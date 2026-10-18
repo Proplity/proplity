@@ -27,6 +27,7 @@ import type {
   CreateMessageInput,
   CreatePropertyInput,
   CreateUnitInput,
+  UpdateUnitInput,
   CreateViewingInput,
   MergePropertyInput,
   UpdatePropertyInput,
@@ -167,6 +168,12 @@ export const api = {
       }),
     createUnit: (propertyId: string, body: CreateUnitInput) =>
       apiClient.post<{ data: Unit }>(`/api/v1/properties/${propertyId}/units`, body),
+    updateUnit: (
+      propertyId: string,
+      unitId: string,
+      body: UpdateUnitInput,
+    ) =>
+      apiClient.patch<{ data: Unit }>(`/api/v1/properties/${propertyId}/units/${unitId}`, body),
     importUnits: (propertyId: string, file: File) => {
       const formData = new FormData();
       formData.append('file', file);

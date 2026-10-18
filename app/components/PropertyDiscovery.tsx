@@ -97,7 +97,7 @@ function cardFields(property: Property) {
     sqft: cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : 'N/A',
     status: anyVacant ? 'available' : 'occupied',
     verified: property.moderationStatus === 'APPROVED',
-    features: cheapestUnit?.amenities ?? [],
+    features: (cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:')),
     imageClass: 'bg-linear-to-br from-blue-100 to-blue-200',
     neighborhood: {
       safety: property.securityRating ? Math.round(property.securityRating / 10) : null,

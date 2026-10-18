@@ -8,6 +8,8 @@ import { validateBody } from '@/lib/api/validate';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { getClientIp } from '@/lib/auth/rateLimit';
+import { sendEmail } from '@/lib/email';
+import { appUrl } from '@/lib/appUrl';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -80,6 +82,44 @@ export const POST = withAuth(
 
         return created;
       });
+
+      // Send signature confirmation emails
+      try {
+        const fullLease = await prisma.lease.findUnique({
+          where: { id },
+          include: {
+            tenant: { select: { email: true, name: true } },
+            unit: {
+              include: {
+                property: {
+                  include: {
+                    manager: { select: { email: true, name: true } },
+                    landlord: { select: { email: true, name: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (fullLease) {
+          const signerName = validated.data.fullName || session.role;
+          const parties = [
+            fullLease.tenant,
+            fullLease.unit.property.manager,
+            fullLease.unit.property.landlord,
+          ].filter((p): p is { email: string; name: string } => Boolean(p?.email));
+          const uniqueParties = [...new Map(parties.map((p) => [p.email, p])).values()];
+          for (const party of uniqueParties) {
+            await sendEmail({
+              to: party.email,
+              subject: `Digital Signature Recorded: Lease for Unit ${fullLease.unit.unitNumber}`,
+              body: `Hi ${party.name},\n\n${signerName} has digitally signed the lease agreement for unit ${fullLease.unit.unitNumber} at ${fullLease.unit.property.name}.\n\nView the active lease in your Proplity dashboard:\n${appUrl('/dashboard/leases', req)}`,
+            });
+          }
+        }
+      } catch (signMailErr) {
+        console.error('Failed to dispatch lease signature email', signMailErr);
+      }
 
       return NextResponse.json({ data: signature }, { status: 201 });
     } catch (err) {
