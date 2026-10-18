@@ -8,6 +8,7 @@ import { WatchDemoModal } from './WatchDemoModal';
 import { FEATURED_GRADIENTS, FeaturedPropertyModal, featuredFields } from './FeaturedPropertyModal';
 import { useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 import {
   ArrowRight,
   Shield,
@@ -705,7 +706,8 @@ export function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="bg-linear-to-br from-blue-50 to-green-50 py-20">
+      {subscriptionsEnabled() && (
+        <section id="pricing" className="bg-linear-to-br from-blue-50 to-green-50 py-20">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h2>
@@ -789,6 +791,7 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* CTA */}
       <section className="bg-blue-600 py-20 text-white">
@@ -835,11 +838,13 @@ export function LandingPage() {
                     Features
                   </a>
                 </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Pricing
-                  </a>
-                </li>
+                {subscriptionsEnabled() && (
+                  <li>
+                    <a href="#pricing" className="hover:text-white">
+                      Pricing
+                    </a>
+                  </li>
+                )}
                 <li>
                   <button
                     type="button"

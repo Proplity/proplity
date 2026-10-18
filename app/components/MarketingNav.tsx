@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 const FEATURE_LINKS = [
   { label: 'For Landlords', href: '/for-landlords' },
@@ -36,6 +37,10 @@ export function MarketingNav() {
   const ctaHref = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login';
   const ctaLabel = user ? 'Go to Dashboard' : 'Get Started';
 
+  const navLinks = subscriptionsEnabled()
+    ? NAV_LINKS
+    : NAV_LINKS.filter((item) => item.label !== 'Pricing');
+
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
@@ -64,7 +69,7 @@ export function MarketingNav() {
             </div>
           </div>
 
-          {NAV_LINKS.map((item) => (
+          {navLinks.map((item) => (
             <Link
               key={item.label}
               href={item.href}
@@ -116,7 +121,7 @@ export function MarketingNav() {
             ))}
           </div>
           <div className="flex flex-col gap-3 border-t border-gray-100 pt-4">
-            {NAV_LINKS.map((item) => (
+            {navLinks.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
