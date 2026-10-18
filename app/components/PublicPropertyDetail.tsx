@@ -79,7 +79,7 @@ function NeighbourhoodModal({
             onClick={onUpgrade}
             className="flex-1 rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
           >
-            Upgrade Now
+            Upgrade (Incoming Feature)
           </button>
         </div>
       </div>

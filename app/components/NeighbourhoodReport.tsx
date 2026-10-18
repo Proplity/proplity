@@ -109,14 +109,14 @@ export function NeighbourhoodReport() {
       setShowPaymentModal(true);
       return;
     }
-    toast.info('PDF Export Coming Soon', {
-      description: 'Comprehensive PDF downloads for neighbourhood reports will be available in an upcoming release.',
+    toast.info('Incoming Feature', {
+      description: 'PDF report generation is an upcoming feature and will be available in a future release.',
     });
   };
 
   const handleUpgradeToPremium = () => {
-    toast.info('Feature Coming Soon', {
-      description: 'Online premium subscription billing will be available in an upcoming release.',
+    toast.info('Incoming Feature', {
+      description: 'Online premium subscription billing is an upcoming feature and will be available in an upcoming release.',
     });
     setShowPaymentModal(false);
   };
@@ -158,10 +158,14 @@ export function NeighbourhoodReport() {
         </div>
         <button
           onClick={handleDownloadPDF}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+          title="PDF export is coming in an upcoming release"
         >
-          <Download className="h-4 w-4" />
-          Download PDF
+          <Download className="h-4 w-4 text-blue-600" />
+          <span>Download PDF</span>
+          <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-xs font-semibold text-blue-800">
+            Incoming Feature
+          </span>
         </button>
       </div>
 
@@ -621,7 +625,7 @@ export function NeighbourhoodReport() {
                 onClick={handleUpgradeToPremium}
                 className="flex-1 rounded-lg bg-purple-600 px-4 py-3 font-medium text-white hover:bg-purple-700"
               >
-                Upgrade Now
+                Upgrade (Incoming Feature)
               </button>
             </div>
           </div>
