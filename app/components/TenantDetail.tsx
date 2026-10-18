@@ -30,6 +30,8 @@ import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/u
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
+import { ConfirmDialog } from './ConfirmDialog';
+import { toast } from 'sonner';
 import type { Lease, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
 
 interface TenantDetailProps {
@@ -341,6 +343,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     lateFeeFlatAmount: '0',
   });
   const [renewingLease, setRenewingLease] = useState(false);
+  const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
   const [renewDraft, setRenewDraft] = useState({
     startDate: '',
     endDate: '',
@@ -656,12 +659,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               )}
               {lease.status === 'ACTIVE' && (
                 <button
-                  onClick={async () => {
-                    if (!confirm('Terminate this lease? The unit will be freed up as vacant.'))
-                      return;
-                    await submitStatus('TERMINATED');
-                    refetchLease();
-                  }}
+                  onClick={() => setShowTerminateConfirm(true)}
                   disabled={savingStatus}
                   className="flex-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
@@ -1067,7 +1065,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 onClick={(e) => {
                   if (!tenant.phoneNumber) {
                     e.preventDefault();
-                    alert('No phone number on file for this tenant.');
+                    toast.error('No phone number on file for this tenant.');
                   }
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -1100,7 +1098,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 onClick={(e) => {
                   if (!tenant.phoneNumber) {
                     e.preventDefault();
-                    alert('No phone number on file for this tenant.');
+                    toast.error('No phone number on file for this tenant.');
                   }
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -1357,6 +1355,22 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showTerminateConfirm}
+        title="Terminate Lease?"
+        description="Are you sure you want to terminate this lease? The unit will immediately be freed up and marked as vacant."
+        confirmLabel="Terminate Lease"
+        cancelLabel="Keep Active"
+        variant="danger"
+        isLoading={savingStatus}
+        onCancel={() => setShowTerminateConfirm(false)}
+        onConfirm={async () => {
+          await submitStatus('TERMINATED');
+          setShowTerminateConfirm(false);
+          refetchLease();
+        }}
+      />
     </div>
   );
 }

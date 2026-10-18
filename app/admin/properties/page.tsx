@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
 import { api } from '@/lib/apiClient';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { MergeDuplicateModal } from './MergeDuplicateModal';
 import { PropertyReviewDrawer } from './PropertyReviewDrawer';
 import type { Property } from '@/lib/api/types';
@@ -86,6 +87,7 @@ export default function AdminPropertiesPage() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [mergeCandidate, setMergeCandidate] = useState<Property | null>(null);
   const [unmergingId, setUnmergingId] = useState<string | null>(null);
+  const [unmergeTargetProperty, setUnmergeTargetProperty] = useState<Property | null>(null);
 
   // ISS-025: listings that share an address fingerprint with another live listing.
   // Merged-away ones are excluded from the active duplicate groups.
@@ -130,14 +132,17 @@ export default function AdminPropertiesPage() {
     return acc;
   }, {});
 
-  const handleUnmerge = async (property: Property) => {
-    if (!confirm(`Undo merge for "${property.name}"? The listing will return to pending review.`)) {
-      return;
-    }
-    setUnmergingId(property.id);
+  const handleUnmerge = (property: Property) => {
+    setUnmergeTargetProperty(property);
+  };
+
+  const handleConfirmUnmerge = async () => {
+    if (!unmergeTargetProperty) return;
+    setUnmergingId(unmergeTargetProperty.id);
     try {
-      await api.properties.unmerge(property.id);
-      toast.success(`Unmerged "${property.name}" -- it is now back in pending review.`);
+      await api.properties.unmerge(unmergeTargetProperty.id);
+      toast.success(`Unmerged "${unmergeTargetProperty.name}" -- it is now back in pending review.`);
+      setUnmergeTargetProperty(null);
       refetch();
     } catch {
       toast.error('Failed to undo merge. Please try again.');
@@ -637,6 +642,18 @@ export default function AdminPropertiesPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(unmergeTargetProperty)}
+        title="Undo Merge?"
+        description={`Undo merge for "${unmergeTargetProperty?.name}"? The listing will return to pending review.`}
+        confirmLabel="Undo Merge"
+        cancelLabel="Keep Merged"
+        variant="warning"
+        isLoading={Boolean(unmergingId)}
+        onCancel={() => setUnmergeTargetProperty(null)}
+        onConfirm={handleConfirmUnmerge}
+      />
     </div>
   );
 }
