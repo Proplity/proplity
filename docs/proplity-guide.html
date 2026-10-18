@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Proplity Complete Platform Guide</title>
+<title>Proplity — Complete Step-by-Step Role Guide</title>
+<meta name="description" content="Comprehensive visual guide to every page, feature, role, and workflow in the Proplity property management platform.">
 <style>
 
 :root {
@@ -2114,6 +2115,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/landlord_02c_neighbourhood_editor.png" alt="Neighbourhood report editor" onerror="this.style.background='#1a2235';this.style.height='#180px'"><div class="screenshot-label">Neighbourhood report editor (landlord/manager view) <span class="badge badge-desktop">Desktop</span></div></div>
   </div>
   <div class="alert alert-info" style="margin-top:16px;"><span class="alert-icon">📷</span><div><strong>Photo Management & Gallery:</strong> Landlords and property managers can click <em>Manage Photos</em> on any listing to upload, reorder, delete, and designate cover and exterior photos (saved in <code>Property.photoUrls</code> and <code>Property.imageUrl</code>). All photos appear in the public property gallery with high-resolution preview and a <em>+N more</em> viewer.</div></div>
+  <div class="alert alert-success" style="margin-top:12px;"><span class="alert-icon">✨</span><div><strong>Moderation & Selective Unit Publishing:</strong>
+    <ul style="margin:6px 0 0 18px; padding:0; list-style-type:disc;">
+      <li><strong>Request Approval without Publishing:</strong> Landlords can submit properties for admin moderation review while keeping the listing unpublished to the public marketplace until ready.</li>
+      <li><strong>Edit & Auto-Resubmission:</strong> Updating listing details automatically resubmits the property to <code>PENDING_REVIEW</code> with an <code>[EDITED]</code> flag and alerts administrators via email.</li>
+      <li><strong>Selective Unit Visibility:</strong> Toggle individual units between <em>Public (Marketplace)</em> and <em>Private (Selected Few)</em>, allowing landlords to market e.g. 3 of 4 units publicly while reserving 1 unit for internal managers or selected tenants.</li>
+    </ul>
+  </div></div>
 </div>
 
 <div class="step-card">
@@ -2285,8 +2293,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/vendor_02_job_detail_desktop.png" alt="Job detail" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Job detail page <span class="badge badge-desktop">Desktop</span></div></div>
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/vendor_03_ticket_details_desktop.png" alt="Ticket details" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Ticket detail (full info) <span class="badge badge-desktop">Desktop</span></div></div>
-    <div class="screenshot-item">
-    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/vendor_04_ticket_update_desktop.png" alt="Status update" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Update job status (In Progress → Completed) <span class="badge badge-desktop">Desktop</span></div></div>
   </div>
 </div>
 
@@ -2314,15 +2320,21 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <div class="step-card">
   <h3><span class="step-num">6.1</span>Admin Overview & User Management</h3>
-  <p>Platform-wide statistics and a searchable table of every registered user. The admin can view, suspend, reactivate, and manage any account on the system.</p>
+  <p>Platform-wide statistics and a searchable directory of every registered user. The admin can view, suspend, reactivate, and manage any account on the system.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_01_overview.png" alt="Admin overview" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Admin overview dashboard <span class="badge badge-desktop">Desktop</span></div></div>
     <div class="screenshot-item">
-    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_02_users.png" alt="User management" onerror="this.style.background='#1a2235';this.style.height='#180px'"><div class="screenshot-label">User management (search, filter by role and status, page through accounts) <span class="badge badge-desktop">Desktop</span></div></div>
+    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_02_users.png" alt="User management" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">User management (search, filter by role and status, page through accounts) <span class="badge badge-desktop">Desktop</span></div></div>
     <div class="screenshot-item">
-    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_07_user_suspend.png" alt="Suspend an account" onerror="this.style.background='#1a2235';this.style.height='#180px'"><div class="screenshot-label">Suspending an account asks for a reason, which is saved in the audit log <span class="badge badge-desktop">Desktop</span></div></div>
+    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_07_user_suspend.png" alt="Suspend an account" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Suspending an account asks for a reason, which is saved in the audit log <span class="badge badge-desktop">Desktop</span></div></div>
   </div>
+  <div class="alert alert-info" style="margin-top:16px;"><span class="alert-icon">👥</span><div><strong>User Cards & Sticky Toolbar:</strong>
+    <ul style="margin:6px 0 0 18px; padding:0; list-style-type:disc;">
+      <li><strong>Cards vs. Table Toggle:</strong> Switch between responsive User Cards (highlighting user avatars, roles, statuses, and active <em>Properties Count</em>) and traditional Table views on desktop and mobile.</li>
+      <li><strong>Sticky Compact Toolbar:</strong> Filter and search toolbars remain pinned at the top on scroll without taking excessive vertical space.</li>
+    </ul>
+  </div></div>
 </div>
 
 <div class="step-card">
@@ -2330,11 +2342,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
-    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='#180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>
+    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>
     <div class="screenshot-item">
-    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_09_duplicate_listing.png" alt="Duplicate listings" onerror="this.style.background='#1a2235';this.style.height='#180px'"><div class="screenshot-label">Possible duplicate listings flagged in the moderation queue <span class="badge badge-desktop">Desktop</span></div></div>
+    <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_09_duplicate_listing.png" alt="Duplicate listings" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Possible duplicate listings flagged in the moderation queue <span class="badge badge-desktop">Desktop</span></div></div>
   </div>
-  <div class="alert alert-info" style="margin-top:16px;"><span class="alert-icon">⚡</span><div><strong>Duplicate Listing Detection & Merging:</strong> Listings are automatically fingerprinted via SHA-256 address hashing. Potential duplicates display a <em>Possible duplicate</em> badge in the moderation queue. Admins can click <em>Merge</em> to open the Duplicate Merge Modal, designate the primary listing, and consolidate units, leases, and inquiries. Merged listings remain visible in the <em>Merged</em> tab filter with a one-click <em>Undo Merge</em> option, and every action is recorded in the Security Audit Log.</div></div>
+  <div class="alert alert-success" style="margin-top:16px;"><span class="alert-icon">🛡️</span><div><strong>Moderation Review Drawer & Selective Publishing:</strong>
+    <ul style="margin:6px 0 0 18px; padding:0; list-style-type:disc;">
+      <li><strong>Slide-Over Review Drawer:</strong> Clicking <em>Review</em> or <em>View</em> opens a slide-over popup drawer (right-side desktop, bottom sheet mobile, click-outside backdrop) displaying property summary, landlord and manager contact information, public/private units list, moderation history, quick Approve/Reject/Publish actions, and a <em>FULL VIEW</em> link to the inspection page.</li>
+      <li><strong>Approval Dates & Edited Badges:</strong> Tracks exact approval timestamps and highlights resubmitted listings with an <em>Edited</em> badge whenever a landlord updates property details.</li>
+      <li><strong>Cards & Table Views:</strong> Toggle between modern property cards and traditional table layout with sticky compact filter controls.</li>
+    </ul>
+  </div></div>
+  <div class="alert alert-info" style="margin-top:12px;"><span class="alert-icon">⚡</span><div><strong>Duplicate Listing Detection & Merging:</strong> Listings are automatically fingerprinted via SHA-256 address hashing. Potential duplicates display a <em>Possible duplicate</em> badge in the moderation queue. Admins can click <em>Merge</em> to open the Duplicate Merge Modal, designate the primary listing, and consolidate units, leases, and inquiries. Merged listings remain visible in the <em>Merged</em> tab filter with a one-click <em>Undo Merge</em> option, and every action is recorded in the Security Audit Log.</div></div>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_03_reports.png" alt="Reports" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Platform-wide reports & analytics <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2454,25 +2473,26 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     const label = item.querySelector('.screenshot-label');
     return {
       src: img ? img.getAttribute('src') : '',
-      alt: img ? img.getAttribute('alt') : '',
-      title: label ? label.textContent.trim().replace(/\s+/g, ' ') : ''
+      alt: img ? img.getAttribute('alt') : 'Screenshot',
+      title: label ? label.innerText.replace('Desktop', ' (Desktop)').replace('Tablet', ' (Tablet)').replace('Mobile', ' (Mobile)') : (img ? img.getAttribute('alt') : 'Screenshot')
     };
-  });
+  }).filter(item => item.src);
 
   let currentIndex = 0;
   const lightbox = document.getElementById('lightbox');
   const lbImg = document.getElementById('lightbox-img');
-  const lbCounter = document.getElementById('lightbox-counter');
   const lbTitle = document.getElementById('lightbox-title');
+  const lbCounter = document.getElementById('lightbox-counter');
   const lbOpenRaw = document.getElementById('lightbox-open-raw');
+  const lbBackdrop = document.getElementById('lightbox-backdrop');
   const lbClose = document.getElementById('lightbox-close');
   const lbPrev = document.getElementById('lightbox-prev');
   const lbNext = document.getElementById('lightbox-next');
-  const lbBackdrop = document.getElementById('lightbox-backdrop');
 
   function openLightbox(index) {
+    if (index < 0 || index >= screenshots.length) return;
     currentIndex = index;
-    updateLightbox();
+    renderImage();
     lightbox.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -2482,41 +2502,61 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     document.body.style.overflow = '';
   }
 
-  function updateLightbox() {
+  function renderImage() {
     const item = screenshots[currentIndex];
-    if (!item) return;
-    lbImg.src = item.src;
-    lbImg.alt = item.alt;
-    lbCounter.textContent = (currentIndex + 1) + ' / ' + screenshots.length;
-    lbTitle.textContent = item.title;
-    lbOpenRaw.href = item.src;
+    lbImg.style.opacity = '0';
+    setTimeout(() => {
+      lbImg.src = item.src;
+      lbImg.alt = item.alt;
+      lbTitle.textContent = item.title;
+      lbCounter.textContent = `${currentIndex + 1} / ${screenshots.length}`;
+      lbOpenRaw.href = item.src;
+      lbImg.style.opacity = '1';
+    }, 50);
   }
 
-  function nextImage() {
+  function showNext() {
     currentIndex = (currentIndex + 1) % screenshots.length;
-    updateLightbox();
+    renderImage();
   }
 
-  function prevImage() {
+  function showPrev() {
     currentIndex = (currentIndex - 1 + screenshots.length) % screenshots.length;
-    updateLightbox();
+    renderImage();
   }
 
-  screenshotItems.forEach((item, idx) => {
-    item.addEventListener('click', () => openLightbox(idx));
+  screenshotItems.forEach((item, index) => {
+    item.addEventListener('click', () => openLightbox(index));
   });
 
   lbClose.addEventListener('click', closeLightbox);
   lbBackdrop.addEventListener('click', closeLightbox);
-  lbNext.addEventListener('click', (e) => { e.stopPropagation(); nextImage(); });
-  lbPrev.addEventListener('click', (e) => { e.stopPropagation(); prevImage(); });
+  lbNext.addEventListener('click', (e) => { e.stopPropagation(); showNext(); });
+  lbPrev.addEventListener('click', (e) => { e.stopPropagation(); showPrev(); });
 
   window.addEventListener('keydown', (e) => {
-    if (lightbox.style.display !== 'flex') return;
+    if (lightbox.style.display === 'none') return;
     if (e.key === 'Escape') closeLightbox();
-    else if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextImage(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); prevImage(); }
+    else if (e.key === 'ArrowRight' || e.key === 'Space') {
+      e.preventDefault();
+      showNext();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      showPrev();
+    }
   });
+
+  let touchStartX = 0;
+  let touchEndX = 0;
+  lightbox.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, {passive: true});
+
+  lightbox.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    if (touchEndX < touchStartX - 40) showNext();
+    if (touchEndX > touchStartX + 40) showPrev();
+  }, {passive: true});
 })();
 </script>
 

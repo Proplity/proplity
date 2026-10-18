@@ -194,12 +194,29 @@ tab bar's _More_ menu on mobile).
     instead of having to start over. New listings need admin approval
     before they go live.
 
-**3b. Manage listing photos** — on any existing property details page, click
+**3b. Request Admin Approval without Publishing** — in the property detail sidebar under
+**Listing Status**, landlords can click **Request Admin Approval** to initiate admin moderation
+review while keeping the property unpublished to the public marketplace until ready.
+
+**3c. Edit property, Draft Staging, Cancel Approval & Delete Lifecycle** — click **Edit Property** in the Listing Status card
+to revise property name, address, city, state, or description.
+- **Save as Draft (`saveAsDraft: true`)**: Stages proposed changes inside `property.metadata.pendingChanges` with status `DRAFT`. The live public marketplace listing remains published with its current verified details, and no admin emails are triggered.
+- **Submit for Review (`submitForReview: true`)**: Promotes draft changes to `PENDING_REVIEW` and alerts platform administrators. If critical identity/location fields are modified, the listing is temporarily unpublished until re-approved; minor content edits leave the listing active while changes await review.
+- **Cancel Pending Edits / Approval Request (`cancelPendingEdits: true`)**: Landlords can cancel an active approval request at any time. This restores the listing's published/approved status and returns the proposed edits safely back to `DRAFT`.
+- **Delete Pending Edits (`deletePendingEdits: true`)**: Discards draft edits completely.
+- **Under-Review Deletion Guard**: Edits currently under review **cannot be deleted directly**. The landlord must cancel the approval request first before deleting (enforced on both UI and API with code `UNDER_REVIEW_CANNOT_DELETE`).
+
+**3d. Per-unit Public vs Private visibility** — in the **Units & Tenants** section, landlords and managers
+can toggle each unit's visibility between **Public (Marketplace)** and **Private (Selected Few)**. This
+allows selective publishing (e.g., publishing 3 of 4 units publicly while keeping 1 unit reserved for
+internal managers or selected tenants).
+
+**3e. Manage listing photos** — on any existing property details page, click
 **Manage Photos** to open the photo management dialog. Add photos, drag to
 reorder, designate the cover or exterior photo, and delete outdated images.
 Changes save via PATCH and update the public listing gallery immediately.
 
-**3c. Edit neighbourhood report** — click **Neighbourhood** on any property
+**3f. Edit neighbourhood report** — click **Neighbourhood** on any property
 page to rate security, electricity, water, roads, flood risk, amenities, and
 demographics (0–10), add key features and status notes.
 
@@ -332,16 +349,20 @@ address (e.g. `/dashboard/discover`), they are sent back to `/admin`.
 
 **3. User Management** — every account on the platform, filterable by
 role (chips: All / Admin / Manager / Landlord / Tenant / Vendor) and status,
-searchable by name, email, or phone. Admins can click **Suspend Account** to
-deactivate any account (mandatory reason recorded in the audit log; user's session
-is terminated immediately) or reactivate it, and change roles where eligible.
+searchable by name, email, or phone.
+- **Card & Table Views**: toggle between modern User Cards (highlighting each user's avatar, role badge, status, and **Properties Count**) and traditional tabular view on both desktop and mobile.
+- **Sticky Compact Toolbar**: toolbar stays sticky at the top on scroll without consuming excessive vertical space.
+- Admins can click **Suspend Account** to deactivate any account (mandatory reason recorded in the audit log; user's session is terminated immediately) or reactivate it, and change roles where eligible.
 
 **4. Reports** — platform-wide reporting.
 
 **5. Properties** — the **moderation queue**. Filter chips (Pending Review
 by default, Approved, Rejected, Flagged, Merged) and search show who submitted each
-listing; open one to approve or reject it.
-
+listing.
+- **Cards & Table Views**: toggle between responsive Property Cards and traditional Table view on desktop and mobile.
+- **Sticky Compact Toolbar**: sticky at top on scroll with minimal vertical footprint.
+- **Review Drawer Popup**: clicking **Review** or **View** on a property opens a responsive slide-over drawer (right-side drawer on desktop, bottom sheet on mobile, click-outside backdrop) displaying property overview, approved/edited dates, landlord and manager contact info, public/private units list, moderation notes, quick Approve/Reject/Publish actions, and a **FULL VIEW** button to inspect the full property page.
+- **Approval Date & Edited Badges**: displays approved dates and highlights listings with an **Edited** badge if resubmitted after changes.
 - **Duplicate Detection & Merge**: listings sharing an address and city display a
   **Possible duplicate** badge. Admins can click **Merge** to designate a canonical
   listing and merge duplicates (`MergeDuplicateModal`), consolidating units, leases, and inquiries.

@@ -171,9 +171,11 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
     );
   }
 
-  // A property can have multiple units at different prices -- the booking
-  // widget uses the cheapest one, same convention as PropertyDiscovery's card.
-  const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
+  // A property can have multiple units at different prices -- only public units
+  // are visible or factored into marketplace pricing (units marked visibility:private are internal-only)
+  const publicUnits = property.units.filter((u) => !u.amenities?.includes('visibility:private'));
+  const visibleUnits = publicUnits.length > 0 ? publicUnits : property.units;
+  const cheapestUnit = [...visibleUnits].sort((a, b) => a.rentAmount - b.rentAmount)[0];
   const yearlyAmount = cheapestUnit?.rentAmount ?? 0;
   const freq = cheapestUnit?.listedPaymentFrequency ?? 'ANNUAL';
   const priceLabel = `₦${yearlyAmount.toLocaleString()}`;
@@ -423,18 +425,20 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
             <div>
               <h2 className="mb-4 text-lg font-bold text-gray-900">Amenities & Features</h2>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {(cheapestUnit?.amenities ?? []).map((label) => {
-                  const Icon = CheckCircle;
-                  return (
-                    <div key={label} className="flex items-center gap-2.5 text-sm text-gray-700">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                        <Icon className="h-4 w-4 text-blue-600" />
+                {(cheapestUnit?.amenities ?? [])
+                  .filter((a) => !a.startsWith('visibility:'))
+                  .map((label) => {
+                    const Icon = CheckCircle;
+                    return (
+                      <div key={label} className="flex items-center gap-2.5 text-sm text-gray-700">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                          <Icon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        {label}
                       </div>
-                      {label}
-                    </div>
-                  );
-                })}
-                {(cheapestUnit?.amenities ?? []).length === 0 && (
+                    );
+                  })}
+                {(cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:')).length === 0 && (
                   <p className="text-sm text-gray-400">No amenities listed yet.</p>
                 )}
               </div>

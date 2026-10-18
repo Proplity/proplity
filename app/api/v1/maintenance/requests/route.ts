@@ -8,8 +8,9 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { notifyUsers } from '@/lib/notifications';
+import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 import { safeUrlList } from '@/lib/api/urlField';
+import { appUrl } from '@/lib/appUrl';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -102,6 +103,22 @@ export const POST = withAuth(
           body: `A new maintenance request was submitted for ${request.unit?.property?.name ?? 'your property'}.`,
           link: `/dashboard/maintenance/${request.id}`,
         });
+
+        try {
+          const recipientUsers = await prisma.user.findMany({
+            where: { id: { in: recipients } },
+            select: { email: true, name: true },
+          });
+          for (const u of recipientUsers) {
+            await notifyByEmail(
+              u.email,
+              `New Maintenance Request: ${request.title}`,
+              `Hi ${u.name},\n\nA new maintenance request has been submitted by a tenant.\n\nProperty: ${request.unit?.property?.name ?? 'Your Property'}\nUnit: ${request.unit?.unitNumber ?? 'General'}\nTitle: ${request.title}\nDescription: ${request.description}\n\nReview and assign a vendor in your Proplity dashboard:\n${appUrl(`/dashboard/maintenance/${request.id}`, req)}`,
+            );
+          }
+        } catch (mailErr) {
+          console.error('Failed to email maintenance recipients', mailErr);
+        }
       }
 
       return NextResponse.json({ data: request }, { status: 201 });

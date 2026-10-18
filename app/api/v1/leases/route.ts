@@ -232,6 +232,28 @@ export const POST = withAuth(
         return { lease, invoice };
       });
 
+      // If the tenant already existed (not invited with token), notify them of their new lease
+      if (!invited && tenantId) {
+        try {
+          const [existingTenantUser, unitDetails] = await Promise.all([
+            prisma.user.findUnique({ where: { id: tenantId }, select: { email: true, name: true } }),
+            prisma.unit.findUnique({
+              where: { id: unitId },
+              include: { property: { select: { name: true } } },
+            }),
+          ]);
+          if (existingTenantUser && unitDetails) {
+            await sendEmail({
+              to: existingTenantUser.email,
+              subject: `New Lease Agreement Ready for Review: Unit ${unitDetails.unitNumber}`,
+              body: `Hi ${existingTenantUser.name},\n\nA new lease agreement has been prepared for you for unit ${unitDetails.unitNumber} at ${unitDetails.property.name}.\n\nPlease sign in to your Proplity dashboard to review and digitally sign your lease:\n${appUrl('/dashboard/leases', req)}`,
+            });
+          }
+        } catch (leaseEmailErr) {
+          console.error('Failed to email tenant about new lease', leaseEmailErr);
+        }
+      }
+
       return NextResponse.json(
         { data: { ...result.lease, initialInvoice: result.invoice, tenantInvited: invited } },
         { status: 201 },
