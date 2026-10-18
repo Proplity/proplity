@@ -8,6 +8,9 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { appUrl } from '@/lib/appUrl';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 export const GET = withAuth(async (req, { session }) => {
   try {
     const status = req.nextUrl.searchParams.get('status');
@@ -37,6 +40,7 @@ export const GET = withAuth(async (req, { session }) => {
     const where: Prisma.ApplicationWhereInput = filters.length ? { AND: filters } : {};
 
     const applications = await prisma.application.findMany({
+      take: LIST_LIMIT,
       where,
       include: {
         applicant: { select: { id: true, name: true, email: true, phoneNumber: true } },

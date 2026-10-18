@@ -7,7 +7,13 @@ import crypto from 'crypto';
 // email bodies (which include live verification/reset tokens) on a real
 // deployment.
 export function emailInboxEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_EMAIL_INBOX_ENABLED === 'true';
+  if (process.env.NEXT_PUBLIC_EMAIL_INBOX_ENABLED !== 'true') return false;
+  // The inbox shows live reset and verification links to anyone who can reach it, so in a
+  // production build it needs a second, deliberate switch (ISS-071).
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.EMAIL_INBOX_ALLOW_IN_PRODUCTION === 'true';
+  }
+  return true;
 }
 
 export type SentEmailRecord = {

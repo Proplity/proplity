@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/auth/session';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { validateCSRF } from '@/lib/auth/csrf';
 
 type Handler = (
   req: NextRequest,
@@ -14,6 +15,12 @@ type Handler = (
 export function withAuth(handler: Handler, opts?: { roles?: Role[] }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (req: NextRequest, routeCtx?: any) => {
+    // Cookie-authenticated writes must come from our own pages: a cross-site request
+    // has a foreign Origin (or none). SameSite=Lax is the first line; this is the second.
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !validateCSRF(req)) {
+      return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 });
+    }
+
     const jwtSession = await getServerSession();
     if (!jwtSession) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
 

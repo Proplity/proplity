@@ -11,6 +11,9 @@ import { safeUrlList } from '@/lib/api/urlField';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: RouteCtx) {
@@ -19,6 +22,7 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
     const status = req.nextUrl.searchParams.get('status');
 
     const units = await prisma.unit.findMany({
+      take: LIST_LIMIT,
       where: { propertyId: id, ...(status ? { status: status as UnitStatus } : {}) },
       orderBy: { unitNumber: 'asc' },
     });

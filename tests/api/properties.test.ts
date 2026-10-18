@@ -1098,3 +1098,57 @@ describe('properties: staged edits cannot bypass moderation (ISS-059, ISS-060, I
     expect(row?.moderationStatus).toBe('APPROVED');
   });
 });
+
+describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('refuses a cross-origin or origin-less write on an authenticated route', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const p = await createProperty({ managerId: m.id });
+    const foreign = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      headers: { Origin: 'https://evil.example' },
+      body: { description: 'x' },
+    });
+    expect(foreign.status).toBe(403);
+    const ok = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'x' },
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('will not merge away a listing that others were merged into, or one with active leases', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const a = await createProperty({});
+    const b = await createProperty({});
+    const c = await createProperty({});
+    await testPrisma.property.update({ where: { id: a.id }, data: { mergedIntoId: b.id } });
+    const chain = await apiFetch(`/api/v1/properties/${b.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: c.id },
+    });
+    expect(chain.status).toBe(400);
+
+    const tenant = await createUser(Role.TENANT);
+    const d = await createProperty({});
+    const unit = await createUnit(d.id);
+    const lease = await createLease(unit.id, tenant.id);
+    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'ACTIVE' } });
+    const e = await createProperty({});
+    const live = await apiFetch(`/api/v1/properties/${d.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: e.id },
+    });
+    expect(live.status).toBe(400);
+    expect(live.body.error).toContain('active leases');
+  });
+});
