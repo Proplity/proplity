@@ -4,8 +4,14 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
-  const { token, password } = await req.json();
-  if (!token) {
+  let body: { token?: unknown; password?: unknown } = {};
+  try {
+    body = await req.json();
+  } catch {
+    // falls through to the missing-token error
+  }
+  const { token, password } = body;
+  if (!token || typeof token !== 'string') {
     return NextResponse.json({ error: 'Verification token is required' }, { status: 400 });
   }
   if (password !== undefined && (typeof password !== 'string' || password.length < 6)) {
@@ -24,13 +30,16 @@ export async function POST(req: NextRequest) {
   // compatible with plain register-style verification.
   const passwordHash = password ? await bcrypt.hash(password, 12) : undefined;
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
+  // Only a person still waiting to verify changes state. A leftover link (an earlier
+  // email from before a resend) must never re-activate a suspended account or reset the
+  // password of one that is already active. Every token for the user is spent at once.
+  await prisma.$transaction(async (tx) => {
+    await tx.user.updateMany({
+      where: { id: record.userId, status: 'PENDING_VERIFICATION' },
       data: { status: 'ACTIVE', ...(passwordHash ? { passwordHash } : {}) },
-    }),
-    prisma.verificationToken.delete({ where: { id: record.id } }),
-  ]);
+    });
+    await tx.verificationToken.deleteMany({ where: { userId: record.userId } });
+  });
 
   return NextResponse.json({ success: true, message: 'Email verified successfully' });
 }
