@@ -148,13 +148,16 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
                 <Settings className="h-5 w-5 text-gray-600" />
               </Link>
-              <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
+              <button className="flex items-center gap-2.5 rounded-lg p-2 text-left hover:bg-gray-100">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
                 >
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-sm font-medium">{auth.user?.name}</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-medium leading-tight text-gray-900">{auth.user?.name}</span>
+                  <span className="text-xs text-gray-500 capitalize leading-tight">{role || 'User'}</span>
+                </div>
               </button>
               <button
                 onClick={() => setShowLogout(true)}
@@ -190,9 +193,14 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                     aria-hidden="true"
                   />
                   <div className="absolute top-full right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
-                    <p className="truncate px-4 py-1.5 text-sm font-medium text-gray-900">
-                      {auth.user?.name}
-                    </p>
+                    <div className="px-4 py-1.5 border-b border-gray-100">
+                      <p className="truncate text-sm font-medium text-gray-900 leading-tight">
+                        {auth.user?.name}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 capitalize leading-tight">
+                        {role || 'User'}
+                      </p>
+                    </div>
                     <Link
                       href="/dashboard/settings"
                       onClick={() => setAvatarMenuOpen(false)}

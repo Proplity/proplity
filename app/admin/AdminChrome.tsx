@@ -82,11 +82,14 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
             <Link href="/admin/settings" className="block rounded-lg p-2 hover:bg-gray-100">
               <Settings className="h-5 w-5 text-gray-600" />
             </Link>
-            <button className="hidden items-center gap-2 rounded-lg p-2 hover:bg-gray-100 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
+            <button className="hidden items-center gap-2.5 rounded-lg p-2 text-left hover:bg-gray-100 sm:flex">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-600">
                 <User className="h-4 w-4 text-white" />
               </div>
-              <span className="hidden text-sm font-medium sm:inline">{auth.user?.name}</span>
+              <div className="hidden flex-col text-left sm:flex">
+                <span className="text-sm font-medium leading-tight text-gray-900">{auth.user?.name}</span>
+                <span className="text-xs text-gray-500 capitalize leading-tight">Administrator</span>
+              </div>
             </button>
             <button
               onClick={() => setShowLogout(true)}
