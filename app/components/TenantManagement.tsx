@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLeases } from '@/hooks/useLeases';
 import { useInvoices } from '@/hooks/useInvoices';
+import { toast } from 'sonner';
 import type { Invoice } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
 
@@ -229,7 +230,7 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                         onClick={(e) => {
                           if (!lease.tenant?.phoneNumber) {
                             e.preventDefault();
-                            alert('No phone number on file for this tenant.');
+                            toast.error('No phone number on file for this tenant.');
                           }
                         }}
                         className="rounded p-1 hover:bg-gray-100"

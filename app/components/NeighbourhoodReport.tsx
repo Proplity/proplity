@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useActiveLease } from '@/hooks/useLeases';
 import { useProperty } from '@/hooks/useProperties';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { toast } from 'sonner';
 
 interface Section {
   rating?: number;
@@ -103,21 +105,20 @@ export function NeighbourhoodReport() {
   const report = property?.neighbourhoodReports[0] ?? null;
 
   const handleDownloadPDF = () => {
-    if (!isPremiumUser) {
+    if (subscriptionsEnabled() && !isPremiumUser) {
       setShowPaymentModal(true);
       return;
     }
-    alert(
-      'Downloading Neighbourhood Report as PDF...\n\nThis feature would generate a comprehensive PDF report with all the neighbourhood insights.',
-    );
+    toast.info('PDF Export Coming Soon', {
+      description: 'Comprehensive PDF downloads for neighbourhood reports will be available in an upcoming release.',
+    });
   };
 
   const handleUpgradeToPremium = () => {
-    alert(
-      'Redirecting to payment gateway...\n\nAfter successful payment, you will have unlimited access to neighbourhood reports and other premium features.',
-    );
+    toast.info('Feature Coming Soon', {
+      description: 'Online premium subscription billing will be available in an upcoming release.',
+    });
     setShowPaymentModal(false);
-    setIsPremiumUser(true);
   };
 
   if (leaseLoading || propertyLoading) {
@@ -164,11 +165,8 @@ export function NeighbourhoodReport() {
         </button>
       </div>
 
-      {/* Premium Service Banner -- Subscription model exists in the schema
-          but isn't wired to any real gating (CLAUDE.md: "not in the PRD,
-          confirm with product before building"), so this stays local demo
-          state exactly as before, not backed by a real entitlement check. */}
-      {!isPremiumUser && (
+      {/* Premium Service Banner */}
+      {subscriptionsEnabled() && !isPremiumUser && (
         <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
@@ -233,7 +231,7 @@ export function NeighbourhoodReport() {
                   </p>
                 </div>
               </div>
-              {isPremiumUser && (
+              {subscriptionsEnabled() && isPremiumUser && (
                 <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
                   Premium Report
                 </span>

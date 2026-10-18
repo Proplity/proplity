@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Logo } from './Logo';
 import { MarketingNav } from './MarketingNav';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 import {
   Mail,
   Phone,
@@ -427,7 +428,9 @@ export function ContactPage() {
           {[
             {
               heading: 'Product',
-              links: ['Features', 'Pricing', 'Blog', 'Integrations'],
+              links: subscriptionsEnabled()
+                ? ['Features', 'Pricing', 'Blog', 'Integrations']
+                : ['Features', 'Blog', 'Integrations'],
             },
             { heading: 'Company', links: ['About Us', 'Careers', 'Contact'] },
             { heading: 'Legal', links: ['Privacy Policy', 'Terms of Service'] },

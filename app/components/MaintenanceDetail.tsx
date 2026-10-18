@@ -22,6 +22,7 @@ import { useVendors } from '@/hooks/useVendors';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useAuth } from '@/context/AuthContext';
 import { usePayInvoice } from '@/hooks/useInvoices';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface MaintenanceDetailProps {
   requestId: string;
@@ -93,6 +94,7 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const [finalCost, setFinalCost] = useState('');
   const [completionProofUrl, setCompletionProofUrl] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   if (loading) {
     return <div className="p-6 text-gray-500">Loading request…</div>;
@@ -155,11 +157,15 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
     }
   };
 
-  const handleCancel = async () => {
-    if (!confirm('Cancel this maintenance request?')) return;
+  const handleCancel = () => {
+    setShowCancelConfirm(true);
+  };
+
+  const handleConfirmCancel = async () => {
     setActionError(null);
     try {
       await updateRequest({ status: 'CANCELLED' });
+      setShowCancelConfirm(false);
       refetch();
     } catch {
       setActionError('Failed to cancel request');
@@ -632,6 +638,18 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Cancel Maintenance Request?"
+        description="Are you sure you want to cancel this maintenance request? This action cannot be undone."
+        confirmLabel="Cancel Request"
+        cancelLabel="Keep Request"
+        variant="danger"
+        isLoading={submitting}
+        onCancel={() => setShowCancelConfirm(false)}
+        onConfirm={handleConfirmCancel}
+      />
     </div>
   );
 }

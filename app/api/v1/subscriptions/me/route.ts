@@ -2,9 +2,21 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 export const GET = withAuth(async (_req, { session }) => {
   try {
+    if (!subscriptionsEnabled()) {
+      return NextResponse.json({
+        data: {
+          userId: session.sub,
+          tier: 'FREE',
+          status: 'ACTIVE',
+          currentPeriodEnd: null,
+        },
+      });
+    }
+
     let subscription = await prisma.subscription.findUnique({ where: { userId: session.sub } });
     // A plan set to end with its paid period reverts to FREE once that period is over.
     if (

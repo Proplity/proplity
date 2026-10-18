@@ -23,6 +23,7 @@ import {
   useSetDefaultBankAccount,
   useDeleteBankAccount,
 } from '@/hooks/useBankAccounts';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export type SettingsTab = 'general' | 'completion' | 'banking';
 
@@ -430,7 +431,8 @@ function BankAccountsCard() {
     error: createError,
   } = useCreateBankAccount();
   const { submit: setDefault } = useSetDefaultBankAccount();
-  const { submit: removeAccount } = useDeleteBankAccount();
+  const { submit: removeAccount, submitting: removing } = useDeleteBankAccount();
+  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     accountNumber: '',
@@ -456,10 +458,19 @@ function BankAccountsCard() {
     refetch();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Remove this bank account?')) return;
-    await removeAccount(id);
-    refetch();
+  const handleDelete = (id: string) => {
+    setDeleteAccountId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteAccountId) return;
+    try {
+      await removeAccount(deleteAccountId);
+      setDeleteAccountId(null);
+      refetch();
+    } catch {
+      // error surfaced below
+    }
   };
 
   return (
@@ -556,6 +567,18 @@ function BankAccountsCard() {
           <p className="text-sm text-gray-400">No bank accounts added yet.</p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteAccountId)}
+        title="Remove Bank Account?"
+        description="Are you sure you want to remove this bank account? Future payouts will need another account designated."
+        confirmLabel="Remove Account"
+        cancelLabel="Keep Account"
+        variant="danger"
+        isLoading={removing}
+        onCancel={() => setDeleteAccountId(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

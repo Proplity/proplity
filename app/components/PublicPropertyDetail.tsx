@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useProperty, useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
@@ -255,12 +256,14 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
               <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
                 About Us
               </Link>
-              <Link
-                href="/pricing"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Pricing
-              </Link>
+              {subscriptionsEnabled() && (
+                <Link
+                  href="/pricing"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Pricing
+                </Link>
+              )}
             </div>
             <Link
               href={dashboardHref}
@@ -546,7 +549,14 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
               {/* Neighbourhood report */}
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <button
-                  onClick={() => setShowNeighModal(true)}
+                  onClick={() => {
+                    if (subscriptionsEnabled()) {
+                      setShowNeighModal(true);
+                    } else {
+                      const el = document.getElementById('neighbourhood');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="group flex w-full items-center justify-between rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 transition-colors hover:bg-violet-100"
                 >
                   <div className="flex items-center gap-2">
@@ -639,7 +649,9 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
           {[
             {
               heading: 'Product',
-              links: ['Features', 'Pricing', 'Blog', 'Integrations'],
+              links: subscriptionsEnabled()
+                ? ['Features', 'Pricing', 'Blog', 'Integrations']
+                : ['Features', 'Blog', 'Integrations'],
             },
             { heading: 'Company', links: ['About Us', 'Careers', 'Contact'] },
             { heading: 'Legal', links: ['Privacy Policy', 'Terms of Service'] },
