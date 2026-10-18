@@ -101,6 +101,8 @@ export async function createProperty(
     managerId: string | null;
     landlordId: string | null;
     isPublished: boolean;
+    moderationStatus: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
+    metadata: any;
   }> = {},
 ) {
   return testPrisma.property.create({
@@ -112,6 +114,9 @@ export async function createProperty(
       managerId: overrides.managerId ?? null,
       landlordId: overrides.landlordId ?? null,
       isPublished: overrides.isPublished ?? false,
+      moderationStatus:
+        overrides.moderationStatus ?? (overrides.isPublished ? 'APPROVED' : 'PENDING_REVIEW'),
+      ...(overrides.metadata !== undefined ? { metadata: overrides.metadata } : {}),
     },
   });
 }

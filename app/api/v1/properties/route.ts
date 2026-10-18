@@ -10,6 +10,8 @@ import { validateBody } from '@/lib/api/validate';
 import { serializeUnit } from '@/lib/api/propertyAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
+import { sendEmail } from '@/lib/email';
+import { appUrl } from '@/lib/appUrl';
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,11 +40,11 @@ export async function GET(req: NextRequest) {
           where,
           skip,
           take,
-          // manager included so the admin moderation queue can show who
-          // submitted a listing without a second round-trip per property.
+          // manager and landlord included so admin moderation queue and tables show complete ownership info
           include: {
             units: true,
             manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
+            landlord: { select: { id: true, name: true, phoneNumber: true, email: true } },
             mergedInto: { select: { id: true, name: true, address: true, city: true } },
           },
           orderBy: { createdAt: 'desc' },
@@ -156,6 +158,31 @@ export const POST = withAuth(
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },
       });
+
+      // Notify all Admins by email of the new listing awaiting review
+      try {
+        const admins = await prisma.user.findMany({
+          where: { role: 'ADMIN' },
+          select: { email: true, name: true },
+        });
+        const submitter = await prisma.user.findUnique({
+          where: { id: session.sub },
+          select: { name: true, email: true, role: true },
+        });
+        const adminEmails = [
+          ...new Set([...admins.map((a) => a.email), 'admin@proplity.com']),
+        ];
+        for (const adminEmail of adminEmails) {
+          await sendEmail({
+            to: adminEmail,
+            subject: `New Property Submitted for Moderation: ${property.name}`,
+            body: `Hi Admin,\n\nA new property listing "${property.name}" (${property.address}, ${property.city}) has been submitted by ${submitter?.name ?? 'User'} (${submitter?.email ?? ''}, ${submitter?.role ?? ''}).\n\nIt is now pending review in the Moderation Queue.\n\nReview it here: ${appUrl(`/admin/properties`, req)}`,
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to dispatch admin notification email for new property', emailErr);
+      }
+
       return NextResponse.json(
         { data: property, possibleDuplicates: duplicates.length },
         { status: 201 },

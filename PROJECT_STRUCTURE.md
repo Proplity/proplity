@@ -68,7 +68,7 @@ proplity/
 │   │
 │   ├── 📁 admin/                            # ADMIN-only shell
 │   │   ├── 📄 layout.tsx, page.tsx, AdminChrome.tsx
-│   │   ├── 📁 users/, properties/ (moderation queue), reports/, security/ (audit log), settings/ (platform settings), notifications/
+│   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
 │   ├── 📁 api/v1/                           # REST API — 81 route.ts files (grouped below)

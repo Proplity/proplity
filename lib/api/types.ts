@@ -21,6 +21,47 @@ export type Unit = {
   amenities: string[];
 };
 
+export type PropertyPendingChanges = {
+  status: 'DRAFT' | 'PENDING_REVIEW';
+  submittedAt?: string;
+  updatedAt?: string;
+  property?: {
+    name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    type?: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
+    description?: string;
+    imageUrl?: string;
+    photoUrls?: string[];
+  };
+  units?: {
+    [unitId: string]: Partial<{
+      unitNumber: string;
+      bedrooms: number;
+      bathrooms: number;
+      rentAmount: number;
+      serviceCharge: number;
+      listedPaymentFrequency: string;
+      amenities: string[];
+    }>;
+  };
+  newUnits?: Array<{
+    unitNumber: string;
+    bedrooms: number;
+    bathrooms: number;
+    rentAmount: number;
+    serviceCharge?: number;
+    listedPaymentFrequency?: string;
+    amenities?: string[];
+  }>;
+};
+
+export type PropertyMetadata = {
+  pendingChanges?: PropertyPendingChanges;
+  [key: string]: unknown;
+};
+
 export type Property = {
   id: string;
   name: string;
@@ -36,6 +77,7 @@ export type Property = {
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
+  landlord?: { id: string; name: string; phoneNumber: string | null; email: string; role?: string } | null;
   isPublished: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
@@ -44,6 +86,7 @@ export type Property = {
   roadConditionScore: number | null;
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   moderationNotes?: string | null;
+  metadata?: PropertyMetadata | null;
   listingHash?: string | null;
   mergedIntoId?: string | null;
   mergedInto?: { id: string; name: string; address?: string; city?: string } | null;
@@ -51,6 +94,9 @@ export type Property = {
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
   createdAt: string;
+  updatedAt?: string;
+  approvedAt?: string | null;
+  isEdited?: boolean;
   units: Unit[];
 };
 
@@ -105,10 +151,25 @@ export type UpdatePropertyInput = {
   exteriorPhotoUrl?: string | null;
   photoUrls?: string[];
   isPublished?: boolean;
+  moderationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
+  moderationNotes?: string;
+  metadata?: PropertyMetadata | null;
+  saveAsDraft?: boolean;
+  submitForReview?: boolean;
+  cancelPendingEdits?: boolean;
+  deletePendingEdits?: boolean;
 };
 
 export type MergePropertyInput = {
   targetPropertyId: string;
+};
+
+export type UpdateUnitInput = Partial<CreateUnitInput> & {
+  status?: string;
+  action?: 'APPROVE' | 'REJECT';
+  saveAsDraft?: boolean;
+  cancelPendingEdits?: boolean;
+  deletePendingEdits?: boolean;
 };
 
 export type CreateUnitInput = {

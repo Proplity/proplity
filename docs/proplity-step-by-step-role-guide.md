@@ -1568,14 +1568,17 @@ Platform-wide statistics and health — the admin sees everything from one scree
 ## Step 6.2 — User Management
 
 **What this is:**
-A searchable table of every registered user on the platform. The admin can manage any account.
+A searchable, filterable view of every registered user on the platform. The admin can manage any account.
 
 **What the admin can do:**
 
-- Search by name, email or phone, and filter by role and status (the list is paged, 20 at a time)
-- Suspend an account (the person is signed out straight away and emailed your reason) or reactivate it
-- Change the role of a person who has no properties, tenancy or jobs yet
-- Every one of these asks for a reason, which is saved in the audit log. You cannot change your own account or another admin's
+- **Toggle between Cards & Table View:** Switch seamlessly between modern user cards and traditional tabular format on desktop and mobile.
+- **Sticky Compact Toolbar:** Keep search, role filters, status dropdown, and view switcher sticky at the top on scroll without taking too much screen space.
+- **View Landlord/Manager Properties Count:** Prominently highlights the number of properties owned or managed by the user directly on their card or table row.
+- Search by name, email or phone, and filter by role and status (the list is paged, 20 at a time).
+- Suspend an account (the person is signed out straight away and emailed your reason) or reactivate it.
+- Change the role of a person who has no properties, tenancy or jobs yet.
+- Every one of these asks for a reason, which is saved in the audit log. You cannot change your own account or another admin's.
 
 **Screenshot:** `docs/screenshots/admin_02_users.png`
 
@@ -1592,11 +1595,18 @@ Suspending (or changing a role) asks for a reason first. It is saved in the audi
 **What this is:**
 Every new property listing from a landlord goes through admin review before publishing publicly.
 
-**Admin action:**
+**Admin features & actions:**
 
-- Review listing details and photos
-- **Approve** → goes live on the platform
-- **Reject** → listing hidden, landlord notified with a reason
+- **Cards & Table Views:** Switch between responsive Property Cards and traditional Table view on desktop or mobile.
+- **Sticky Compact Toolbar:** Filter by moderation status (All, Pending Review, Approved, Rejected, Flagged, Merged), search listings, and switch views with a sticky bar that remains visible on scroll.
+- **Slide-Over Review Drawer:** Clicking **Review** or **View** opens a responsive popup drawer (right-side slide-over on desktop, bottom sheet on mobile, click-outside to dismiss) providing:
+  - Property identity, status badges, and approved/edited dates.
+  - Complete **Landlord and Manager contact information** (name, email, phone).
+  - Public vs. Private units list breakdown.
+  - Moderation notes history and quick Approve / Reject / Publish buttons.
+  - **FULL VIEW** button taking the administrator to the complete `/admin/properties/[id]` inspection page.
+- **Date Approved & Edited Badges:** Approved date is tracked and displayed. If a landlord edits a property, it automatically flags the listing with an **Edited** badge and resubmits for admin re-approval.
+- **Unit-Level Selective Publishing:** Supports landlords publishing e.g. 3 of 4 units publicly while keeping 1 unit private (internal to managers and selected tenants only).
 
 **Screenshot:** `docs/screenshots/admin_06_properties.png`
 

@@ -169,10 +169,23 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] Admins live in `/admin` — opening a regular dashboard address
       (e.g. `/dashboard/discover`) or the homepage's "Browse All Properties"
       should land on `/admin`, never an error page
-- [ ] Manage users — view/manage every account on the platform, across all
-      roles
-- [ ] Properties — the moderation queue: filter chips, search, open a
-      pending listing, approve/reject
+- [ ] Manage users — view/manage every account on the platform across all
+      roles:
+      - Toggle between Cards view and Table view on desktop and mobile
+      - Sticky compact toolbar remains visible on vertical scroll
+      - Landlords and managers prominently display their active Properties Count
+- [ ] Properties — the moderation queue:
+      - Toggle between responsive Cards view and Table view on desktop and mobile
+      - Sticky compact toolbar with status tabs (All, Pending Review, Approved, Rejected, Flagged, Merged)
+      - Click "Review" or "View" to open slide-over popup drawer (right-side desktop, bottom sheet mobile, click-outside backdrop)
+      - Inspect Landlord & Manager contact information in drawer and on full property page
+      - Check Approved Date and [EDITED] badges on resubmitted listings
+      - Quick Approve / Reject / Publish actions in drawer or full page
+      - "FULL VIEW" link navigates directly to `/admin/properties/[id]`
+- [ ] Landlord Property Controls:
+      - Request Admin Approval without publishing immediately
+      - Edit property details (auto-resubmits to `PENDING_REVIEW` with `[EDITED]` status and notifies admins)
+      - Selective unit visibility: toggle individual units between Public (Marketplace) and Private (Selected Few)
 - [ ] Security — the audit log page loads (a mostly-empty list is expected)
 - [ ] Admin Controls tiles on System Overview: User Management, Security and
       Settings navigate; **Database** shows the "no in-app database console"
@@ -183,9 +196,7 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] Platform Settings — toggle platform-wide behavior (currently: whether
       a vendor invoice auto-completes its maintenance job)
 - [ ] Open the admin-specific notifications view (bell + full page) —
-      **note**: nothing currently triggers a notification _to_ an admin, so
-      there's no in-app action that will make one appear yet; this checks
-      that the screen itself opens correctly, not a live notification
+      property creations and landlord edits trigger email/system notifications to admins
 - [ ] Change password from inside the admin panel (Settings)
 
 ## Cross-cutting things worth testing regardless of role

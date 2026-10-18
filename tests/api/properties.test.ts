@@ -763,3 +763,157 @@ describe('properties: merge & unmerge duplicate listings (ISS-025)', () => {
     expect(postUndoRes.body.data.mergedIntoId).toBeNull();
   });
 });
+
+describe('properties: pending changes metadata, draft staging, cancel approval, and delete lifecycle', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('allows landlord to save edits as draft without unpublishing or alerting admins', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Original Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+    });
+
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        name: 'Proposed New Name',
+        description: 'Proposed New Description',
+        saveAsDraft: true,
+      },
+    });
+
+    expect(res.status).toBe(200);
+    // Live property fields remain unchanged
+    expect(res.body.data.name).toBe('Original Live Prop');
+    expect(res.body.data.isPublished).toBe(true);
+    expect(res.body.data.moderationStatus).toBe('APPROVED');
+    // Staged in metadata.pendingChanges
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
+    expect(res.body.data.metadata?.pendingChanges?.property?.name).toBe('Proposed New Name');
+    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe('Proposed New Description');
+  });
+
+  it('promotes draft to PENDING_REVIEW when submitted for review', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Draft Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+      metadata: {
+        pendingChanges: {
+          status: 'DRAFT',
+          property: { name: 'Critical New Name' },
+        },
+      },
+    });
+
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { submitForReview: true },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('PENDING_REVIEW');
+    // Critical field modification unpublishes listing until approved
+    expect(res.body.data.isPublished).toBe(false);
+    expect(res.body.data.moderationStatus).toBe('PENDING_REVIEW');
+    expect(res.body.data.moderationNotes).toContain('[EDITED:CRITICAL');
+  });
+
+  it('blocks deleting pending edits while under review (must cancel first)', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Under Review Prop',
+      landlordId: landlord.id,
+      isPublished: false,
+      moderationStatus: 'PENDING_REVIEW',
+      metadata: {
+        pendingChanges: {
+          status: 'PENDING_REVIEW',
+          property: { name: 'Under Review Edits' },
+        },
+      },
+    });
+
+    // Attempting delete directly while PENDING_REVIEW must return 400
+    const delRes = await apiFetch<{ error: string; code: string }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { deletePendingEdits: true },
+    });
+
+    expect(delRes.status).toBe(400);
+    expect(delRes.body.code).toBe('UNDER_REVIEW_CANNOT_DELETE');
+    expect(delRes.body.error).toContain('cancel the approval request first before deleting');
+  });
+
+  it('allows landlord to cancel approval request, safely returning edits to DRAFT', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Cancel Review Prop',
+      landlordId: landlord.id,
+      isPublished: false,
+      moderationStatus: 'PENDING_REVIEW',
+      metadata: {
+        pendingChanges: {
+          status: 'PENDING_REVIEW',
+          property: { name: 'Proposed Edits' },
+        },
+      },
+    });
+
+    const cancelRes = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
+    expect(cancelRes.body.data.isPublished).toBe(true);
+    expect(cancelRes.body.data.moderationStatus).toBe('APPROVED');
+  });
+
+  it('allows landlord to delete pending edits once in DRAFT', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Draft Deletable Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+      metadata: {
+        pendingChanges: {
+          status: 'DRAFT',
+          property: { name: 'Unwanted Draft' },
+        },
+      },
+    });
+
+    const delRes = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { deletePendingEdits: true },
+    });
+
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.data.metadata?.pendingChanges).toBeUndefined();
+
+    const dbProp = await testPrisma.property.findUnique({ where: { id: prop.id } });
+    const dbMeta = (dbProp?.metadata as any) || {};
+    expect(dbMeta.pendingChanges).toBeUndefined();
+  });
+});
+

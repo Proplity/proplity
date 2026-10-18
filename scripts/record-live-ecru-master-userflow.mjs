@@ -8,11 +8,11 @@ const __dirname = dirname(__filename);
 
 const BASE = 'https://proplity-ecru.vercel.app';
 const PW = 'Password123!';
-const VIDEO_DIR = resolve(__dirname, '../docs/videos');
-const PUBLIC_VIDEO_DIR = resolve(__dirname, '../public/videos');
+const VIDEO_DIR = resolve(__dirname, '../out/video');
+const OUT_VIDEO_DIR = resolve(__dirname, '../out/video');
 
 mkdirSync(VIDEO_DIR, { recursive: true });
-mkdirSync(PUBLIC_VIDEO_DIR, { recursive: true });
+mkdirSync(OUT_VIDEO_DIR, { recursive: true });
 
 // Injected virtual cursor and premium animated HUD pill banner
 const CURSOR_SCRIPT = `
@@ -362,10 +362,10 @@ async function main() {
     await activateAccountWithToken(token2);
 
     // =========================================================================
-    // ACT 3: LANDLORD LOGIN, DASHBOARD & PROFILE TABS
+    // ACT 3: LANDLORD LOGIN, SETTINGS & PROPERTY CREATION WIZARD
     // =========================================================================
-    console.log('--- Act 3: Landlord Login & Settings ---');
-    recordChapter('🤝', 'Act 3: Landlord Dashboard, Profile Tabs & Delegation', '#10b981');
+    console.log('--- Act 3: Landlord Login, Settings & Property Creation ---');
+    recordChapter('🏰', 'Act 3: Landlord Dashboard & Listing "The Grand Azure Residences"', '#10b981');
     await ensureLoginPage();
     await setHud('🔑 Signing in as Landlord Victoria Sterling', '#10b981');
     await page.getByPlaceholder('Enter your email').fill(landlordEmail1);
@@ -389,6 +389,87 @@ async function main() {
       await smoothClick(profileTab);
       await page.waitForTimeout(1000);
     }
+
+    // Landlord Creates Property "The Grand Azure Residences"
+    await setHud('🏗 Step 1/4: Landlord Listing New Property (/properties/new)', '#10b981');
+    await page.goto(`${BASE}/dashboard/properties/new`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1200);
+
+    // Select Property Type
+    const aptBtn = page.locator('button:has-text("Apartment")').first();
+    if (await aptBtn.isVisible()) await smoothClick(aptBtn);
+
+    const propAddr = page.locator('input[placeholder*="Block 15"], input[placeholder*="Address"]').first();
+    if (await propAddr.isVisible()) {
+      await humanType(propAddr, 'Plot 14B Admiralty Way, Lekki Phase 1');
+    }
+
+    const propCity = page.locator('input[placeholder*="Lagos"], input[placeholder*="City"]').first();
+    if (await propCity.isVisible()) {
+      await humanType(propCity, 'Lagos');
+    }
+
+    const propState = page.locator('select').first();
+    if (await propState.isVisible()) {
+      await propState.selectOption('Lagos');
+    }
+
+    await smoothScroll(300);
+    const nextStep1 = page.locator('button:has-text("Next Step")');
+    if (await nextStep1.isVisible()) {
+      await smoothClick(nextStep1);
+      await page.waitForTimeout(1200);
+    }
+
+    // Step 2: Multi-Unit setup & Amenities
+    await setHud('🏢 Step 2/4: Unit Breakdown, Rent Pricing & Amenities', '#10b981');
+    const unitInput = page.locator('input[placeholder*="3B"]').first();
+    if (await unitInput.isVisible()) await humanType(unitInput, 'Suite 4A');
+
+    const rentInput = page.locator('input[placeholder*="850000"]').first();
+    if (await rentInput.isVisible()) await humanType(rentInput, '4500000');
+
+    await smoothScroll(350);
+    const pwrBtn = page.locator('button:has-text("24/7 Power Supply")');
+    if (await pwrBtn.isVisible()) await smoothClick(pwrBtn);
+    const secBtn = page.locator('button:has-text("Security/CCTV")');
+    if (await secBtn.isVisible()) await smoothClick(secBtn);
+    const gymBtn = page.locator('button:has-text("Gym")');
+    if (await gymBtn.isVisible()) await smoothClick(gymBtn);
+
+    await smoothScroll(400);
+    const nextStep2 = page.locator('button:has-text("Next Step")');
+    if (await nextStep2.isVisible()) {
+      await smoothClick(nextStep2);
+      await page.waitForTimeout(1200);
+    }
+
+    // Step 3: Media Upload Guidelines
+    await setHud('📸 Step 3/4: Media Guidelines & Photo Quality Verification', '#10b981');
+    await smoothScroll(400);
+    await page.waitForTimeout(1000);
+    const nextStep3 = page.locator('button:has-text("Next Step")');
+    if (await nextStep3.isVisible()) {
+      await smoothClick(nextStep3);
+      await page.waitForTimeout(1200);
+    }
+
+    // Step 4: Review & Submit
+    await setHud('🚀 Step 4/4: Listing Audit & Submitting for Verification', '#10b981');
+    await smoothScroll(400);
+    await page.waitForTimeout(1000);
+    const submitBtn = page.locator('button:has-text("Submit for Verification"), button:has-text("Submit Property")').first();
+    if (await submitBtn.isVisible()) {
+      await smoothClick(submitBtn);
+      await page.waitForTimeout(2500);
+    }
+
+    // Landlord inspects portfolio list (Cards / Table view)
+    await setHud('📂 Landlord Portfolio: Modern Cards & Sticky Filter View', '#10b981');
+    await page.goto(`${BASE}/dashboard/properties`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1500);
 
     await logout();
 
@@ -429,7 +510,11 @@ async function main() {
     const mToken = await fetchVerificationToken(managerEmail);
     await activateAccountWithToken(mToken);
 
-    // Manager Login
+    // =========================================================================
+    // ACT 5: MANAGER LOGIN & PORTFOLIO EXPLORATION
+    // =========================================================================
+    console.log('--- Act 5: Manager Login & Portfolio Exploration ---');
+    recordChapter('👔', 'Act 5: Property Manager Portal & Operational Overview', '#3b82f6');
     await ensureLoginPage();
     await setHud('🔑 Signing in as Property Manager Marcus Vance', '#3b82f6');
     await page.getByPlaceholder('Enter your email').fill(managerEmail);
@@ -437,84 +522,12 @@ async function main() {
     await page.getByRole('button', { name: 'Sign In' }).click();
     await page.waitForTimeout(2000);
 
-    // =========================================================================
-    // ACT 5: PROPERTY CREATION WIZARD (4-STEP PIPELINE)
-    // =========================================================================
-    console.log('--- Act 5: Property Creation Wizard ---');
-    recordChapter('🏗', 'Act 5: Listing New Property "The Grand Azure Residences"', '#f59e0b');
-    await setHud('🏗 Step 1/4: Basic Property Specs & Amenities (/properties/new)', '#f59e0b');
-    await page.goto(`${BASE}/dashboard/properties/new`);
+    await setHud('📊 Property Manager Dashboard & Portfolio Controls', '#3b82f6');
+    await page.goto(`${BASE}/dashboard`);
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1200);
-
-    // Select Property Type
-    const aptBtn = page.locator('button:has-text("Apartment")').first();
-    if (await aptBtn.isVisible()) await smoothClick(aptBtn);
-
-    const propAddr = page.locator('input[placeholder*="Block 15"], input[placeholder*="Address"]').first();
-    if (await propAddr.isVisible()) {
-      await humanType(propAddr, 'Plot 14B Admiralty Way, Lekki Phase 1');
-    }
-
-    const propCity = page.locator('input[placeholder*="Lagos"], input[placeholder*="City"]').first();
-    if (await propCity.isVisible()) {
-      await humanType(propCity, 'Lagos');
-    }
-
-    const propState = page.locator('select').first();
-    if (await propState.isVisible()) {
-      await propState.selectOption('Lagos');
-    }
-
+    await page.waitForTimeout(1500);
     await smoothScroll(300);
-    const nextStep1 = page.locator('button:has-text("Next Step")');
-    if (await nextStep1.isVisible()) {
-      await smoothClick(nextStep1);
-      await page.waitForTimeout(1200);
-    }
-
-    // Step 2: Multi-Unit setup & Amenities
-    await setHud('🏢 Step 2/4: Unit Breakdown, Rent Pricing & Amenities', '#f59e0b');
-    const unitInput = page.locator('input[placeholder*="3B"]').first();
-    if (await unitInput.isVisible()) await humanType(unitInput, 'Suite 4A');
-
-    const rentInput = page.locator('input[placeholder*="850000"]').first();
-    if (await rentInput.isVisible()) await humanType(rentInput, '4500000');
-
-    await smoothScroll(350);
-    const pwrBtn = page.locator('button:has-text("24/7 Power Supply")');
-    if (await pwrBtn.isVisible()) await smoothClick(pwrBtn);
-    const secBtn = page.locator('button:has-text("Security/CCTV")');
-    if (await secBtn.isVisible()) await smoothClick(secBtn);
-    const gymBtn = page.locator('button:has-text("Gym")');
-    if (await gymBtn.isVisible()) await smoothClick(gymBtn);
-
-    await smoothScroll(400);
-    const nextStep2 = page.locator('button:has-text("Next Step")');
-    if (await nextStep2.isVisible()) {
-      await smoothClick(nextStep2);
-      await page.waitForTimeout(1200);
-    }
-
-    // Step 3: Media Upload Guidelines
-    await setHud('📸 Step 3/4: Media Guidelines & Photo Quality Verification', '#f59e0b');
-    await smoothScroll(400);
     await page.waitForTimeout(1000);
-    const nextStep3 = page.locator('button:has-text("Next Step")');
-    if (await nextStep3.isVisible()) {
-      await smoothClick(nextStep3);
-      await page.waitForTimeout(1200);
-    }
-
-    // Step 4: Review & Submit
-    await setHud('🚀 Step 4/4: Listing Audit & Submitting for Verification', '#f59e0b');
-    await smoothScroll(400);
-    await page.waitForTimeout(1000);
-    const submitBtn = page.locator('button:has-text("Submit for Verification"), button:has-text("Submit Property")').first();
-    if (await submitBtn.isVisible()) {
-      await smoothClick(submitBtn);
-      await page.waitForTimeout(2500);
-    }
 
     await logout();
 
@@ -534,29 +547,61 @@ async function main() {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
 
-    const reviewBtn = page.locator('td button:has-text("Review"), button:has-text("Review")').first();
+    // Showcase Cards view and Table view toggle
+    await setHud('🔲 Switching View Modes: Cards vs. Table Directory', '#a78bfa');
+    const tableBtn = page.locator('button[title="Switch to Table view"]');
+    if (await tableBtn.isVisible()) {
+      await smoothClick(tableBtn);
+      await page.waitForTimeout(1200);
+    }
+    const cardsBtn = page.locator('button[title="Switch to Card view"]');
+    if (await cardsBtn.isVisible()) {
+      await smoothClick(cardsBtn);
+      await page.waitForTimeout(1200);
+    }
+
+    // Sticky toolbar demonstration on scroll
+    await setHud('📌 Sticky Compact Filter Toolbar Remains Pinned on Scroll', '#a78bfa');
+    await smoothScroll(300);
+    await page.waitForTimeout(1000);
+    await smoothScroll(-300);
+    await page.waitForTimeout(800);
+
+    // Open Slide-Over Review Drawer
+    await setHud('📋 Opening Slide-Over Review Drawer for "The Grand Azure Residences"', '#a78bfa');
+    const reviewBtn = page.locator('button:has-text("Review"), button:has-text("View")').first();
     if (await reviewBtn.isVisible()) {
       await smoothClick(reviewBtn);
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(1800);
 
-      // Inspect audit details
-      await smoothScroll(350);
-      await page.waitForTimeout(1200);
+      // Inspect Landlord info & Units inside Drawer
+      await setHud('🔍 Review Drawer: Landlord & Manager Contacts, Units & Audit Trail', '#a78bfa');
+      const drawerScroll = page.locator('aside[aria-label="Property Review Drawer"] div.overflow-y-auto');
+      if (await drawerScroll.isVisible()) {
+        await drawerScroll.evaluate((el) => el.scrollBy({ top: 250, behavior: 'smooth' }));
+        await page.waitForTimeout(1200);
+      }
 
-      // Approve listing
-      const approveBtn = page.locator('button:has-text("Approve Listing"), button:has-text("Approve")').first();
+      // Approve listing in Drawer
+      const approveBtn = page.locator('aside button:has-text("Approve Listing"), button:has-text("Approve Listing")').first();
       if (await approveBtn.isVisible()) {
-        await setHud('✅ Super Admin Approves Property: Market Ready', '#10b981');
+        await setHud('✅ Super Admin Approves Property in Review Drawer', '#10b981');
         await smoothClick(approveBtn);
+        await page.waitForTimeout(2000);
+      }
+
+      // Re-open or toggle publish if drawer closed on approval
+      const publishBtn = page.locator('aside button:has-text("Publish Listing"), button:has-text("Publish Listing"), button:has-text("Publish")').first();
+      if (await publishBtn.isVisible()) {
+        await setHud('🌐 Publishing Listing for Public Discovery', '#10b981');
+        await smoothClick(publishBtn);
         await page.waitForTimeout(1800);
       }
 
-      // Publish listing
-      const publishBtn = page.locator('button:has-text("Publish Listing"), button:has-text("Publish")').first();
-      if (await publishBtn.isVisible()) {
-        await setHud('🌐 Admin Action: Publishing Listing for Public Discovery', '#10b981');
-        await smoothClick(publishBtn);
-        await page.waitForTimeout(1800);
+      const closeDrawerBtn = page.locator('button[aria-label="Close review popup"], aside button:has-text("Close")').first();
+      if (await closeDrawerBtn.isVisible()) {
+        await smoothClick(closeDrawerBtn);
+        await page.waitForTimeout(1000);
       }
     }
 
@@ -750,8 +795,26 @@ async function main() {
     await page.goto(`${BASE}/admin/users`);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
-    await smoothScroll(400);
+
+    // Switch between Cards and Table view on Admin Users
+    await setHud('🔲 User Management: Modern Cards View with Active Properties Count', '#8b5cf6');
+    const userTableBtn = page.locator('button[title="Switch to Table view"]');
+    if (await userTableBtn.isVisible()) {
+      await smoothClick(userTableBtn);
+      await page.waitForTimeout(1200);
+    }
+    const userCardsBtn = page.locator('button[title="Switch to Card view"]');
+    if (await userCardsBtn.isVisible()) {
+      await smoothClick(userCardsBtn);
+      await page.waitForTimeout(1200);
+    }
+
+    // Scroll to demonstrate sticky compact toolbar
+    await setHud('📌 Sticky Compact Filter Toolbar Remains Visible on Vertical Scroll', '#8b5cf6');
+    await smoothScroll(350);
     await page.waitForTimeout(1200);
+    await smoothScroll(-350);
+    await page.waitForTimeout(800);
 
     // Tour Admin Security & Audit Logs
     await setHud('🔒 Security & Audit Logs: Real-time Event Tracking (/admin/security)', '#8b5cf6');
@@ -800,14 +863,10 @@ async function main() {
       return statSync(resolve(VIDEO_DIR, b)).mtimeMs - statSync(resolve(VIDEO_DIR, a)).mtimeMs;
     })[0];
     const srcPath = resolve(VIDEO_DIR, latestVideo);
-    const destPath = resolve(VIDEO_DIR, 'proplity-complete-userflow.webm');
-    const publicDest = resolve(PUBLIC_VIDEO_DIR, 'proplity-complete-userflow.webm');
-
+    const destPath = resolve(OUT_VIDEO_DIR, 'proplity-complete-userflow.webm');
     copyFileSync(srcPath, destPath);
-    copyFileSync(srcPath, publicDest);
     const sizeMb = Math.round(statSync(destPath).size / 1024 / 1024);
-    console.log(`✅ Video saved: ${destPath} (${sizeMb}MB)`);
-    console.log(`✅ Public video updated: ${publicDest}`);
+    console.log(`✅ Video saved directly to out/video: ${destPath} (${sizeMb}MB)`);
 
     // Update the interactive HTML video players
     const totalSec = Math.floor((Date.now() - recStartTime) / 1000);
