@@ -66,7 +66,7 @@ function getTabsForRole(role: Role) {
         },
         {
           href: '/dashboard/schedules',
-          label: 'Recurring Maintenance',
+          label: 'Schedules',
           shortLabel: 'Schedules',
           icon: CalendarClock,
         },
@@ -103,7 +103,7 @@ function getTabsForRole(role: Role) {
         },
         {
           href: '/dashboard/schedules',
-          label: 'Recurring Maintenance',
+          label: 'Schedules',
           shortLabel: 'Schedules',
           icon: CalendarClock,
         },
