@@ -8,7 +8,14 @@ import nextTs from 'eslint-config-next/typescript';
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', '.next-test/**', 'out/**', 'node_modules/**', 'prisma/migrations/**']),
+  globalIgnores([
+    '.next/**',
+    '.next-test/**',
+    '.next-journey/**',
+    'out/**',
+    'node_modules/**',
+    'prisma/migrations/**',
+  ]),
   {
     rules: {
       // Style and React-compiler heuristics the code base trips by the dozen;

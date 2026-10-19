@@ -10,6 +10,14 @@ import { validateBody } from '@/lib/api/validate';
 import { getSystemSettings } from '@/lib/systemSettings';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
 import { notifyAndEmail, notifyPropertyTeam, type NotifyRequest } from '@/lib/notifications';
+import {
+  EVIDENCE_REQUIRED,
+  OPEN_STATUSES,
+  completionData,
+  hasCompletionEvidence,
+  isOpenStatus,
+  tellTenantRepairDone,
+} from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -106,7 +114,13 @@ async function announceInvoice(
     maintenanceRequestId: string | null;
     userId: string | null;
   },
-  ctx: { autoCompleted: boolean; byVendor: boolean; actorId: string; req: NotifyRequest },
+  ctx: {
+    autoCompleted: boolean;
+    awaitingTenant: boolean;
+    byVendor: boolean;
+    actorId: string;
+    req: NotifyRequest;
+  },
 ) {
   const money = `₦${invoice.amount.toLocaleString()}`;
   const due = invoice.dueDate.toDateString();
@@ -136,18 +150,7 @@ async function announceInvoice(
     } else {
       await notifyAndEmail(request.tenantId, toPay, { req: ctx.req });
     }
-    if (ctx.autoCompleted) {
-      await notifyAndEmail(
-        request.tenantId,
-        {
-          type: 'MAINTENANCE_STATUS',
-          title: 'Your repair was completed',
-          body: `Work on "${request.title}" is done.`,
-          link: `/dashboard/maintenance/${request.id}`,
-        },
-        { req: ctx.req },
-      );
-    }
+    if (ctx.autoCompleted) await tellTenantRepairDone(request, ctx.awaitingTenant, ctx.req);
     return;
   }
 
@@ -268,6 +271,27 @@ export const POST = withAuth(
         }
       }
 
+      // The job being billed. A cancelled request has nothing to bill, and a vendor whose invoice
+      // closes the job must have shown the finished work first.
+      const job =
+        maintenanceRequestId && rest.type === 'MAINTENANCE'
+          ? await prisma.maintenanceRequest.findUnique({
+              where: { id: maintenanceRequestId },
+              select: { status: true, afterPhotoUrls: true, completionProofUrl: true },
+            })
+          : null;
+      if (maintenanceRequestId && rest.type === 'MAINTENANCE') {
+        if (!job) {
+          return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+        }
+        if (job.status === 'CANCELLED') {
+          return NextResponse.json(
+            { error: 'This request was cancelled, so it cannot be billed.' },
+            { status: 409 },
+          );
+        }
+      }
+
       const data = { leaseId, maintenanceRequestId, userId, ...rest };
 
       // Admin-configurable (Platform Settings, SystemSettings.
@@ -280,23 +304,45 @@ export const POST = withAuth(
         !!maintenanceRequestId &&
         (await getSystemSettings()).autoCompleteMaintenanceOnInvoice;
 
+      // Closes a job that is still open. One already finished (a corrected invoice replacing a
+      // cancelled one) keeps its completion, its tenant answer and its approval.
+      const closesJob = shouldAutoComplete && !!job && isOpenStatus(job.status);
+      if (closesJob && session.role === 'VENDOR' && !hasCompletionEvidence(job)) {
+        return NextResponse.json(EVIDENCE_REQUIRED, { status: 409 });
+      }
+      const completion = closesJob ? await completionData() : null;
+
       const createInvoice = () =>
         shouldAutoComplete
           ? prisma.$transaction(async (tx) => {
               const invoice = await tx.invoice.create({ data });
-              await tx.maintenanceRequest.update({
-                where: { id: maintenanceRequestId! },
-                // The vendor's bill is the job's final cost; record it with the
-                // completion so the request and the manager board don't read "Pending".
-                data: { status: 'COMPLETED', finalCost: invoice.amount, completedAt: new Date() },
-              });
+              // The vendor's bill is the job's final cost; record it with the
+              // completion so the request and the manager board don't read "Pending".
+              if (completion) {
+                await tx.maintenanceRequest.updateMany({
+                  where: { id: maintenanceRequestId!, status: { in: [...OPEN_STATUSES] } },
+                  data: {
+                    ...completion,
+                    finalCost: invoice.amount,
+                    ...(job && !job.completionProofUrl && job.afterPhotoUrls[0]
+                      ? { completionProofUrl: job.afterPhotoUrls[0] }
+                      : {}),
+                  },
+                });
+              } else {
+                await tx.maintenanceRequest.updateMany({
+                  where: { id: maintenanceRequestId!, status: 'COMPLETED' },
+                  data: { finalCost: invoice.amount },
+                });
+              }
               return invoice;
             })
           : prisma.invoice.create({ data });
 
       const announce = async (invoice: Awaited<ReturnType<typeof createInvoice>>) => {
         await announceInvoice(invoice, {
-          autoCompleted: shouldAutoComplete,
+          autoCompleted: closesJob,
+          awaitingTenant: completion?.confirmationStatus === 'AWAITING_TENANT',
           byVendor: session.role === 'VENDOR',
           actorId: session.sub,
           req,

@@ -1,6 +1,7 @@
 /node_modules
 /.next
 /.next-test
+/.next-journey
 /out
 /build
 next-env.d.ts

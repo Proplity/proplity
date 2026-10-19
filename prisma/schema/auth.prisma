@@ -59,6 +59,7 @@ model User {
   leaseSignatures              LeaseSignature[]
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
+  approvedRepairs              MaintenanceRequest[]      @relation("RepairApprovals")
   bankAccounts                 BankAccount[]
   issuedAccessCodes            AccessCode[]
   announcements                Announcement[]            @relation("AnnouncementAuthor")

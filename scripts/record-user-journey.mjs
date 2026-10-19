@@ -120,6 +120,10 @@ async function makeSampleImages() {
     ['bathroom', 'Bathroom', '#cfe6e1'],
     ['exterior', 'Building exterior', '#d9e8c6'],
     ['id-card', 'Sample ID card', '#f3e6c9'],
+    ['sink-before', 'Leaking sink trap (before)', '#ecd5d5'],
+    ['sink-after', 'Sink trap replaced (after)', '#d5ecde'],
+    ['still-wet', 'Cabinet floor still wet', '#e8e2d0'],
+    ['sink-fixed', 'Dried out and sealed (second visit)', '#d0e6ec'],
   ];
   for (const [key, label, bg] of items) {
     await p.setContent(
@@ -282,6 +286,10 @@ async function main() {
   // Sign in through the login form, as a person would.
   async function signIn(email, password = PW) {
     if (!page.url().includes('/login')) await page.goto('/login');
+    // The form hydrates and the session check runs once the page loads; text typed before that is
+    // wiped, so let the page settle first (the paced run never notices, a fast one does).
+    await page.waitForLoadState('networkidle').catch(() => undefined);
+    await page.waitForTimeout(FAST ? 700 : 150);
     await type(page.getByPlaceholder('Enter your email'), email);
     await type(page.getByPlaceholder('Enter your password'), password);
     await click(page.getByRole('button', { name: 'Sign In' }), { settle: 800 });
@@ -1043,6 +1051,34 @@ async function main() {
     await submit(page.getByRole('button', { name: 'Save Notes' }));
     await hud('📝 A progress note the manager and tenant can follow', '#f59e0b');
     await pause(2200);
+    await page.getByRole('heading', { name: 'Work Photos' }).scrollIntoViewIfNeeded();
+    await hud('📸 Work Photos: the vendor shows the work, before and after', '#f59e0b');
+    await pause(2200);
+    await page
+      .locator('input[type="file"][aria-label="Add before photos"]')
+      .setInputFiles(images['sink-before']);
+    await page.getByRole('button', { name: 'Open before photo 1' }).waitFor({ timeout: 30000 });
+    await hud('📷 A photo of the leak before the work is saved on the job', '#f59e0b');
+    await pause(2400);
+    await click(page.getByRole('button', { name: /Mark Complete & Create Invoice/ }), {
+      settle: 1500,
+    });
+    await page.getByText('Sending this invoice closes the job').waitFor({ timeout: 20000 });
+    await hud(
+      '🛑 Closing a job needs a photo of the finished work, so the invoice waits for one',
+      '#ef4444',
+    );
+    await pause(3200);
+    await click(page.getByRole('link', { name: 'Add photos to the job' }), { settle: 1500 });
+    await page.getByRole('heading', { name: 'Work Photos' }).waitFor({ timeout: 40000 });
+    await page.getByRole('heading', { name: 'Work Photos' }).scrollIntoViewIfNeeded();
+    await page
+      .locator('input[type="file"][aria-label="Add after photos"]')
+      .setInputFiles(images['sink-after']);
+    await page.getByRole('button', { name: 'Open after photo 1' }).waitFor({ timeout: 30000 });
+    await hud('✅ The finished work is photographed: now the job can be closed', '#10b981');
+    await pause(2400);
+    await scroll(600);
     await click(page.getByRole('button', { name: /Mark Complete & Create Invoice/ }), {
       settle: 1500,
     });
@@ -1085,6 +1121,15 @@ async function main() {
     await pause(1200);
     await click(card.getByRole('button', { name: 'View Details' }), { settle: 1500 });
     await page.getByText('Cost Tracking').waitFor({ timeout: 40000 });
+    await page.getByText('Vendor, after the work').scrollIntoViewIfNeeded();
+    await hud('📸 The vendor’s before and after photos are on the request', '#3b82f6');
+    await pause(2800);
+    await page.getByRole('heading', { name: 'Sign-off' }).scrollIntoViewIfNeeded();
+    await hud(
+      '🧾 Sign-off: waiting for the tenant to say whether it is fixed. The manager can wait, or approve now',
+      '#3b82f6',
+    );
+    await pause(3500);
     await page.getByText('Cost Tracking').scrollIntoViewIfNeeded();
     await hud('🧾 Cost Tracking: the vendor invoice is waiting to be paid', '#3b82f6');
     await pause(2500);
@@ -1107,8 +1152,12 @@ async function main() {
   // The guest code the tenant makes, read from the screen so the gate check can use it later.
   let guestCode = null;
 
-  act(15, 'The tenant sees the repair done and rates the vendor', async () => {
-    chapter('⭐', 'The tenant sees the repair completed and rates the vendor', '#10b981');
+  act(15, 'The tenant is asked whether the repair is fixed', async () => {
+    chapter(
+      '🔧',
+      'The tenant sees the repair completed and is asked whether it is fixed',
+      '#10b981',
+    );
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
     else {
@@ -1152,26 +1201,167 @@ async function main() {
     await hud('🔧 My maintenance requests: every request and where it stands', '#10b981');
     await pause(2200);
     await click(page.getByRole('button', { name: /Kitchen sink is leaking/ }), { settle: 1200 });
+    await page.getByText('Is it fixed?').waitFor({ timeout: 20000 });
     await hud(
-      '📜 The activity timeline: submitted, vendor assigned, started, completed',
+      '🧰 The vendor says it is done, so the tenant is asked whether it is really fixed',
+      '#f59e0b',
+    );
+    await pause(2600);
+    await page.getByText('Vendor photos, after the work').scrollIntoViewIfNeeded();
+    await hud(
+      '📸 The vendor’s photos show what was done; the answer never affects payment',
+      '#f59e0b',
+    );
+    await pause(2600);
+    await click(page.getByRole('button', { name: 'Still a problem' }), { settle: 800 });
+    await type(
+      page.getByPlaceholder('What is still wrong?'),
+      'The drip has stopped but the cabinet floor is still wet and there is a damp smell.',
+      16,
+    );
+    await page
+      .locator('input[type="file"][aria-label="Add photos (optional)"]')
+      .setInputFiles(images['still-wet']);
+    await page.getByRole('button', { name: 'Open your photo 1' }).waitFor({ timeout: 30000 });
+    await hud('📷 A reason is required; photos are optional', '#f59e0b');
+    await pause(2200);
+    await submit(page.getByRole('button', { name: 'Send to my property team' }));
+    await page.getByText('You said it is still a problem').first().waitFor({ timeout: 20000 });
+    await hud('🚩 Sent: the property team decides what happens next', '#ef4444');
+    await pause(3200);
+  });
+
+  // ---------------------------------------------------------------------------------------------
+  act(16, 'The manager sends the repair back and the vendor fixes it again', async () => {
+    chapter(
+      '↩️',
+      'The tenant says it is not fixed: the manager sends it back and the vendor fixes it again',
+      '#ef4444',
+    );
+    if (page.url() === 'about:blank') await page.goto('/login');
+    if (page.url().includes('/login')) await signIn('manager@proplity.com');
+    else {
+      await signOut();
+      await signIn('manager@proplity.com');
+    }
+    await page
+      .getByRole('link', { name: /Repairs the tenant says are not fixed/ })
+      .waitFor({ timeout: 20000 });
+    await hud('🚩 Needs your attention: the tenant says a repair is not fixed', '#ef4444');
+    await pause(3000);
+    await click(page.getByRole('link', { name: /Repairs the tenant says are not fixed/ }), {
+      settle: 1500,
+    });
+    await page.getByText('What the tenant says').waitFor({ timeout: 40000 });
+    await page.getByText('What the tenant says').scrollIntoViewIfNeeded();
+    await hud(
+      '📋 The tenant’s reason and photo, and three choices for the property team',
+      '#ef4444',
+    );
+    await pause(3600);
+    await page.getByRole('button', { name: 'Give to another vendor' }).waitFor();
+    await page.getByRole('button', { name: 'Approve anyway' }).waitFor();
+    await submit(page.getByRole('button', { name: 'Send back to vendor' }));
+    await page
+      .getByRole('heading', { name: 'Sign-off' })
+      .waitFor({ state: 'detached', timeout: 20000 });
+    await hud('↩️ Sent back: the job is open again and the vendor is told why', '#3b82f6');
+    await pause(3000);
+
+    await signOut();
+    await signIn('vendor@proplity.com');
+    await page.getByRole('link', { name: /Repairs sent back to you/ }).waitFor({ timeout: 20000 });
+    await hud('🔔 The vendor sees the repair that came back', '#f59e0b');
+    await pause(2600);
+    await click(page.getByRole('link', { name: /Repairs sent back to you/ }), { settle: 1500 });
+    await page.getByText('The tenant says this is still a problem').waitFor({ timeout: 40000 });
+    await hud('🚩 The tenant’s reason and photo are on the job', '#ef4444');
+    await pause(3200);
+    await page.getByRole('heading', { name: 'Work Photos' }).scrollIntoViewIfNeeded();
+    await page
+      .locator('input[type="file"][aria-label="Add after photos"]')
+      .setInputFiles(images['sink-fixed']);
+    await page.getByRole('button', { name: 'Open after photo 2' }).waitFor({ timeout: 30000 });
+    await hud('📷 The second visit is photographed', '#f59e0b');
+    await pause(2200);
+    await scroll(500);
+    await hud('✅ The invoice is already sent, so the vendor just marks the work done', '#f59e0b');
+    await pause(2200);
+    await submit(page.getByRole('button', { name: 'Mark work done' }));
+    await page
+      .getByText('Waiting for the tenant to confirm the repair is fixed')
+      .waitFor({ timeout: 20000 });
+    await hud('📤 Done again: the tenant is asked once more, and payment is untouched', '#10b981');
+    await pause(3000);
+  });
+
+  // ---------------------------------------------------------------------------------------------
+  act(17, 'The tenant confirms, rates the vendor, and the manager approves', async () => {
+    chapter(
+      '✅',
+      'The tenant confirms it is fixed and rates the vendor; the manager approves',
       '#10b981',
     );
-    await pause(2500);
+    if (page.url() === 'about:blank') await page.goto('/login');
+    if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
+    else {
+      await signOut();
+      await signIn(NEW_TENANT.email);
+    }
+    await page.getByRole('link', { name: /Repairs to confirm/ }).waitFor({ timeout: 20000 });
+    await hud('🏠 The tenant is asked again: Repairs to confirm', '#10b981');
+    await pause(2400);
+    await click(page.getByRole('link', { name: /Repairs to confirm/ }), { settle: 1500 });
+    await page.getByText('Is it fixed?').waitFor({ timeout: 40000 });
+    await hud('🔧 This time it is fixed', '#10b981');
+    await pause(2000);
+    await submit(page.getByRole('button', { name: 'Confirm fixed' }));
+    await page.getByText('You confirmed this repair is fixed').waitFor({ timeout: 20000 });
+    await hud(
+      '✅ Confirmed: recorded on the repair for the property team and the vendor',
+      '#10b981',
+    );
+    await pause(2600);
     await scroll(300);
     await hud('⭐ The job is done, so the tenant rates the vendor', '#10b981');
     await click(page.getByRole('button', { name: '5 stars' }), { settle: 500 });
     await type(
       page.getByPlaceholder('Add a comment (optional)'),
-      'Quick, tidy and fixed it the same day.',
+      'Quick, tidy and fixed it properly on the second visit.',
     );
     await submit(page.getByRole('button', { name: 'Submit Rating' }));
     await page.getByText('Your rating').waitFor();
     await hud('✅ Rating saved: it feeds the vendor profile the manager sees', '#10b981');
+    await pause(2800);
+
+    await signOut();
+    await signIn('manager@proplity.com');
+    await click(page.getByRole('link', { name: 'Maintenance' }).first(), { settle: 1200 });
+    await page.waitForURL('**/dashboard/maintenance');
+    const card = page
+      .locator('div.rounded-lg', { hasText: 'Kitchen sink is leaking under the cabinet' })
+      .filter({ has: page.getByRole('button', { name: 'View Details' }) })
+      .last();
+    await card.scrollIntoViewIfNeeded();
+    await click(card.getByRole('button', { name: 'View Details' }), { settle: 1500 });
+    await page.getByRole('heading', { name: 'Sign-off' }).waitFor({ timeout: 40000 });
+    await page.getByRole('heading', { name: 'Sign-off' }).scrollIntoViewIfNeeded();
+    await hud('🧾 Sign-off: the tenant confirmed it is fixed, so the manager signs off', '#3b82f6');
     await pause(3000);
+    await submit(page.getByRole('button', { name: 'Approve work' }));
+    await page
+      .getByText(/^Approved by/)
+      .first()
+      .waitFor({ timeout: 20000 });
+    await hud(
+      '✅ Approved: the sign-off is recorded. It never changes what the vendor is owed',
+      '#10b981',
+    );
+    await pause(3200);
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(16, 'Tenant and manager message each other', async () => {
+  act(18, 'Tenant and manager message each other', async () => {
     chapter('💬', 'The tenant and the manager message each other', '#06b6d4');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
@@ -1222,7 +1412,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(17, 'The manager uses the property tools', async () => {
+  act(19, 'The manager uses the property tools', async () => {
     chapter(
       '🏢',
       'The manager works the property page: photos, private units, edits, notices and equipment',
@@ -1341,7 +1531,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(18, 'The admin approves the edit and tours the console', async () => {
+  act(20, 'The admin approves the edit and tours the console', async () => {
     chapter('🛡', 'The admin approves the staged edit and checks the platform', '#a78bfa');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('admin@proplity.com');
@@ -1411,7 +1601,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(19, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
+  act(21, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
     chapter('🔧', 'The vendor sees the payment arrive', '#ef4444');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('vendor@proplity.com');
