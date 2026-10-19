@@ -23,6 +23,7 @@ import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useAuth } from '@/context/AuthContext';
 import { usePayInvoice } from '@/hooks/useInvoices';
 import { ConfirmDialog } from './ConfirmDialog';
+import type { MaintenanceRequest } from '@/lib/api/types';
 
 interface MaintenanceDetailProps {
   requestId: string;
@@ -467,6 +468,7 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                       <span className="text-gray-600">Vendor invoice {inv.invoiceNumber}</span>
                       <span className="font-semibold">₦{inv.amount.toLocaleString()}</span>
                     </div>
+                    <InvoiceBreakdown invoice={inv} />
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {inv.status.replace('_', ' ')}
@@ -650,6 +652,63 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
         onCancel={() => setShowCancelConfirm(false)}
         onConfirm={handleConfirmCancel}
       />
+    </div>
+  );
+}
+
+type VendorInvoice = NonNullable<MaintenanceRequest['invoices']>[number];
+
+// The vendor's invoice is stored as one amount plus a text description (one
+// "item — qty x rate = amount" line each, then optional notes), so the
+// breakdown is read back out of that text. The vendor's total includes 7.5%
+// VAT, which is not in the lines; it is shown as the difference.
+function InvoiceBreakdown({ invoice }: { invoice: VendorInvoice }) {
+  const [open, setOpen] = useState(false);
+  const [body, notes] = (invoice.description ?? '').split(/\n\nNotes: /);
+  const lines = body.split('\n').filter(Boolean);
+  const lineTotals = lines.map((l) => Number(l.match(/= ₦([\d,.]+)$/)?.[1]?.replace(/,/g, '')));
+  const itemised = lineTotals.length > 0 && lineTotals.every((n) => Number.isFinite(n));
+  const subtotal = itemised ? lineTotals.reduce((a, b) => a + b, 0) : 0;
+  const extra = itemised ? Math.round((invoice.amount - subtotal) * 100) / 100 : 0;
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-xs font-medium text-blue-600 hover:underline"
+      >
+        {open ? 'Hide invoice' : 'View invoice'}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+          <p className="text-gray-500">
+            Sent {new Date(invoice.createdAt).toLocaleDateString('en-US', { dateStyle: 'medium' })}{' '}
+            · due {new Date(invoice.dueDate).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+          </p>
+          {lines.length > 0 ? (
+            <ul className="space-y-1">
+              {lines.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500">The vendor added no itemised lines.</p>
+          )}
+          {itemised && extra > 0 && (
+            <p className="flex justify-between border-t border-gray-200 pt-2">
+              <span>VAT and other charges</span>
+              <span>₦{extra.toLocaleString()}</span>
+            </p>
+          )}
+          <p className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
+            <span>Total</span>
+            <span>₦{invoice.amount.toLocaleString()}</span>
+          </p>
+          {notes && <p className="text-gray-600">Vendor notes: {notes}</p>}
+        </div>
+      )}
     </div>
   );
 }
