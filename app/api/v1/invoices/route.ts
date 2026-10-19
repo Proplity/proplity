@@ -217,7 +217,9 @@ export const POST = withAuth(
               const invoice = await tx.invoice.create({ data });
               await tx.maintenanceRequest.update({
                 where: { id: maintenanceRequestId! },
-                data: { status: 'COMPLETED' },
+                // The vendor's bill is the job's final cost; record it with the
+                // completion so the request and the manager board don't read "Pending".
+                data: { status: 'COMPLETED', finalCost: invoice.amount, completedAt: new Date() },
               });
               return invoice;
             })

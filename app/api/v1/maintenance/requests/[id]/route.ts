@@ -143,7 +143,15 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
       const updated = await prisma.maintenanceRequest.update({
         where: { id },
-        data: { categoryId, priority, vendorId, scheduledFor },
+        // Handing a new request to a vendor makes it a scheduled job: that is the
+        // state the vendor's job page can start from, and the manager board shows.
+        data: {
+          categoryId,
+          priority,
+          vendorId,
+          scheduledFor,
+          ...(vendorId && request.status === 'SUBMITTED' ? { status: 'SCHEDULED' as const } : {}),
+        },
       });
       await notifyTenantOfStatus(
         request,

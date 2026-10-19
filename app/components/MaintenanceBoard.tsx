@@ -41,7 +41,7 @@ function Column({
   loading: boolean;
 }) {
   return (
-    <div className="min-w-[320px] rounded-lg bg-gray-50 p-4">
+    <div className="w-full rounded-lg bg-gray-50 p-4 md:min-w-[320px] md:flex-1">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className={`h-5 w-5 ${color}`} />
@@ -179,7 +179,7 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-col gap-4 pb-4 md:flex-row md:overflow-x-auto">
         <Column
           title="New Requests"
           requests={newRequests}

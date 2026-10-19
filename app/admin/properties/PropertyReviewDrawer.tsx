@@ -503,6 +503,19 @@ export function PropertyReviewDrawer({ property, onClose, onUpdated }: PropertyR
               </div>
             )}
 
+            {isApproved && property.metadata?.pendingChanges?.status === 'PENDING_REVIEW' && (
+              // A live listing the owner edited (description, photos, a unit's rent) keeps its
+              // approval while the edit waits here; approving applies it in one step.
+              <button
+                onClick={() => handleModerate('APPROVED')}
+                disabled={submitting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {submitting ? 'Applying…' : 'Approve Edits'}
+              </button>
+            )}
+
             {isApproved && (
               <div className="flex gap-2">
                 <button

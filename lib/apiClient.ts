@@ -295,6 +295,8 @@ export const api = {
       apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
       apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
+    rateVendor: (id: string, body: { rating: number; comment?: string }) =>
+      apiClient.post<{ data: unknown }>(`/api/v1/maintenance/requests/${id}/rating`, body),
   },
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),

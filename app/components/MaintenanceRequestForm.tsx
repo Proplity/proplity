@@ -141,7 +141,9 @@ export function MaintenanceRequestForm() {
               <p className="text-sm font-medium">Your Unit</p>
               <p className="text-sm text-gray-600">
                 {activeLease
-                  ? `Unit ${activeLease.unitId.slice(0, 8)}`
+                  ? activeLease.unit?.property?.name
+                    ? `${activeLease.unit.property.name} · Unit ${activeLease.unit.unitNumber}`
+                    : `Unit ${activeLease.unit?.unitNumber ?? activeLease.unitId.slice(0, 8)}`
                   : 'Loading your active lease…'}
               </p>
             </div>
