@@ -8,6 +8,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { safeUrlList } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
+import { notifyAndEmail } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -82,6 +83,34 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       }),
       prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } }),
     ]);
+
+    // The other people in the thread are told, once: while they still have an unread notice
+    // for this conversation, further messages do not add another.
+    const others = await prisma.conversationParticipant.findMany({
+      where: { conversationId: id, userId: { not: session.sub } },
+      select: { userId: true },
+    });
+    const sender = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: { name: true },
+    });
+    const link = `/dashboard/messages?c=${id}`;
+    for (const { userId } of others) {
+      const unread = await prisma.notification.findFirst({
+        where: { recipientId: userId, link, isRead: false },
+        select: { id: true },
+      });
+      if (unread) continue;
+      await notifyAndEmail(
+        userId,
+        {
+          title: `New message from ${sender?.name ?? 'someone'}`,
+          body: validated.data.body.slice(0, 140),
+          link,
+        },
+        { email: false },
+      );
+    }
 
     return NextResponse.json({ data: message }, { status: 201 });
   } catch (err) {

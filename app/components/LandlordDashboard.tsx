@@ -32,6 +32,7 @@ import { useCreateConversation } from '@/hooks/useConversations';
 import { api } from '@/lib/apiClient';
 import { toCsv } from '@/lib/csv';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface LandlordDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -223,6 +224,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         <h1 className="mb-1 text-2xl font-semibold">Landlord Portfolio</h1>
         <p className="text-gray-600">Overview of your property investments</p>
       </div>
+
+      <AttentionCard />
 
       {/* Sticky Setup & Profile Completion Prompt for Landlords */}
       {!loading && !bankLoading && (propertyCount === 0 || (bankAccounts ?? []).length === 0) && (

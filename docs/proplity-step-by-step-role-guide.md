@@ -154,7 +154,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ### Domain 5: Property Manager Operations & Tenancy Administration (18 Features)
 
-69. **Manager Operations Command Center**: Daily task hub highlighting pending viewings, open repair tickets, expiring leases, and uncollected rent.
+69. **Manager Operations Command Center**: The **Needs your attention** list at the top of the dashboard: applications and viewing requests to answer, repairs with no vendor, finished repairs with a vendor invoice to pay, overdue rent, leases waiting for signatures or ending within 60 days, listings that need changes, and unread messages. Each row opens the place that handles it. Every dashboard (tenant, landlord, vendor, admin) has the same list with that role's tasks.
 70. **Role-Scoped Assigned Properties Directory**: Property catalog strictly isolated to buildings where the manager is designated as Property.managerId.
 71. **Property Detail Management Console**: In-depth console displaying all constituent units, condition reports, and equipment inventory.
 72. **Direct Tenant Onboarding / Lease Invite**: Invite tenants by email (\`/dashboard/tenants/add\`); system creates lease and emails activation link.
