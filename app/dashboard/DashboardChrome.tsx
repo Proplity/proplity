@@ -23,6 +23,7 @@ import {
   Building2,
   DollarSign,
   Receipt,
+  CalendarClock,
   Plus,
   LogOut,
   ChevronUp,
@@ -63,6 +64,12 @@ function getTabsForRole(role: Role) {
           shortLabel: 'Transfers',
           icon: Receipt,
         },
+        {
+          href: '/dashboard/schedules',
+          label: 'Recurring Maintenance',
+          shortLabel: 'Schedules',
+          icon: CalendarClock,
+        },
       ];
     case 'tenant':
       return [
@@ -93,6 +100,12 @@ function getTabsForRole(role: Role) {
           label: 'Bank Transfers',
           shortLabel: 'Transfers',
           icon: Receipt,
+        },
+        {
+          href: '/dashboard/schedules',
+          label: 'Recurring Maintenance',
+          shortLabel: 'Schedules',
+          icon: CalendarClock,
         },
       ];
     case 'vendor':

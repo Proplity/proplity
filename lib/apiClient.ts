@@ -48,8 +48,11 @@ import type {
   Invoice,
   Lease,
   LeaseSignature,
+  CreateScheduleInput,
   MaintenanceCategory,
   MaintenanceRequest,
+  MaintenanceSchedule,
+  UpdateScheduleInput,
   ManagerInviteCode,
   Message,
   Note,
@@ -301,7 +304,17 @@ export const api = {
     update: (id: string, body: UpdateMaintenanceRequestInput) =>
       apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
-      apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
+      apiClient.post<{ data: { id: string } }>('/api/v1/maintenance/requests', body),
+    schedules: {
+      list: (params?: { page?: number; limit?: number }) =>
+        apiClient.get<Paginated<MaintenanceSchedule>>('/api/v1/maintenance/schedules', { params }),
+      create: (body: CreateScheduleInput) =>
+        apiClient.post<{ data: MaintenanceSchedule }>('/api/v1/maintenance/schedules', body),
+      update: (id: string, body: UpdateScheduleInput) =>
+        apiClient.patch<{ data: MaintenanceSchedule }>(`/api/v1/maintenance/schedules/${id}`, body),
+      remove: (id: string) =>
+        apiClient.delete<{ data: { id: string } }>(`/api/v1/maintenance/schedules/${id}`),
+    },
     rateVendor: (id: string, body: { rating: number; comment?: string }) =>
       apiClient.post<{ data: unknown }>(`/api/v1/maintenance/requests/${id}/rating`, body),
     answerRepair: (id: string, body: RepairAnswerInput) =>

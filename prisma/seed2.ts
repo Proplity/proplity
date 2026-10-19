@@ -19,11 +19,13 @@ import {
   AccessCodeStatus,
   RepairConfirmationStatus,
   BankTransferStatus,
+  ScheduleFrequency,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { listingHash } from '../lib/propertyFingerprint';
+import { anchorDay } from '../lib/maintenanceSchedule';
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -460,6 +462,7 @@ async function main() {
   const unitHighland4B = propHighland.units.find((u) => u.unitNumber === '4B')!;
   const unitHeights203 = propHeights.units.find((u) => u.unitNumber === '203')!;
   const unitYaba1A = propYaba.units.find((u) => u.unitNumber === '1A')!;
+  const unitHighland2A = propHighland.units.find((u) => u.unitNumber === '2A')!;
 
   // 5. Create Leases
   const leaseJordan = await prisma.lease.create({
@@ -689,6 +692,53 @@ async function main() {
       disputeReason: 'It still sparks when I plug in the kettle.',
     },
   });
+
+  // A work order: the manager raised this on a vacant flat, so it has no tenant and nobody is asked
+  // to confirm it. It is waiting for a vendor.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitHighland2A.id,
+      tenantId: null,
+      createdById: manager.id,
+      title: 'Repaint the vacant flat',
+      description:
+        'Two coats of emulsion in the lounge and bedrooms before the next tenant moves in.',
+      categoryId: categories['Other'],
+      priority: MaintenancePriority.LOW,
+      status: MaintenanceStatus.SUBMITTED,
+    },
+  });
+
+  // Recurring maintenance: one running on an occupied unit, one on the vacant flat (it will raise a
+  // work order with no tenant), and one paused.
+  const inDays = (n: number) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+  for (const schedule of [
+    {
+      unitId: unitHeights203.id,
+      categoryId: categories['HVAC'],
+      frequency: ScheduleFrequency.QUARTERLY,
+      nextDueDate: inDays(20),
+      isActive: true,
+    },
+    {
+      unitId: unitHighland2A.id,
+      categoryId: categories['Cleaning'],
+      frequency: ScheduleFrequency.MONTHLY,
+      nextDueDate: inDays(5),
+      isActive: true,
+    },
+    {
+      unitId: unitYaba1A.id,
+      categoryId: categories['Electrical'],
+      frequency: ScheduleFrequency.ANNUAL,
+      nextDueDate: inDays(90),
+      isActive: false,
+    },
+  ]) {
+    await prisma.maintenanceSchedule.create({
+      data: { ...schedule, dayOfMonth: anchorDay(schedule.nextDueDate, schedule.frequency) },
+    });
+  }
 
   // 9. Vendor Ratings
   await prisma.vendorRating.create({
