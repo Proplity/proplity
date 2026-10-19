@@ -1,6 +1,42 @@
 import { prisma } from '@/lib/db';
+import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Telling people must never stop the sweep, so a failure here is logged and the worker carries on.
+async function tellOverdue(invoice: {
+  invoiceNumber: string;
+  amount: number;
+  dueDate: Date;
+  lease: {
+    tenantId: string;
+    unit: {
+      unitNumber: string;
+      property: { name: string; managerId: string | null; landlordId: string | null };
+    };
+  } | null;
+}) {
+  const lease = invoice.lease;
+  if (!lease?.unit?.property) return;
+  try {
+    await notifyAndEmail(lease.tenantId, {
+      title: `Invoice ${invoice.invoiceNumber} is overdue`,
+      body: `Your payment of ₦${invoice.amount.toLocaleString()} was due on ${invoice.dueDate.toDateString()} and is now overdue. Please pay as soon as you can to avoid late fees.`,
+      link: '/dashboard',
+    });
+    await notifyPropertyTeam(
+      lease.unit.property,
+      {
+        title: `Rent overdue: ${invoice.invoiceNumber}`,
+        body: `Invoice ${invoice.invoiceNumber} (₦${invoice.amount.toLocaleString()}) for unit ${lease.unit.unitNumber} at ${lease.unit.property.name} is overdue.`,
+        link: '/dashboard/breakdown/rent',
+      },
+      { email: false },
+    );
+  } catch (err) {
+    console.error('Failed to announce an overdue invoice', err);
+  }
+}
 
 // Sends exactly one PAYMENT_REMINDER per invoice, not the full "reminder ->
 // call -> notice" escalation ladder PRD §6.1 describes -- that's explicitly
@@ -18,7 +54,7 @@ export async function runOverdueFlagger(): Promise<{
   // because the fee hasn't been created yet) still needs one.
   const candidates = await prisma.invoice.findMany({
     where: { status: { in: ['UNPAID', 'OVERDUE'] }, dueDate: { lt: now } },
-    include: { lease: true },
+    include: { lease: { include: { unit: { include: { property: true } } } } },
   });
 
   let flagged = 0;
@@ -54,6 +90,7 @@ export async function runOverdueFlagger(): Promise<{
             },
           });
           remindersSent += 1;
+          await tellOverdue(invoice);
         }
       }
     }

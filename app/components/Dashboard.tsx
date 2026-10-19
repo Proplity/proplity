@@ -3,6 +3,7 @@ import { DollarSign, Home, Users, AlertCircle, CheckCircle, KeyRound } from 'luc
 import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface DashboardProps {
   onNavigate: (page: Page) => void;
@@ -72,6 +73,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           Welcome back! Here&apos;s what&apos;s happening with your properties.
         </p>
       </div>
+
+      <AttentionCard />
 
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 

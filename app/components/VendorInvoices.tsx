@@ -74,6 +74,21 @@ export function VendorInvoices() {
                   <p className="text-xs text-gray-500">
                     Sent {new Date(inv.createdAt).toLocaleDateString('en-US')}
                   </p>
+                  {inv.payments.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+                      {inv.payments.map((p) => (
+                        <li key={p.id}>
+                          {naira(p.amount)} paid {new Date(p.paidAt).toLocaleDateString('en-US')}{' '}
+                          <Link
+                            href={`/receipts/${p.id}`}
+                            className="font-medium text-blue-600 hover:underline"
+                          >
+                            Receipt {p.receiptNumber}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-semibold">{naira(inv.amount)}</p>

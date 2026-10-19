@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
 import { ScheduleFrequency } from '@prisma/client';
 
 function addInterval(date: Date, frequency: ScheduleFrequency): Date {
@@ -21,7 +22,7 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
   const now = new Date();
   const due = await prisma.maintenanceSchedule.findMany({
     where: { isActive: true, nextDueDate: { lte: now } },
-    include: { category: true },
+    include: { category: true, unit: { include: { property: true } } },
   });
 
   let dispatched = 0;
@@ -52,7 +53,7 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
       continue;
     }
 
-    await prisma.$transaction([
+    const [request] = await prisma.$transaction([
       prisma.maintenanceRequest.create({
         data: {
           unitId: schedule.unitId,
@@ -72,6 +73,29 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
       }),
     ]);
     dispatched += 1;
+
+    // The request exists with no vendor yet: the property team assigns one, the tenant is told
+    // someone will be in their unit.
+    await notifyPropertyTeam(
+      schedule.unit.property,
+      {
+        type: 'MAINTENANCE_STATUS',
+        title: `${request.title} needs a vendor`,
+        body: `A ${schedule.frequency.toLowerCase()} schedule raised "${request.title}" for unit ${schedule.unit.unitNumber} at ${schedule.unit.property.name}.`,
+        link: `/dashboard/maintenance/${request.id}`,
+      },
+      { email: false },
+    );
+    await notifyAndEmail(
+      activeLease.tenantId,
+      {
+        type: 'MAINTENANCE_STATUS',
+        title: 'Scheduled maintenance for your unit',
+        body: `${request.title} is coming up for unit ${schedule.unit.unitNumber}. The property team will arrange a vendor.`,
+        link: `/dashboard/maintenance/${request.id}`,
+      },
+      { email: false },
+    );
   }
 
   return { dispatched, skippedNoTenant };

@@ -8,6 +8,7 @@ import {
   LateFeeType,
   MaintenancePriority,
   MaintenanceStatus,
+  RepairConfirmationStatus,
   ScheduleFrequency,
   InvoiceType,
   InvoiceStatus,
@@ -16,6 +17,7 @@ import {
   NotificationType,
 } from '@prisma/client';
 import { testPrisma } from './db';
+import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
 
 let counter = 0;
 function unique(prefix: string) {
@@ -204,6 +206,14 @@ export async function createMaintenanceRequest(
     vendorId: string | null;
     priority: MaintenancePriority;
     status: MaintenanceStatus;
+    // Repair follow-through: the vendor's photos, the tenant's answer and the team's sign-off.
+    afterPhotoUrls: string[];
+    beforePhotoUrls: string[];
+    confirmationStatus: RepairConfirmationStatus;
+    disputeReason: string | null;
+    approvedAt: Date | null;
+    finalCost: number | null;
+    completedAt: Date | null;
   }> = {},
 ) {
   return testPrisma.maintenanceRequest.create({
@@ -216,6 +226,13 @@ export async function createMaintenanceRequest(
       vendorId: overrides.vendorId ?? null,
       priority: overrides.priority ?? MaintenancePriority.MEDIUM,
       status: overrides.status ?? MaintenanceStatus.SUBMITTED,
+      afterPhotoUrls: overrides.afterPhotoUrls,
+      beforePhotoUrls: overrides.beforePhotoUrls,
+      confirmationStatus: overrides.confirmationStatus,
+      disputeReason: overrides.disputeReason,
+      approvedAt: overrides.approvedAt,
+      finalCost: overrides.finalCost,
+      completedAt: overrides.completedAt,
     },
   });
 }
@@ -353,4 +370,12 @@ export async function createBankAccount(
       isDefault: overrides.isDefault ?? true,
     },
   });
+}
+
+/** A bookable viewing time: 10:00 AM Lagos time, `daysAhead` days out, moved off a Sunday. */
+export function bookableViewingTime(daysAhead = 3): string {
+  const day = new Date();
+  day.setDate(day.getDate() + daysAhead);
+  if (day.getDay() === 0) day.setDate(day.getDate() + 1);
+  return viewingInstant(toLocalDateKey(day), '10:00').toISOString();
 }

@@ -4,25 +4,31 @@ import {
   ArrowLeft,
   Wrench,
   MapPin,
-  DollarSign,
   AlertCircle,
   CheckCircle,
   Clock,
-  Image as ImageIcon,
   Phone,
   Search,
   Star,
   X,
   UserCheck,
   MessageSquare,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
-import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
+import {
+  useMaintenanceRequest,
+  useReviewRepair,
+  useUpdateMaintenanceRequest,
+} from '@/hooks/useMaintenanceRequests';
 import { useVendors } from '@/hooks/useVendors';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useAuth } from '@/context/AuthContext';
 import { usePayInvoice } from '@/hooks/useInvoices';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PhotoGrid } from './RepairPhotos';
+import { InvoicePayments } from './InvoicePayments';
+import type { MaintenanceRequest } from '@/lib/api/types';
 
 interface MaintenanceDetailProps {
   requestId: string;
@@ -67,13 +73,33 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
       text: 'Marked completed',
       time: new Date(request.completedAt).toLocaleString(),
     });
+  if (request.confirmationRespondedAt)
+    entries.push({
+      text:
+        request.confirmationStatus === 'DISPUTED'
+          ? 'Tenant says it is still a problem'
+          : 'Tenant confirmed it is fixed',
+      time: new Date(request.confirmationRespondedAt).toLocaleString(),
+    });
+  if (request.approvedAt)
+    entries.push({
+      text: `Approved by ${request.approvedBy?.name ?? 'the property team'}`,
+      time: new Date(request.approvedAt).toLocaleString(),
+    });
   return entries.reverse();
+}
+
+// The server's own message (for example "Invoice INV-… has already been paid") when it sent one.
+function errorText(err: unknown, fallback: string): string {
+  const message = (err as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
+  return typeof message === 'string' && message ? message : fallback;
 }
 
 export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const { data: request, loading, refetch } = useMaintenanceRequest(requestId);
   const { open: openConversation } = useOpenConversation();
   const { submit: updateRequest, submitting } = useUpdateMaintenanceRequest(requestId);
+  const { submit: reviewRepair, submitting: reviewing } = useReviewRepair(requestId);
   const { data: vendors, loading: vendorsLoading } = useVendors();
   const auth = useAuth();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
@@ -90,9 +116,9 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
 
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [vendorSearch, setVendorSearch] = useState('');
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [finalCost, setFinalCost] = useState('');
-  const [completionProofUrl, setCompletionProofUrl] = useState('');
+  // The vendor picker serves two jobs: giving a new request to a vendor, and giving a disputed
+  // repair to a different one.
+  const [assignMode, setAssignMode] = useState<'assign' | 'reassign-disputed'>('assign');
   const [actionError, setActionError] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -115,6 +141,11 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
     );
   }
 
+  const isOpen = request.status !== 'COMPLETED' && request.status !== 'CANCELLED';
+  const disputed =
+    request.status === 'COMPLETED' &&
+    request.confirmationStatus === 'DISPUTED' &&
+    !request.approvedAt;
   const currentStatus = statusConfig[request.status];
   const currentPriority = priorityConfig[request.priority];
   const StatusIcon = currentStatus.icon;
@@ -129,31 +160,25 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const handleAssign = async (vendorId: string) => {
     setActionError(null);
     try {
-      await updateRequest({ vendorId });
+      if (assignMode === 'reassign-disputed') {
+        await reviewRepair({ action: 'REASSIGN', vendorId });
+      } else {
+        await updateRequest({ vendorId });
+      }
       setShowAssignModal(false);
       refetch();
-    } catch {
-      setActionError('Failed to assign vendor');
+    } catch (err) {
+      setActionError(errorText(err, 'Failed to assign vendor'));
     }
   };
 
-  const handleComplete = async () => {
-    const cost = Number(finalCost);
-    if (!completionProofUrl.trim() || !Number.isFinite(cost) || cost < 0) {
-      setActionError('A completion proof URL and a valid final cost are required');
-      return;
-    }
+  const handleReview = async (action: 'APPROVE' | 'REOPEN') => {
     setActionError(null);
     try {
-      await updateRequest({
-        status: 'COMPLETED',
-        completionProofUrl: completionProofUrl.trim(),
-        finalCost: cost,
-      });
-      setShowCompleteModal(false);
+      await reviewRepair({ action });
       refetch();
-    } catch {
-      setActionError('Failed to mark as completed');
+    } catch (err) {
+      setActionError(errorText(err, 'Could not save that decision'));
     }
   };
 
@@ -281,23 +306,38 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
           {/* Images */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-4 font-semibold">Photos & Evidence</h2>
-            {request.mediaUrls.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
-                {request.mediaUrls.map((url, i) => (
-                  <div
-                    key={i}
-                    className="flex aspect-video items-center justify-center rounded-lg border border-gray-200 bg-gray-100"
-                  >
-                    <div className="text-center">
-                      <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                      <p className="text-xs text-gray-600">{url}</p>
-                    </div>
-                  </div>
-                ))}
+            <div className="space-y-5">
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">From the tenant</p>
+                <PhotoGrid
+                  urls={request.mediaUrls}
+                  label="Tenant photo"
+                  emptyText="No photos attached to this request."
+                />
               </div>
-            ) : (
-              <p className="text-sm text-gray-400">No photos attached to this request.</p>
-            )}
+              {request.vendor && (
+                <>
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-gray-700">
+                      Vendor, before the work
+                    </p>
+                    <PhotoGrid
+                      urls={request.beforePhotoUrls}
+                      label="Before photo"
+                      emptyText="The vendor has not added before photos."
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-gray-700">Vendor, after the work</p>
+                    <PhotoGrid
+                      urls={request.afterPhotoUrls}
+                      label="After photo"
+                      emptyText="The vendor has not added after photos yet."
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Timeline */}
@@ -395,12 +435,17 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                     <span className="ml-1 text-xs text-gray-600">Rated by tenant</span>
                   </div>
                 )}
-                <button
-                  onClick={() => setShowAssignModal(true)}
-                  className="w-full rounded-lg border border-blue-300 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                >
-                  Reassign Vendor
-                </button>
+                {isOpen && (
+                  <button
+                    onClick={() => {
+                      setAssignMode('assign');
+                      setShowAssignModal(true);
+                    }}
+                    className="w-full rounded-lg border border-blue-300 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                  >
+                    Reassign Vendor
+                  </button>
+                )}
               </>
             ) : (
               <div className="py-4 text-center">
@@ -409,7 +454,10 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                 </div>
                 <p className="mb-4 text-sm text-gray-500">No vendor assigned yet</p>
                 <button
-                  onClick={() => setShowAssignModal(true)}
+                  onClick={() => {
+                    setAssignMode('assign');
+                    setShowAssignModal(true);
+                  }}
                   className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   + Assign Vendor
@@ -418,25 +466,94 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
             )}
           </div>
 
-          {/* Actions */}
-          {request.status !== 'COMPLETED' && request.status !== 'CANCELLED' && (
+          {/* Actions: only the vendor can finish a job, so the team can only cancel it */}
+          {isOpen && (
             <div className="rounded-lg border border-gray-200 bg-white p-6">
               <h2 className="mb-4 font-semibold">Actions</h2>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setShowCompleteModal(true)}
-                  disabled={submitting}
-                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                >
-                  Mark as Completed
-                </button>
-                <button
-                  onClick={handleCancel}
-                  disabled={submitting}
-                  className="w-full rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                >
-                  Cancel Request
-                </button>
+              <button
+                onClick={handleCancel}
+                disabled={submitting}
+                className="w-full rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              >
+                Cancel Request
+              </button>
+            </div>
+          )}
+
+          {/* Sign-off: what the tenant said, and the team's decision */}
+          {request.status === 'COMPLETED' && (
+            <div className="rounded-lg border border-gray-200 bg-white p-6">
+              <h2 className="mb-3 flex items-center gap-2 font-semibold">
+                <ShieldCheck className="h-4 w-4 text-gray-500" />
+                Sign-off
+              </h2>
+              <div className="space-y-3 text-sm">
+                <p className="text-gray-700">
+                  {request.confirmationStatus === 'AWAITING_TENANT'
+                    ? 'Waiting for the tenant to confirm it is fixed. You can approve now without waiting.'
+                    : request.confirmationStatus === 'CONFIRMED'
+                      ? `The tenant confirmed it is fixed${
+                          request.confirmationRespondedAt
+                            ? ` on ${new Date(request.confirmationRespondedAt).toLocaleDateString()}`
+                            : ''
+                        }.`
+                      : request.confirmationStatus === 'DISPUTED'
+                        ? 'The tenant says it is still a problem.'
+                        : 'The tenant was not asked to confirm this repair.'}
+                </p>
+
+                {request.disputeReason && request.confirmationStatus === 'DISPUTED' && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="font-medium text-red-900">What the tenant says</p>
+                    <p className="mt-1 whitespace-pre-line text-red-900">{request.disputeReason}</p>
+                    <div className="mt-2">
+                      <PhotoGrid urls={request.disputePhotoUrls} label="Tenant photo" />
+                    </div>
+                  </div>
+                )}
+
+                {request.approvedAt ? (
+                  <p className="flex items-center gap-1 font-medium text-green-700">
+                    <CheckCircle className="h-4 w-4" />
+                    Approved by {request.approvedBy?.name ?? 'your team'} on{' '}
+                    {new Date(request.approvedAt).toLocaleDateString()}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {disputed && (
+                      <>
+                        <button
+                          onClick={() => handleReview('REOPEN')}
+                          disabled={reviewing}
+                          className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Send back to vendor
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAssignMode('reassign-disputed');
+                            setShowAssignModal(true);
+                          }}
+                          disabled={reviewing}
+                          className="w-full rounded-lg border border-blue-300 px-4 py-2 font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        >
+                          Give to another vendor
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleReview('APPROVE')}
+                      disabled={reviewing}
+                      className="w-full rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {disputed ? 'Approve anyway' : 'Approve work'}
+                    </button>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">
+                  Approving records your sign-off. It does not pay or hold back the vendor&apos;s
+                  invoice.
+                </p>
               </div>
             </div>
           )}
@@ -467,6 +584,16 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                       <span className="text-gray-600">Vendor invoice {inv.invoiceNumber}</span>
                       <span className="font-semibold">₦{inv.amount.toLocaleString()}</span>
                     </div>
+                    <InvoiceBreakdown invoice={inv} />
+                    {canPayVendor && (
+                      <InvoicePayments
+                        invoice={inv}
+                        payments={inv.payments}
+                        owing={inv.status === 'CANCELLED' || inv.status === 'PAID' ? 0 : owing}
+                        canRecord={canPayVendor}
+                        onChanged={refetch}
+                      />
+                    )}
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {inv.status.replace('_', ' ')}
@@ -503,7 +630,11 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
           >
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <div>
-                <h2 className="text-lg font-semibold">Select a Vendor</h2>
+                <h2 className="text-lg font-semibold">
+                  {assignMode === 'reassign-disputed'
+                    ? 'Give to another vendor'
+                    : 'Select a Vendor'}
+                </h2>
                 <p className="text-sm text-gray-500">
                   Assigning for: {request.title} — {request.unit?.property?.name}
                 </p>
@@ -586,59 +717,6 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
         </div>
       )}
 
-      {/* Mark Completed Modal */}
-      {showCompleteModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setShowCompleteModal(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-xl bg-white p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-lg font-semibold">Mark as Completed</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Completion proof URL</label>
-                <input
-                  value={completionProofUrl}
-                  onChange={(e) => setCompletionProofUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 flex items-center gap-1 text-sm text-gray-600">
-                  <DollarSign className="h-3.5 w-3.5" /> Final cost (₦)
-                </label>
-                <input
-                  value={finalCost}
-                  onChange={(e) => setFinalCost(e.target.value)}
-                  type="number"
-                  min="0"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setShowCompleteModal(false)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleComplete}
-                disabled={submitting}
-                className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {submitting ? 'Saving…' : 'Confirm Completion'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <ConfirmDialog
         open={showCancelConfirm}
         title="Cancel Maintenance Request?"
@@ -650,6 +728,63 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
         onCancel={() => setShowCancelConfirm(false)}
         onConfirm={handleConfirmCancel}
       />
+    </div>
+  );
+}
+
+type VendorInvoice = NonNullable<MaintenanceRequest['invoices']>[number];
+
+// The vendor's invoice is stored as one amount plus a text description (one
+// "item — qty x rate = amount" line each, then optional notes), so the
+// breakdown is read back out of that text. The vendor's total includes 7.5%
+// VAT, which is not in the lines; it is shown as the difference.
+function InvoiceBreakdown({ invoice }: { invoice: VendorInvoice }) {
+  const [open, setOpen] = useState(false);
+  const [body, notes] = (invoice.description ?? '').split(/\n\nNotes: /);
+  const lines = body.split('\n').filter(Boolean);
+  const lineTotals = lines.map((l) => Number(l.match(/= ₦([\d,.]+)$/)?.[1]?.replace(/,/g, '')));
+  const itemised = lineTotals.length > 0 && lineTotals.every((n) => Number.isFinite(n));
+  const subtotal = itemised ? lineTotals.reduce((a, b) => a + b, 0) : 0;
+  const extra = itemised ? Math.round((invoice.amount - subtotal) * 100) / 100 : 0;
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-xs font-medium text-blue-600 hover:underline"
+      >
+        {open ? 'Hide invoice' : 'View invoice'}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+          <p className="text-gray-500">
+            Sent {new Date(invoice.createdAt).toLocaleDateString('en-US', { dateStyle: 'medium' })}{' '}
+            · due {new Date(invoice.dueDate).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+          </p>
+          {lines.length > 0 ? (
+            <ul className="space-y-1">
+              {lines.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500">The vendor added no itemised lines.</p>
+          )}
+          {itemised && extra > 0 && (
+            <p className="flex justify-between border-t border-gray-200 pt-2">
+              <span>VAT and other charges</span>
+              <span>₦{extra.toLocaleString()}</span>
+            </p>
+          )}
+          <p className="flex justify-between border-t border-gray-200 pt-2 font-semibold">
+            <span>Total</span>
+            <span>₦{invoice.amount.toLocaleString()}</span>
+          </p>
+          {notes && <p className="text-gray-600">Vendor notes: {notes}</p>}
+        </div>
+      )}
     </div>
   );
 }

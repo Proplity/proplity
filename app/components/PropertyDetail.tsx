@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { api } from '@/lib/apiClient';
+import { formatViewingTime } from '@/lib/viewingSlots';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
 import { useLeases } from '@/hooks/useLeases';
@@ -879,11 +880,39 @@ function ViewingRequestsCard({ propertyId }: { propertyId: string }) {
           <div key={v.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
               <p className="font-medium">{v.requestedBy?.name ?? 'Visitor'}</p>
+              {v.requestedBy && (
+                <>
+                  <p className="text-xs text-gray-600">
+                    {v.requestedBy.email}
+                    {v.requestedBy.phoneNumber ? ` · ${v.requestedBy.phoneNumber}` : ''}
+                  </p>
+                  <div className="my-1 flex flex-wrap gap-1.5">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        v.requestedBy.hasIdOnFile
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {v.requestedBy.hasIdOnFile ? 'ID on file' : 'No ID on file'}
+                    </span>
+                    {v.requestedBy.kycStatus === 'VERIFIED' && (
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                        Identity verified
+                      </span>
+                    )}
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                      Member since{' '}
+                      {new Date(v.requestedBy.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </>
+              )}
               <p className="text-xs text-gray-500">
-                {new Date(v.scheduledAt).toLocaleString('en-US', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
+                {formatViewingTime(v.scheduledAt)} (Lagos time)
                 {v.notes ? ` · ${v.notes}` : ''}
               </p>
             </div>

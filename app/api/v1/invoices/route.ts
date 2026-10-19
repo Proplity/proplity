@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { InvoiceStatus, InvoiceType, Prisma } from '@prisma/client';
 import { canManageProperty } from '@/lib/api/propertyAccess';
@@ -9,6 +10,15 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { getSystemSettings } from '@/lib/systemSettings';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { notifyAndEmail, notifyPropertyTeam, type NotifyRequest } from '@/lib/notifications';
+import {
+  EVIDENCE_REQUIRED,
+  OPEN_STATUSES,
+  completionData,
+  lacksEvidence,
+  isOpenStatus,
+  tellTenantRepairDone,
+} from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -60,7 +70,7 @@ export const GET = withAuth(async (req, { session }) => {
         skip,
         take,
         include: {
-          payments: { orderBy: { paidAt: 'desc' } },
+          payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
           lease: {
             select: {
               id: true,
@@ -92,6 +102,69 @@ const createInvoiceSchema = z.object({
   status: z.nativeEnum(InvoiceStatus).optional(),
   description: z.string().optional(),
 });
+
+// Everyone who has to do something about a new invoice hears about it: the tenant (or the billed
+// user) for rent and charges, the property team for a vendor's bill. A vendor's invoice also
+// completes the job when auto-complete is on, so the tenant is told the repair is done.
+async function announceInvoice(
+  invoice: {
+    invoiceNumber: string;
+    amount: number;
+    dueDate: Date;
+    leaseId: string | null;
+    maintenanceRequestId: string | null;
+    userId: string | null;
+  },
+  ctx: {
+    autoCompleted: boolean;
+    awaitingTenant: boolean;
+    byVendor: boolean;
+    actorId: string;
+    req: NotifyRequest;
+  },
+) {
+  const money = `₦${invoice.amount.toLocaleString()}`;
+  const due = invoice.dueDate.toDateString();
+  const toPay = {
+    title: `New invoice ${invoice.invoiceNumber}`,
+    body: `You have a new invoice of ${money}, due ${due}.`,
+    link: '/dashboard',
+  };
+
+  if (invoice.maintenanceRequestId) {
+    const request = await prisma.maintenanceRequest.findUnique({
+      where: { id: invoice.maintenanceRequestId },
+      include: { unit: { include: { property: true } } },
+    });
+    if (!request) return;
+    if (ctx.byVendor) {
+      await notifyPropertyTeam(
+        request.unit.property,
+        {
+          type: 'MAINTENANCE_STATUS',
+          title: ctx.autoCompleted ? 'Job done, vendor invoice to pay' : 'Vendor invoice to pay',
+          body: `The vendor sent invoice ${invoice.invoiceNumber} (${money}) for "${request.title}".`,
+          link: `/dashboard/maintenance/${request.id}`,
+        },
+        { exceptId: ctx.actorId, req: ctx.req },
+      );
+    } else {
+      await notifyAndEmail(request.tenantId, toPay, { req: ctx.req });
+    }
+    if (ctx.autoCompleted) await tellTenantRepairDone(request, ctx.awaitingTenant, ctx.req);
+    return;
+  }
+
+  if (invoice.leaseId) {
+    const lease = await prisma.lease.findUnique({
+      where: { id: invoice.leaseId },
+      select: { tenantId: true },
+    });
+    if (lease) await notifyAndEmail(lease.tenantId, toPay, { req: ctx.req });
+    return;
+  }
+  if (invoice.userId) await notifyAndEmail(invoice.userId, toPay, { req: ctx.req });
+}
 
 export const POST = withAuth(
   async (req, { session }) => {
@@ -199,6 +272,27 @@ export const POST = withAuth(
         }
       }
 
+      // The job being billed. A cancelled request has nothing to bill, and a vendor whose invoice
+      // closes the job must have shown the finished work first.
+      const job =
+        maintenanceRequestId && rest.type === 'MAINTENANCE'
+          ? await prisma.maintenanceRequest.findUnique({
+              where: { id: maintenanceRequestId },
+              select: { status: true, afterPhotoUrls: true, completionProofUrl: true },
+            })
+          : null;
+      if (maintenanceRequestId && rest.type === 'MAINTENANCE') {
+        if (!job) {
+          return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+        }
+        if (job.status === 'CANCELLED') {
+          return NextResponse.json(
+            { error: 'This request was cancelled, so it cannot be billed.' },
+            { status: 409 },
+          );
+        }
+      }
+
       const data = { leaseId, maintenanceRequestId, userId, ...rest };
 
       // Admin-configurable (Platform Settings, SystemSettings.
@@ -211,28 +305,60 @@ export const POST = withAuth(
         !!maintenanceRequestId &&
         (await getSystemSettings()).autoCompleteMaintenanceOnInvoice;
 
+      // Closes a job that is still open. One already finished (a corrected invoice replacing a
+      // cancelled one) keeps its completion, its tenant answer and its approval.
+      const closesJob = shouldAutoComplete && !!job && isOpenStatus(job.status);
+      if (closesJob && session.role === 'VENDOR' && lacksEvidence(job)) {
+        return NextResponse.json(EVIDENCE_REQUIRED, { status: 409 });
+      }
+      const completion = closesJob ? await completionData() : null;
+
       const createInvoice = () =>
         shouldAutoComplete
           ? prisma.$transaction(async (tx) => {
               const invoice = await tx.invoice.create({ data });
-              await tx.maintenanceRequest.update({
-                where: { id: maintenanceRequestId! },
-                // The vendor's bill is the job's final cost; record it with the
-                // completion so the request and the manager board don't read "Pending".
-                data: { status: 'COMPLETED', finalCost: invoice.amount, completedAt: new Date() },
-              });
+              // The vendor's bill is the job's final cost; record it with the
+              // completion so the request and the manager board don't read "Pending".
+              if (completion) {
+                await tx.maintenanceRequest.updateMany({
+                  where: { id: maintenanceRequestId!, status: { in: [...OPEN_STATUSES] } },
+                  data: {
+                    ...completion,
+                    finalCost: invoice.amount,
+                    ...(job && !job.completionProofUrl && job.afterPhotoUrls[0]
+                      ? { completionProofUrl: job.afterPhotoUrls[0] }
+                      : {}),
+                  },
+                });
+              } else {
+                await tx.maintenanceRequest.updateMany({
+                  where: { id: maintenanceRequestId!, status: 'COMPLETED' },
+                  data: { finalCost: invoice.amount },
+                });
+              }
               return invoice;
             })
           : prisma.invoice.create({ data });
 
+      const announce = async (invoice: Awaited<ReturnType<typeof createInvoice>>) => {
+        await announceInvoice(invoice, {
+          autoCompleted: closesJob,
+          awaitingTenant: completion?.confirmationStatus === 'AWAITING_TENANT',
+          byVendor: session.role === 'VENDOR',
+          actorId: session.sub,
+          req,
+        });
+        return invoice;
+      };
+
       try {
-        const invoice = await createInvoice();
+        const invoice = await announce(await createInvoice());
         return NextResponse.json({ data: invoice }, { status: 201 });
       } catch (err) {
         // invoiceNumber is dbgenerated (rule 11) -- never set by app code.
         // On the vanishingly rare uuid-derived collision, retry once.
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-          const invoice = await createInvoice();
+          const invoice = await announce(await createInvoice());
           return NextResponse.json({ data: invoice }, { status: 201 });
         }
         throw err;

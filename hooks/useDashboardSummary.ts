@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
+import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AdminBreakdownSummary,
   AdminDashboardSummary,
@@ -99,4 +100,8 @@ export function useVendorSummary() {
   return useSummary<VendorDashboardSummary>(() =>
     api.dashboard.mineVendor().then((res) => res.data.data),
   );
+}
+
+export function useAttention() {
+  return useSummary<AttentionItem[]>(() => api.dashboard.attention().then((res) => res.data.data));
 }

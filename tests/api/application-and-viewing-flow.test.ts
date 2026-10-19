@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, bookableViewingTime } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -128,7 +128,7 @@ describe('viewing requests: confirm / decline / cancel (ISS-047)', () => {
     const property = await createProperty({ managerId: manager.id });
     const mCookie = await authCookie(manager.id, manager.role);
     const tCookie = await authCookie(tenant.id, tenant.role);
-    const when = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    const when = bookableViewingTime();
     const res = await apiFetch(`/api/v1/properties/${property.id}/viewings`, {
       method: 'POST',
       cookie: tCookie,

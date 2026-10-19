@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { checkFreeformParticipants } from '@/lib/api/messagingAccess';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { syncThreadVendor } from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (_req, { session }) => {
   try {
@@ -109,7 +110,11 @@ export const POST = withAuth(async (req, { session }) => {
       if (!isParty) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
       const existing = await prisma.conversation.findUnique({ where: { maintenanceRequestId } });
-      if (existing) return NextResponse.json({ data: existing });
+      if (existing) {
+        // A vendor assigned after the thread was made would otherwise never be in it.
+        await syncThreadVendor(maintenanceRequestId, request.vendorId);
+        return NextResponse.json({ data: existing });
+      }
 
       const participantUserIds = new Set<string>([request.tenantId]);
       if (request.vendorId) participantUserIds.add(request.vendorId);

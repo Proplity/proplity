@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
   AccessCodeDetail,
@@ -62,6 +63,9 @@ import type {
   Subscription,
   Unit,
   UpdateMaintenanceRequestInput,
+  RepairAnswerInput,
+  RepairReviewInput,
+  PlatformSettings,
   Vendor,
   Violation,
   BankTransferStatus,
@@ -72,6 +76,7 @@ import type {
   InitiateVendorPayoutInput,
 } from './api/types';
 import type { UploadFolder } from '@/lib/fileRef';
+import type { Receipt } from '@/lib/receiptTypes';
 
 export const apiClient = axios.create({
   headers: {
@@ -299,6 +304,16 @@ export const api = {
       apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
     rateVendor: (id: string, body: { rating: number; comment?: string }) =>
       apiClient.post<{ data: unknown }>(`/api/v1/maintenance/requests/${id}/rating`, body),
+    answerRepair: (id: string, body: RepairAnswerInput) =>
+      apiClient.post<{ data: MaintenanceRequest }>(
+        `/api/v1/maintenance/requests/${id}/confirmation`,
+        body,
+      ),
+    reviewRepair: (id: string, body: RepairReviewInput) =>
+      apiClient.post<{ data: MaintenanceRequest }>(
+        `/api/v1/maintenance/requests/${id}/review`,
+        body,
+      ),
   },
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
@@ -333,6 +348,7 @@ export const api = {
     breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
     mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
     mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
+    attention: () => apiClient.get<{ data: AttentionItem[] }>('/api/v1/dashboard/attention'),
   },
   invoices: {
     list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>
@@ -418,14 +434,15 @@ export const api = {
         >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
-      get: () =>
-        apiClient.get<{
-          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
-        }>('/api/v1/admin/settings'),
-      update: (data: { autoCompleteMaintenanceOnInvoice: boolean }) =>
-        apiClient.patch<{
-          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
-        }>('/api/v1/admin/settings', data),
+      get: () => apiClient.get<{ data: PlatformSettings }>('/api/v1/admin/settings'),
+      update: (
+        data: Partial<
+          Pick<
+            PlatformSettings,
+            'autoCompleteMaintenanceOnInvoice' | 'requireTenantRepairConfirmation'
+          >
+        >,
+      ) => apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
     },
   },
   notifications: {
@@ -449,6 +466,8 @@ export const api = {
           invoiceId,
         },
       ),
+    receipt: (paymentId: string) =>
+      apiClient.get<{ data: Receipt }>(`/api/v1/payments/${paymentId}/receipt`),
     authorization: (leaseId: string) =>
       apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
         params: { leaseId },

@@ -6,6 +6,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyByEmail, notifyUser } from '@/lib/notifications';
+import { formatViewingTime } from '@/lib/viewingSlots';
 
 type RouteCtx = { params: Promise<{ id: string; viewingId: string }> };
 
@@ -47,10 +48,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       data: { status },
     });
 
-    const when = viewing.scheduledAt.toLocaleString('en-US', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-    });
+    const when = `${formatViewingTime(viewing.scheduledAt, 'full')} (Lagos time)`;
     const name = viewing.property.name;
 
     if (isTeam) {

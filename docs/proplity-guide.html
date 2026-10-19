@@ -720,7 +720,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Viewing Appointment Scheduling Calendar</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Prospective tenants select from upcoming manager-defined dates and time slots for on-site inspection.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Prospective tenants pick a date (tomorrow to 60 days ahead, Mon-Sat) and a half-hour start time (9 AM to 5 PM, Lagos time) for an on-site inspection; the property team sees who is coming (contact, ID on file, account age) on each request.</div>
         <code>ScheduleViewing.tsx</code> &bull; <code>POST /viewings</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -894,8 +894,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Offline Bank Transfer Proof Submission</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Upload bank transfer payment receipts, input sender bank, amount, reference number, and date.</div>
-        <code>POST /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The "Paid another way" form: record a bank transfer or cash payment with the sender bank, amount, reference, date and an optional receipt file. It counts once someone else confirms it.</div>
+        <code>PaidAnotherWayForm.tsx</code> &bull; <code>ISS-103</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Duplicate Reference Guard</div>
@@ -904,7 +904,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Transfer Reconciliation Status Tracker</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants see real-time status of their offline submissions: PENDING, APPROVED (receipted), or REJECTED.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants see the transfers they recorded under Transfers you recorded: waiting, confirmed (with a receipt link) or rejected with the reason.</div>
         <code>GET /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -919,8 +919,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Itemized Payment Ledger & Digital Receipts</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">History of all settled payments with transaction references, method badges, and downloadable receipts.</div>
-        <code>/dashboard/payment-history</code> &bull; <code>Receipts</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">History of all settled payments with transaction references, method badges and a receipt for each: receipt number, who paid whom, how, what is still owing, print or save as PDF.</div>
+        <code>/dashboard/payment-history</code> &bull; <code>/receipts/[id]</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">3-Step Structured Tenancy Application</div>
@@ -1058,7 +1058,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager Operations Command Center</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Daily task hub highlighting pending viewings, open repair tickets, expiring leases, and uncollected rent.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The <b>Needs your attention</b> list at the top of the dashboard: applications and viewing requests, repairs with no vendor, vendor invoices to pay, overdue rent, leases to sign or ending, listings needing changes and unread messages, each linking to where it is handled. Every role has the same list.</div>
         <code>Dashboard.tsx</code> &bull; <code>Operations Console</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -1113,8 +1113,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Statement Reconciliation</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid.</div>
-        <code>/api/v1/bank-transfers/[id]/reconcile</code> &bull; <code>ISS-012</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The Bank Transfers page lists transfers waiting for confirmation. Open the receipt file, then confirm or reject. Nobody can confirm a transfer they recorded themselves. Confirming marks the invoice paid and creates the receipt.</div>
+        <code>/dashboard/reconciliation</code> &bull; <code>/admin/payments</code> &bull; <code>ISS-012</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Maintenance Payout Processing</div>
@@ -1202,6 +1202,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Maintenance Invoice Payer Assignment</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Routes vendor invoice payment directly to the managing property manager or property landlord.</div>
         <code>Invoice.payerId</code> &bull; <code>ISS-051</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Paid Notice and Receipts for Vendors</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The vendor is told when an invoice is paid, by card or by hand, and opens the receipt from Invoices.</div>
+        <code>/dashboard/vendor/invoices</code> &bull; <code>/receipts/[id]</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Bank Account Registration</div>
@@ -2057,6 +2062,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">2.7</span>Maintenance Request (Report a Repair)</h3>
   <p>Something broken? Submit a maintenance request — the manager assigns a tradesperson (vendor) to fix it. Pick a category, urgency, describe the problem, and optionally attach photos.</p>
+  <p>When the vendor says the work is done, the request shows <strong>Needs your answer</strong>. Open it, look at the vendor's photos and choose one:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;"><strong>Confirm fixed</strong>: records that the repair is fixed. Nothing else changes.</li>
+    <li style="margin-bottom:6px;"><strong>Still a problem</strong>: say what is still wrong (required) and add photos if you like. Your property team is told and decides whether the same vendor comes back, another vendor takes it, or the work is approved anyway.</li>
+  </ul>
+  <p>Your answer never changes what is owed to the vendor, and an admin can switch the question off.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_04_maintenance_list_desktop.png" alt="Maintenance list" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Maintenance requests list (tracker) <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2347,6 +2358,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div id="manager-maintenance" class="step-card">
   <h3><span class="step-num">4.5</span>Maintenance Board (Kanban View)</h3>
   <p>The manager's maintenance control centre — a Kanban board (like Trello) showing all repair requests from all tenants. Manager assigns vendors to jobs and tracks progress through New → In Progress → Resolved → Closed.</p>
+  <p>Only the vendor can finish a job. When they have, the repair page shows the vendor's before and after photos and a <strong>Sign-off</strong> card:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;"><strong>Approve work</strong> records your sign-off, separate from the vendor finishing. It does not pay or hold back the vendor invoice.</li>
+    <li style="margin-bottom:6px;">If the tenant says it is still a problem you see their reason and photos and choose <strong>Send back to vendor</strong>, <strong>Give to another vendor</strong> (the first vendor unpaid invoice is cancelled; if it has already been paid the job cannot move) or <strong>Approve anyway</strong>.</li>
+    <li style="margin-bottom:6px;">The tenant may not have answered yet: you can wait for them, or approve straight away.</li>
+  </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/manager_07_maintenance_desktop.png" alt="Maintenance kanban" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Maintenance Kanban board <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2474,6 +2491,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">5.2</span>Job Detail & Status Updates</h3>
   <p>Full details of a single maintenance job — problem description, tenant photos, property address, preferred access time, and timeline. Vendor clicks "Update Status" to move from In Progress → Completed.</p>
+  <p>Under <strong>Work Photos</strong> the vendor adds before photos (optional) and after photos. At least one after photo is needed to close the job, whether it is closed by the invoice or by <strong>Mark work done</strong>.</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;">If the tenant says the repair is still a problem, a red box shows their reason and photos. Fix it, add new photos and press <strong>Mark work done</strong>: the invoice is not sent again.</li>
+    <li style="margin-bottom:6px;">Photos lock once the property team approves the repair or the tenant confirms it.</li>
+  </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/vendor_02_job_detail_desktop.png" alt="Job detail" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Job detail page <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2539,6 +2561,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">6.2</span>Properties Moderation, Reports, Audit Logs & Settings</h3>
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
+  <p>Platform Settings has two switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>

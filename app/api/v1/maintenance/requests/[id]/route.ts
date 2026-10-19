@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 import { handleFileError } from '@/lib/api/fileErrors';
 import { z } from 'zod';
@@ -10,8 +11,26 @@ import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
 import { safeUrl } from '@/lib/api/urlField';
+import { getSystemSettings } from '@/lib/systemSettings';
+import {
+  EVIDENCE_REQUIRED,
+  MAX_EVIDENCE_PHOTOS,
+  OPEN_STATUSES,
+  completionData,
+  evidenceRequired,
+  lacksEvidence,
+  isOpenStatus,
+  syncThreadVendor,
+  tellTenantRepairDone,
+  vendorProblem,
+} from '@/lib/maintenanceFlow';
 
 type RouteCtx = { params: Promise<{ id: string }> };
+
+// Only what a screen shows about the people on a job. These used to be `true`, which returned
+// whole user rows (password hash, ID document link, emergency contact) to everyone who could open
+// the request.
+const PERSON = { id: true, name: true, email: true, phoneNumber: true } as const;
 
 function loadRequest(id: string) {
   return prisma.maintenanceRequest.findUnique({
@@ -27,14 +46,15 @@ function loadRequest(id: string) {
         },
       },
       category: true,
-      vendor: true,
-      tenant: true,
+      vendor: { select: PERSON },
+      tenant: { select: PERSON },
+      approvedBy: { select: { id: true, name: true } },
       conversation: true,
       vendorRating: true,
       invoices: {
         where: { type: 'MAINTENANCE' },
         orderBy: { createdAt: 'desc' },
-        include: { payments: { select: { amount: true } } },
+        include: { payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } } },
       },
     },
   });
@@ -72,11 +92,30 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json({ data: request });
+    // A vendor needs the tenant's name and phone to arrange access, not their email address.
+    const tenant =
+      request.tenant && isAssignedVendor ? { ...request.tenant, email: '' } : request.tenant;
+
+    // Tells the vendor's screen whether sending an invoice will also close the job, so it can ask
+    // for the finished-work photos first.
+    const { autoCompleteMaintenanceOnInvoice } = await getSystemSettings();
+
+    return NextResponse.json({
+      data: {
+        ...request,
+        tenant,
+        workflow: {
+          autoCompleteOnInvoice: autoCompleteMaintenanceOnInvoice,
+          evidenceRequired: evidenceRequired(),
+        },
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }
 });
+
+const evidenceList = z.array(safeUrl).max(MAX_EVIDENCE_PHOTOS);
 
 const patchSchema = z.object({
   categoryId: z.string().nullable().optional(),
@@ -85,8 +124,11 @@ const patchSchema = z.object({
   scheduledFor: z.coerce.date().nullable().optional(),
   status: z.nativeEnum(MaintenanceStatus).optional(),
   completionProofUrl: safeUrl.optional(),
-  finalCost: z.number().optional(),
+  finalCost: z.number().min(0).max(1_000_000_000).optional(),
   vendorNotes: z.string().optional(),
+  // The vendor's photos of the work. Each list replaces the stored one.
+  beforePhotoUrls: evidenceList.optional(),
+  afterPhotoUrls: evidenceList.optional(),
 });
 
 export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -108,11 +150,39 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       completionProofUrl,
       finalCost,
       vendorNotes,
+      beforePhotoUrls,
+      afterPhotoUrls,
     } = validated.data;
 
-    await assertOwnsFileUrls([completionProofUrl], session.sub, 'maintenance-requests');
-
     const canManage = canManageProperty(session, request.unit.property);
+    const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
+
+    // Photos of the work belong to the assigned vendor, and stop changing once the repair is signed
+    // off (the tenant confirmed it or the property team approved it).
+    const touchesEvidence = beforePhotoUrls !== undefined || afterPhotoUrls !== undefined;
+    if (touchesEvidence) {
+      if (!isAssignedVendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (request.status === 'CANCELLED') {
+        return NextResponse.json({ error: 'This request was cancelled' }, { status: 409 });
+      }
+      if (request.approvedAt || request.confirmationStatus === 'CONFIRMED') {
+        return NextResponse.json(
+          { error: 'This repair has been signed off, so its photos can no longer change.' },
+          { status: 409 },
+        );
+      }
+    }
+    // Who may attach a file is decided first; only then is the file itself checked to be theirs.
+    await assertOwnsFileUrls(
+      [completionProofUrl, ...(beforePhotoUrls ?? []), ...(afterPhotoUrls ?? [])],
+      session.sub,
+      'maintenance-requests',
+    );
+    const evidenceData = {
+      ...(beforePhotoUrls !== undefined ? { beforePhotoUrls } : {}),
+      ...(afterPhotoUrls !== undefined ? { afterPhotoUrls } : {}),
+    };
+
     const isTriage =
       categoryId !== undefined ||
       priority !== undefined ||
@@ -123,22 +193,22 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (isTriage) {
       if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-      // Only a vetted vendor can take a job (ISS-043). A vendor with no
-      // profile row predates sign-up profiles and is still allowed.
+      // A finished or cancelled job changes hands through the review step (a disputed repair can
+      // be reassigned there), not by quietly swapping the vendor.
+      if (
+        vendorId !== undefined &&
+        vendorId !== request.vendorId &&
+        !isOpenStatus(request.status)
+      ) {
+        return NextResponse.json(
+          { error: 'This request is closed, so its vendor cannot be changed here.' },
+          { status: 409 },
+        );
+      }
+
       if (vendorId) {
-        const vendor = await prisma.user.findFirst({
-          where: { id: vendorId, role: 'VENDOR' },
-          include: { vendorProfile: { select: { verificationStatus: true } } },
-        });
-        if (!vendor) {
-          return NextResponse.json({ error: 'vendorId must reference a vendor' }, { status: 400 });
-        }
-        if (vendor.vendorProfile && vendor.vendorProfile.verificationStatus !== 'VERIFIED') {
-          return NextResponse.json(
-            { error: 'This vendor has not been verified yet', code: 'VENDOR_NOT_VERIFIED' },
-            { status: 409 },
-          );
-        }
+        const problem = await vendorProblem(vendorId);
+        if (problem) return problem;
       }
 
       const updated = await prisma.maintenanceRequest.update({
@@ -153,6 +223,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           ...(vendorId && request.status === 'SUBMITTED' ? { status: 'SCHEDULED' as const } : {}),
         },
       });
+      if (vendorId !== undefined) await syncThreadVendor(id, vendorId, request.vendorId);
       await notifyTenantOfStatus(
         request,
         session.sub,
@@ -173,11 +244,18 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ data: updated });
     }
 
-    // Cancel: MANAGER/LANDLORD/ADMIN, or the TENANT who owns the request.
+    // Cancel: MANAGER/LANDLORD/ADMIN, or the TENANT who owns the request. Only an open request can
+    // be cancelled: a finished one has a vendor's work and invoice behind it.
     if (status === 'CANCELLED') {
       const isOwnerTenant = session.role === 'TENANT' && request.tenantId === session.sub;
       if (!canManage && !isOwnerTenant) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (!isOpenStatus(request.status)) {
+        return NextResponse.json(
+          { error: `A ${request.status.toLowerCase()} request cannot be cancelled` },
+          { status: 409 },
+        );
       }
 
       const updated = await prisma.maintenanceRequest.update({
@@ -192,52 +270,74 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ data: updated });
     }
 
-    // Progress/completion: only the assigned VENDOR.
+    // Progress/completion: only the assigned VENDOR, and only on a job that is still open.
     if (status === 'IN_PROGRESS' || status === 'COMPLETED') {
-      const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
       if (!isAssignedVendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!isOpenStatus(request.status)) {
+        return NextResponse.json(
+          { error: `This job is already ${request.status.toLowerCase()}` },
+          { status: 409 },
+        );
+      }
 
       if (status === 'COMPLETED') {
-        if (!completionProofUrl || finalCost === undefined) {
+        // A job that was sent back is finished again at the cost already billed.
+        const cost = finalCost ?? request.finalCost ?? undefined;
+        if (cost === undefined) {
           return NextResponse.json(
-            { error: 'completionProofUrl and finalCost are required to complete a request' },
+            { error: 'finalCost is required to complete a request' },
             { status: 400 },
           );
         }
+        const after = afterPhotoUrls ?? request.afterPhotoUrls;
+        const proof = completionProofUrl ?? request.completionProofUrl;
+        if (lacksEvidence({ afterPhotoUrls: after, completionProofUrl: proof })) {
+          return NextResponse.json(EVIDENCE_REQUIRED, { status: 400 });
+        }
 
-        // Auto-create the MAINTENANCE invoice in the same transaction as the
-        // completion write -- maintenanceRequestId satisfies Invoice's
-        // "at least one of leaseId/maintenanceRequestId/userId" rule.
-        // Skipped when the vendor already sent a live invoice for this job
-        // (one invoice per job, ISS-051).
-        const alreadyInvoiced = await prisma.invoice.findFirst({
-          where: { maintenanceRequestId: id, type: 'MAINTENANCE', status: { not: 'CANCELLED' } },
-          select: { id: true },
+        const data = {
+          ...(await completionData()),
+          ...evidenceData,
+          // Older screens read the single proof link, so keep it filled from the first photo.
+          completionProofUrl: proof ?? after[0],
+          finalCost: cost,
+        };
+
+        // Claim the job and write the invoice together: the claim only matches while the job is
+        // still open, so two simultaneous completions cannot both go through.
+        const updated = await prisma.$transaction(async (tx) => {
+          const claimed = await tx.maintenanceRequest.updateMany({
+            where: { id, status: { in: [...OPEN_STATUSES] } },
+            data,
+          });
+          if (claimed.count === 0) return null;
+
+          // Skipped when the vendor already sent a live invoice for this job (one invoice per
+          // job, ISS-051) or when there is nothing to bill.
+          const alreadyInvoiced = await tx.invoice.findFirst({
+            where: { maintenanceRequestId: id, type: 'MAINTENANCE', status: { not: 'CANCELLED' } },
+            select: { id: true },
+          });
+          if (!alreadyInvoiced && cost > 0) {
+            // maintenanceRequestId satisfies Invoice's "at least one of
+            // leaseId/maintenanceRequestId/userId" rule.
+            await tx.invoice.create({
+              data: {
+                maintenanceRequestId: id,
+                type: 'MAINTENANCE',
+                amount: cost,
+                dueDate: new Date(),
+                description: `Maintenance: ${request.title}`,
+              },
+            });
+          }
+          return tx.maintenanceRequest.findUnique({ where: { id } });
         });
-        const [updated] = await prisma.$transaction([
-          prisma.maintenanceRequest.update({
-            where: { id },
-            data: { status: 'COMPLETED', completionProofUrl, finalCost, completedAt: new Date() },
-          }),
-          ...(alreadyInvoiced
-            ? []
-            : [
-                prisma.invoice.create({
-                  data: {
-                    maintenanceRequestId: id,
-                    type: 'MAINTENANCE' as const,
-                    amount: finalCost,
-                    dueDate: new Date(),
-                    description: `Maintenance: ${request.title}`,
-                  },
-                }),
-              ]),
-        ]);
-        await notifyTenantOfStatus(
-          request,
-          session.sub,
-          `Your request "${request.title}" has been completed.`,
-        );
+        if (!updated) {
+          return NextResponse.json({ error: 'This job is already closed' }, { status: 409 });
+        }
+
+        await tellTenantRepairDone(request, data.confirmationStatus === 'AWAITING_TENANT', req);
 
         const property = request.unit?.property;
         const managersToNotify = [property?.managerId, property?.landlordId].filter(
@@ -257,7 +357,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
       const updated = await prisma.maintenanceRequest.update({
         where: { id },
-        data: { status: 'IN_PROGRESS', ...(vendorNotes !== undefined ? { vendorNotes } : {}) },
+        data: {
+          status: 'IN_PROGRESS',
+          ...(vendorNotes !== undefined ? { vendorNotes } : {}),
+          ...evidenceData,
+        },
       });
       await notifyTenantOfStatus(
         request,
@@ -267,15 +371,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ data: updated });
     }
 
-    // Notes-only update: the assigned vendor leaving a progress note without
+    // Notes and photos only: the assigned vendor leaving a progress note or adding photos without
     // changing status (e.g. a request already IN_PROGRESS).
-    if (vendorNotes !== undefined) {
-      const isAssignedVendor = session.role === 'VENDOR' && request.vendorId === session.sub;
+    if (vendorNotes !== undefined || touchesEvidence) {
       if (!isAssignedVendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
       const updated = await prisma.maintenanceRequest.update({
         where: { id },
-        data: { vendorNotes },
+        data: { ...(vendorNotes !== undefined ? { vendorNotes } : {}), ...evidenceData },
       });
       return NextResponse.json({ data: updated });
     }

@@ -194,7 +194,14 @@ export type PropertyViewing = {
   id: string;
   propertyId: string;
   requestedById: string;
-  requestedBy?: { name: string; email: string };
+  requestedBy?: {
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    createdAt: string;
+    kycStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+    hasIdOnFile: boolean;
+  };
   scheduledAt: string;
   status: 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   notes: string | null;
@@ -214,6 +221,9 @@ export type CreateMaintenanceRequestInput = {
   mediaUrls?: string[];
 };
 
+export type RepairConfirmationStatus =
+  'NOT_REQUESTED' | 'AWAITING_TENANT' | 'CONFIRMED' | 'DISPUTED';
+
 export type MaintenanceRequest = {
   id: string;
   unitId: string;
@@ -231,18 +241,34 @@ export type MaintenanceRequest = {
   mediaUrls: string[];
   vendorNotes: string | null;
   completionProofUrl: string | null;
+  /** The vendor's photos of the work, uploaded through the file gateway. */
+  beforePhotoUrls: string[];
+  afterPhotoUrls: string[];
+  /** The tenant's answer once the job is finished (the admin can switch the step off). */
+  confirmationStatus: RepairConfirmationStatus;
+  confirmationRespondedAt: string | null;
+  disputeReason: string | null;
+  disputePhotoUrls: string[];
+  /** The property team's sign-off. */
+  approvedAt: string | null;
+  approvedBy?: { id: string; name: string } | null;
   scheduledFor: string | null;
   completedAt: string | null;
   costEstimate: number | null;
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
+  // Present on the single-request fetch only.
+  workflow?: { autoCompleteOnInvoice: boolean; evidenceRequired: boolean };
   // Present on the single-request fetch only (ISS-051).
   invoices?: {
     id: string;
     invoiceNumber: string;
     amount: number;
     status: string;
-    payments: { amount: number }[];
+    description: string | null;
+    dueDate: string;
+    createdAt: string;
+    payments: Pick<Payment, 'id' | 'amount' | 'paidAt' | 'paymentMethod' | 'receiptNumber'>[];
   }[];
   createdAt: string;
   updatedAt: string;
@@ -257,6 +283,23 @@ export type UpdateMaintenanceRequestInput = {
   completionProofUrl?: string;
   finalCost?: number;
   vendorNotes?: string;
+  /** Each list replaces the stored photos (assigned vendor only). */
+  beforePhotoUrls?: string[];
+  afterPhotoUrls?: string[];
+};
+
+export type RepairAnswerInput =
+  { outcome: 'CONFIRMED' } | { outcome: 'DISPUTED'; reason: string; photoUrls?: string[] };
+
+export type RepairReviewInput =
+  | { action: 'APPROVE' }
+  | { action: 'REOPEN'; note?: string }
+  | { action: 'REASSIGN'; vendorId: string; note?: string };
+
+export type PlatformSettings = {
+  setupComplete: boolean;
+  autoCompleteMaintenanceOnInvoice: boolean;
+  requireTenantRepairConfirmation: boolean;
 };
 
 export type Vendor = {
@@ -385,6 +428,8 @@ export type Payment = {
   transactionRef: string | null;
   paidAt: string;
   notes: string | null;
+  /** The number printed on this payment's receipt (`/receipts/<id>`). */
+  receiptNumber: string;
 };
 
 export type AutoPayMandate = {
@@ -990,7 +1035,13 @@ export type BankTransferSubmission = {
   };
   submittedBy?: { id: string; name: string; email: string };
   reconciledBy?: { id: string; name: string; role: string } | null;
-  payment?: { id: string; amount: number; paidAt: string; transactionRef: string | null } | null;
+  payment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    transactionRef: string | null;
+    receiptNumber: string;
+  } | null;
 };
 
 export type SubmitBankTransferInput = {

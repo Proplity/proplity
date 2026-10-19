@@ -256,7 +256,18 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (!involved) return false;
     const request = await prisma.maintenanceRequest.findFirst({
       where: {
-        AND: [involved, { OR: [{ mediaUrls: { has: url } }, { completionProofUrl: url }] }],
+        AND: [
+          involved,
+          {
+            OR: [
+              { mediaUrls: { has: url } },
+              { completionProofUrl: url },
+              { beforePhotoUrls: { has: url } },
+              { afterPhotoUrls: { has: url } },
+              { disputePhotoUrls: { has: url } },
+            ],
+          },
+        ],
       },
       select: { id: true },
     });
@@ -323,6 +334,12 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     });
     if (!submission) return false;
     if (submission.submittedById === actor.sub) return true;
+    // Once confirmed, the payer on the lease and the vendor who was paid may read the proof too:
+    // it is attached to their receipt.
+    if (submission.status === 'APPROVED') {
+      if (submission.invoice.lease?.tenantId === actor.sub) return true;
+      if (submission.invoice.maintenanceRequest?.vendorId === actor.sub) return true;
+    }
     if (!scope) return false;
     const property =
       submission.invoice.lease?.unit.property ??

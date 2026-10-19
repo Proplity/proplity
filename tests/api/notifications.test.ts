@@ -286,9 +286,10 @@ describe('notifications: maintenance status trigger', () => {
     });
     expect(notifications.length).toBe(2);
     expect(notifications[0].body).toContain('started');
+    expect(notifications[0].link).toBe(`/dashboard/maintenance/${request.id}`);
+    // Finishing a repair asks the tenant to confirm it, and the link opens their own screen.
+    expect(notifications[1].title).toBe('Is your repair fixed?');
     expect(notifications[1].body).toContain('completed');
-    expect(notifications.every((n) => n.link === `/dashboard/maintenance/${request.id}`)).toBe(
-      true,
-    );
+    expect(notifications[1].link).toBe(`/dashboard/tenant-maintenance?request=${request.id}`);
   });
 });

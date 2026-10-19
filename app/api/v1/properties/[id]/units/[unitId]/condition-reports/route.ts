@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { tellUnitTenant } from '@/lib/notifications';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 
@@ -71,6 +72,10 @@ export const POST = withAuth(
 
       const report = await prisma.conditionReport.create({
         data: { unitId, ...validated.data, rooms: validated.data.rooms as Prisma.InputJsonValue },
+      });
+      await tellUnitTenant(unitId, {
+        title: 'A condition report was added for your unit',
+        body: 'The property team recorded the condition of your unit. Open it to review the rooms and photos.',
       });
       return NextResponse.json({ data: report }, { status: 201 });
     } catch (err) {

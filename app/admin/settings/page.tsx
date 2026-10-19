@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import { ClipboardCheck, Loader2, Settings as SettingsIcon, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { Switch } from '@/app/components/ui/switch';
@@ -10,13 +10,16 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoComplete, setAutoComplete] = useState(true);
+  const [confirmRepairs, setConfirmRepairs] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     api.admin.settings
       .get()
       .then((res) => {
-        if (!cancelled) setAutoComplete(res.data.data.autoCompleteMaintenanceOnInvoice);
+        if (cancelled) return;
+        setAutoComplete(res.data.data.autoCompleteMaintenanceOnInvoice);
+        setConfirmRepairs(res.data.data.requireTenantRepairConfirmation);
       })
       .catch(() => {
         if (!cancelled) toast.error('Failed to load platform settings.');
@@ -38,6 +41,21 @@ export default function AdminSettingsPage() {
       toast.success('Platform settings updated.');
     } catch {
       setAutoComplete(previous);
+      toast.error('Failed to update setting. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmToggle = async (checked: boolean) => {
+    const previous = confirmRepairs;
+    setConfirmRepairs(checked);
+    setSaving(true);
+    try {
+      await api.admin.settings.update({ requireTenantRepairConfirmation: checked });
+      toast.success('Platform settings updated.');
+    } catch {
+      setConfirmRepairs(previous);
       toast.error('Failed to update setting. Please try again.');
     } finally {
       setSaving(false);
@@ -80,7 +98,38 @@ export default function AdminSettingsPage() {
               </p>
             </div>
           </div>
-          <Switch checked={autoComplete} disabled={saving} onCheckedChange={handleToggle} />
+          <Switch
+            checked={autoComplete}
+            disabled={saving}
+            onCheckedChange={handleToggle}
+            aria-label="Auto-complete maintenance jobs on invoice"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-50">
+              <ClipboardCheck className="h-4.5 w-4.5 text-green-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Ask tenants to confirm finished repairs</p>
+              <p className="mt-1 max-w-xl text-sm text-gray-600">
+                When on (default), a repair the vendor finishes asks the tenant to confirm it is
+                fixed or say it is still a problem. A problem goes to the property manager, who can
+                send it back to the vendor, give it to another one, or approve it anyway. It never
+                holds up payment. Turning this off stops new requests; repairs already waiting for
+                an answer can still be answered.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={confirmRepairs}
+            disabled={saving}
+            onCheckedChange={handleConfirmToggle}
+            aria-label="Ask tenants to confirm finished repairs"
+          />
         </div>
       </div>
     </div>

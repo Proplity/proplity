@@ -34,11 +34,15 @@ test('tenant can book a viewing on a future date (ISS-042)', async ({ page, requ
   await loginAs(page, 'tenant');
   await page.goto(`/dashboard/properties/${propertyId}/schedule-viewing`);
 
-  // The first offered day must be in the future, not a stale hard-coded date.
-  const firstDay = page.getByRole('button', { name: /slots available/i }).first();
-  await expect(firstDay).toBeVisible();
-  await firstDay.click();
-  await page.getByRole('button', { name: /10:00 AM/ }).click();
+  // The date field starts from tomorrow; pick a weekday inside the allowed range.
+  const date = page.getByLabel('Viewing date');
+  await expect(date).toBeVisible();
+  const day = new Date();
+  day.setDate(day.getDate() + 3);
+  if (day.getDay() === 0) day.setDate(day.getDate() + 1);
+  const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+  await date.fill(key);
+  await page.getByLabel('Start time').selectOption('10:00');
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.locator('input[type="text"]').first().fill('Jordan Hayes');

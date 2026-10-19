@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { LeaseStatus, PaymentFrequency, LateFeeType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { notifyAndEmail } from '@/lib/notifications';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
@@ -44,7 +46,7 @@ function loadLease(id: string) {
       tenant: { select: tenantSelect },
       notices: { orderBy: { createdAt: 'desc' } },
       invoices: {
-        include: { payments: { orderBy: { paidAt: 'desc' } } },
+        include: { payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } } },
         orderBy: { createdAt: 'desc' },
       },
       renewedFrom: true,
@@ -161,6 +163,15 @@ export const PATCH = withAuth(
           return created;
         });
 
+        await notifyAndEmail(
+          lease.tenantId,
+          {
+            title: 'Your lease was renewed',
+            body: `Your lease for unit ${lease.unit.unitNumber} at ${lease.unit.property.name} was renewed: ${renew.startDate.toDateString()} to ${renew.endDate.toDateString()}, rent ₦${renew.rentAmount.toLocaleString()}.`,
+            link: '/dashboard',
+          },
+          { req },
+        );
         return NextResponse.json({ data: newLease }, { status: 201 });
       }
 
@@ -211,6 +222,27 @@ export const PATCH = withAuth(
 
           return result;
         });
+        const unitLabel = `unit ${lease.unit.unitNumber} at ${lease.unit.property.name}`;
+        const statusNote: Record<string, string> = {
+          ACTIVE: `Your lease for ${unitLabel} is now active.`,
+          TERMINATED: `Your lease for ${unitLabel} was terminated.`,
+          EXPIRED: `Your lease for ${unitLabel} has ended.`,
+        };
+        await notifyAndEmail(
+          lease.tenantId,
+          {
+            title:
+              status && statusNote[status]
+                ? `Lease ${status.toLowerCase()}`
+                : 'Lease terms updated',
+            body:
+              status && statusNote[status]
+                ? statusNote[status]
+                : `The terms of your lease for ${unitLabel} were updated. Open it to see what changed.`,
+            link: '/dashboard',
+          },
+          { req },
+        );
         return NextResponse.json({ data: updated });
       }
 

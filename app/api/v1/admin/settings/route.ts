@@ -23,9 +23,16 @@ export const GET = withAuth(
   { roles: ['ADMIN'] },
 );
 
-const updateSchema = z.object({
-  autoCompleteMaintenanceOnInvoice: z.boolean(),
-});
+// Each toggle is optional so a screen can flip one without restating the others, but an empty
+// body is rejected so a typo cannot silently do nothing.
+const updateSchema = z
+  .object({
+    autoCompleteMaintenanceOnInvoice: z.boolean().optional(),
+    requireTenantRepairConfirmation: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), {
+    message: 'Send at least one setting to change',
+  });
 
 export const PATCH = withAuth(
   async (req) => {

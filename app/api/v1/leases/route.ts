@@ -12,6 +12,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { sendEmail } from '@/lib/email';
+import { notifyAndEmail } from '@/lib/notifications';
 
 // VENDOR has no legitimate reason to list leases -- everyone else's access
 // is scoped below, not gated by role.
@@ -249,13 +250,35 @@ export const POST = withAuth(
             await sendEmail({
               to: existingTenantUser.email,
               subject: `New Lease Agreement Ready for Review: Unit ${unitDetails.unitNumber}`,
-              body: `Hi ${existingTenantUser.name},\n\nA new lease agreement has been prepared for you for unit ${unitDetails.unitNumber} at ${unitDetails.property.name}.\n\nPlease sign in to your Proplity dashboard to review and digitally sign your lease:\n${appUrl('/dashboard/leases', req)}`,
+              body: `Hi ${existingTenantUser.name},\n\nA new lease agreement has been prepared for you for unit ${unitDetails.unitNumber} at ${unitDetails.property.name}.\n\nPlease sign in to your Proplity dashboard to review and digitally sign your lease:\n${appUrl('/dashboard', req)}`,
             });
           }
         } catch (leaseEmailErr) {
           console.error('Failed to email tenant about new lease', leaseEmailErr);
         }
       }
+
+      // The tenant has a lease to read and sign, and an invoice to pay: tell them in the app
+      // (the invite or lease email above already went by email).
+      const where = `unit ${unit.unitNumber} at ${unit.property.name}`;
+      await notifyAndEmail(
+        tenantId!,
+        {
+          title: 'Lease ready to sign',
+          body: `A lease for ${where} was prepared for you. Review it and add your signature.`,
+          link: '/dashboard',
+        },
+        { email: false },
+      );
+      await notifyAndEmail(
+        tenantId!,
+        {
+          title: `Invoice ${result.invoice.invoiceNumber} issued`,
+          body: `Your first rent invoice for ${where} is ₦${result.invoice.amount.toLocaleString()}, due ${result.invoice.dueDate.toDateString()}.`,
+          link: '/dashboard',
+        },
+        { email: false },
+      );
 
       return NextResponse.json(
         { data: { ...result.lease, initialInvoice: result.invoice, tenantInvited: invited } },

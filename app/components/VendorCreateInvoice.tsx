@@ -19,6 +19,14 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
   const { data: job, loading: jobLoading, error: jobError } = useMaintenanceRequest(jobId);
   const { data: bankAccounts } = useBankAccounts();
   const bank = bankAccounts.find((b) => b.isDefault) ?? bankAccounts[0];
+  // Sending this invoice closes the job, and a job closes only once the finished work is shown.
+  const needsPhotos =
+    !!job &&
+    job.workflow?.autoCompleteOnInvoice === true &&
+    job.workflow?.evidenceRequired === true &&
+    ['SUBMITTED', 'SCHEDULED', 'IN_PROGRESS'].includes(job.status) &&
+    (job.afterPhotoUrls ?? []).length === 0 &&
+    !job.completionProofUrl;
   const [notes, setNotes] = useState('');
   // Starts with one blank row: the vendor itemises their own work (ISS-044).
   const [lineItems, setLineItems] = useState([
@@ -300,6 +308,22 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
           />
         </div>
 
+        {needsPhotos && (
+          <div
+            role="alert"
+            className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Sending this invoice closes the job, so add at least one photo of the finished work
+              first.{' '}
+              <Link href={`/dashboard/vendor/jobs/${jobId}`} className="font-medium underline">
+                Add photos to the job
+              </Link>
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -311,7 +335,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
-            disabled={submitting || !canSubmit}
+            disabled={submitting || !canSubmit || needsPhotos}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-5 w-5" />

@@ -13,6 +13,7 @@ import {
   registerMaxAttempts,
 } from '@/lib/auth/rateLimit';
 import { sendEmail } from '@/lib/email';
+import { notifyAdmins } from '@/lib/notifications';
 import { Role, UserStatus } from '@prisma/client';
 
 const registerSchema = z.object({
@@ -180,6 +181,14 @@ export async function POST(req: NextRequest) {
       subject: 'Verify your Proplity account',
       body: `Hi ${user.name},\n\nWelcome to Proplity! Confirm your email address to activate your account:\n\n${appUrl(`/verify-email?token=${rawToken}`, req)}\n\nThis link expires in 7 days.`,
     });
+
+    if (user.role === Role.VENDOR) {
+      await notifyAdmins({
+        title: 'Vendor awaiting verification',
+        body: `${vendor?.businessName || user.name} signed up as a vendor and needs to be verified.`,
+        link: '/admin/users',
+      });
+    }
 
     // No session is established here -- the account is PENDING_VERIFICATION
     // until the link above is used, and login already 403s that status

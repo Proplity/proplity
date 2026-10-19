@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
-import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { notifyAndEmail, notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
 import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
@@ -96,12 +96,17 @@ export async function POST(req: NextRequest) {
       // treated as "already handled" -- never a second credit (ISS-052).
       // The invoice row is locked first so two different payments landing at
       // once also total correctly.
-      let outcome: { wasPaid: boolean; status: string; paidTotal: number } | null = null;
+      let outcome: {
+        wasPaid: boolean;
+        status: string;
+        paidTotal: number;
+        paymentId: string;
+      } | null = null;
       try {
         outcome = await prisma.$transaction(async (tx) => {
           await tx.$queryRaw`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`;
           const before = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
-          await tx.payment.create({
+          const created = await tx.payment.create({
             data: {
               invoiceId,
               amount,
@@ -128,7 +133,7 @@ export async function POST(req: NextRequest) {
           if (status !== before.status) {
             await tx.invoice.update({ where: { id: invoiceId }, data: { status } });
           }
-          return { wasPaid: before.status === 'PAID', status, paidTotal };
+          return { wasPaid: before.status === 'PAID', status, paidTotal, paymentId: created.id };
         });
       } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -183,6 +188,23 @@ export async function POST(req: NextRequest) {
               title: 'Rent Payment Confirmed',
               body: `Your rent payment of ₦${amount.toLocaleString()} has been received. Thank you!`,
               link: '/dashboard/payment-history',
+            });
+          }
+        }
+
+        // A vendor's invoice being paid: the vendor is told, with the receipt (this used to happen for
+        // rent only, so a vendor never learned they had been paid).
+        if (invoice.type === 'MAINTENANCE' && invoice.maintenanceRequestId) {
+          const job = await prisma.maintenanceRequest.findUnique({
+            where: { id: invoice.maintenanceRequestId },
+            select: { vendorId: true },
+          });
+          if (job?.vendorId) {
+            await notifyAndEmail(job.vendorId, {
+              type: 'SYSTEM',
+              title: `Payment received: ${invoice.invoiceNumber}`,
+              body: `₦${amount.toLocaleString()} was paid on your invoice ${invoice.invoiceNumber}. Open the receipt to view or print it.`,
+              link: `/receipts/${outcome.paymentId}`,
             });
           }
         }

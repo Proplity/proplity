@@ -76,7 +76,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 8. **360° Virtual Tour & Video Tour Embedding**: Direct integration of 360-degree virtual tours and video walkthroughs (\`Property.virtualTourUrl\`).
 9. **Neighborhood Quality Metrics & Radar Ratings**: Scored breakdown (0-10) for Safety, Flood Risk, Roads, Power, Water, and Schools (\`NeighbourhoodReport.tsx\`, ISS-016).
 10. **Dynamic Property Trust Score Badge**: Algorithmic trust rating badge computed daily by background workers (\`Property.trustScore\`, ISS-013).
-11. **Inspection Viewing Booking**: Interactive calendar picker with morning/afternoon slots for on-site property visits (\`ScheduleViewing.tsx\`).
+11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
 13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
 14. **Platform Inquiries & Contact Form**: Validated platform contact and support submission form (\`/contact\`, \`ContactPage.tsx\`).
@@ -116,12 +116,12 @@ Every action — from paying rent to submitting a repair request to approving a 
 38. **Online Rent Checkout**: Card, USSD, and bank transfer payment via Paystack checkout with real-time balance recalculation.
 39. **Card Tokenization & Reusable Mandates**: Secure storage of payment authorization tokens (\`AutoPayMandate\`) for recurring rent charging (ISS-056).
 40. **Automatic Rent Charging Background Worker**: Daily worker charging due invoices using saved mandate tokens (\`autopayCharger.ts\`, ISS-011).
-41. **Offline Bank Transfer Proof Submission**: File upload and transaction metadata submission for offline bank deposits (\`/api/v1/bank-transfers\`, ISS-012).
+41. **Offline Bank Transfer Proof Submission**: The "Paid another way" form records a bank transfer or cash payment with its reference and an optional receipt file; it counts once someone else confirms it (\`PaidAnotherWayForm.tsx\`, ISS-103).
 42. **Bank Transfer Duplicate Reference Guard**: Prevents re-submitting previously registered transfer references (\`bankTransferService.ts\`, ISS-012).
 43. **Transfer Reconciliation Status Tracker**: Real-time visibility into whether transfer proof is PENDING, APPROVED, or REJECTED with notes.
 44. **Digital Lease Agreement Console**: View active and historical tenancy agreements, clauses, rent cycles, and deposit terms (\`/dashboard/rentals\`).
 45. **In-Browser Digital E-Signature Execution**: Sign binding lease agreements online with digital signature image, timestamp, and IP logging.
-46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and downloadable receipts.
+46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and a receipt for every payment (receipt number, who paid whom, what is still owing; print or save as PDF; ISS-103).
 47. **3-Step Structured Tenancy Application**: Form capturing personal identity, employer info, monthly income, and references (\`PropertyApplicationForm.tsx\`).
 48. **Mandatory Profile Completion Verification Gate**: Enforced profile completion screen (\`/dashboard/profile/complete\`) before application submission.
 49. **Identity Document Gateway Upload**: Secure upload of government IDs (NIN, Driver's License, Passport) behind private file gateway.
@@ -154,7 +154,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ### Domain 5: Property Manager Operations & Tenancy Administration (18 Features)
 
-69. **Manager Operations Command Center**: Daily task hub highlighting pending viewings, open repair tickets, expiring leases, and uncollected rent.
+69. **Manager Operations Command Center**: The **Needs your attention** list at the top of the dashboard: applications and viewing requests to answer, repairs with no vendor, finished repairs with a vendor invoice to pay, overdue rent, leases waiting for signatures or ending within 60 days, listings that need changes, and unread messages. Each row opens the place that handles it. Every dashboard (tenant, landlord, vendor, admin) has the same list with that role's tasks.
 70. **Role-Scoped Assigned Properties Directory**: Property catalog strictly isolated to buildings where the manager is designated as Property.managerId.
 71. **Property Detail Management Console**: In-depth console displaying all constituent units, condition reports, and equipment inventory.
 72. **Direct Tenant Onboarding / Lease Invite**: Invite tenants by email (\`/dashboard/tenants/add\`); system creates lease and emails activation link.
@@ -165,7 +165,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 77. **Visual Kanban Maintenance Board**: Multi-column board organizing repairs into Submitted, Assigned, In Progress, and Completed stages.
 78. **Vendor Job Assignment with Email Alerts**: Assign maintenance tickets to verified vendors with automated email dispatch and direct ticket linkage.
 79. **Manager-Scoped Invoice Creation**: Generates rent or utility invoices strictly scoped to managed leases, preventing out-of-portfolio billing (ISS-050).
-80. **Bank Transfer Statement Reconciliation**: Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid (ISS-012).
+80. **Bank Transfer Statement Reconciliation**: The Bank Transfers page lists recorded transfers and their receipt files; someone other than the person who recorded one confirms or rejects it, and confirming marks the invoice paid and creates the receipt (ISS-012, ISS-103).
 81. **Vendor Maintenance Payout Processing**: Initiate vendor payouts for completed jobs and execute disbursement via Paystack Transfer API or manual log (ISS-012).
 82. **Neighborhood Report Metric Editor**: Custom editor screen allowing managers to update area safety and infrastructure scores (ISS-016).
 83. **Unit Move-In / Move-Out Condition Reports**: Create detailed room-by-room condition checklists with rating scores, notes, and inspection photos.
@@ -185,7 +185,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 92. **Job Detail & Tenant Access Instructions**: Full problem description, unit address, tenant contact info, access times, and damage photos.
 93. **Job Progress State Transitions**: Vendors update job status from In Progress to Completed once on-site work is concluded.
 94. **Dynamic Itemized Invoice Builder**: Form-driven builder starting empty and loading real job info for itemized billing (ISS-044).
-95. **Automated Maintenance Invoice Payer Assignment**: Routes vendor invoice payment directly to the managing property manager or property landlord (ISS-051).
+95. **Automated Maintenance Invoice Payer Assignment**: Routes vendor invoice payment directly to the managing property manager or property landlord (ISS-051). The Cost Tracking card's **View invoice** toggle shows the vendor's lines, VAT, total and notes.
 96. **Vendor Bank Account Registration**: Link verified NUBAN bank accounts to receive direct electronic transfer disbursements.
 97. **Vendor Payout Disbursement Tracking**: Real-time payout ledger tracking approval, processing, and transfer settlement references (ISS-012).
 98. **Direct Messaging with Assigning Manager**: Two-way in-app messaging channel with the property manager for site access or material approvals.
@@ -760,6 +760,15 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 5. Complete payment on Paystack
 6. Redirected back to Proplity with "Payment Successful" confirmation
 
+**Paid another way (bank transfer or cash):**
+
+1. Open **Payment History** and press **I paid by bank transfer**
+2. Pick the invoice, enter the amount, the bank you paid from, the name on the account, the date and the bank's reference. Attach the receipt or proof if you have it (a photo or PDF)
+3. Press **Record payment**. It appears under **Transfers you recorded** and the invoice does not change yet
+4. Your property team confirms it (someone other than you). When they do, the invoice is paid, you are told, and the payment shows a **Receipt** link. If they reject it you are told why
+
+Every payment in your history has a **Receipt**: it shows the receipt number, who paid whom, how, the reference and what is still owing. **Print / Save as PDF** gives you a copy. Only you, the person paid, your property team and admins can open it.
+
 **Screenshots:**
 
 - Pay Now modal: `docs/screenshots/tenant_03_pay_rent_modal_desktop.png`
@@ -844,11 +853,11 @@ Before applying, you can request to physically visit a property. The manager con
 **Steps:**
 
 1. On a property detail page, click **Schedule Viewing**
-2. A modal appears with a date picker and time slot
-3. Pick your preferred date and time
-4. Click **Submit Request**
-5. Manager receives the request and confirms (or suggests a new time)
-6. Confirmation email is sent to you
+2. Pick a **date** with the date field (tomorrow up to 60 days ahead, Monday to Saturday) and a **start time** from the dropdown (every 30 minutes, 9:00 AM to 5:00 PM, Lagos time)
+3. Click **Continue**, check your details (filled in from your account) and add any notes
+4. Click **Confirm Viewing**
+5. The manager sees who is coming (contact, whether an ID is on file, how long they have had an account) and confirms or declines
+6. A confirmation email is sent to you
 
 **Screenshots:**
 
@@ -935,6 +944,15 @@ Something broken? Use this form to report it. The manager assigns a tradesperson
    - **Access Time:** When is it OK for someone to visit?
 3. Click **Submit Request**
 4. Your request appears in "Track a Maintenance Request" on your dashboard
+
+**When the vendor says the work is done:**
+
+The request shows **Needs your answer** (and the dashboard's Needs your attention list shows **Repairs to confirm**). Open it, look at the vendor's before and after photos, then choose:
+
+- **Confirm fixed** — records that the repair is fixed. Nothing else changes.
+- **Still a problem** — say what is still wrong (required) and add photos if you like. Your property team is told and decides whether the same vendor comes back, another vendor takes it, or the work is approved anyway.
+
+Your answer never changes what is owed to the vendor. An admin can switch the question off in Platform Settings; a repair already waiting for an answer can still be answered.
 
 **Screenshots:**
 
@@ -1482,7 +1500,7 @@ Full list of all current and past tenants. Where daily tenant management happens
 
 - View profiles, payment history, lease details
 - Send invoices manually
-- Record payments
+- Record payments: **Record payment** marks rent paid straight away (reference only; the action is audit-logged)
 - Issue lease renewal or termination notices
 
 **Screenshots:**
@@ -1553,7 +1571,15 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 3. Select the right vendor from the dropdown (e.g., plumber for water issue)
 4. Vendor receives a notification, and the request becomes a scheduled job (it moves to the In Progress column)
 5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
-6. The tenant can then rate the vendor from My Maintenance Requests, and the manager pays the vendor invoice under Cost Tracking
+6. The tenant can then rate the vendor from My Maintenance Requests, and the manager opens **View invoice** under Cost Tracking (the vendor's itemised lines, VAT, total and notes) and pays it
+
+**Finished repairs: the Sign-off card**
+
+Only the vendor can finish a job (the old "Mark as Completed" button is gone). Once they have, the repair page shows their before and after photos and a **Sign-off** card:
+
+- **Approve work** — records your sign-off, separate from the vendor finishing. It does not pay or hold back the vendor's invoice.
+- If the tenant answered **Still a problem** you see their reason and photos and choose **Send back to vendor** (the job is open again and the vendor is told), **Give to another vendor** (the first vendor's unpaid invoice is cancelled; if it has already been paid the job cannot move) or **Approve anyway**.
+- The tenant may not have answered yet: you can wait for them, or approve straight away.
 
 **Screenshots:**
 
@@ -1577,6 +1603,13 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 
 **What this is:**
 All financial activity across the manager's properties — rent collected, outstanding invoices, payment history per tenant.
+
+**Bank Transfers** (a tab in the navigation, `/dashboard/reconciliation`): payments recorded as paid another way wait here for confirmation.
+
+- **Confirm payment** — marks the invoice paid, creates the receipt and tells the tenant and the vendor. Open **View receipt or proof** first.
+- **Reject** — needs a reason; whoever recorded it is told why.
+- You cannot confirm a transfer **you** recorded (you can withdraw it). If nobody else on the property can confirm it, an admin is told.
+- To pay a vendor another way, open the repair, and under the vendor's invoice press **Paid another way**: record the transfer or cash payment with the receipt file. It waits here until someone other than you confirms it.
 
 **Screenshot:** `docs/screenshots/manager_09_financials_desktop.png`
 
@@ -1766,6 +1799,9 @@ Full details of a single maintenance job — what needs fixing, where, when, and
 - Preferred access time
 - Job timeline/history
 - **Update Status** button (move job from In Progress → Completed)
+- **Work Photos** — add before photos (optional) and after photos; at least one after photo is needed to close the job, whether the invoice or **Mark work done** closes it
+- A red box with the tenant's reason and photos if they said the repair is still a problem; fix it, add new photos and press **Mark work done** (the invoice is not sent again)
+- Photos lock once the property team approves the repair or the tenant confirms it
 
 **Screenshots:**
 
@@ -1826,6 +1862,7 @@ Invoices sent for completed jobs are listed with their amount and payment status
 
 - Awaiting payment turns to paid once the manager settles the invoice.
 - A vendor can bill only their own jobs, and every new invoice starts unpaid.
+- You are told when an invoice is paid (by card, or recorded by hand), and each payment on **Invoices** has a **Receipt** link.
 
 **Screenshots:**
 
@@ -1961,6 +1998,11 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
+It has two switches:
+
+- **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
+- **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
+
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
 ![Admin 04 Settings](screenshots/admin_04_settings.png)
@@ -2075,6 +2117,11 @@ TENANT                          MANAGER                         SYSTEM
   │                                │                               │
   │  ◄── Repair confirmed ─────────┤                               │
 ```
+
+## Step 6.10 — Bank Transfers
+
+**What this is:**
+The same list the property team uses (`/admin/payments`, the **Bank Transfers** tab): payments recorded as paid another way, waiting for confirmation, confirmed or rejected. An admin confirms a transfer when nobody else on the property can, for example a manager's entry on a property with no landlord. An admin cannot confirm an entry they recorded themselves either.
 
 ---
 

@@ -13,5 +13,8 @@ model SystemSettings {
   // Admin-toggleable (Platform Settings) for operators who invoice interim
   // costs mid-job and don't want that to auto-close the request.
   autoCompleteMaintenanceOnInvoice Boolean  @default(true)
+  // When true (default), a job the vendor finishes asks the tenant to confirm it is fixed (or
+  // report a problem). Turning it off stops new requests; ones already waiting stay answerable.
+  requireTenantRepairConfirmation  Boolean  @default(true)
   updatedAt                        DateTime @updatedAt
 }
