@@ -306,7 +306,11 @@ vendor browsing the same page won't see it — it's manager/landlord-only).
   (grace period, late fee) as before.
 
 **4. Manage maintenance requests** — open _Maintenance_ to see every
-request across your portfolio. Open one to:
+request across your portfolio. Press **Raise a repair** to log work you want
+done yourself on any unit you look after, even an empty one: choose the
+property and unit, say what is needed and, if you like, a vendor. It has no
+tenant, so nobody is asked to confirm it; you approve it when the vendor is
+done and pay the vendor as usual. Open a request to:
 
 - Click **Message about this request** to reach the shared thread with
   the tenant (and vendor, once assigned).
@@ -333,6 +337,14 @@ the navigation). Transfers recorded by tenants or by your team wait under
 and the vendor are told) or **Reject** with a reason. You cannot confirm one
 you recorded yourself; you can only withdraw it. If nobody else on the
 property can confirm it, an admin is told.
+
+**4c. Recurring maintenance** — open _Schedules_ to see what is
+serviced on a rhythm. **New schedule**: pick the unit, what is serviced, how
+often and the first due date. **Pause** and **Resume**, **Edit** the date or
+cycle, or **Remove** it. The daily job raises a repair when each one falls due
+and asks you to find a vendor; for an empty unit it is a work order with no
+tenant. A monthly schedule that starts on the 31st lands on the last day of a
+short month and then returns to the 31st.
 
 **5. Messages** — your inbox lists every conversation across tenants,
 vendors, and landlords you're connected to.

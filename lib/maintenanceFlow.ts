@@ -60,7 +60,9 @@ export const EVIDENCE_REQUIRED = {
  * they redo the work. A repair with no tenant (a work order the property team raised) has nobody to
  * ask, so it is never left waiting for an answer.
  */
-export async function completionData(request: { tenantId: string | null }): Promise<
+export async function completionData(request: {
+  tenantId: string | null;
+}): Promise<
   Pick<
     Prisma.MaintenanceRequestUncheckedUpdateInput,
     | 'status'
