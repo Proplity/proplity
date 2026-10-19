@@ -116,19 +116,24 @@ users for a database-heavy app like this one.
 
 ## 4. Background workers (cron)
 
-Five workers exist in `lib/workers/`, dispatched by
+Ten workers exist in `lib/workers/`, dispatched by
 `POST|GET /api/v1/cron/[job]`:
 
-- `rent-invoicer`
-- `overdue-flagger`
-- `maintenance-schedule-dispatcher`
+- `rent-invoicer` (tells the tenant about each new rent invoice)
+- `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true`)
+- `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
+- `reminders` (rent due in 3 days; lease ending within 60 days; one reminder each)
+- `maintenance-schedule-dispatcher` (tells the property team and the tenant)
 - `access-code-expiry-janitor`
 - `payment-reliability-scorer`
-- `all` — runs all five in dependency order (added for this deployment)
+- `property-trust-scorer`
+- `storage-janitor`
+- `retention` (disabled until `RETENTION_ENABLED=true`)
+- `all` — runs every job above in dependency order
 
 **The Hobby plan allows 2 cron jobs at once-a-day granularity**, which is fewer
-than the five workers need. So `vercel.json` schedules a single daily job
-against `/api/v1/cron/all`, which fans out internally:
+than the ten workers need. So `vercel.json` schedules a single daily job
+against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
 
 ```json
 "crons": [{ "path": "/api/v1/cron/all", "schedule": "0 2 * * *" }]
@@ -161,6 +166,7 @@ Give each worker its own schedule and drop the fan-out:
 "crons": [
   { "path": "/api/v1/cron/rent-invoicer",                   "schedule": "0 2 * * *" },
   { "path": "/api/v1/cron/overdue-flagger",                 "schedule": "0 3 * * *" },
+  { "path": "/api/v1/cron/reminders",                       "schedule": "0 7 * * *" },
   { "path": "/api/v1/cron/maintenance-schedule-dispatcher", "schedule": "0 * * * *" },
   { "path": "/api/v1/cron/access-code-expiry-janitor",      "schedule": "*/30 * * * *" },
   { "path": "/api/v1/cron/payment-reliability-scorer",      "schedule": "0 4 * * 0" }

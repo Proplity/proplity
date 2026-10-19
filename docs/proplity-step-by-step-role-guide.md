@@ -185,7 +185,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 92. **Job Detail & Tenant Access Instructions**: Full problem description, unit address, tenant contact info, access times, and damage photos.
 93. **Job Progress State Transitions**: Vendors update job status from In Progress to Completed once on-site work is concluded.
 94. **Dynamic Itemized Invoice Builder**: Form-driven builder starting empty and loading real job info for itemized billing (ISS-044).
-95. **Automated Maintenance Invoice Payer Assignment**: Routes vendor invoice payment directly to the managing property manager or property landlord (ISS-051).
+95. **Automated Maintenance Invoice Payer Assignment**: Routes vendor invoice payment directly to the managing property manager or property landlord (ISS-051). The Cost Tracking card's **View invoice** toggle shows the vendor's lines, VAT, total and notes.
 96. **Vendor Bank Account Registration**: Link verified NUBAN bank accounts to receive direct electronic transfer disbursements.
 97. **Vendor Payout Disbursement Tracking**: Real-time payout ledger tracking approval, processing, and transfer settlement references (ISS-012).
 98. **Direct Messaging with Assigning Manager**: Two-way in-app messaging channel with the property manager for site access or material approvals.
@@ -1553,7 +1553,7 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 3. Select the right vendor from the dropdown (e.g., plumber for water issue)
 4. Vendor receives a notification, and the request becomes a scheduled job (it moves to the In Progress column)
 5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
-6. The tenant can then rate the vendor from My Maintenance Requests, and the manager pays the vendor invoice under Cost Tracking
+6. The tenant can then rate the vendor from My Maintenance Requests, and the manager opens **View invoice** under Cost Tracking (the vendor's itemised lines, VAT, total and notes) and pays it
 
 **Screenshots:**
 

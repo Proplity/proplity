@@ -103,7 +103,9 @@ scores.
 **6. Schedule a viewing** — from a property's detail page, click **Schedule
 Viewing**.
 
-1.  Pick a date, then a time slot, and click **Continue**.
+1.  Pick a date with the date field (tomorrow up to 60 days ahead, Monday to
+    Saturday) and a start time from the dropdown (every 30 minutes, 9:00 AM to
+    5:00 PM, Lagos time), then click **Continue**.
 2.  Fill in your name, email, and phone number.
 3.  Click **Confirm Viewing**. A "Viewing Scheduled!" confirmation appears
     and a confirmation email is sent.
