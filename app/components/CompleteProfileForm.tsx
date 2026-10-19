@@ -533,7 +533,7 @@ export function CompleteProfileForm({
         </button>
         <h1 className="mb-2 text-2xl font-bold">Complete Your Profile</h1>
         <p className="mb-6 text-gray-600">
-          This is filled in once and reused for every property you apply to — no need to re-enter it
+          This is filled in once and reused for every property you apply to, no need to re-enter it
           each time.
         </p>
 
