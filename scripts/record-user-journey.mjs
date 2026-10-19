@@ -882,7 +882,10 @@ async function main() {
     }
     await hud('🏠 The tenant dashboard now shows a lease waiting to be signed', '#10b981');
     await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
-    await pause(2200);
+    await page.getByRole('heading', { name: 'Needs your attention' }).waitFor();
+    await page.getByText('Lease to sign').waitFor();
+    await hud('📌 Needs your attention: everything waiting on the tenant, in one list', '#10b981');
+    await pause(3000);
     await scroll(250);
     await hud('✍️ The tenant types a full legal name to sign: that is the e-signature', '#10b981');
     await type(page.getByPlaceholder('Full name'), `${NEW_TENANT.first} ${NEW_TENANT.last}`);
@@ -965,6 +968,12 @@ async function main() {
     }
     await hud('👔 The manager has a new notification about the repair', '#3b82f6');
     await pause(1800);
+    await page.getByText('Repair requests with no vendor').waitFor({ timeout: 20000 });
+    await hud(
+      '📌 Needs your attention: the repair waits for a vendor, with a link to it',
+      '#3b82f6',
+    );
+    await pause(3000);
     await click(page.getByRole('link', { name: 'Maintenance' }).first(), { settle: 1200 });
     await page.waitForURL('**/dashboard/maintenance');
     await hud('🛠 The Maintenance board: new requests, in progress and completed', '#3b82f6');

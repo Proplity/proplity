@@ -10,6 +10,7 @@ import { getServerSession } from '@/lib/auth/session';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
+import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
 import { appUrl } from '@/lib/appUrl';
 import {
   STAGED_PROPERTY_FIELDS,
@@ -340,6 +341,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         },
       });
 
+      await notifyAdminsInApp({
+        title: isCritical ? 'Critical edit awaiting review' : 'Listing edit awaiting review',
+        body: `Edits to "${updated.name}" were submitted for review.`,
+        link: '/admin/properties',
+      });
       await notifyAdmins(
         isCritical
           ? `[CRITICAL REVIEW] Property Location/Identity Updated: ${updated.name}`
@@ -448,6 +454,11 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     });
 
     if (stageForReview || resubmit) {
+      await notifyAdminsInApp({
+        title: critical ? 'Critical edit awaiting review' : 'Listing edit awaiting review',
+        body: `Edits to "${updated.name}" were submitted for review.`,
+        link: '/admin/properties',
+      });
       await notifyAdmins(
         critical
           ? `[CRITICAL REVIEW] Property Location/Identity Updated: ${updated.name}`
