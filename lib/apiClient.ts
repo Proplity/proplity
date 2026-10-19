@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
   AccessCodeDetail,
@@ -333,6 +334,7 @@ export const api = {
     breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
     mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
     mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
+    attention: () => apiClient.get<{ data: AttentionItem[] }>('/api/v1/dashboard/attention'),
   },
   invoices: {
     list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>

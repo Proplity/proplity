@@ -9,6 +9,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { getSystemSettings } from '@/lib/systemSettings';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { notifyAndEmail, notifyPropertyTeam, type NotifyRequest } from '@/lib/notifications';
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -92,6 +93,74 @@ const createInvoiceSchema = z.object({
   status: z.nativeEnum(InvoiceStatus).optional(),
   description: z.string().optional(),
 });
+
+// Everyone who has to do something about a new invoice hears about it: the tenant (or the billed
+// user) for rent and charges, the property team for a vendor's bill. A vendor's invoice also
+// completes the job when auto-complete is on, so the tenant is told the repair is done.
+async function announceInvoice(
+  invoice: {
+    invoiceNumber: string;
+    amount: number;
+    dueDate: Date;
+    leaseId: string | null;
+    maintenanceRequestId: string | null;
+    userId: string | null;
+  },
+  ctx: { autoCompleted: boolean; byVendor: boolean; actorId: string; req: NotifyRequest },
+) {
+  const money = `₦${invoice.amount.toLocaleString()}`;
+  const due = invoice.dueDate.toDateString();
+  const toPay = {
+    title: `New invoice ${invoice.invoiceNumber}`,
+    body: `You have a new invoice of ${money}, due ${due}.`,
+    link: '/dashboard',
+  };
+
+  if (invoice.maintenanceRequestId) {
+    const request = await prisma.maintenanceRequest.findUnique({
+      where: { id: invoice.maintenanceRequestId },
+      include: { unit: { include: { property: true } } },
+    });
+    if (!request) return;
+    if (ctx.byVendor) {
+      await notifyPropertyTeam(
+        request.unit.property,
+        {
+          type: 'MAINTENANCE_STATUS',
+          title: ctx.autoCompleted ? 'Job done, vendor invoice to pay' : 'Vendor invoice to pay',
+          body: `The vendor sent invoice ${invoice.invoiceNumber} (${money}) for "${request.title}".`,
+          link: `/dashboard/maintenance/${request.id}`,
+        },
+        { exceptId: ctx.actorId, req: ctx.req },
+      );
+    } else {
+      await notifyAndEmail(request.tenantId, toPay, { req: ctx.req });
+    }
+    if (ctx.autoCompleted) {
+      await notifyAndEmail(
+        request.tenantId,
+        {
+          type: 'MAINTENANCE_STATUS',
+          title: 'Your repair was completed',
+          body: `Work on "${request.title}" is done.`,
+          link: `/dashboard/maintenance/${request.id}`,
+        },
+        { req: ctx.req },
+      );
+    }
+    return;
+  }
+
+  if (invoice.leaseId) {
+    const lease = await prisma.lease.findUnique({
+      where: { id: invoice.leaseId },
+      select: { tenantId: true },
+    });
+    if (lease) await notifyAndEmail(lease.tenantId, toPay, { req: ctx.req });
+    return;
+  }
+  if (invoice.userId) await notifyAndEmail(invoice.userId, toPay, { req: ctx.req });
+}
 
 export const POST = withAuth(
   async (req, { session }) => {
@@ -225,14 +294,24 @@ export const POST = withAuth(
             })
           : prisma.invoice.create({ data });
 
+      const announce = async (invoice: Awaited<ReturnType<typeof createInvoice>>) => {
+        await announceInvoice(invoice, {
+          autoCompleted: shouldAutoComplete,
+          byVendor: session.role === 'VENDOR',
+          actorId: session.sub,
+          req,
+        });
+        return invoice;
+      };
+
       try {
-        const invoice = await createInvoice();
+        const invoice = await announce(await createInvoice());
         return NextResponse.json({ data: invoice }, { status: 201 });
       } catch (err) {
         // invoiceNumber is dbgenerated (rule 11) -- never set by app code.
         // On the vanishingly rare uuid-derived collision, retry once.
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-          const invoice = await createInvoice();
+          const invoice = await announce(await createInvoice());
           return NextResponse.json({ data: invoice }, { status: 201 });
         }
         throw err;

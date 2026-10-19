@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { notifyAndEmail } from '@/lib/notifications';
 
 const redeemSchema = z.object({ code: z.string().min(1) });
 
@@ -72,6 +73,17 @@ export const POST = withAuth(
         where: { id: code.id },
         include: { landlord: { select: { id: true, name: true } } },
       });
+      const manager = await prisma.user.findUnique({
+        where: { id: session.sub },
+        select: { name: true },
+      });
+      if (updated?.landlord) {
+        await notifyAndEmail(updated.landlord.id, {
+          title: 'A manager linked to you',
+          body: `${manager?.name ?? 'A manager'} used your invite code and now manages properties for you.`,
+          link: '/dashboard',
+        });
+      }
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);

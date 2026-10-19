@@ -27,6 +27,7 @@ import {
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
+import { AttentionCard } from './AttentionCard';
 
 interface TenantDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -166,6 +167,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         <h1 className="mb-1 text-2xl font-semibold">My Rental Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
+
+      <AttentionCard />
 
       {signLease && showSignatureCard && (
         <LeaseSignatureCard lease={signLease} onSigned={refetchSignLease} />
