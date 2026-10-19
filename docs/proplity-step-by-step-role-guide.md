@@ -1075,7 +1075,8 @@ The Access Codes card lists the codes issued for the tenant unit, such as a gues
 
 - Codes belong to a unit and need an active lease. They are single use by default; a code can be made reusable for a regular visitor.
 - Two active codes for the same unit cannot share a value.
-- **+ New Guest Code** on the card opens a short form: guest name (optional), the gate code (a six-digit one is suggested), an optional expiry date and a One-time use box. The new code appears in the list straight away.
+- **+ New Guest Code** on the card opens a short form: guest name (optional), the gate code (a six-digit one is suggested), an optional expiry date and a One-time use box. The new code appears in the list straight away. Each code shows its state (Active, Used, Expired or Revoked); **Revoke** cancels an active code so the gate refuses it, and **Activity** lists every time the gate checked it.
+- **Gate Check (manager or landlord):** on the property page, the Gate Check card is for the person at the gate. Pick the unit being visited, type the code the guest gives and press Check: it says whether to let them in or why not (already used, expired, cancelled, or no such code). A one-time code is used up the first time it lets someone in. The unit's codes are listed below with Revoke and Activity. Nothing here opens a physical gate; the guard decides.
 - The full-page view shows everything on the tenant home: lease summary, balance and auto-pay, maintenance, access codes and documents.
 
 **Screenshots:**
