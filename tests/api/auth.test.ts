@@ -888,6 +888,31 @@ describe('auth: verify-email', () => {
     expect(res.status).toBe(400);
   });
 
+  it('does not re-activate a suspended account or reset an active one via a leftover token', async () => {
+    const suspended = await createUser(Role.TENANT, {
+      email: 'suspended-token@test.local',
+      status: UserStatus.SUSPENDED,
+    });
+    const t1 = await createVerificationToken(suspended.id);
+    const r1 = await apiFetch('/api/v1/auth/verify-email', {
+      method: 'POST',
+      body: { token: t1.rawToken, password: 'attacker-chosen-1' },
+    });
+    expect(r1.status).toBe(200);
+    const after = await testPrisma.user.findUnique({ where: { id: suspended.id } });
+    expect(after?.status).toBe(UserStatus.SUSPENDED);
+    expect(after?.passwordHash).toBe(suspended.passwordHash);
+
+    const active = await createUser(Role.TENANT, { email: 'active-token@test.local' });
+    const t2 = await createVerificationToken(active.id);
+    await apiFetch('/api/v1/auth/verify-email', {
+      method: 'POST',
+      body: { token: t2.rawToken, password: 'attacker-chosen-2' },
+    });
+    const activeAfter = await testPrisma.user.findUnique({ where: { id: active.id } });
+    expect(activeAfter?.passwordHash).toBe(active.passwordHash);
+  });
+
   it('activates the account without changing its password when none is supplied', async () => {
     const user = await createUser(Role.TENANT, {
       email: 'invited@test.local',

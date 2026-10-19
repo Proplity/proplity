@@ -110,13 +110,15 @@ export function NeighbourhoodReport() {
       return;
     }
     toast.info('Incoming Feature', {
-      description: 'PDF report generation is an upcoming feature and will be available in a future release.',
+      description:
+        'PDF report generation is an upcoming feature and will be available in a future release.',
     });
   };
 
   const handleUpgradeToPremium = () => {
     toast.info('Incoming Feature', {
-      description: 'Online premium subscription billing is an upcoming feature and will be available in an upcoming release.',
+      description:
+        'Online premium subscription billing is an upcoming feature and will be available in an upcoming release.',
     });
     setShowPaymentModal(false);
   };

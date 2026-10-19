@@ -232,7 +232,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* Sticky Compact Filter Toolbar */}
-      <div className="sticky top-0 z-30 -mx-6 px-6 py-2 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs transition-all">
+      <div className="sticky top-0 z-30 -mx-6 border-b border-gray-200 bg-white/95 px-6 py-2 shadow-xs backdrop-blur-md transition-all">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Role Filter Pills & Status Dropdown */}
           <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-0.5">
@@ -281,7 +281,7 @@ export default function AdminUsersPage() {
                 placeholder="Search users…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none shadow-2xs"
+                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs shadow-2xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
@@ -289,7 +289,7 @@ export default function AdminUsersPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -302,7 +302,7 @@ export default function AdminUsersPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'table'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -330,15 +330,15 @@ export default function AdminUsersPage() {
       {viewMode === 'grid' && (
         <div className="space-y-6">
           {loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-2xl border border-gray-200 bg-white p-5 space-y-4"
+                  className="animate-pulse space-y-4 rounded-2xl border border-gray-200 bg-white p-5"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-gray-200" />
-                    <div className="space-y-1.5 flex-1">
+                    <div className="flex-1 space-y-1.5">
                       <div className="h-4 w-3/4 rounded bg-gray-200" />
                       <div className="h-3 w-1/2 rounded bg-gray-100" />
                     </div>
@@ -357,7 +357,7 @@ export default function AdminUsersPage() {
           )}
 
           {!loading && users.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {users.map((user: AdminUser) => {
                 const roleBadge = ROLE_BADGE[user.role] ?? {
                   label: user.role,
@@ -370,24 +370,24 @@ export default function AdminUsersPage() {
                 return (
                   <div
                     key={user.id}
-                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow"
+                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-md"
                   >
                     <div>
                       {/* Top Header: Avatar, Name, Email, Role, Status */}
-                      <div className="flex items-start justify-between gap-3 mb-3.5">
-                        <div className="flex items-center gap-3 min-w-0">
+                      <div className="mb-3.5 flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-xs">
                             {user.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-bold text-gray-900 text-sm leading-tight truncate">
+                            <h3 className="truncate text-sm leading-tight font-bold text-gray-900">
                               {user.name}
                             </h3>
-                            <p className="text-xs text-gray-500 truncate mt-0.5">{user.email}</p>
+                            <p className="mt-0.5 truncate text-xs text-gray-500">{user.email}</p>
                           </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex shrink-0 flex-col items-end gap-1">
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadge.className}`}
                           >
@@ -404,8 +404,8 @@ export default function AdminUsersPage() {
 
                       {/* Vendor Banner if vendor */}
                       {user.vendorProfile && (
-                        <div className="mb-3 rounded-lg bg-orange-50/80 border border-orange-200/60 px-3 py-1.5 text-xs">
-                          <p className="font-semibold text-orange-950 truncate">
+                        <div className="mb-3 rounded-lg border border-orange-200/60 bg-orange-50/80 px-3 py-1.5 text-xs">
+                          <p className="truncate font-semibold text-orange-950">
                             {user.vendorProfile.businessName}
                           </p>
                           <p className="text-[11px] text-orange-700 capitalize">
@@ -415,9 +415,9 @@ export default function AdminUsersPage() {
                       )}
 
                       {/* Metrics Box: Properties, Phone, Joined */}
-                      <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3 space-y-2 mb-4 text-xs">
+                      <div className="mb-4 space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 flex items-center gap-1.5">
+                          <span className="flex items-center gap-1.5 text-gray-500">
                             <Building2 className="h-3.5 w-3.5 text-blue-600" />
                             Properties
                           </span>
@@ -435,17 +435,17 @@ export default function AdminUsersPage() {
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 flex items-center gap-1.5">
+                          <span className="flex items-center gap-1.5 text-gray-500">
                             <Phone className="h-3.5 w-3.5 text-gray-400" />
                             Phone
                           </span>
-                          <span className="text-gray-700 font-medium truncate max-w-[150px]">
+                          <span className="max-w-[150px] truncate font-medium text-gray-700">
                             {user.phoneNumber ?? '—'}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 flex items-center gap-1.5">
+                          <span className="flex items-center gap-1.5 text-gray-500">
                             <Calendar className="h-3.5 w-3.5 text-gray-400" />
                             Joined
                           </span>
@@ -463,7 +463,7 @@ export default function AdminUsersPage() {
                     {/* Actions Footer */}
                     <div className="border-t border-gray-100 pt-3">
                       {user.role === 'ADMIN' ? (
-                        <p className="text-center text-xs text-gray-400 italic py-1">
+                        <p className="py-1 text-center text-xs text-gray-400 italic">
                           System Administrator
                         </p>
                       ) : (
@@ -471,7 +471,7 @@ export default function AdminUsersPage() {
                           {user.status === 'ACTIVE' && (
                             <button
                               onClick={() => openAction(user, 'SUSPENDED')}
-                              className="flex-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors"
+                              className="flex-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50"
                             >
                               Suspend
                             </button>
@@ -479,14 +479,14 @@ export default function AdminUsersPage() {
                           {user.status === 'SUSPENDED' && (
                             <button
                               onClick={() => openAction(user, 'ACTIVE')}
-                              className="flex-1 rounded-lg border border-green-200 px-2.5 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors"
+                              className="flex-1 rounded-lg border border-green-200 px-2.5 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-50"
                             >
                               Reactivate
                             </button>
                           )}
                           <button
                             onClick={() => openAction(user, 'ROLE')}
-                            className="flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
                           >
                             Change Role
                           </button>
@@ -653,7 +653,7 @@ export default function AdminUsersPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 disabled:opacity-40 hover:bg-gray-50"
+              className="rounded border border-gray-200 bg-white px-2.5 py-1 hover:bg-gray-50 disabled:opacity-40"
             >
               Previous
             </button>
@@ -663,7 +663,7 @@ export default function AdminUsersPage() {
             <button
               onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
               disabled={page >= pageCount}
-              className="rounded border border-gray-200 bg-white px-2.5 py-1 disabled:opacity-40 hover:bg-gray-50"
+              className="rounded border border-gray-200 bg-white px-2.5 py-1 hover:bg-gray-50 disabled:opacity-40"
             >
               Next
             </button>

@@ -236,7 +236,10 @@ export const POST = withAuth(
       if (!invited && tenantId) {
         try {
           const [existingTenantUser, unitDetails] = await Promise.all([
-            prisma.user.findUnique({ where: { id: tenantId }, select: { email: true, name: true } }),
+            prisma.user.findUnique({
+              where: { id: tenantId },
+              select: { email: true, name: true },
+            }),
             prisma.unit.findUnique({
               where: { id: unitId },
               include: { property: { select: { name: true } } },

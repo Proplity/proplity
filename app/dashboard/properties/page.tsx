@@ -67,7 +67,7 @@ export default function MyPropertiesPage() {
       </div>
 
       {/* Sticky Compact Filter Toolbar */}
-      <div className="sticky top-0 z-30 -mx-6 px-6 py-2 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs transition-all">
+      <div className="sticky top-0 z-30 -mx-6 border-b border-gray-200 bg-white/95 px-6 py-2 shadow-xs backdrop-blur-md transition-all">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Status Filter Pills */}
           <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-0.5">
@@ -103,7 +103,7 @@ export default function MyPropertiesPage() {
                 placeholder="Search properties…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none shadow-2xs"
+                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs shadow-2xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
@@ -111,7 +111,7 @@ export default function MyPropertiesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -124,7 +124,7 @@ export default function MyPropertiesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'table'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -151,11 +151,11 @@ export default function MyPropertiesPage() {
       {viewMode === 'grid' && (
         <div className="space-y-6">
           {loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-2xl border border-gray-200 bg-white p-5 space-y-4"
+                  className="animate-pulse space-y-4 rounded-2xl border border-gray-200 bg-white p-5"
                 >
                   <div className="h-6 w-3/4 rounded bg-gray-200" />
                   <div className="h-4 w-1/2 rounded bg-gray-100" />
@@ -175,7 +175,7 @@ export default function MyPropertiesPage() {
           )}
 
           {!loading && filtered.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((property) => {
                 const meta = STATUS_META[property.moderationStatus];
                 const StatusIcon = meta.icon;
@@ -184,11 +184,11 @@ export default function MyPropertiesPage() {
                 return (
                   <div
                     key={property.id}
-                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow"
+                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-md"
                   >
                     <div>
                       {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.className}`}
                         >
@@ -208,23 +208,23 @@ export default function MyPropertiesPage() {
                       </div>
 
                       {/* Property Identity */}
-                      <div className="flex items-start gap-3 mb-4">
+                      <div className="mb-4 flex items-start gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-bold text-gray-900 text-base line-clamp-1">
+                          <h3 className="line-clamp-1 text-base font-bold text-gray-900">
                             {property.name}
                           </h3>
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 line-clamp-1">
-                            <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                          <p className="mt-0.5 line-clamp-1 flex items-center gap-1 text-xs text-gray-500">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                             {property.address}, {property.city}
                           </p>
                         </div>
                       </div>
 
                       {/* Units & Occupancy Box */}
-                      <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3 space-y-2 mb-4 text-xs">
+                      <div className="mb-4 space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500">Total Units</span>
                           <span className="font-bold text-gray-900">{property.units.length}</span>
@@ -243,7 +243,7 @@ export default function MyPropertiesPage() {
                       <button
                         type="button"
                         onClick={() => router.push(`/dashboard/properties/${property.id}`)}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700"
                       >
                         <span>View Details</span>
                         <ArrowRight className="h-3.5 w-3.5" />

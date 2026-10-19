@@ -11,6 +11,9 @@ import { safeUrlList } from '@/lib/api/urlField';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: RouteCtx) {
@@ -19,6 +22,7 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
     const status = req.nextUrl.searchParams.get('status');
 
     const units = await prisma.unit.findMany({
+      take: LIST_LIMIT,
       where: { propertyId: id, ...(status ? { status: status as UnitStatus } : {}) },
       orderBy: { unitNumber: 'asc' },
     });
@@ -60,9 +64,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const amenities = data.amenities ?? [];
     // If added by landlord or manager, mark unit as pending approval so it stays hidden
     // from the public marketplace until approved, without taking the parent property offline.
-    const unitAmenities = isLandlordOrManager && !amenities.includes('approval:pending')
-      ? [...amenities, 'approval:pending']
-      : amenities;
+    const unitAmenities =
+      isLandlordOrManager && !amenities.includes('approval:pending')
+        ? [...amenities, 'approval:pending']
+        : amenities;
 
     const unit = await prisma.unit.create({
       data: { ...data, amenities: unitAmenities, propertyId: id, squareFeet: sqft },
@@ -79,9 +84,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
           where: { id: session.sub },
           select: { name: true, email: true, role: true },
         });
-        const adminEmails = [
-          ...new Set([...admins.map((a) => a.email), 'admin@proplity.com']),
-        ];
+        const adminEmails = [...new Set([...admins.map((a) => a.email), 'admin@proplity.com'])];
         for (const adminEmail of adminEmails) {
           await sendEmail({
             to: adminEmail,

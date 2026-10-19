@@ -87,8 +87,12 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                 <User className="h-4 w-4 text-white" />
               </div>
               <div className="hidden flex-col text-left sm:flex">
-                <span className="text-sm font-medium leading-tight text-gray-900">{auth.user?.name}</span>
-                <span className="text-xs text-gray-500 capitalize leading-tight">Administrator</span>
+                <span className="text-sm leading-tight font-medium text-gray-900">
+                  {auth.user?.name}
+                </span>
+                <span className="text-xs leading-tight text-gray-500 capitalize">
+                  Administrator
+                </span>
               </div>
             </button>
             <button
@@ -111,7 +115,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
         )}
 
         <aside
-          className={`absolute inset-y-0 left-0 z-40 w-64 transform flex flex-col justify-between border-r border-gray-200 bg-white p-4 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          className={`absolute inset-y-0 left-0 z-40 flex w-64 transform flex-col justify-between border-r border-gray-200 bg-white p-4 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -148,7 +152,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Fixed bottom avatar & logout menu */}
-          <div className="relative mt-auto pt-3 border-t border-gray-200 shrink-0">
+          <div className="relative mt-auto shrink-0 border-t border-gray-200 pt-3">
             {sidebarMenuOpen && (
               <>
                 <div
@@ -159,9 +163,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                 <div
                   role="menu"
                   aria-label="Admin account options"
-                  className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
+                  className="absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
                 >
-                  <div className="px-3 py-2 border-b border-gray-100">
+                  <div className="border-b border-gray-100 px-3 py-2">
                     <p className="truncate text-sm font-semibold text-gray-900">
                       {auth.user?.name || 'Admin'}
                     </p>
@@ -174,7 +178,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                     <Link
                       href="/admin/settings"
                       onClick={() => setSidebarMenuOpen(false)}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     >
                       <Settings className="h-4 w-4 text-gray-500" />
                       <span>Settings</span>
@@ -186,7 +190,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                         setSidebarMenuOpen(false);
                         setShowLogout(true);
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4 text-red-500" />
                       <span>Log Out</span>
@@ -196,22 +200,22 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            <div className="flex items-center justify-between gap-2 rounded-xl p-2 hover:bg-gray-100/80 transition-colors">
+            <div className="flex items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-gray-100/80">
               <button
                 type="button"
                 onClick={() => setSidebarMenuOpen((prev) => !prev)}
-                className="flex flex-1 items-center gap-3 min-w-0 text-left focus:outline-none"
+                className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none"
                 aria-label="Account options"
                 aria-expanded={sidebarMenuOpen}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-xs">
                   <User className="h-4 w-4" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900 leading-tight">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm leading-tight font-medium text-gray-900">
                     {auth.user?.name || 'Admin'}
                   </p>
-                  <p className="truncate text-xs text-gray-500 capitalize leading-tight">
+                  <p className="truncate text-xs leading-tight text-gray-500 capitalize">
                     Administrator
                   </p>
                 </div>
@@ -227,7 +231,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                 onClick={() => setShowLogout(true)}
                 title="Log Out"
                 aria-label="Log Out"
-                className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               >
                 <LogOut className="h-4 w-4" />
               </button>

@@ -180,7 +180,7 @@ export function CompleteProfileForm({
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                phoneNumber ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                phoneNumber ? 'bg-green-50 font-medium text-green-800' : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{phoneNumber ? '✓' : '○'}</span>
@@ -188,7 +188,7 @@ export function CompleteProfileForm({
             </div>
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                yearOfBirth ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                yearOfBirth ? 'bg-green-50 font-medium text-green-800' : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{yearOfBirth ? '✓' : '○'}</span>
@@ -196,7 +196,9 @@ export function CompleteProfileForm({
             </div>
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                emergencyContactName ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                emergencyContactName
+                  ? 'bg-green-50 font-medium text-green-800'
+                  : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{emergencyContactName ? '✓' : '○'}</span>
@@ -204,7 +206,9 @@ export function CompleteProfileForm({
             </div>
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                emergencyContactPhone ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                emergencyContactPhone
+                  ? 'bg-green-50 font-medium text-green-800'
+                  : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{emergencyContactPhone ? '✓' : '○'}</span>
@@ -212,7 +216,9 @@ export function CompleteProfileForm({
             </div>
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                emergencyContactRelationship ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                emergencyContactRelationship
+                  ? 'bg-green-50 font-medium text-green-800'
+                  : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{emergencyContactRelationship ? '✓' : '○'}</span>
@@ -220,7 +226,9 @@ export function CompleteProfileForm({
             </div>
             <div
               className={`flex items-center gap-1.5 rounded-lg p-2 ${
-                idDocumentUrl || idDocumentName ? 'bg-green-50 text-green-800 font-medium' : 'bg-gray-50 text-gray-500'
+                idDocumentUrl || idDocumentName
+                  ? 'bg-green-50 font-medium text-green-800'
+                  : 'bg-gray-50 text-gray-500'
               }`}
             >
               <span>{idDocumentUrl || idDocumentName ? '✓' : '○'}</span>
@@ -270,7 +278,7 @@ export function CompleteProfileForm({
           <div className="space-y-2 pt-1 text-xs">
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-2.5">
               <div className="flex items-center gap-2">
-                <span className={phoneNumber ? 'text-green-600 font-bold' : 'text-gray-400'}>
+                <span className={phoneNumber ? 'font-bold text-green-600' : 'text-gray-400'}>
                   {phoneNumber ? '✓' : '○'}
                 </span>
                 <span className="font-medium text-gray-700">Contact Details (Phone & Bio)</span>
@@ -298,9 +306,7 @@ export function CompleteProfileForm({
               <div className="flex items-center gap-2">
                 <span
                   className={
-                    idDocumentUrl || idDocumentName
-                      ? 'text-green-600 font-bold'
-                      : 'text-gray-400'
+                    idDocumentUrl || idDocumentName ? 'font-bold text-green-600' : 'text-gray-400'
                   }
                 >
                   {idDocumentUrl || idDocumentName ? '✓' : '○'}
@@ -453,13 +459,13 @@ export function CompleteProfileForm({
             <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Document upload isn&apos;t available in this environment yet. You can still select
-                a file, but only its name will be recorded.
+                Document upload isn&apos;t available in this environment yet. You can still select a
+                file, but only its name will be recorded.
               </span>
             </div>
           )}
           <label className="block cursor-pointer">
-            <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 transition-colors hover:bg-gray-50">
               <Upload className="h-5 w-5 text-gray-400" />
               <span className="text-sm text-gray-600">
                 {uploading
@@ -503,7 +509,7 @@ export function CompleteProfileForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+          className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Save Profile & Verification'}
         </button>

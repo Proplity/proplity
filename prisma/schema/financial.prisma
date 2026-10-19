@@ -69,16 +69,20 @@ enum PayoutMethod {
 // automatically each cycle. Stores only a provider-side payment method token,
 // never raw card/account data.
 model AutoPayMandate {
-  id                 String          @id @default(uuid())
-  leaseId            String
-  lease              Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  provider           PaymentProvider @default(PAYSTACK)
-  paymentMethodToken String
-  status             AutoPayStatus   @default(ACTIVE)
-  nextChargeDate     DateTime?
-  lastChargedAt      DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                  String          @id @default(uuid())
+  leaseId             String
+  lease               Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  provider            PaymentProvider @default(PAYSTACK)
+  paymentMethodToken  String
+  status              AutoPayStatus   @default(ACTIVE)
+  nextChargeDate      DateTime?
+  lastChargedAt       DateTime?
+  // Charge-run bookkeeping (ISS-065): a run claims the mandate by stamping
+  // lastAttemptAt, and a card that keeps failing is paused after 3 declines.
+  lastAttemptAt       DateTime?
+  consecutiveFailures Int             @default(0)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   @@index([leaseId, status])
 }

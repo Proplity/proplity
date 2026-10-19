@@ -73,7 +73,7 @@
     "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
     "@vercel/blob": "^2.8.1",
-    "axios": "^1.19.0",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",
@@ -86,7 +86,7 @@
     "jose": "^6.2.8",
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
-    "next": "16.3.6",
+    "next": "16.4.2",
     "next-themes": "0.4.6",
     "pg": "^8.23.0",
     "react": "19.2.8",
@@ -121,7 +121,7 @@
     "autocannon": "^8.0.0",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.2",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prisma": "^7.9.1",
@@ -144,7 +144,9 @@
       "deepmerge-ts": "^8.0.0",
       "nanoid": "^3.3.18",
       "uuid": "^11.1.1",
-      "fast-uri": "^3.1.6"
+      "fast-uri": "^3.1.8",
+      "brace-expansion@<2": "^1.1.21",
+      "brace-expansion@>=2 <3": "^2.1.7"
     }
   },
   "prisma": {

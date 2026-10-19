@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
+
 // No vendor-listing route existed anywhere in the API (confirmed by search
 // during Phase 9.3) -- needed for MaintenanceDetail's assign-vendor picker.
 // Reputation is computed at query time from real VendorRating/MaintenanceRequest
@@ -11,6 +14,7 @@ export const GET = withAuth(
   async () => {
     try {
       const vendors = await prisma.user.findMany({
+        take: LIST_LIMIT,
         // Only vetted businesses are listed (ISS-043). A vendor with no profile
         // row at all predates sign-up profiles and stays visible.
         where: {

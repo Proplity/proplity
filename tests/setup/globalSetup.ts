@@ -71,6 +71,8 @@ export default async function globalSetup() {
     // Uploads go to disk in tests, whatever .env.test says about Cloudinary.
     STORAGE_PROVIDER: 'local',
     RETENTION_ENABLED: 'true',
+    // Lets the auto-pay worker tests charge (against the mock gateway under test).
+    AUTOPAY_WORKER_ENABLED: 'true',
     LOCAL_STORAGE_PATH: TEST_STORAGE_PATH,
   };
   const server: ChildProcess = spawn('pnpm', ['exec', 'next', 'dev'], {
