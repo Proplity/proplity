@@ -239,6 +239,8 @@ describe('maintenance: requests, [id] PATCH -- triage / cancel / progress', () =
     expect(triage.body.data.categoryId).toBe(category.id);
     expect(triage.body.data.priority).toBe('HIGH');
     expect(triage.body.data.vendorId).toBe(vendor.id);
+    // A new request handed to a vendor becomes a scheduled job the vendor can start.
+    expect(triage.body.data.status).toBe('SCHEDULED');
   });
 
   it('lets the managing owner or the owning tenant cancel, forbids anyone else', async () => {

@@ -179,6 +179,7 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
   const cheapestUnit = [...visibleUnits].sort((a, b) => a.rentAmount - b.rentAmount)[0];
   const yearlyAmount = cheapestUnit?.rentAmount ?? 0;
   const freq = cheapestUnit?.listedPaymentFrequency ?? 'ANNUAL';
+  const serviceCharge = cheapestUnit?.serviceCharge ?? 0;
   const priceLabel = `₦${yearlyAmount.toLocaleString()}`;
   const monthly = `₦${Math.round(yearlyAmount / 12).toLocaleString()}`;
   const verified = property.moderationStatus === 'APPROVED';
@@ -370,9 +371,11 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                     <CheckCircle className="h-3.5 w-3.5" /> Verified Listing
                   </span>
                 )}
-                <span className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                  <Maximize2 className="h-3.5 w-3.5" /> Virtual Tour
-                </span>
+                {property.video360Url && (
+                  <span className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                    <Maximize2 className="h-3.5 w-3.5" /> Virtual Tour
+                  </span>
+                )}
                 <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700">
                   ID #{propertyId.slice(0, 8).toUpperCase()}
                 </span>
@@ -505,18 +508,20 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                   <span>Base rent</span>
                   <span className="font-medium text-gray-800">{priceLabel}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Agency fee (5%)</span>
-                  <span className="font-medium text-gray-800">₦60,000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Legal fee</span>
-                  <span className="font-medium text-gray-800">₦30,000</span>
-                </div>
+                {serviceCharge > 0 && (
+                  <div className="flex justify-between">
+                    <span>Service charge</span>
+                    <span className="font-medium text-gray-800">
+                      ₦{serviceCharge.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-2 flex justify-between border-t border-gray-200 pt-2">
-                  <span className="font-semibold text-gray-700">Total</span>
+                  <span className="font-semibold text-gray-700">
+                    Total per {freq === 'MONTHLY' ? 'month' : 'year'}
+                  </span>
                   <span className="font-bold text-gray-900">
-                    ₦{(yearlyAmount + 90000).toLocaleString()}
+                    ₦{(yearlyAmount + serviceCharge).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -624,19 +629,21 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="bg-blue-700 px-6 py-14 text-center text-white">
-        <h2 className="mb-2 text-2xl font-bold">Ready to Transform Your Property Management?</h2>
-        <p className="mb-6 text-sm text-blue-200">
-          Join thousands of property managers already using Proplity.
-        </p>
-        <Link
-          href="/login"
-          className="rounded-xl bg-white px-7 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
-        >
-          Start Free Trial →
-        </Link>
-      </section>
+      {/* ── CTA ── (for visitors only; a signed-in user already has the Apply button) */}
+      {!user && (
+        <section className="bg-blue-700 px-6 py-14 text-center text-white">
+          <h2 className="mb-2 text-2xl font-bold">Like what you see?</h2>
+          <p className="mb-6 text-sm text-blue-200">
+            Create a free tenant account to book a viewing and apply for this property.
+          </p>
+          <Link
+            href="/register"
+            className="rounded-xl bg-white px-7 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
+          >
+            Create a Free Account →
+          </Link>
+        </section>
+      )}
 
       {/* ── Footer ── */}
       <footer className="bg-gray-900 px-6 py-12 text-gray-400">

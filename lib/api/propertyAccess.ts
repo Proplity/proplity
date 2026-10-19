@@ -21,3 +21,11 @@ export function serializeUnit<T extends { squareFeet: number | null }>(unit: T) 
   const { squareFeet, ...rest } = unit;
   return { ...rest, sqft: squareFeet };
 }
+
+// A unit the owner side marked "Make Private" carries this amenity flag; it is
+// the only place the private/public choice is stored.
+export const PRIVATE_UNIT_FLAG = 'visibility:private';
+
+export function isPrivateUnit(unit: { amenities?: string[] | null }) {
+  return !!unit.amenities?.includes(PRIVATE_UNIT_FLAG);
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Send, Search, Paperclip, Phone, Video, ArrowLeft } from 'lucide-react';
+import { Send, Search, Paperclip, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations, useMessages, useSendMessage } from '@/hooks/useConversations';
 import type { Conversation } from '@/lib/api/types';
@@ -128,7 +128,9 @@ export function MessagingPortal() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Conversations List */}
-        <div className="flex w-96 flex-col border-r border-gray-200 bg-white">
+        <div
+          className={`w-full flex-col border-r border-gray-200 bg-white md:flex md:w-96 ${selectedConv ? 'hidden' : 'flex'}`}
+        >
           <div className="border-b border-gray-200 p-4">
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
@@ -201,9 +203,16 @@ export function MessagingPortal() {
         {selectedConv ? (
           <div className="flex flex-1 flex-col">
             {/* Chat Header */}
-            <div className="border-b border-gray-200 bg-white px-6 py-4">
+            <div className="border-b border-gray-200 bg-white px-4 py-4 md:px-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    aria-label="Back to conversations"
+                    className="rounded-lg p-2 hover:bg-gray-100 md:hidden"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500">
                     <span className="text-sm font-semibold text-white">
                       {initials(describe(selectedConv, auth.user?.id).name)}
@@ -215,14 +224,6 @@ export function MessagingPortal() {
                       {describe(selectedConv, auth.user?.id).subtitle}
                     </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="rounded-lg p-2 hover:bg-gray-100" title="Voice call">
-                    <Phone className="h-5 w-5 text-gray-600" />
-                  </button>
-                  <button className="rounded-lg p-2 hover:bg-gray-100" title="Video call">
-                    <Video className="h-5 w-5 text-gray-600" />
-                  </button>
                 </div>
               </div>
             </div>
@@ -292,7 +293,7 @@ export function MessagingPortal() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center bg-gray-50">
+          <div className="hidden flex-1 items-center justify-center bg-gray-50 md:flex">
             <div className="text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-200">
                 <Send className="h-10 w-10 text-gray-400" />

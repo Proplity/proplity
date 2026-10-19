@@ -34,6 +34,12 @@ export function useMaintenanceCategories() {
   return { data, loading, error };
 }
 
+export function useRateVendor() {
+  return useApiSubmit((id: string, body: { rating: number; comment?: string }) =>
+    api.maintenance.rateVendor(id, body),
+  );
+}
+
 export function useCreateMaintenanceRequest() {
   return useApiSubmit((body: CreateMaintenanceRequestInput) => api.maintenance.createRequest(body));
 }

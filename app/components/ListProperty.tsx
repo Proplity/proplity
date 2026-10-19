@@ -91,6 +91,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [uploadingExterior, setUploadingExterior] = useState(false);
   const [mediaUploadError, setMediaUploadError] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -193,11 +194,41 @@ export function ListProperty({ userRole }: ListPropertyProps) {
     'Kwara',
   ];
 
+  // What each step needs before the next one opens, so a half-filled form
+  // can't reach "Submit for Verification" and fail there with a generic error.
+  const stepProblem = (): string | null => {
+    if (step === 1) {
+      if (!formData.propertyType) return 'Choose the type of property.';
+      if (!formData.address.trim() || !formData.city.trim()) {
+        return 'Enter the street address and the city.';
+      }
+    }
+    if (step === 2) {
+      if (units.some((u) => !u.unitNumber.trim() || !(parseFloat(u.rentAmount) > 0))) {
+        return 'Every unit needs a label and a rent amount.';
+      }
+    }
+    // Only enforced where uploads work; elsewhere the notice above says media can wait.
+    if (step === 3 && uploadsEnabled()) {
+      if (uploadedMedia.photos.length === 0 || uploadedMedia.exteriorPhotos.length === 0) {
+        return 'Add at least one photo of the rooms and one of the building from outside.';
+      }
+    }
+    return null;
+  };
+
   const handleNext = () => {
+    const problem = stepProblem();
+    if (problem) {
+      setStepError(problem);
+      return;
+    }
+    setStepError(null);
     if (step < totalSteps) setStep(step + 1);
   };
 
   const handlePrevious = () => {
+    setStepError(null);
     if (step > 1) setStep(step - 1);
   };
 
@@ -704,8 +735,10 @@ export function ListProperty({ userRole }: ListPropertyProps) {
             {/* 360° Video */}
             <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-500">
               <Video className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-              <h3 className="mb-1 font-semibold">360° Walkthrough Video *</h3>
-              <p className="mb-4 text-sm text-gray-600">Required for review</p>
+              <h3 className="mb-1 font-semibold">360° Walkthrough Video</h3>
+              <p className="mb-4 text-sm text-gray-600">
+                Optional: lets tenants tour the property remotely
+              </p>
               <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
                 {uploadingVideo ? 'Uploading…' : 'Upload Video'}
                 <input
@@ -944,6 +977,13 @@ export function ListProperty({ userRole }: ListPropertyProps) {
             </button>
           )}
         </div>
+
+        {stepError && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {stepError}
+          </div>
+        )}
 
         {submitError && (
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">

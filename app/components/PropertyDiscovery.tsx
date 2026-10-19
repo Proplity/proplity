@@ -239,15 +239,29 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
               key={property.id}
               className="overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg"
             >
-              {/* Property Image Placeholder */}
-              <div className={`h-48 ${card.imageClass} relative flex items-center justify-center`}>
+              {/* Cover photo when the listing has one, otherwise a plain placeholder */}
+              <div
+                className={`h-48 ${card.imageClass} relative flex items-center justify-center overflow-hidden`}
+              >
+                {property.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- uploads are served through the file gateway
+                  <img
+                    src={property.imageUrl}
+                    alt={property.name}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
                 {card.verified && (
                   <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
                     <Shield className="h-3 w-3" />
                     Verified
                   </div>
                 )}
-                <div className="text-sm text-gray-400">360° View Available</div>
+                {!property.imageUrl && (
+                  <div className="text-sm text-gray-400">
+                    {property.video360Url ? '360° View Available' : 'No photo yet'}
+                  </div>
+                )}
               </div>
 
               <div className="p-5">

@@ -185,6 +185,8 @@ async function main() {
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
       floodRiskScore: 15.0,

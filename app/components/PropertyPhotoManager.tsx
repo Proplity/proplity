@@ -162,7 +162,7 @@ export function PropertyPhotoManager({
     <>
       {/* ── Dashboard Card ── */}
       <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 p-6">
           <div>
             <h2 className="font-semibold text-gray-900">Photos & Media</h2>
             <p className="text-sm text-gray-500">

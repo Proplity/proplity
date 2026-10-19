@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PropertyType } from '@prisma/client';
+import { Prisma, PropertyType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { getServerSession } from '@/lib/auth/session';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { serializeUnit } from '@/lib/api/propertyAccess';
+import { PRIVATE_UNIT_FLAG, isPrivateUnit, serializeUnit } from '@/lib/api/propertyAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
@@ -65,7 +65,18 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const minBedrooms = searchParams.get('minBedrooms');
 
-    const where: Record<string, unknown> = { isPublished: true, mergedIntoId: null };
+    // Only approved listings are public; isPublished alone is the owner's own toggle.
+    const where: Record<string, unknown> = {
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+      mergedIntoId: null,
+    };
+    // A building whose units are all private has nothing to show the public. (amenities
+    // can be NULL on a unit, so this is done in SQL where COALESCE handles that.)
+    const allPrivate = await prisma.$queryRaw<{ propertyId: string }[]>(Prisma.sql`
+      SELECT "propertyId" FROM "Unit" GROUP BY "propertyId"
+      HAVING bool_and(COALESCE(amenities, '{}'::text[]) @> ARRAY[${PRIVATE_UNIT_FLAG}]::text[])`);
+    if (allPrivate.length > 0) where.id = { notIn: allPrivate.map((r) => r.propertyId) };
     if (city) where.city = city;
     if (state) where.state = state;
     if (type) where.type = type as PropertyType;
@@ -99,7 +110,11 @@ export async function GET(req: NextRequest) {
       prisma.property.count({ where }),
     ]);
 
-    const data = properties.map((p) => ({ ...p, units: p.units.map(serializeUnit) }));
+    // Private units are never part of the public list.
+    const data = properties.map((p) => ({
+      ...p,
+      units: p.units.filter((u) => !isPrivateUnit(u)).map(serializeUnit),
+    }));
 
     return NextResponse.json({ data, meta: buildMeta(total, page, limit) });
   } catch (err) {

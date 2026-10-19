@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ResponsiveTables } from '@/app/components/ResponsiveTables';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
@@ -377,7 +378,10 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
+        <main className="flex-1 overflow-auto pb-24 lg:pb-0">
+          <ResponsiveTables />
+          {children}
+        </main>
 
         {showAIAssistant && aiAssistantDemoEnabled && (
           <AIAssistant onClose={() => setShowAIAssistant(false)} />
