@@ -1,21 +1,29 @@
 # Proplity: handover
 
-> Written 2026-10-15 for anyone (person or AI assistant) picking the project up cold. Read this first, then `CLAUDE.md` (the always-current project reference) and `CURRENT_STATE.md` (what is built, with a changelog). Keep this file current: update it in the same pass as any change that moves the facts below.
+> **Latest detailed handover: [`docs/HANDOVER-2026-10-19.md`](docs/HANDOVER-2026-10-19.md)** (the 2026-10-19 period: journey recorder, flow fixes, viewing date field, notifications, attention list, the agreed next work, and exactly how to run everything). This file is the standing overview. Written 2026-10-15 for anyone (person or AI assistant) picking the project up cold. Read this first, then `CLAUDE.md` (the always-current project reference) and `CURRENT_STATE.md` (what is built, with a changelog). Keep this file current: update it in the same pass as any change that moves the facts below.
 
 ## What this is
 
 Proplity is a property-management platform for the Nigerian market: landlords, managers, tenants, vendors and an admin. Next.js 16 App Router, Prisma 7 on PostgreSQL, JWT cookies with rotating refresh tokens, Paystack payments, Cloudinary uploads, Resend email, deployed on Vercel.
 
-## Where things stand (2026-10-16)
+## Where things stand (2026-10-19)
 
-- The domain API roadmap, the frontend, the background workers and the test suites are built. 94 route handlers, 43 models, 25 migrations.
+- The domain API roadmap, the frontend, the background workers and the test suites are built. 95 route handlers, 43 models, 27 migrations (none added 2026-10-19).
 - The issue register (`docs/issues/issues.md`) is worked through: everything that can be done without outside input is built and merged to `dev`.
-- **Tests:** a full `vitest run` (integration plus unit) is 480 tests in 41 files, all passing on this branch. `pnpm test` runs 375 Vitest integration tests in 26 files (`tests/api/`), `pnpm test:unit` runs 73 fast unit/fuzz/security/anomaly tests in 12 files (~2.8s). Stryker mutation testing achieves 85.71% mutation score (`pnpm test:mutation`). Autocannon load testing (`pnpm test:load`) and 100k units query scaling benchmark (`pnpm benchmark:100k`). Playwright E2E: 52 tests across 15 spec files. `pnpm lint`: 0 errors, 0 warnings.
+- **Tests:** `pnpm test` (`tests/api/`, real HTTP against a spawned `next dev` on port 3101) is 494 tests in 42 files, all passing; `pnpm test:unit` runs 73 fast unit/fuzz/security/anomaly tests in 12 files. Stryker mutation testing achieves 85.71% mutation score (`pnpm test:mutation`). Autocannon load testing (`pnpm test:load`) and 100k units query scaling benchmark (`pnpm benchmark:100k`). Playwright E2E: 52 tests across 15 spec files. `pnpm lint`: 0 errors, 0 warnings.
 - **Code scan (2026-10-19):** a security and bug scan of `dev` found and fixed ISS-059 to ISS-082 (see `CURRENT_STATE.md` and the register). Two were serious: a manager could re-approve and publish a rejected listing, and could edit another property's units via staged `metadata`; both only existed in the ADR-0013 property-edit code (on `dev` and `main`, not `prod`). Not changed, by decision: vendor payouts are still allowed before the invoice is paid; passwords still need only 6 characters at sign-up (setup needs 8); a full script-level CSP is not set.
+- **2026-10-19 work:** a UI-only 19-act journey recorder (`scripts/record-user-journey.mjs`) and a re-recorded video; flow fixes ISS-084 to ISS-097 (merged to `dev` and `main`); access-code screens; phone layout; Schedule Tour date field and Lagos-time viewing hours; a visitor profile on viewing requests; a View invoice breakdown on repairs; notifications for every action that needs someone; a **Needs your attention** list on every dashboard; a `reminders` cron job (10 jobs now). #110 and #111 are on `dev` only: the next release is a PR `dev` into `main`.
 - **Branches:** `dev` is the integration branch, `main` is staging, `prod` is production. Work goes on a short-lived branch, then a PR into `dev`, then `dev` into `main`, then `main` into `prod`. All stale local and remote feature branches merged into `dev` have been pruned.
 - **Repo and CI:** GitHub `Proplity/proplity`. CI runs typecheck, lint, format check, build, the API integration suite and Playwright. Vercel's GitHub integration posts preview deployments (the custom preview workflow was removed).
 
 ## What is left
+
+### Next features (agreed or proposed, none started; details in `docs/HANDOVER-2026-10-19.md` §4 and `CLAUDE.md`, Deliberately deferred)
+
+1. **Repair follow-through** (migration): vendor evidence upload, tenant Confirm fixed / Still a problem (manager decides on a dispute), admin on/off switch, fix the manager's refused "Mark as Completed" button (ISS-100 to ISS-102). Ask the owner about a 7-day auto-confirm.
+2. **Offline payments and receipts** (small migration): a "Paid another way" form with receipt upload, a reconcile list that blocks self-approval, a printable receipt per payment (ISS-103).
+3. **Re-record the video** after 1 and 2.
+4. Parked until the owner decides: manager-initiated repairs (work orders), recurring-schedules screen, viewing availability (ISS-104).
 
 ### Needs a person (production checks, before releasing `dev` to `prod`)
 
@@ -62,6 +70,8 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 - **Full test suite is slow** (about 7 minutes). Run it in the background and wait for it to finish rather than polling.
 - **Ports:** free a stuck dev server with `fuser -k <port>/tcp`, not a broad `pkill`.
 - **First Playwright run on a cold dev server** can time out while pages compile; rerun before assuming a real failure.
+- **Sharing a machine with other projects:** the API suite's port 3101 can be taken by another project's server, which makes every test return 404; change `TEST_PORT` locally (do not commit) and do not kill the other project's processes.
+- **Journey and video work:** UI-only (clicks, typing, file choosing), from a fresh DB; a failing step is a product bug. See the 2026-10-19 handover §5.3 for env vars, snapshots and the act-ordering caveat.
 - **The assistant used so far could not merge PRs or delete remote branches** (blocked by its permission rules), so the owner merges.
 - **Commit attribution:** commits end with the co-author line the tooling asks for; PR bodies end with the generated-with line. Follow whatever your own tooling requires.
 
@@ -75,4 +85,4 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 ## Where to read more
 
-`CLAUDE.md` (architecture, conventions) · `CURRENT_STATE.md` (state and changelog) · `docs/issues/issues.md` (every known issue, status and where it lives) · `docs/PRD-as-built.md` (what the product does versus the original PRD) · `docs/adr/` (decisions) · `DEPLOYMENT.md` (deploy, CI, env vars, cron) · `docs/testing-guide.md` (QA checklist) · `docs/proplity-step-by-step-role-guide.md` (click-by-click per role).
+`docs/HANDOVER-2026-10-19.md` (the detailed, current handover) · `CLAUDE.md` (architecture, conventions) · `CURRENT_STATE.md` (state and changelog) · `docs/issues/issues.md` (every known issue, status and where it lives) · `docs/PRD-as-built.md` (what the product does versus the original PRD) · `docs/adr/` (decisions) · `DEPLOYMENT.md` (deploy, CI, env vars, cron) · `docs/testing-guide.md` (QA checklist) · `docs/proplity-step-by-step-role-guide.md` (click-by-click per role).

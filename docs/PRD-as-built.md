@@ -122,16 +122,16 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 
 ## 5. Service-provider (vendor) features (PRD §5.4)
 
-| Requirement                 | Status | As built                                                                                                                                                |
-| --------------------------- | :----: | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Business profile            |   ✅   | Vendor profile record and listing.                                                                                                                      |
-| Job intake & dispatch       |   ✅   | Assigned jobs list and detail, notification on assignment.                                                                                              |
-| AI-structured work tickets  |   ❌   | Tickets are the tenant's own fields; no AI structuring.                                                                                                 |
-| Messaging with stakeholders |   ✅   | See §3.5.                                                                                                                                               |
-| Job status tracking         |   ✅   | In progress → completed from the job page.                                                                                                              |
-| Invoice generation          |   ✅   | Itemised invoice for a completed job.                                                                                                                   |
-| Online payments to vendors  |   ✅   | Vendor payouts flow built (ISS-012): initiation from invoices/jobs, approval, settlement via Paystack transfer API / mock gateway, and status tracking. |
-| Work history & reputation   |   ✅   | Ratings from tenants (one per completed job, from My Maintenance Requests); reputation computed on demand from ratings (never cached).                  |
+| Requirement                 | Status | As built                                                                                                                                                                |
+| --------------------------- | :----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business profile            |   ✅   | Vendor profile record and listing.                                                                                                                                      |
+| Job intake & dispatch       |   ✅   | Assigned jobs list and detail, notification on assignment.                                                                                                              |
+| AI-structured work tickets  |   ❌   | Tickets are the tenant's own fields; no AI structuring.                                                                                                                 |
+| Messaging with stakeholders |   ✅   | See §3.5.                                                                                                                                                               |
+| Job status tracking         |   ✅   | In progress → completed from the job page. No evidence upload by the vendor, and no tenant confirmation after completion (designs agreed, not built: ISS-100, ISS-102). |
+| Invoice generation          |   ✅   | Itemised invoice for a completed job.                                                                                                                                   |
+| Online payments to vendors  |   ✅   | Vendor payouts flow built (ISS-012): initiation from invoices/jobs, approval, settlement via Paystack transfer API / mock gateway, and status tracking.                 |
+| Work history & reputation   |   ✅   | Ratings from tenants (one per completed job, from My Maintenance Requests); reputation computed on demand from ratings (never cached).                                  |
 
 ## 6. Community, estate, AI and discovery (PRD §5.3, §6)
 
