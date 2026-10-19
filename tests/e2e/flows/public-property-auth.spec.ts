@@ -72,7 +72,8 @@ test('signed-in user sees "Go to Dashboard" (not "Get Started") on marketing pag
   await loginAs(page, 'tenant');
   for (const path of ['/pricing', '/about', '/contact', '/for-landlords']) {
     await page.goto(path);
-    const cta = page.getByRole('link', { name: 'Go to Dashboard' });
+    // A marketing page can carry the call to action in the nav and again in the page body.
+    const cta = page.getByRole('link', { name: 'Go to Dashboard' }).first();
     await expect(cta).toBeVisible();
     await expect(cta).toHaveAttribute('href', '/dashboard');
   }
