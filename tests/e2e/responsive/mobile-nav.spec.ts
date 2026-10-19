@@ -23,10 +23,14 @@ test.describe('marketing nav (no database needed)', () => {
     await expect(menu.getByRole('link', { name: 'For Service Providers' })).toBeVisible();
     await expect(menu.getByRole('link', { name: 'Contact Us' })).toBeVisible();
     await expect(menu.getByRole('link', { name: 'About Us' })).toBeVisible();
-    await expect(menu.getByRole('link', { name: 'Pricing' })).toBeVisible();
-
-    await menu.getByRole('link', { name: 'Pricing' }).click();
-    await expect(page).toHaveURL(/\/pricing/);
+    // Pricing is only in the menu while subscriptions are on.
+    if (process.env.NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED === 'true') {
+      await expect(menu.getByRole('link', { name: 'Pricing' })).toBeVisible();
+      await menu.getByRole('link', { name: 'Pricing' }).click();
+      await expect(page).toHaveURL(/\/pricing/);
+    } else {
+      await expect(menu.getByRole('link', { name: 'Pricing' })).toHaveCount(0);
+    }
   });
 
   test('no horizontal overflow on marketing pages at phone width', async ({ page }) => {
@@ -114,6 +118,7 @@ test.describe('admin sidebar drawer (needs a reachable, seeded database)', () =>
 
     // The users table scrolls inside its own box instead of cutting columns off.
     await page.goto('/admin/users');
+    await page.getByTitle('Switch to Table view').click();
     const table = page.locator('table').first();
     await expect(table).toBeVisible();
     const scrolls = await table.evaluate((el) => {
