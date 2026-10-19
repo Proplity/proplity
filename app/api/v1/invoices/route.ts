@@ -125,6 +125,17 @@ export const POST = withAuth(
             { status: 403 },
           );
         }
+        // A vendor bills the job only: not a lease or another user (which would put an
+        // invoice in front of an unrelated tenant), and never one that starts as paid.
+        if (leaseId || userId) {
+          return NextResponse.json(
+            { error: 'Vendors may only bill the maintenance job itself' },
+            { status: 403 },
+          );
+        }
+        if (rest.status && rest.status !== 'UNPAID') {
+          return NextResponse.json({ error: 'New invoices must start as UNPAID' }, { status: 400 });
+        }
         const request = await prisma.maintenanceRequest.findUnique({
           where: { id: maintenanceRequestId },
         });
