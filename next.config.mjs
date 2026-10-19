@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Do not advertise the framework in every response.
+  poweredByHeader: false,
   // Next 16 enforces a single `next dev` server per distDir (a lockfile at
   // <distDir>/lock) -- so the automated test suite's spawned server sets
   // NEXT_TEST_DIST_DIR to run out of a separate build directory, letting it
