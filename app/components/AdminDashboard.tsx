@@ -97,7 +97,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
       {loading && <p className="text-sm text-gray-500">Loading platform data…</p>}
 
       {/* Platform Stats */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -106,9 +106,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
               onClick={() =>
                 onNavigate?.({ type: 'admin-breakdown', breakdownType: stat.breakdown })
               }
-              className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-6 text-left transition-all hover:border-blue-400 hover:shadow-md"
+              className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:border-blue-400 hover:shadow-md sm:p-6"
             >
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between sm:mb-4">
                 <div
                   className={`h-12 w-12 ${stat.bg} flex items-center justify-center rounded-lg transition-opacity group-hover:opacity-80`}
                 >
@@ -117,7 +117,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
               </div>
               <p className="mb-1 text-2xl font-semibold">{stat.value}</p>
               <p className="text-sm text-gray-600">{stat.label}</p>
-              <p className="mt-2 text-xs text-blue-500 opacity-0 transition-opacity group-hover:opacity-100">
+              <p className="mt-2 hidden text-xs text-blue-500 opacity-0 transition-opacity group-hover:opacity-100 sm:block">
                 Click to view breakdown →
               </p>
             </button>

@@ -3,8 +3,6 @@ import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
 import type { AccessCode, CreateAccessCodeInput } from '@/lib/api/types';
 
-// Not wired to a form this phase -- no access-code UI exists yet. Built per
-// the plan's explicit hook list, available for a future addition.
 export function useAccessCodes(unitId: string | null) {
   const [data, setData] = useState<AccessCode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,5 +38,15 @@ export function useAccessCodes(unitId: string | null) {
 export function useCreateAccessCode() {
   return useApiSubmit((body: CreateAccessCodeInput) =>
     api.accessCodes.create(body).then((res) => res.data.data),
+  );
+}
+
+export function useRevokeAccessCode() {
+  return useApiSubmit((id: string) => api.accessCodes.revoke(id).then((res) => res.data.data));
+}
+
+export function useVerifyAccessCode() {
+  return useApiSubmit((body: { unitId: string; code: string }) =>
+    api.accessCodes.verify(body).then((res) => res.data.data),
   );
 }

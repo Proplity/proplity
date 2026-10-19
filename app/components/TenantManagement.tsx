@@ -70,14 +70,14 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="mb-1 text-2xl font-semibold">Tenant Management</h1>
           <p className="text-gray-600">Manage your tenants and track rent payments</p>
         </div>
         <button
           onClick={() => onNavigate({ type: 'add-tenant' })}
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium whitespace-nowrap text-white hover:bg-blue-700"
         >
           + Add Tenant
         </button>

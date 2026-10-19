@@ -1,6 +1,8 @@
 import axios from 'axios';
 import type {
   AccessCode,
+  AccessCodeDetail,
+  AccessVerifyResult,
   AdCampaign,
   AdminUser,
   Announcement,
@@ -295,6 +297,8 @@ export const api = {
       apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
       apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
+    rateVendor: (id: string, body: { rating: number; comment?: string }) =>
+      apiClient.post<{ data: unknown }>(`/api/v1/maintenance/requests/${id}/rating`, body),
   },
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
@@ -354,6 +358,10 @@ export const api = {
       apiClient.get<{ data: AccessCode[] }>('/api/v1/access-codes', { params: { unitId } }),
     create: (body: CreateAccessCodeInput) =>
       apiClient.post<{ data: AccessCode }>('/api/v1/access-codes', body),
+    get: (id: string) => apiClient.get<{ data: AccessCodeDetail }>(`/api/v1/access-codes/${id}`),
+    revoke: (id: string) => apiClient.delete<{ data: AccessCode }>(`/api/v1/access-codes/${id}`),
+    verify: (body: { unitId: string; code: string }) =>
+      apiClient.post<{ data: AccessVerifyResult }>('/api/v1/access-codes/verify', body),
   },
   conversations: {
     list: () => apiClient.get<{ data: Conversation[] }>('/api/v1/conversations'),

@@ -266,9 +266,9 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
       {/* Portfolio Stats */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50">
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
@@ -277,8 +277,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           <p className="text-sm text-gray-600">Total Units</p>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-50">
               <Users className="h-6 w-6 text-green-600" />
             </div>
@@ -290,8 +290,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           </p>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-50">
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
@@ -302,8 +302,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           <p className="text-sm text-gray-600">Total Listed Rent</p>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-50">
               <TrendingUp className="h-6 w-6 text-orange-600" />
             </div>

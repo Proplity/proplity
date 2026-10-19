@@ -43,6 +43,7 @@ import {
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
 import { PropertyPhotoManager } from './PropertyPhotoManager';
+import { GateCheckCard } from './GateCheckCard';
 import type { Page } from '../dashboard/navigateToPage';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
 
@@ -934,7 +935,10 @@ function ApplicationRow({
 }) {
   const { submit: review, submitting } = useReviewApplication(application.id);
   const details = application.details as Record<string, unknown>;
-  const name = [details.firstName, details.lastName].filter(Boolean).join(' ') || 'Applicant';
+  const name =
+    application.applicant?.name ||
+    [details.firstName, details.lastName].filter(Boolean).join(' ') ||
+    'Applicant';
 
   const handleReview = async (status: 'APPROVED' | 'REJECTED') => {
     try {
@@ -990,7 +994,9 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const { data: pendingApplications, refetch: refetchApplications } = useApplications({
     status: 'PENDING',
   });
-  const { data: approvedApplications } = useApplications({ status: 'APPROVED' });
+  const { data: approvedApplications, refetch: refetchApproved } = useApplications({
+    status: 'APPROVED',
+  });
   const { submit: unmergeProperty, submitting: unmerging } = useUnmergeProperty(propertyId);
   const [showUnmergeConfirm, setShowUnmergeConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1179,11 +1185,11 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div className="mb-4 flex items-start justify-between">
+        <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
           <div>
             <h1 className="mb-2 text-2xl font-semibold">{property.name}</h1>
-            <div className="mb-2 flex items-center gap-2 text-gray-600">
-              <MapPin className="h-4 w-4" />
+            <div className="mb-2 flex items-start gap-2 text-gray-600">
+              <MapPin className="mt-1 h-4 w-4 shrink-0" />
               <span>
                 {property.address}, {property.city}
                 {property.state ? `, ${property.state}` : ''}
@@ -1466,7 +1472,10 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                   <ApplicationRow
                     key={application.id}
                     application={application}
-                    onReviewed={refetchApplications}
+                    onReviewed={() => {
+                      refetchApplications();
+                      refetchApproved();
+                    }}
                   />
                 ))}
                 {propertyApplications.length === 0 && (
@@ -1589,6 +1598,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
             />
             <StakeholdersCard property={property} />
             <EquipmentCard propertyId={property.id} />
+            {canManage && <GateCheckCard units={property.units} />}
             <Link
               href={`/dashboard/properties/${property.id}/neighbourhood`}
               className="block rounded-lg border border-gray-200 bg-white p-6 hover:bg-gray-50"
