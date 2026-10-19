@@ -894,8 +894,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Offline Bank Transfer Proof Submission</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Upload bank transfer payment receipts, input sender bank, amount, reference number, and date.</div>
-        <code>POST /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The "Paid another way" form: record a bank transfer or cash payment with the sender bank, amount, reference, date and an optional receipt file. It counts once someone else confirms it.</div>
+        <code>PaidAnotherWayForm.tsx</code> &bull; <code>ISS-103</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Duplicate Reference Guard</div>
@@ -904,7 +904,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Transfer Reconciliation Status Tracker</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants see real-time status of their offline submissions: PENDING, APPROVED (receipted), or REJECTED.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Tenants see the transfers they recorded under Transfers you recorded: waiting, confirmed (with a receipt link) or rejected with the reason.</div>
         <code>GET /api/v1/bank-transfers</code> &bull; <code>ISS-012</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -919,8 +919,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Itemized Payment Ledger & Digital Receipts</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">History of all settled payments with transaction references, method badges, and downloadable receipts.</div>
-        <code>/dashboard/payment-history</code> &bull; <code>Receipts</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">History of all settled payments with transaction references, method badges and a receipt for each: receipt number, who paid whom, how, what is still owing, print or save as PDF.</div>
+        <code>/dashboard/payment-history</code> &bull; <code>/receipts/[id]</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">3-Step Structured Tenancy Application</div>
@@ -1113,8 +1113,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Bank Transfer Statement Reconciliation</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid.</div>
-        <code>/api/v1/bank-transfers/[id]/reconcile</code> &bull; <code>ISS-012</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The Bank Transfers page lists transfers waiting for confirmation. Open the receipt file, then confirm or reject. Nobody can confirm a transfer they recorded themselves. Confirming marks the invoice paid and creates the receipt.</div>
+        <code>/dashboard/reconciliation</code> &bull; <code>/admin/payments</code> &bull; <code>ISS-012</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Maintenance Payout Processing</div>
@@ -1202,6 +1202,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Automated Maintenance Invoice Payer Assignment</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Routes vendor invoice payment directly to the managing property manager or property landlord.</div>
         <code>Invoice.payerId</code> &bull; <code>ISS-051</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Paid Notice and Receipts for Vendors</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The vendor is told when an invoice is paid, by card or by hand, and opens the receipt from Invoices.</div>
+        <code>/dashboard/vendor/invoices</code> &bull; <code>/receipts/[id]</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Vendor Bank Account Registration</div>

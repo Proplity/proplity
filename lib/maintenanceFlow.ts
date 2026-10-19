@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getSystemSettings } from '@/lib/systemSettings';
+import { getStorage } from '@/lib/storage';
 import { notifyAndEmail, notifyUser, type NotifyRequest } from '@/lib/notifications';
 
 // Rules shared by the places that finish, review or hand over a repair: the vendor's PATCH, the
@@ -25,6 +26,26 @@ export function hasCompletionEvidence(r: {
   completionProofUrl: string | null;
 }): boolean {
   return r.afterPhotoUrls.length > 0 || Boolean(r.completionProofUrl);
+}
+
+/**
+ * Photos are asked for only where they can be uploaded. With no storage provider configured a vendor
+ * has no way to attach one, so requiring it would make every job impossible to close.
+ */
+export function evidenceRequired(): boolean {
+  try {
+    return getStorage().isConfigured();
+  } catch {
+    return false;
+  }
+}
+
+/** True when the finished work must be shown and has not been. */
+export function lacksEvidence(r: {
+  afterPhotoUrls: string[];
+  completionProofUrl: string | null;
+}): boolean {
+  return evidenceRequired() && !hasCompletionEvidence(r);
 }
 
 export const EVIDENCE_REQUIRED = {

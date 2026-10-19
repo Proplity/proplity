@@ -27,6 +27,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePayInvoice } from '@/hooks/useInvoices';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PhotoGrid } from './RepairPhotos';
+import { InvoicePayments } from './InvoicePayments';
 import type { MaintenanceRequest } from '@/lib/api/types';
 
 interface MaintenanceDetailProps {
@@ -584,6 +585,15 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                       <span className="font-semibold">₦{inv.amount.toLocaleString()}</span>
                     </div>
                     <InvoiceBreakdown invoice={inv} />
+                    {canPayVendor && (
+                      <InvoicePayments
+                        invoice={inv}
+                        payments={inv.payments}
+                        owing={inv.status === 'CANCELLED' || inv.status === 'PAID' ? 0 : owing}
+                        canRecord={canPayVendor}
+                        onChanged={refetch}
+                      />
+                    )}
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         {inv.status.replace('_', ' ')}

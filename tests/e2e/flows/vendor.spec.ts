@@ -8,7 +8,9 @@ import { loginAs } from '../helpers/auth';
 test('vendor can open a job and submit an invoice', async ({ page }) => {
   await loginAs(page, 'vendor');
 
-  await page.getByText('Kitchen Sink Leaking').click();
+  // The "Needs your attention" list can show the same title once it loads, so ask for the card's
+  // heading rather than the text.
+  await page.getByRole('heading', { name: 'Kitchen Sink Leaking' }).click();
   await expect(page.getByRole('heading', { name: 'Kitchen Sink Leaking' })).toBeVisible();
 
   await page.getByRole('button', { name: /mark complete & create invoice/i }).click();
@@ -21,5 +23,5 @@ test('vendor can open a job and submit an invoice', async ({ page }) => {
   await page.getByRole('button', { name: /submit invoice/i }).click();
 
   // Successful submission returns to the dashboard job list.
-  await expect(page.getByText('Kitchen Sink Leaking')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Kitchen Sink Leaking').first()).toBeVisible({ timeout: 15_000 });
 });

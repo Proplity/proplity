@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 import { handleFileError } from '@/lib/api/fileErrors';
 import { z } from 'zod';
@@ -16,7 +17,8 @@ import {
   MAX_EVIDENCE_PHOTOS,
   OPEN_STATUSES,
   completionData,
-  hasCompletionEvidence,
+  evidenceRequired,
+  lacksEvidence,
   isOpenStatus,
   syncThreadVendor,
   tellTenantRepairDone,
@@ -52,7 +54,7 @@ function loadRequest(id: string) {
       invoices: {
         where: { type: 'MAINTENANCE' },
         orderBy: { createdAt: 'desc' },
-        include: { payments: { select: { amount: true } } },
+        include: { payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } } },
       },
     },
   });
@@ -102,7 +104,10 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       data: {
         ...request,
         tenant,
-        workflow: { autoCompleteOnInvoice: autoCompleteMaintenanceOnInvoice },
+        workflow: {
+          autoCompleteOnInvoice: autoCompleteMaintenanceOnInvoice,
+          evidenceRequired: evidenceRequired(),
+        },
       },
     });
   } catch (err) {
@@ -286,7 +291,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         }
         const after = afterPhotoUrls ?? request.afterPhotoUrls;
         const proof = completionProofUrl ?? request.completionProofUrl;
-        if (!hasCompletionEvidence({ afterPhotoUrls: after, completionProofUrl: proof })) {
+        if (lacksEvidence({ afterPhotoUrls: after, completionProofUrl: proof })) {
           return NextResponse.json(EVIDENCE_REQUIRED, { status: 400 });
         }
 

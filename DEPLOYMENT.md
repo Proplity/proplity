@@ -1,6 +1,6 @@
 # Deployment — Vercel + GitHub Actions
 
-Proplity is a **server-rendered** Next.js 16 app: 73 API routes, a `proxy.ts`
+Proplity is a **server-rendered** Next.js 16 app: 98 API routes, a `proxy.ts`
 auth gate, and Prisma against Postgres. It cannot be statically exported.
 
 ## 0. Branch model

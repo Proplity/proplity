@@ -10,8 +10,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useBankTransfers } from '@/hooks/useBankTransfers';
 import type { Invoice } from '@/lib/api/types';
+import { PaidAnotherWayForm, type PayableInvoice } from './PaidAnotherWayForm';
 
 const statusConfig = {
   completed: { label: 'Paid', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -21,6 +25,9 @@ const statusConfig = {
 };
 
 type PaymentRecord = {
+  /** The payment this row is (its receipt is at /receipts/<paymentId>); none for an unpaid invoice. */
+  paymentId: string | null;
+  receiptNumber: string | null;
   id: string;
   period: string;
   description: string;
@@ -35,7 +42,13 @@ type PaymentRecord = {
 // sub-phase). An invoice with a payment renders as one paid record; an
 // invoice still owing money renders as one pending/upcoming record instead
 // -- there's no separate "scheduled payment" model to source that from.
-function toRecords(invoices: Invoice[]): PaymentRecord[] {
+// The tenant sees the vendor's bill on their own repair here too, but is not a party to it: the
+// receipt and "paid another way" are for invoices on their lease or addressed to them.
+function isOwnInvoice(invoice: Invoice, meId: string | undefined): boolean {
+  return !!meId && (invoice.lease?.tenant.id === meId || invoice.userId === meId);
+}
+
+function toRecords(invoices: Invoice[], meId: string | undefined): PaymentRecord[] {
   const records: PaymentRecord[] = [];
   for (const invoice of invoices) {
     if (invoice.status === 'CANCELLED') continue;
@@ -51,6 +64,8 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
     if (invoice.payments.length > 0) {
       for (const payment of invoice.payments) {
         records.push({
+          paymentId: isOwnInvoice(invoice, meId) ? payment.id : null,
+          receiptNumber: isOwnInvoice(invoice, meId) ? payment.receiptNumber : null,
           id: invoice.invoiceNumber,
           period,
           description,
@@ -63,6 +78,8 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
       }
     } else {
       records.push({
+        paymentId: null,
+        receiptNumber: null,
         id: invoice.invoiceNumber,
         period,
         description,
@@ -78,8 +95,26 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
 }
 
 export function TenantPaymentHistory() {
-  const { data: invoices, loading, error } = useInvoices();
-  const allPayments = useMemo(() => toRecords(invoices), [invoices]);
+  const { user } = useAuth();
+  const { data: invoices, loading, error, refetch } = useInvoices();
+  const transfers = useBankTransfers();
+  const [recording, setRecording] = useState(false);
+  // What can still be paid: an open invoice, minus what has been paid on it already.
+  const payable: PayableInvoice[] = invoices
+    .filter((i) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status))
+    .filter((i) => isOwnInvoice(i, user?.id))
+    .map((i) => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber,
+      owing: Math.max(
+        0,
+        Math.round((i.amount - i.payments.reduce((n, p) => n + p.amount, 0)) * 100) / 100,
+      ),
+      label: i.description?.split('\n')[0] ?? i.type.replace(/_/g, ' ').toLowerCase(),
+    }))
+    .filter((i) => i.owing > 0);
+  const openTransfers = transfers.data.filter((t) => t.status !== 'APPROVED');
+  const allPayments = useMemo(() => toRecords(invoices, user?.id), [invoices, user?.id]);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -128,12 +163,70 @@ export function TenantPaymentHistory() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="mb-1 text-2xl font-semibold">Payment History</h1>
-        <p className="text-sm text-gray-500">
-          A full record of your rent and other invoice payments
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold">Payment History</h1>
+          <p className="text-sm text-gray-500">
+            A full record of your rent and other invoice payments
+          </p>
+        </div>
+        {payable.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setRecording(true)}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            I paid by bank transfer
+          </button>
+        )}
       </div>
+
+      {openTransfers.length > 0 && (
+        <section
+          aria-label="Transfers you recorded"
+          className="rounded-xl border border-gray-200 bg-white"
+        >
+          <h2 className="border-b border-gray-100 px-5 py-3 text-sm font-semibold">
+            Transfers you recorded
+          </h2>
+          <ul className="divide-y divide-gray-100">
+            {openTransfers.map((t) => (
+              <li
+                key={t.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm"
+              >
+                <span>
+                  ₦{t.amount.toLocaleString()} for {t.invoice?.invoiceNumber}{' '}
+                  <span className="text-xs text-gray-500">
+                    (reference {t.referenceNumber}, {new Date(t.paymentDate).toLocaleDateString()})
+                  </span>
+                </span>
+                {t.status === 'PENDING' ? (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                    Waiting for your property team to confirm
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
+                    Rejected{t.rejectionReason ? `: ${t.rejectionReason}` : ''}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {recording && (
+        <PaidAnotherWayForm
+          invoices={payable}
+          onClose={() => setRecording(false)}
+          onDone={() => {
+            setRecording(false);
+            transfers.refetch();
+            refetch();
+          }}
+        />
+      )}
 
       {loading && <p className="text-sm text-gray-500">Loading payment history…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -240,6 +333,9 @@ export function TenantPaymentHistory() {
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
                   Status
                 </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase">
+                  Receipt
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -275,12 +371,24 @@ export function TenantPaymentHistory() {
                         {cfg.label}
                       </span>
                     </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      {payment.paymentId ? (
+                        <Link
+                          href={`/receipts/${payment.paymentId}`}
+                          className="text-xs font-medium text-blue-600 hover:underline"
+                        >
+                          Receipt {payment.receiptNumber}
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {currentData.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-5 py-10 text-center text-sm text-gray-400">
                     No payments found.
                   </td>
                 </tr>

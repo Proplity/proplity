@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -52,7 +53,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
             role: true,
           },
         },
-        payment: true,
+        payment: { select: PUBLIC_PAYMENT_SELECT },
       },
     });
 

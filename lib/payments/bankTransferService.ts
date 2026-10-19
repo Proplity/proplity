@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { canManageProperty } from '@/lib/api/propertyAccess';
-import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { notifyAdmins, notifyAndEmail, notifyPropertyTeam, notifyUser } from '@/lib/notifications';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 export type SubmitBankTransferInput = {
@@ -155,21 +155,27 @@ export async function submitBankTransferProof(
     },
   });
 
-  // Notify property managers and landlord about pending verification
-  const recipientIds: string[] = [];
-  if (property?.managerId && property.managerId !== actor.sub) {
-    recipientIds.push(property.managerId);
-  }
-  if (property?.landlordId && property.landlordId !== actor.sub) {
-    recipientIds.push(property.landlordId);
-  }
-  if (recipientIds.length > 0) {
-    await notifyUsers(recipientIds, {
-      type: 'SYSTEM',
-      title: 'New bank transfer submitted for reconciliation',
-      body: `A transfer proof of ₦${amount.toLocaleString()} for invoice ${invoice.invoiceNumber} has been submitted for review.`,
-      link: '/admin/payments',
-    });
+  // Tell whoever can confirm it (the property's manager and landlord, except the person who
+  // submitted it: nobody confirms their own entry). When there is no one else on the property
+  // team, the admins are told instead, so the entry is never left with nobody to confirm it.
+  const alert = {
+    type: 'SYSTEM' as const,
+    title: 'Bank transfer to confirm',
+    body: `A transfer of ₦${amount.toLocaleString()} for invoice ${invoice.invoiceNumber} is waiting for someone to confirm it.`,
+  };
+  const others = [property?.managerId, property?.landlordId].filter(
+    (id): id is string => Boolean(id) && id !== actor.sub,
+  );
+  if (property && others.length > 0) {
+    await notifyPropertyTeam(
+      property,
+      { ...alert, link: '/dashboard/reconciliation' },
+      {
+        exceptId: actor.sub,
+      },
+    );
+  } else {
+    await notifyAdmins({ ...alert, link: '/admin/payments' });
   }
 
   return submission;
@@ -234,6 +240,15 @@ export async function reconcileBankTransfer(
     );
   }
 
+  // Whoever recorded a payment cannot be the one who confirms it. They can still withdraw their own
+  // entry (reject it with a reason).
+  if (action === 'APPROVE' && submission.submittedById === actor.sub) {
+    throw new BankTransferError(
+      'Someone else must confirm a transfer you submitted. Ask another member of the property team or an admin.',
+      403,
+    );
+  }
+
   if (action === 'REJECT') {
     const reason = options?.rejectionReason?.trim();
     if (!reason) {
@@ -276,13 +291,15 @@ export async function reconcileBankTransfer(
       return row;
     });
 
-    // Notify the tenant of rejection
-    await notifyUser(submission.submittedById, {
-      type: 'SYSTEM',
-      title: 'Bank transfer submission rejected',
-      body: `Your bank transfer payment proof for invoice ${submission.invoice.invoiceNumber} was rejected: ${reason}`,
-      link: '/dashboard/payment-history',
-    });
+    // Tell whoever submitted it, on a screen their role can open.
+    if (submission.submittedById !== actor.sub) {
+      await notifyUser(submission.submittedById, {
+        type: 'SYSTEM',
+        title: 'Bank transfer submission rejected',
+        body: `Your bank transfer payment proof for invoice ${submission.invoice.invoiceNumber} was rejected: ${reason}`,
+        link: await submitterLink(submission.submittedById),
+      });
+    }
 
     return updated;
   }
@@ -375,13 +392,42 @@ export async function reconcileBankTransfer(
     return { submission: updatedSubmission, payment, newStatus };
   });
 
-  // Notify the submitting tenant of success
+  // Tell everyone the payment concerns, each with a link they can open (the receipt for those who
+  // were paid or are the payer).
+  const receipt = `/receipts/${result.payment.id}`;
+  const money = `₦${submission.amount.toLocaleString()}`;
   await notifyUser(submission.submittedById, {
     type: 'SYSTEM',
     title: 'Bank transfer payment confirmed',
-    body: `Your bank transfer of ₦${submission.amount.toLocaleString()} for invoice ${submission.invoice.invoiceNumber} has been verified and applied.`,
-    link: '/dashboard/payment-history',
+    body: `Your bank transfer of ${money} for invoice ${submission.invoice.invoiceNumber} has been verified and applied. Receipt ${result.payment.receiptNumber} is ready.`,
+    link: receipt,
   });
+  const leaseTenantId = submission.invoice.lease?.tenantId;
+  if (leaseTenantId && leaseTenantId !== submission.submittedById) {
+    await notifyUser(leaseTenantId, {
+      type: 'SYSTEM',
+      title: 'Payment recorded',
+      body: `A payment of ${money} was recorded on invoice ${submission.invoice.invoiceNumber}.`,
+      link: receipt,
+    });
+  }
+  const vendorId = submission.invoice.maintenanceRequest?.vendorId;
+  if (vendorId) {
+    await notifyAndEmail(vendorId, {
+      type: 'SYSTEM',
+      title: `Payment received: ${submission.invoice.invoiceNumber}`,
+      body: `${money} was paid on your invoice ${submission.invoice.invoiceNumber}. Open the receipt to view or print it.`,
+      link: receipt,
+    });
+  }
 
   return result;
+}
+
+/** Where to send someone about a transfer they submitted: tenants see their payments, staff the list to confirm. */
+async function submitterLink(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role === 'ADMIN') return '/admin/payments';
+  if (user?.role === 'MANAGER' || user?.role === 'LANDLORD') return '/dashboard/reconciliation';
+  return '/dashboard/payment-history';
 }

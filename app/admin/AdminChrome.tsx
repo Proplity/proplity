@@ -15,6 +15,7 @@ import {
   Users,
   Building2,
   FileText,
+  Receipt,
   Settings,
   SlidersHorizontal,
   Shield,
@@ -30,6 +31,7 @@ const TABS = [
   { href: '/admin/properties', label: 'Properties', icon: Building2 },
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
+  { href: '/admin/payments', label: 'Bank Transfers', icon: Receipt },
   { href: '/admin/security', label: 'Security', icon: Shield },
   { href: '/admin/settings', label: 'Platform Settings', icon: SlidersHorizontal },
 ];
