@@ -6,7 +6,6 @@ import {
   Calendar,
   CreditCard,
   MapPin,
-  Key,
   FileText,
   MessageSquare,
   AlertCircle,
@@ -17,6 +16,7 @@ import { useTenantSummary } from '@/hooks/useDashboardSummary';
 import { usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes, useCreateAccessCode } from '@/hooks/useAccessCodes';
+import { AccessCodeCard } from './AccessCodeCard';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import {
   useAutoPayMandates,
@@ -557,18 +557,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
               )}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {accessCodes.map((access) => (
-                  <div key={access.id} className="rounded-lg border border-gray-200 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Key className="h-4 w-4 text-blue-600" />
-                      <p className="text-sm font-medium">{access.guestName ?? 'Access Code'}</p>
-                    </div>
-                    <p className="mb-1 text-2xl font-bold text-blue-600">{access.code}</p>
-                    <p className="text-xs text-gray-500">
-                      {access.validUntil
-                        ? `Expires ${new Date(access.validUntil).toLocaleDateString()}`
-                        : 'No expiry'}
-                    </p>
-                  </div>
+                  <AccessCodeCard key={access.id} code={access} onChanged={refetchAccessCodes} />
                 ))}
                 {accessCodes.length === 0 && (
                   <p className="text-sm text-gray-400 md:col-span-3">No active access codes.</p>

@@ -43,6 +43,7 @@ import {
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { useEquipment, useCreateEquipment } from '@/hooks/useEquipment';
 import { PropertyPhotoManager } from './PropertyPhotoManager';
+import { GateCheckCard } from './GateCheckCard';
 import type { Page } from '../dashboard/navigateToPage';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
 
@@ -1597,6 +1598,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
             />
             <StakeholdersCard property={property} />
             <EquipmentCard propertyId={property.id} />
+            {canManage && <GateCheckCard units={property.units} />}
             <Link
               href={`/dashboard/properties/${property.id}/neighbourhood`}
               className="block rounded-lg border border-gray-200 bg-white p-6 hover:bg-gray-50"
