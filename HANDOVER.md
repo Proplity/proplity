@@ -23,7 +23,7 @@ Proplity is a property-management platform for the Nigerian market: landlords, m
 
 1. **Repair follow-through** (`feat/repair-follow-through`, migration `20261019171917_repair_follow_through`): vendor before/after photos, tenant Confirm fixed / Still a problem, the property team's Approve work / Send back / Give to another vendor, an admin on/off switch, the broken "Mark as Completed" button removed (ISS-100 to ISS-102, ISS-105 to ISS-110). **Not built, never agreed:** a 7-day "silence is confirmed" rule.
 2. **Offline payments and receipts** (`feat/offline-payments-and-receipts`, stacked on 1, migration `20261019190000_payment_receipt_number`): a "Paid another way" form, a Bank Transfers list where someone other than the recorder confirms, a receipt for every payment (ISS-103, ISS-111 to ISS-115).
-3. **Re-record the walkthrough video** after 1 and 2 (`scripts/record-user-journey.mjs`; see `docs/HANDOVER-2026-10-19.md` §5.3).
+3. **The walkthrough video was re-recorded** after 1 and 2 (22 acts, 24m48s: `public/videos/proplity-complete-userflow.webm`). The raw recording is about 100 MB, which GitHub refuses at 100 MiB, so after every recording run `node scripts/compress-journey-video.mjs` (about 40 MB, takes roughly as long as the video; ISS-119).
 4. Parked until the owner decides: manager-initiated repairs (work orders), recurring-schedules screen, viewing availability (ISS-104). Also an open question (ISS-110): should the assigned vendor see the unit's gate code while a job is open?
 
 ### Security hotfix to `prod` (do not wait for the next release)
