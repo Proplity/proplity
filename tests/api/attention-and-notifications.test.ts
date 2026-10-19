@@ -182,7 +182,7 @@ describe('notifications: actions that need someone', () => {
     expect((await notices(tenant.id)).map((n) => n.title)).toContain('Lease active');
   });
 
-  it('tells the property team about a vendor invoice and the tenant that the repair is done', async () => {
+  it('tells the property team about a vendor invoice and asks the tenant to confirm the repair', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
@@ -191,6 +191,8 @@ describe('notifications: actions that need someone', () => {
     const request = await createMaintenanceRequest(unit.id, tenant.id, {
       vendorId: vendor.id,
       status: 'IN_PROGRESS',
+      // The invoice closes the job, which needs a photo of the finished work.
+      afterPhotoUrls: ['/api/v1/files/after-photo'],
     });
 
     const res = await apiFetch('/api/v1/invoices', {
@@ -207,7 +209,8 @@ describe('notifications: actions that need someone', () => {
     expect(res.status).toBe(201);
     const team = await notices(manager.id);
     expect(team.map((n) => n.title)).toContain('Job done, vendor invoice to pay');
-    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Your repair was completed');
+    // Finishing a repair asks the tenant whether it is really fixed.
+    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Is your repair fixed?');
   });
 
   it('tells the vendor about a rating, and a violation or condition report reaches the tenant', async () => {

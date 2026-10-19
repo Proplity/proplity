@@ -90,6 +90,10 @@ are configured for this environment before treating it as a defect.
       photos, urgency level, and a preferred time
 - [ ] Track a maintenance request — watch its status change as staff and
       vendors work on it
+- [ ] When the vendor finishes, the request says **Needs your answer** (and
+      the dashboard lists **Repairs to confirm**): the vendor's photos are
+      shown; **Confirm fixed** records it, **Still a problem** needs a reason
+      (photos optional) and tells the property team
 - [ ] View payment history — see past rent payments
 - [ ] Pay rent (via Paystack, or the mock gateway in test environments) —
       the invoice becomes paid, a payment appears in history, and the
@@ -146,6 +150,12 @@ Same as landlord, plus the day-to-day operational tools:
       Service Charge) — the tenant sees both
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
+- [ ] On a finished repair the **Sign-off** card shows the tenant's answer;
+      **Approve work** records the sign-off (the invoice is unaffected). If the
+      tenant disputed it: **Send back to vendor**, **Give to another vendor**
+      (refused if the first vendor's invoice has been paid) and **Approve
+      anyway**. There is no "Mark as Completed" button: only the vendor
+      finishes a job
 - [ ] View breakdown/reports — drill into numbers (e.g. properties,
       transactions, maintenance) from the dashboard
 - [ ] Message tenants and vendors
@@ -160,6 +170,12 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] See assigned jobs — the maintenance requests they've been assigned to
 - [ ] View job details for a specific request
 - [ ] Update job status as they work on it (in progress → completed)
+- [ ] Add before and after photos under **Work Photos**; a job cannot be
+      closed (by invoice or **Mark work done**) without at least one after
+      photo; photos lock once the repair is approved or confirmed
+- [ ] A repair the tenant said is still a problem shows their reason and
+      photos in a red box; fix it and press **Mark work done** (no second
+      invoice)
 - [ ] Create an invoice for a completed job (itemized costs, submit for
       payment) — **note**: whether submitting an invoice automatically
       marks the job Completed is a platform-wide setting an admin controls
@@ -186,8 +202,10 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] View reports
 - [ ] Drill into breakdowns — same kind of detail view as managers get, but
       platform-wide
-- [ ] Platform Settings — toggle platform-wide behavior (currently: whether
-      a vendor invoice auto-completes its maintenance job)
+- [ ] Platform Settings — toggle platform-wide behavior: whether a vendor
+      invoice auto-completes its maintenance job, and whether tenants are
+      asked to confirm finished repairs (turning it off leaves repairs already
+      waiting for an answer answerable)
 - [ ] Open the admin-specific notifications view (bell + full page) —
       property creations and landlord edits trigger email/system notifications to admins
 - [ ] Change password from inside the admin panel (Settings)

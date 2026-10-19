@@ -379,9 +379,11 @@ action, entity, date/time) with filtering by action, actor, entity, and date ran
 plus expandable JSON metadata for deep inspection. Tracks user suspensions, role changes,
 private file access, vendor verifications, retention erasures, and property merge/unmerge.
 
-**5c. Platform Settings** — currently one live toggle: whether a vendor's
-invoice automatically completes its maintenance job. Flip it and it takes
-effect immediately for every request platform-wide.
+**5c. Platform Settings** — two live toggles: whether a vendor's invoice
+automatically completes its maintenance job, and whether tenants are asked
+to confirm finished repairs (on by default). Flip one and it takes effect
+immediately for every request platform-wide; repairs already waiting for a
+tenant's answer stay answerable if the second is turned off.
 
 _On System Overview, the **Admin Controls** tiles go to User Management,
 Security and Settings; **Database** shows a note that backups and logs are
@@ -411,9 +413,15 @@ in their own account, live:
 4. **Manager** sees it appear in their Maintenance list, opens it, and
    assigns a vendor.
 5. **Vendor** sees the job appear in their queue immediately, opens it,
-   and submits an invoice for the completed work.
+   adds a photo of the finished work, and submits an invoice (the job cannot
+   be closed without a photo).
 6. **Both the manager and the tenant** see the request move to
-   **Completed** — automatically, the moment the invoice was submitted.
+   **Completed** — automatically, the moment the invoice was submitted. The
+   tenant is asked **Is your repair fixed?**
+7. **Tenant** presses **Confirm fixed** (or **Still a problem** with a reason,
+   which goes to the manager, who can send it back to the vendor, give it to
+   another vendor, or approve it anyway). The manager records their sign-off
+   with **Approve work**; neither step affects payment.
 
 ---
 
