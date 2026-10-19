@@ -191,6 +191,27 @@ describe('conversations: create -- DIRECT dedup, and list', () => {
     expect(count).toBe(1);
   });
 
+  it('will not open a thread with an unrelated tenant or vendor, or a user that does not exist', async () => {
+    const a = await createUser(Role.TENANT);
+    const stranger = await createUser(Role.TENANT);
+    const vendor = await createUser(Role.VENDOR);
+    const cookie = await authCookie(a.id, a.role);
+    for (const target of [stranger.id, vendor.id]) {
+      const res = await apiFetch('/api/v1/conversations', {
+        method: 'POST',
+        cookie,
+        body: { type: 'DIRECT', participantIds: [target] },
+      });
+      expect(res.status).toBe(403);
+    }
+    const ghost = await apiFetch('/api/v1/conversations', {
+      method: 'POST',
+      cookie,
+      body: { type: 'DIRECT', participantIds: ['00000000-0000-4000-8000-000000000000'] },
+    });
+    expect(ghost.status).toBe(403);
+  });
+
   it('GET /conversations only returns conversations the caller participates in', async () => {
     const member = await createUser(Role.TENANT);
     const nonMember = await createUser(Role.TENANT);

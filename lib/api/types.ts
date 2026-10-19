@@ -77,7 +77,13 @@ export type Property = {
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
-  landlord?: { id: string; name: string; phoneNumber: string | null; email: string; role?: string } | null;
+  landlord?: {
+    id: string;
+    name: string;
+    phoneNumber: string | null;
+    email: string;
+    role?: string;
+  } | null;
   isPublished: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;

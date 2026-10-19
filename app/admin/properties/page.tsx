@@ -141,7 +141,9 @@ export default function AdminPropertiesPage() {
     setUnmergingId(unmergeTargetProperty.id);
     try {
       await api.properties.unmerge(unmergeTargetProperty.id);
-      toast.success(`Unmerged "${unmergeTargetProperty.name}" -- it is now back in pending review.`);
+      toast.success(
+        `Unmerged "${unmergeTargetProperty.name}" -- it is now back in pending review.`,
+      );
       setUnmergeTargetProperty(null);
       refetch();
     } catch {
@@ -152,19 +154,21 @@ export default function AdminPropertiesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <button
             onClick={() => router.push('/admin')}
-            className="mb-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors"
+            className="mb-2 flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Properties & Moderation</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Properties & Moderation
+            </h1>
             <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
               {properties.length} platform listings
             </span>
@@ -176,7 +180,7 @@ export default function AdminPropertiesPage() {
       </div>
 
       {/* Sticky Compact Filter Toolbar */}
-      <div className="sticky top-0 z-30 -mx-6 px-6 py-2 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-xs transition-all">
+      <div className="sticky top-0 z-30 -mx-6 border-b border-gray-200 bg-white/95 px-6 py-2 shadow-xs backdrop-blur-md transition-all">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Status Filter Pills */}
           <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-0.5">
@@ -216,7 +220,7 @@ export default function AdminPropertiesPage() {
                 placeholder="Search listings…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none shadow-2xs"
+                className="w-full rounded-lg border border-gray-200 bg-white py-1 pr-3 pl-8 text-xs shadow-2xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
@@ -224,7 +228,7 @@ export default function AdminPropertiesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -237,7 +241,7 @@ export default function AdminPropertiesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   viewMode === 'table'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -265,9 +269,12 @@ export default function AdminPropertiesPage() {
       {viewMode === 'grid' && (
         <div>
           {loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+                <div
+                  key={i}
+                  className="animate-pulse space-y-4 rounded-2xl border border-gray-200 bg-white p-5"
+                >
                   <div className="h-6 w-3/4 rounded bg-gray-100" />
                   <div className="h-4 w-1/2 rounded bg-gray-100" />
                   <div className="h-20 rounded-xl bg-gray-50" />
@@ -288,7 +295,7 @@ export default function AdminPropertiesPage() {
           )}
 
           {!loading && filtered.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((property) => {
                 const meta = STATUS_META[property.moderationStatus];
                 const StatusIcon = meta.icon;
@@ -304,12 +311,12 @@ export default function AdminPropertiesPage() {
                 return (
                   <div
                     key={property.id}
-                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow"
+                    className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-md"
                   >
                     <div>
                       {/* Status Badges Row */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.className}`}
                           >
@@ -318,7 +325,7 @@ export default function AdminPropertiesPage() {
                           </span>
 
                           {isEdited && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 border border-amber-300">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
                               <Sparkles className="h-3 w-3 text-amber-700" />
                               Edited
                             </span>
@@ -338,30 +345,34 @@ export default function AdminPropertiesPage() {
                               : 'bg-gray-100 text-gray-600'
                           }`}
                         >
-                          {property.isPublished ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                          {property.isPublished ? (
+                            <Globe className="h-3 w-3" />
+                          ) : (
+                            <Lock className="h-3 w-3" />
+                          )}
                           {property.isPublished ? 'Published' : 'Unpublished'}
                         </span>
                       </div>
 
                       {/* Property Title & Address */}
-                      <div className="flex items-start gap-3 mb-4">
+                      <div className="mb-4 flex items-start gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-bold text-gray-900 text-base line-clamp-1">
+                          <h3 className="line-clamp-1 text-base font-bold text-gray-900">
                             {property.name}
                           </h3>
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                          <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
                             {property.address}, {property.city}
                           </p>
                         </div>
                       </div>
 
                       {/* Timeline: Submitted & Approved Dates */}
-                      <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-xs mb-4">
+                      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-xs">
                         <div>
-                          <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                          <p className="mb-0.5 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                             Submitted
                           </p>
                           <p className="font-medium text-gray-700">
@@ -373,7 +384,7 @@ export default function AdminPropertiesPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                          <p className="mb-0.5 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                             Approved
                           </p>
                           <p className="font-medium text-gray-700">
@@ -383,16 +394,16 @@ export default function AdminPropertiesPage() {
                       </div>
 
                       {/* Ownership Details */}
-                      <div className="space-y-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3 mb-4">
+                      <div className="mb-4 space-y-1.5 border-t border-gray-100 pt-3 text-xs text-gray-600">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400">Landlord:</span>
-                          <span className="font-medium text-gray-900 truncate max-w-[180px]">
+                          <span className="max-w-[180px] truncate font-medium text-gray-900">
                             {property.landlord?.name ?? '—'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400">Manager:</span>
-                          <span className="font-medium text-gray-900 truncate max-w-[180px]">
+                          <span className="max-w-[180px] truncate font-medium text-gray-900">
                             {property.manager?.name ?? '—'}
                           </span>
                         </div>
@@ -409,10 +420,10 @@ export default function AdminPropertiesPage() {
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                    <div className="flex items-center gap-2 border-t border-gray-100 pt-3">
                       <button
                         onClick={() => setSelectedProperty(property)}
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-blue-600 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-[0.99] transition-all"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-600 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 active:scale-[0.99]"
                       >
                         {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
                           ? 'Review'
@@ -421,7 +432,7 @@ export default function AdminPropertiesPage() {
 
                       <button
                         onClick={() => router.push(`/admin/properties/${property.id}`)}
-                        className="flex items-center justify-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.99] transition-all"
+                        className="flex items-center justify-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-[0.99]"
                         title="Open Full View"
                       >
                         Full View
@@ -506,17 +517,17 @@ export default function AdminPropertiesPage() {
                   const approvedDate = getApprovedDate(property);
 
                   return (
-                    <tr key={property.id} className="hover:bg-gray-50/80 transition-colors">
+                    <tr key={property.id} className="transition-colors hover:bg-gray-50/80">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
                             <Building2 className="h-4 w-4" />
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-900 flex items-center gap-2">
+                            <p className="flex items-center gap-2 font-semibold text-gray-900">
                               {property.name}
                               {isEdited && (
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                                <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                                   <Sparkles className="h-2.5 w-2.5" />
                                   Edited
                                 </span>
@@ -540,7 +551,9 @@ export default function AdminPropertiesPage() {
                       <td className="px-6 py-4 text-gray-700">
                         {property.manager?.name ?? <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 font-medium">{property.units.length}</td>
+                      <td className="px-6 py-4 font-medium text-gray-600">
+                        {property.units.length}
+                      </td>
                       <td className="px-6 py-4">
                         {isMerged ? (
                           <div className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
@@ -556,21 +569,21 @@ export default function AdminPropertiesPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-gray-500 text-xs">
+                      <td className="px-6 py-4 text-xs text-gray-500">
                         {new Date(property.createdAt).toLocaleDateString('en-GB', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 text-xs font-medium">
+                      <td className="px-6 py-4 text-xs font-medium text-gray-600">
                         {approvedDate ?? <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setSelectedProperty(property)}
-                            className="rounded-lg border border-blue-600 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors"
+                            className="rounded-lg border border-blue-600 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
                           >
                             {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
                               ? 'Review'
@@ -579,7 +592,7 @@ export default function AdminPropertiesPage() {
 
                           <button
                             onClick={() => router.push(`/admin/properties/${property.id}`)}
-                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                             title="Full View"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { checkFreeformParticipants } from '@/lib/api/messagingAccess';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 
 export const GET = withAuth(async (_req, { session }) => {
@@ -213,6 +214,9 @@ export const POST = withAuth(async (req, { session }) => {
       );
     }
     const allParticipantIds = Array.from(new Set([session.sub, ...participantIds]));
+
+    const blocked = await checkFreeformParticipants(session, participantIds);
+    if (blocked) return NextResponse.json({ error: blocked }, { status: 403 });
 
     if (type === 'DIRECT' && allParticipantIds.length === 2) {
       // Avoid spawning a duplicate 1:1 thread between the same two users.
