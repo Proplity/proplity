@@ -17,6 +17,8 @@ import {
   PaymentMethod,
   PaymentProvider,
   AccessCodeStatus,
+  RepairConfirmationStatus,
+  BankTransferStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
@@ -59,6 +61,7 @@ async function main() {
 
   // 0. Clear existing data to allow safe, repeatable re-runs
   console.log('🧹 Cleaning old table data...');
+  await prisma.bankTransferSubmission.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.vendorRating.deleteMany();
@@ -619,6 +622,11 @@ async function main() {
       finalCost: 15000.0,
       completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
       vendorNotes: 'Replaced faulty transformer/ballast module inside the false ceiling.',
+      // The tenant confirmed it fixed and the property team signed the work off.
+      confirmationStatus: RepairConfirmationStatus.CONFIRMED,
+      confirmationRespondedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      approvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      approvedById: manager.id,
     },
   });
 
@@ -636,6 +644,49 @@ async function main() {
       finalCost: 20000.0,
       completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       vendorNotes: 'Cleaned filters and recharged refrigerant gas.',
+      // Confirmed by the tenant; the team has not signed it off yet.
+      confirmationStatus: RepairConfirmationStatus.CONFIRMED,
+      confirmationRespondedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  // Finished by the vendor, waiting for the tenant to say whether it is fixed.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitHeights203.id,
+      tenantId: tenantAdewale.id,
+      vendorId: vendorAqua.id,
+      title: 'Bathroom Tap Dripping',
+      description: 'The cold tap in the bathroom basin drips all night.',
+      categoryId: categories['Plumbing'],
+      priority: MaintenancePriority.LOW,
+      status: MaintenanceStatus.COMPLETED,
+      costEstimate: 8000.0,
+      finalCost: 8000.0,
+      completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      vendorNotes: 'Replaced the worn cartridge and tested the tap.',
+      confirmationStatus: RepairConfirmationStatus.AWAITING_TENANT,
+    },
+  });
+
+  // The tenant said it is still a problem: the team has to send it back or give it to someone else.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitYaba1A.id,
+      tenantId: tenantTunde.id,
+      vendorId: vendorJohn.id,
+      title: 'Bedroom Socket Sparking',
+      description: 'The socket next to the bed sparks when a plug goes in.',
+      categoryId: categories['Electrical'],
+      priority: MaintenancePriority.HIGH,
+      status: MaintenanceStatus.COMPLETED,
+      costEstimate: 12000.0,
+      finalCost: 12000.0,
+      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      vendorNotes: 'Tightened the terminals on the socket.',
+      confirmationStatus: RepairConfirmationStatus.DISPUTED,
+      confirmationRespondedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      disputeReason: 'It still sparks when I plug in the kettle.',
     },
   });
 
@@ -707,7 +758,7 @@ async function main() {
     },
   });
 
-  await prisma.invoice.create({
+  const invUtilityAdewale = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1002',
       leaseId: leaseAdewale.id,
@@ -742,6 +793,85 @@ async function main() {
     },
   });
 
+  // Offline payments: a transfer a tenant recorded that waits for the team to confirm...
+  await prisma.bankTransferSubmission.create({
+    data: {
+      invoiceId: invUtilityAdewale.id,
+      submittedById: tenantAdewale.id,
+      amount: 45000.0,
+      bankName: 'GTBank',
+      senderAccountName: 'Adewale Johnson',
+      senderAccountNumber: '0123456789',
+      referenceNumber: 'GTB-TRF-20261018-5521',
+      paymentDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      notes: 'Paid from my salary account.',
+      status: BankTransferStatus.PENDING,
+    },
+  });
+
+  // ...and one the landlord already confirmed, which is why it has a receipt.
+  const invUtilityTunde = await prisma.invoice.create({
+    data: {
+      invoiceNumber: 'INV-2026-1004',
+      leaseId: leaseTunde.id,
+      type: InvoiceType.UTILITY,
+      amount: 18000.0,
+      dueDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      status: InvoiceStatus.PAID,
+      description: 'Water bill for September 2026',
+    },
+  });
+  const transferPaymentTunde = await prisma.payment.create({
+    data: {
+      invoiceId: invUtilityTunde.id,
+      amount: 18000.0,
+      paymentMethod: PaymentMethod.BANK_TRANSFER,
+      provider: PaymentProvider.BANK_TRANSFER,
+      transactionRef: 'FBN-TRF-20261013-3308',
+      paidAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      notes: 'Reconciled from bank transfer ref FBN-TRF-20261013-3308',
+    },
+  });
+  await prisma.bankTransferSubmission.create({
+    data: {
+      invoiceId: invUtilityTunde.id,
+      submittedById: manager.id,
+      amount: 18000.0,
+      bankName: 'First Bank',
+      senderAccountName: 'Tunde Bakare',
+      referenceNumber: 'FBN-TRF-20261013-3308',
+      paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      notes: 'Tunde paid the office by transfer and showed the alert.',
+      status: BankTransferStatus.APPROVED,
+      reconciledById: landlord.id,
+      reconciledAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      paymentId: transferPaymentTunde.id,
+    },
+  });
+
+  // The vendor's bill for the confirmed electrical repair, paid in cash by the manager.
+  const invRepairLights = await prisma.invoice.create({
+    data: {
+      invoiceNumber: 'INV-2026-1005',
+      maintenanceRequestId: reqLights.id,
+      type: InvoiceType.MAINTENANCE,
+      amount: 15000.0,
+      dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      status: InvoiceStatus.PAID,
+      description: 'Flickering lights repair, transformer module replaced',
+    },
+  });
+  await prisma.payment.create({
+    data: {
+      invoiceId: invRepairLights.id,
+      amount: 15000.0,
+      paymentMethod: PaymentMethod.CASH,
+      provider: PaymentProvider.CASH,
+      paidAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      notes: 'Paid in cash on completion.',
+    },
+  });
+
   // 12. Notes & Timeline History
   await prisma.note.create({
     data: {
@@ -756,8 +886,17 @@ async function main() {
   // Mark platform setup as complete
   await prisma.systemSettings.upsert({
     where: { id: 'global' },
-    update: { setupComplete: true },
-    create: { id: 'global', setupComplete: true },
+    update: {
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+    },
+    create: {
+      id: 'global',
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+    },
   });
 
   console.log('🌱 Rich Proplity seed2 completed successfully!');

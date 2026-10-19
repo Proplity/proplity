@@ -138,6 +138,16 @@ payment page (Paystack, or the mock gateway in test environments); once
 paid, the invoice flips to paid and your manager is notified. Past
 payments are listed under Recent Payments.
 
+**10b. Paid another way, and receipts** — if you paid by bank transfer or
+cash, press **I paid by bank transfer** on _Payment History_, pick the
+invoice and enter the amount, bank, name on the account, date and the
+bank's reference. Attach the receipt or proof if you have it. It shows under
+**Transfers you recorded** and the invoice does not change until someone on
+your property team (not you) confirms it; you are told either way, with the
+reason if it was rejected. Every payment has a **Receipt** link: the receipt
+number, who paid whom, how, the reference and what is still owing, with
+**Print / Save as PDF**.
+
 **11. Set up auto-pay (optional)** — on the dashboard's payment panel click
 **Setup Auto-Pay**. Auto-pay reuses the card from a rent payment you've
 already made online, so:
@@ -292,6 +302,9 @@ vendor browsing the same page won't see it — it's manager/landlord-only).
   Offer, Default, Expiration Alert, Termination), write a message, send.
 - **Send Invoice** (Quick Actions) — pick a type (including Service Charge),
   amount, due date, optional description; the tenant sees it immediately.
+- **Paid another way** — record a bank transfer or cash payment for the
+  tenant (with the receipt file if you have one). It waits on the **Bank
+  Transfers** tab until someone other than you confirms it.
 - **Terminate Lease**, **Message Tenant**, and lease-terms editing
   (grace period, late fee) as before.
 
@@ -302,9 +315,21 @@ request across your portfolio. Open one to:
   the tenant (and vendor, once assigned).
 - Click **Assign Vendor**, search or pick one from the list — they're
   notified and the job appears in their queue immediately.
-- Once a vendor's invoice is submitted, the request completes
-  automatically by default (configurable in Admin → Platform
-  Settings) — or click **Mark as Completed** yourself at any time.
+- Once a vendor's invoice is submitted with a photo of the finished work,
+  the request completes automatically by default (configurable in Admin →
+  Platform Settings). There is no Mark as Completed button: only the vendor
+  finishes a job. The **Sign-off** card then shows the tenant's answer;
+  press **Approve work**, or for a repair the tenant says is still a
+  problem choose **Send back to vendor**, **Give to another vendor** or
+  **Approve anyway**.
+
+**4b. Confirm payments made another way** — open _Bank Transfers_ (tab in
+the navigation). Transfers recorded by tenants or by your team wait under
+**Waiting for confirmation**. Open **View receipt or proof**, then
+**Confirm payment** (the invoice is paid, the receipt is created, the tenant
+and the vendor are told) or **Reject** with a reason. You cannot confirm one
+you recorded yourself; you can only withdraw it. If nobody else on the
+property can confirm it, an admin is told.
 
 **5. Messages** — your inbox lists every conversation across tenants,
 vendors, and landlords you're connected to.
@@ -328,8 +353,9 @@ landlord are on it too.
 **4. Update job status** as you work — mark it In Progress, and add notes
 as you go.
 
-**5. Create an invoice** — once the job's done, click **Mark Complete &
-Create Invoice**.
+**5. Add photos and create an invoice** — under **Work Photos** add a
+photo of the finished work (at least one after photo is needed to close the
+job), then click **Mark Complete & Create Invoice**.
 
 1.  Add line items (description, quantity, rate) — the total updates
     live.
@@ -337,6 +363,10 @@ Create Invoice**.
 3.  By default, submitting the invoice **automatically marks the job
     Completed** — an admin can turn this off platform-wide if vendors
     need to invoice interim costs without closing out the job early.
+
+**5b. Get paid** — when the manager pays the invoice (by card or recorded
+by hand) you are notified, and _Invoices_ shows a **Receipt** link on each
+payment.
 
 **6. Change your password** and **log out**.
 
@@ -385,6 +415,12 @@ to confirm finished repairs (on by default). Flip one and it takes effect
 immediately for every request platform-wide; repairs already waiting for a
 tenant's answer stay answerable if the second is turned off.
 
+**5d. Bank Transfers** — the same list the property team uses
+(`/admin/payments`): payments recorded as paid another way, waiting,
+confirmed or rejected. An admin confirms one when nobody else can (a manager's
+entry on a property with no landlord), and cannot confirm one they
+recorded.
+
 _On System Overview, the **Admin Controls** tiles go to User Management,
 Security and Settings; **Database** shows a note that backups and logs are
 managed at the hosting level — there is no in-app database console._
@@ -422,6 +458,12 @@ in their own account, live:
    which goes to the manager, who can send it back to the vendor, give it to
    another vendor, or approve it anyway). The manager records their sign-off
    with **Approve work**; neither step affects payment.
+8. **Tenant** pays rent by bank transfer and records it with **I paid by bank
+   transfer** (reference and receipt photo). It waits on the manager's
+   **Bank Transfers** tab.
+9. **Manager** opens it, checks the receipt and presses **Confirm payment**:
+   the invoice is paid, the tenant is told and the payment has a
+   **Receipt** the tenant can print or save as PDF.
 
 ---
 

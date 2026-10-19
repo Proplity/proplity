@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { InvoiceStatus, InvoiceType, Prisma } from '@prisma/client';
 import { canManageProperty } from '@/lib/api/propertyAccess';
@@ -14,7 +15,7 @@ import {
   EVIDENCE_REQUIRED,
   OPEN_STATUSES,
   completionData,
-  hasCompletionEvidence,
+  lacksEvidence,
   isOpenStatus,
   tellTenantRepairDone,
 } from '@/lib/maintenanceFlow';
@@ -69,7 +70,7 @@ export const GET = withAuth(async (req, { session }) => {
         skip,
         take,
         include: {
-          payments: { orderBy: { paidAt: 'desc' } },
+          payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
           lease: {
             select: {
               id: true,
@@ -307,7 +308,7 @@ export const POST = withAuth(
       // Closes a job that is still open. One already finished (a corrected invoice replacing a
       // cancelled one) keeps its completion, its tenant answer and its approval.
       const closesJob = shouldAutoComplete && !!job && isOpenStatus(job.status);
-      if (closesJob && session.role === 'VENDOR' && !hasCompletionEvidence(job)) {
+      if (closesJob && session.role === 'VENDOR' && lacksEvidence(job)) {
         return NextResponse.json(EVIDENCE_REQUIRED, { status: 409 });
       }
       const completion = closesJob ? await completionData() : null;

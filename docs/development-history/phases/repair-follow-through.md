@@ -21,7 +21,7 @@ Finishing a repair stopped at the vendor. Nothing showed the work was done (the 
 ## Decisions worth remembering
 
 - **Reason required, photos optional.** CLAUDE.md said "reason and photos required"; the later handover said "reason required, photos optional". Built the latter.
-- **After photo required, before photo optional.** A before photo is often impossible once work has started.
+- **After photo required, before photo optional.** A before photo is often impossible once work has started. The requirement applies only where an upload provider is configured (`evidenceRequired()` in `lib/maintenanceFlow.ts`); with none, a vendor could never close a job (ISS-116).
 - **Reassign is refused once the first vendor has been paid (even in part)** (`INVOICE_HAS_PAYMENTS`): cancelling a paid invoice would leave money recorded against nothing. An unpaid invoice is cancelled and audited (`INVOICE_CANCELLED_ON_REASSIGN`) so the new vendor can bill the job (one live invoice per job). The first vendor's photos, cost and notes are cleared; the tenant's reason and photos stay for the new vendor.
 - **A reopened job keeps the tenant's reason and photos until the vendor finishes it again**, so the vendor can read them. Finishing again uses the cost already billed and creates no second invoice (**Mark work done**).
 - **Approving does not answer for the tenant.** The manager may approve straight away while the tenant is still being asked; a later dispute clears the approval.

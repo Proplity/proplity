@@ -76,6 +76,7 @@ import type {
   InitiateVendorPayoutInput,
 } from './api/types';
 import type { UploadFolder } from '@/lib/fileRef';
+import type { Receipt } from '@/lib/receiptTypes';
 
 export const apiClient = axios.create({
   headers: {
@@ -465,6 +466,8 @@ export const api = {
           invoiceId,
         },
       ),
+    receipt: (paymentId: string) =>
+      apiClient.get<{ data: Receipt }>(`/api/v1/payments/${paymentId}/receipt`),
     authorization: (leaseId: string) =>
       apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
         params: { leaseId },
