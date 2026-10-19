@@ -59,7 +59,9 @@ export const GET = withAuth(async (req, { session }) => {
 
 const createApplicationSchema = z.object({
   unitId: z.string(),
-  details: z.record(z.string(), z.unknown()),
+  details: z.record(z.string(), z.unknown()).refine((v) => JSON.stringify(v).length <= 50_000, {
+    message: 'Application details are too large',
+  }),
 });
 
 export const POST = withAuth(

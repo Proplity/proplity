@@ -170,22 +170,9 @@ Same as landlord, plus the day-to-day operational tools:
       (e.g. `/dashboard/discover`) or the homepage's "Browse All Properties"
       should land on `/admin`, never an error page
 - [ ] Manage users — view/manage every account on the platform across all
-      roles:
-      - Toggle between Cards view and Table view on desktop and mobile
-      - Sticky compact toolbar remains visible on vertical scroll
-      - Landlords and managers prominently display their active Properties Count
-- [ ] Properties — the moderation queue:
-      - Toggle between responsive Cards view and Table view on desktop and mobile
-      - Sticky compact toolbar with status tabs (All, Pending Review, Approved, Rejected, Flagged, Merged)
-      - Click "Review" or "View" to open slide-over popup drawer (right-side desktop, bottom sheet mobile, click-outside backdrop)
-      - Inspect Landlord & Manager contact information in drawer and on full property page
-      - Check Approved Date and [EDITED] badges on resubmitted listings
-      - Quick Approve / Reject / Publish actions in drawer or full page
-      - "FULL VIEW" link navigates directly to `/admin/properties/[id]`
-- [ ] Landlord Property Controls:
-      - Request Admin Approval without publishing immediately
-      - Edit property details (auto-resubmits to `PENDING_REVIEW` with `[EDITED]` status and notifies admins)
-      - Selective unit visibility: toggle individual units between Public (Marketplace) and Private (Selected Few)
+      roles: - Toggle between Cards view and Table view on desktop and mobile - Sticky compact toolbar remains visible on vertical scroll - Landlords and managers prominently display their active Properties Count
+- [ ] Properties — the moderation queue: - Toggle between responsive Cards view and Table view on desktop and mobile - Sticky compact toolbar with status tabs (All, Pending Review, Approved, Rejected, Flagged, Merged) - Click "Review" or "View" to open slide-over popup drawer (right-side desktop, bottom sheet mobile, click-outside backdrop) - Inspect Landlord & Manager contact information in drawer and on full property page - Check Approved Date and [EDITED] badges on resubmitted listings - Quick Approve / Reject / Publish actions in drawer or full page - "FULL VIEW" link navigates directly to `/admin/properties/[id]`
+- [ ] Landlord Property Controls: - Request Admin Approval without publishing immediately - Edit property details (auto-resubmits to `PENDING_REVIEW` with `[EDITED]` status and notifies admins) - Selective unit visibility: toggle individual units between Public (Marketplace) and Private (Selected Few)
 - [ ] Security — the audit log page loads (a mostly-empty list is expected)
 - [ ] Admin Controls tiles on System Overview: User Management, Security and
       Settings navigate; **Database** shows the "no in-app database console"
@@ -225,7 +212,7 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 375 tests across 26 files in
+- **API Integration suite (Vitest)** — `pnpm test`. 480 tests across 41 files in
   `tests/api/` (including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`),
   real HTTP against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`

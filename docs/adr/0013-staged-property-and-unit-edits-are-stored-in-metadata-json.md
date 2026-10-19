@@ -9,6 +9,7 @@ Recorded: 2026-10-18
 When landlords or property managers update a live, published listing (e.g. changing property title, description, address, or modifying unit rents, bed/bath counts, and availability), these edits require administrative moderation if critical identity/location fields are altered.
 
 Previously, `Property.moderationNotes` (a `TEXT` column originally designed for human reviewer feedback, rejection explanations, and duplicate fingerprint notes) was overloaded with string tags such as `[APPROVED:<ISO>]` and `[EDITED on <Date>]`. Proposing to serialize draft changes into `moderationNotes` as embedded JSON strings (e.g., `[PENDING_CHANGES:{"property":...}]`) caused major issues:
+
 1. **String pollution & fragility**: String manipulation via regular expressions to strip and extract notes was error-prone, vulnerable to malformed JSON, and truncated admin review comments.
 2. **Loss of unit hierarchy**: A flat text string on `Property` could not cleanly capture staged changes across multiple child `Unit` rows (e.g. rent adjustments on Unit A, bedroom additions on Unit B, or draft units awaiting creation).
 3. **Premature unpublishing & lack of draft support**: Overwriting live rows in PostgreSQL forced immediate unpublishing even when landlords only wanted to save unsent drafts or tweak minor content.

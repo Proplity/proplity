@@ -94,9 +94,7 @@ export function AccountSettings() {
           ? 'Complete'
           : `${6 - missingTenantFields.length}/6`
         : undefined,
-      badgeColor: isTenantComplete
-        ? 'bg-green-100 text-green-700'
-        : 'bg-amber-100 text-amber-700',
+      badgeColor: isTenantComplete ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700',
     },
     ...(showBankAccounts
       ? [
@@ -124,7 +122,7 @@ export function AccountSettings() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold">Account Settings</h1>
             {auth.user?.role && (
-              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold capitalize text-blue-700">
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 capitalize">
                 {auth.user.role}
               </span>
             )}
@@ -153,7 +151,9 @@ export function AccountSettings() {
               <Icon className={`h-4 w-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
               <span>{tab.label}</span>
               {tab.badge && (
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tab.badgeColor}`}>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tab.badgeColor}`}
+                >
                   {tab.badge}
                 </span>
               )}
@@ -257,7 +257,9 @@ function ProfileCard({ onSwitchTab }: { onSwitchTab?: (tab: SettingsTab) => void
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-            <span>Your tenant profile is missing emergency contact or ID verification details.</span>
+            <span>
+              Your tenant profile is missing emergency contact or ID verification details.
+            </span>
           </div>
           <button
             type="button"

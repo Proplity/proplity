@@ -66,15 +66,15 @@ function StakeholdersCard({ property }: { property: PropertyDetailData }) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs">
-      <h2 className="mb-4 text-base font-bold text-gray-900 flex items-center gap-2">
+      <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900">
         <ShieldCheck className="h-4 w-4 text-blue-600" />
         Ownership & Management
       </h2>
 
       {/* Landlord details */}
       <div className="mb-3 rounded-xl border border-purple-100 bg-purple-50/60 p-3.5">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] font-bold tracking-wider text-purple-800 uppercase">
             Landlord / Owner
           </span>
           <span className="rounded-full bg-purple-200/60 px-2 py-0.5 text-[10px] font-bold text-purple-900">
@@ -83,14 +83,14 @@ function StakeholdersCard({ property }: { property: PropertyDetailData }) {
         </div>
         {landlord ? (
           <div className="space-y-1 text-xs">
-            <p className="font-bold text-gray-900 text-sm">{landlord.name}</p>
-            <p className="text-gray-600 flex items-center gap-1.5 truncate">
-              <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+            <p className="text-sm font-bold text-gray-900">{landlord.name}</p>
+            <p className="flex items-center gap-1.5 truncate text-gray-600">
+              <Mail className="h-3 w-3 shrink-0 text-gray-400" />
               {landlord.email}
             </p>
             {landlord.phoneNumber && (
-              <p className="text-gray-600 flex items-center gap-1.5">
-                <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+              <p className="flex items-center gap-1.5 text-gray-600">
+                <Phone className="h-3 w-3 shrink-0 text-gray-400" />
                 {landlord.phoneNumber}
               </p>
             )}
@@ -102,8 +102,8 @@ function StakeholdersCard({ property }: { property: PropertyDetailData }) {
 
       {/* Manager details */}
       <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] font-bold tracking-wider text-blue-800 uppercase">
             Property Manager
           </span>
           <span className="rounded-full bg-blue-200/60 px-2 py-0.5 text-[10px] font-bold text-blue-900">
@@ -112,14 +112,14 @@ function StakeholdersCard({ property }: { property: PropertyDetailData }) {
         </div>
         {manager ? (
           <div className="space-y-1 text-xs">
-            <p className="font-bold text-gray-900 text-sm">{manager.name}</p>
-            <p className="text-gray-600 flex items-center gap-1.5 truncate">
-              <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+            <p className="text-sm font-bold text-gray-900">{manager.name}</p>
+            <p className="flex items-center gap-1.5 truncate text-gray-600">
+              <Mail className="h-3 w-3 shrink-0 text-gray-400" />
               {manager.email}
             </p>
             {manager.phoneNumber && (
-              <p className="text-gray-600 flex items-center gap-1.5">
-                <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+              <p className="flex items-center gap-1.5 text-gray-600">
+                <Phone className="h-3 w-3 shrink-0 text-gray-400" />
                 {manager.phoneNumber}
               </p>
             )}
@@ -145,7 +145,9 @@ function EditPropertyModal({
   const draftProp = pendingChanges?.property;
 
   const [name, setName] = useState(draftProp?.name ?? property.name);
-  const [description, setDescription] = useState(draftProp?.description ?? property.description ?? '');
+  const [description, setDescription] = useState(
+    draftProp?.description ?? property.description ?? '',
+  );
   const [address, setAddress] = useState(draftProp?.address ?? property.address);
   const [city, setCity] = useState(draftProp?.city ?? property.city);
   const [state, setState] = useState(draftProp?.state ?? property.state ?? '');
@@ -209,11 +211,13 @@ function EditPropertyModal({
         className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+        <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Edit Property Details</h2>
             {draftProp && (
-              <p className="text-xs text-blue-600 font-medium mt-0.5">Editing unsent draft changes</p>
+              <p className="mt-0.5 text-xs font-medium text-blue-600">
+                Editing unsent draft changes
+              </p>
             )}
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
@@ -223,7 +227,7 @@ function EditPropertyModal({
 
         <form onSubmit={handleSaveAndSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Property Name</label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Property Name</label>
             <input
               type="text"
               required
@@ -234,7 +238,7 @@ function EditPropertyModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Street Address</label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Street Address</label>
             <input
               type="text"
               required
@@ -246,7 +250,7 @@ function EditPropertyModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">City</label>
+              <label className="mb-1 block text-xs font-semibold text-gray-700">City</label>
               <input
                 type="text"
                 required
@@ -256,7 +260,7 @@ function EditPropertyModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">State</label>
+              <label className="mb-1 block text-xs font-semibold text-gray-700">State</label>
               <input
                 type="text"
                 required
@@ -268,7 +272,7 @@ function EditPropertyModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Description</label>
             <textarea
               rows={4}
               value={description}
@@ -277,14 +281,14 @@ function EditPropertyModal({
             />
           </div>
 
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             You can <strong>Save as Draft</strong> without unpublishing or alerting admins, or{' '}
             <strong>Submit for Review</strong> when you are ready.
           </div>
 
-          {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+          {error && <p className="text-xs font-medium text-red-600">{error}</p>}
 
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
             <button
               type="button"
               onClick={onClose}
@@ -426,13 +430,13 @@ function ListingStatusCard({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold text-gray-900">Listing Status</h2>
         {onOpenEdit && (
           <button
             type="button"
             onClick={onOpenEdit}
-            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60"
+            className="flex items-center gap-1 rounded-lg border border-blue-200/60 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
           >
             <Edit3 className="h-3 w-3" />
             Edit Property
@@ -445,13 +449,13 @@ function ListingStatusCard({
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900">
           <div className="flex items-center justify-between font-semibold">
             <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-amber-600 shrink-0" /> Proposed Edits Under Review
+              <Clock className="h-4 w-4 shrink-0 text-amber-600" /> Proposed Edits Under Review
             </span>
-            <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold text-amber-800">
+            <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase">
               In Review
             </span>
           </div>
-          <p className="mt-1 text-amber-800 text-[11px] leading-relaxed">
+          <p className="mt-1 text-[11px] leading-relaxed text-amber-800">
             Your proposed edits are awaiting admin moderation. Edits under review cannot be deleted
             directly; cancel the approval request first before deleting.
           </p>
@@ -460,7 +464,7 @@ function ListingStatusCard({
               type="button"
               onClick={handleCancelPendingEdits}
               disabled={cancellingEdits}
-              className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 disabled:opacity-50 transition-colors shadow-xs"
+              className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-amber-800 disabled:opacity-50"
             >
               {cancellingEdits ? 'Cancelling…' : 'Cancel Approval Request'}
             </button>
@@ -468,7 +472,7 @@ function ListingStatusCard({
               type="button"
               disabled
               title="Edits currently under review cannot be deleted directly. You must cancel the approval request first before deleting."
-              className="flex items-center gap-1 rounded-lg border border-amber-300/60 bg-amber-100/50 px-3 py-1.5 text-xs font-medium text-amber-700/60 cursor-not-allowed"
+              className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-amber-300/60 bg-amber-100/50 px-3 py-1.5 text-xs font-medium text-amber-700/60"
             >
               <Trash2 className="h-3 w-3" />
               Delete Pending Edits
@@ -482,13 +486,13 @@ function ListingStatusCard({
         <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3.5 text-xs text-blue-900">
           <div className="flex items-center justify-between font-semibold">
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-blue-600 shrink-0" /> Saved Draft Edits
+              <Sparkles className="h-4 w-4 shrink-0 text-blue-600" /> Saved Draft Edits
             </span>
-            <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold text-blue-800">
+            <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-800 uppercase">
               Draft
             </span>
           </div>
-          <p className="mt-1 text-blue-800 text-[11px] leading-relaxed">
+          <p className="mt-1 text-[11px] leading-relaxed text-blue-800">
             You have unsent draft edits saved privately. The live listing remains published with its
             current details.
           </p>
@@ -497,7 +501,7 @@ function ListingStatusCard({
               type="button"
               onClick={handleSubmitDraftForReview}
               disabled={submittingDraft}
-              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs"
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
               {submittingDraft ? 'Submitting…' : 'Submit for Review'}
             </button>
@@ -524,8 +528,8 @@ function ListingStatusCard({
       )}
 
       {isEdited && !isUnderReview && !isDraft && (
-        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-2.5 flex items-center gap-2 text-xs text-amber-800">
-          <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+          <Sparkles className="h-4 w-4 shrink-0 text-amber-600" />
           <span>Edited by owner/manager. Requires admin re-approval.</span>
         </div>
       )}
@@ -576,7 +580,7 @@ function ListingStatusCard({
             type="button"
             onClick={handleRequestApproval}
             disabled={requestingApproval || property.moderationStatus === 'PENDING_REVIEW'}
-            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs"
+            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-blue-700 disabled:opacity-50"
           >
             {property.moderationStatus === 'PENDING_REVIEW'
               ? 'Awaiting Admin Review'
@@ -584,7 +588,7 @@ function ListingStatusCard({
                 ? 'Requesting…'
                 : 'Request Admin Approval'}
           </button>
-          <p className="mt-1 text-[11px] text-gray-400 text-center">
+          <p className="mt-1 text-center text-[11px] text-gray-400">
             Allows admin to review without making the listing public yet
           </p>
         </div>
@@ -989,6 +993,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const { data: approvedApplications } = useApplications({ status: 'APPROVED' });
   const { submit: unmergeProperty, submitting: unmerging } = useUnmergeProperty(propertyId);
   const [showUnmergeConfirm, setShowUnmergeConfirm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const handleUnmerge = async () => {
     try {
@@ -1066,8 +1071,6 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
   const verified = property.moderationStatus === 'APPROVED';
   const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
 
-  const [showEditModal, setShowEditModal] = useState(false);
-
   const handleToggleUnitVisibility = async (unit: PropertyDetailData['units'][number]) => {
     const isPrivate = unit.amenities?.includes('visibility:private');
     const currentAmenities = unit.amenities ?? [];
@@ -1120,7 +1123,8 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
             <div>
               <p className="text-sm font-bold">This property was recently edited.</p>
               <p className="text-xs text-amber-700">
-                Property details were revised and automatically resubmitted to platform administrators for re-review.
+                Property details were revised and automatically resubmitted to platform
+                administrators for re-review.
               </p>
             </div>
           </div>
@@ -1300,8 +1304,8 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                               unit.amenities?.includes('visibility:private')
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                ? 'border border-amber-200 bg-amber-100 text-amber-800'
+                                : 'border border-blue-200 bg-blue-100 text-blue-800'
                             }`}
                           >
                             {unit.amenities?.includes('visibility:private') ? (
@@ -1335,57 +1339,71 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                         </div>
                       </div>
 
-                      {property.metadata?.pendingChanges?.units?.[unit.id] && (() => {
-                        const stagedUnit = property.metadata.pendingChanges.units[unit.id];
-                        const isPendingReview = property.metadata.pendingChanges.status === 'PENDING_REVIEW';
-                        return (
-                          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                              <span>
-                                Proposed unit edits:{' '}
-                                {stagedUnit.rentAmount !== undefined && (
-                                  <span className="font-semibold">Rent: ₦{Number(stagedUnit.rentAmount).toLocaleString()} </span>
-                                )}
-                                {stagedUnit.bedrooms !== undefined && (
-                                  <span className="font-semibold">{stagedUnit.bedrooms} bed </span>
-                                )}
-                                {stagedUnit.bathrooms !== undefined && (
-                                  <span className="font-semibold">{stagedUnit.bathrooms} bath </span>
-                                )}
-                                ({isPendingReview ? 'Under Review' : 'Draft'})
-                              </span>
-                            </div>
-                            {canManage && (
-                              <div>
-                                {!isPendingReview ? (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        await api.properties.updateUnit(property.id, unit.id, { deletePendingEdits: true });
-                                        toast.success(`Deleted pending edits for Unit ${unit.unitNumber}`);
-                                        refetchProperty();
-                                      } catch (err: unknown) {
-                                        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-                                        toast.error(msg || 'Failed to delete unit edits');
-                                      }
-                                    }}
-                                    className="flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-700 hover:underline"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                    Delete Pending Edits
-                                  </button>
-                                ) : (
-                                  <span className="text-[10px] text-amber-700 italic">
-                                    Under review: cancel review first to delete
-                                  </span>
-                                )}
+                      {property.metadata?.pendingChanges?.units?.[unit.id] &&
+                        (() => {
+                          const stagedUnit = property.metadata.pendingChanges.units[unit.id];
+                          const isPendingReview =
+                            property.metadata.pendingChanges.status === 'PENDING_REVIEW';
+                          return (
+                            <div className="mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                                <span>
+                                  Proposed unit edits:{' '}
+                                  {stagedUnit.rentAmount !== undefined && (
+                                    <span className="font-semibold">
+                                      Rent: ₦{Number(stagedUnit.rentAmount).toLocaleString()}{' '}
+                                    </span>
+                                  )}
+                                  {stagedUnit.bedrooms !== undefined && (
+                                    <span className="font-semibold">
+                                      {stagedUnit.bedrooms} bed{' '}
+                                    </span>
+                                  )}
+                                  {stagedUnit.bathrooms !== undefined && (
+                                    <span className="font-semibold">
+                                      {stagedUnit.bathrooms} bath{' '}
+                                    </span>
+                                  )}
+                                  ({isPendingReview ? 'Under Review' : 'Draft'})
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                              {canManage && (
+                                <div>
+                                  {!isPendingReview ? (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          await api.properties.updateUnit(property.id, unit.id, {
+                                            deletePendingEdits: true,
+                                          });
+                                          toast.success(
+                                            `Deleted pending edits for Unit ${unit.unitNumber}`,
+                                          );
+                                          refetchProperty();
+                                        } catch (err: unknown) {
+                                          const msg = (
+                                            err as { response?: { data?: { error?: string } } }
+                                          )?.response?.data?.error;
+                                          toast.error(msg || 'Failed to delete unit edits');
+                                        }
+                                      }}
+                                      className="flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-700 hover:underline"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      Delete Pending Edits
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] text-amber-700 italic">
+                                      Under review: cancel review first to delete
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       {lease && lease.tenant ? (
                         <>
                           <div className="mb-3 flex items-start justify-between">

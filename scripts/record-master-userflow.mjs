@@ -325,7 +325,9 @@ async function main() {
     await smoothScroll(-1200);
     await page.waitForTimeout(2500);
 
-    const watchDemoBtn = page.locator('button:has-text("Watch Demo"), a:has-text("Watch Demo")').first();
+    const watchDemoBtn = page
+      .locator('button:has-text("Watch Demo"), a:has-text("Watch Demo")')
+      .first();
     if (await watchDemoBtn.isVisible()) {
       await smoothClick(watchDemoBtn);
       await page.waitForTimeout(2500);
@@ -340,7 +342,9 @@ async function main() {
       }
 
       // Close demo modal
-      const closeDemo = page.locator('button[aria-label="Close demo modal"], button:has-text("Close")').first();
+      const closeDemo = page
+        .locator('button[aria-label="Close demo modal"], button:has-text("Close")')
+        .first();
       if (await closeDemo.isVisible()) {
         await smoothClick(closeDemo);
         await page.waitForTimeout(2000);
@@ -686,14 +690,21 @@ async function main() {
 
       const descBox = page.locator('textarea').first();
       if (await descBox.isVisible()) {
-        await humanType(descBox, ' Luxury waterfront suites with 24/7 power, private elevator & biometric access.', 25);
+        await humanType(
+          descBox,
+          ' Luxury waterfront suites with 24/7 power, private elevator & biometric access.',
+          25,
+        );
         await page.waitForTimeout(1000);
       }
 
       // Click "Save as Draft"
       const saveDraftBtn = page.locator('button:has-text("Save as Draft")');
       if (await saveDraftBtn.isVisible()) {
-        await setHud('💾 Saving Changes to Property.metadata.pendingChanges (Draft Mode)', '#f59e0b');
+        await setHud(
+          '💾 Saving Changes to Property.metadata.pendingChanges (Draft Mode)',
+          '#f59e0b',
+        );
         await smoothClick(saveDraftBtn);
         await page.waitForTimeout(2000);
       }
@@ -703,7 +714,9 @@ async function main() {
       await page.waitForTimeout(2500);
 
       // Request Admin Review
-      const reqReviewBtn = page.locator('button:has-text("Request Admin Review"), button:has-text("Request Review")').first();
+      const reqReviewBtn = page
+        .locator('button:has-text("Request Admin Review"), button:has-text("Request Review")')
+        .first();
       if (await reqReviewBtn.isVisible()) {
         await setHud('📤 Submitting Staged Edits for Admin Moderation Review', '#f59e0b');
         await smoothClick(reqReviewBtn);
@@ -711,19 +724,27 @@ async function main() {
       }
 
       // Show under review state
-      await setHud('⏳ Changes Under Admin Review (Direct Deletion Blocked by Safety Guard)', '#a78bfa');
+      await setHud(
+        '⏳ Changes Under Admin Review (Direct Deletion Blocked by Safety Guard)',
+        '#a78bfa',
+      );
       await page.waitForTimeout(2500);
 
       // Cancel approval request -> returns to draft
       const cancelApprovalBtn = page.locator('button:has-text("Cancel Approval Request")').first();
       if (await cancelApprovalBtn.isVisible()) {
-        await setHud('↩️ Canceling Approval Request: Safely Reverting Staged Edits to Draft', '#3b82f6');
+        await setHud(
+          '↩️ Canceling Approval Request: Safely Reverting Staged Edits to Draft',
+          '#3b82f6',
+        );
         await smoothClick(cancelApprovalBtn);
         await page.waitForTimeout(2000);
       }
 
       // Discard draft
-      const discardDraftBtn = page.locator('button:has-text("Discard Draft"), button:has-text("Discard")').first();
+      const discardDraftBtn = page
+        .locator('button:has-text("Discard Draft"), button:has-text("Discard")')
+        .first();
       if (await discardDraftBtn.isVisible()) {
         await setHud('🗑 Discarding Staged Draft Edits cleanly', '#ef4444');
         await smoothClick(discardDraftBtn);
@@ -731,11 +752,18 @@ async function main() {
       }
 
       // Now create final proposed revision and submit for review
-      await setHud('✨ Final Listing Polish: Submitting Staged Revisions for Admin Approval', '#10b981');
+      await setHud(
+        '✨ Final Listing Polish: Submitting Staged Revisions for Admin Approval',
+        '#10b981',
+      );
       await smoothClick(editPropBtn);
       await page.waitForTimeout(1000);
       if (await descBox.isVisible()) {
-        await humanType(descBox, ' High-spec waterfront executive residence with 24/7 power and security in Lekki.', 25);
+        await humanType(
+          descBox,
+          ' High-spec waterfront executive residence with 24/7 power and security in Lekki.',
+          25,
+        );
       }
       const saveAndSubmitBtn = page.locator('button:has-text("Save & Submit for Review")');
       if (await saveAndSubmitBtn.isVisible()) {
@@ -745,11 +773,16 @@ async function main() {
     }
 
     // 2. Unit Visibility Control
-    await setHud('👁️ Unit Visibility: Toggling Marketplace Public vs Internal Private Units', '#3b82f6');
+    await setHud(
+      '👁️ Unit Visibility: Toggling Marketplace Public vs Internal Private Units',
+      '#3b82f6',
+    );
     await smoothScroll(400);
     await page.waitForTimeout(2000);
 
-    const unitVisBtn = page.locator('button:has-text("Public"), button:has-text("Private")').first();
+    const unitVisBtn = page
+      .locator('button:has-text("Public"), button:has-text("Private")')
+      .first();
     if (await unitVisBtn.isVisible()) {
       await smoothClick(unitVisBtn);
       await page.waitForTimeout(2000);
@@ -835,7 +868,10 @@ async function main() {
     // Inspect Merged Tab (Duplicate Detection & Merge History)
     const mergedChip = page.locator('button:has-text("Merged")');
     if (await mergedChip.isVisible()) {
-      await setHud('🔗 Duplicate Detection: Merged Listings Audit & De-duplication History', '#a78bfa');
+      await setHud(
+        '🔗 Duplicate Detection: Merged Listings Audit & De-duplication History',
+        '#a78bfa',
+      );
       await smoothClick(mergedChip);
       await page.waitForTimeout(2500);
       await smoothScroll(250);
@@ -977,7 +1013,10 @@ async function main() {
     // Tenant Management Table
     await page.goto('/dashboard/tenants');
     await page.waitForTimeout(2500);
-    await setHud('📋 Active & Terminated Leases Directory: Payment Tracking & Compliance', '#3b82f6');
+    await setHud(
+      '📋 Active & Terminated Leases Directory: Payment Tracking & Compliance',
+      '#3b82f6',
+    );
     await smoothScroll(300);
     await page.waitForTimeout(3000);
 
@@ -1017,7 +1056,9 @@ async function main() {
     );
 
     // Search properties by keyword
-    const searchInput = page.locator('input[placeholder*="Search by city, area, or property name" i], input[type="text"]').first();
+    const searchInput = page
+      .locator('input[placeholder*="Search by city, area, or property name" i], input[type="text"]')
+      .first();
     if (await searchInput.isVisible()) {
       await humanType(searchInput, 'Highland');
       await page.waitForTimeout(3000);
@@ -1069,7 +1110,9 @@ async function main() {
       await setHud('📅 Interactive Schedule Viewing Modal: Tour Booking System', '#10b981');
       await smoothClick(scheduleBtn);
       await page.waitForTimeout(3500);
-      const closeSched = page.locator('button:has-text("Cancel"), button[aria-label="Close"]').first();
+      const closeSched = page
+        .locator('button:has-text("Cancel"), button[aria-label="Close"]')
+        .first();
       if (await closeSched.isVisible()) {
         await smoothClick(closeSched);
         await page.waitForTimeout(2000);
@@ -1079,7 +1122,10 @@ async function main() {
     // Demonstrate clicking Neighbourhood Report scrolls directly to scores without subscription upselling
     const neighBtn = page.locator('button:has-text("Neighbourhood Report")').first();
     if (await neighBtn.isVisible()) {
-      await setHud('📊 Neighbourhood Intelligence: Direct Insight Access (Zero Subscription Upsell)', '#10b981');
+      await setHud(
+        '📊 Neighbourhood Intelligence: Direct Insight Access (Zero Subscription Upsell)',
+        '#10b981',
+      );
       await smoothClick(neighBtn);
       await page.waitForTimeout(4000);
     }
@@ -1090,7 +1136,11 @@ async function main() {
     // ACT 6: TENANT LIVING — DIGITAL LEASE, RENT CHECKOUT & MAINTENANCE
     // =========================================================================
     console.log('--- Act 6: Tenant Living ---');
-    recordChapter('🏠', 'Act 6: Tenant Portal, Digital Lease, Rent Checkout & Messaging', '#3b82f6');
+    recordChapter(
+      '🏠',
+      'Act 6: Tenant Portal, Digital Lease, Rent Checkout & Messaging',
+      '#3b82f6',
+    );
     await page.goto('/login');
     await page.waitForTimeout(800);
     await setHud('🏠 Tenant Portal: Lease Agreement & Digital Signing', '#3b82f6');
@@ -1138,7 +1188,10 @@ async function main() {
       // Demonstrate Download PDF with Incoming Feature badge & toast
       const dlBtn = page.locator('button:has-text("Download PDF")').first();
       if (await dlBtn.isVisible()) {
-        await setHud('✨ Incoming Feature Notice: Honest UI/UX Gating Without Misleading Alerts', '#3b82f6');
+        await setHud(
+          '✨ Incoming Feature Notice: Honest UI/UX Gating Without Misleading Alerts',
+          '#3b82f6',
+        );
         await smoothClick(dlBtn);
         await page.waitForTimeout(4000);
       }
@@ -1240,7 +1293,11 @@ async function main() {
     // ACT 7: MANAGER MAINTENANCE OPERATIONS & VENDOR DISPATCH
     // =========================================================================
     console.log('--- Act 7: Manager Maintenance Operations ---');
-    recordChapter('📋', 'Act 7: Manager Messaging Reply, Kanban Dispatch & Vendor Assignment', '#3b82f6');
+    recordChapter(
+      '📋',
+      'Act 7: Manager Messaging Reply, Kanban Dispatch & Vendor Assignment',
+      '#3b82f6',
+    );
     await setHud(
       '📋 Act 7: Manager Operations — Triaging Ticket & Dispatching to Vendor',
       '#3b82f6',
@@ -1255,10 +1312,7 @@ async function main() {
     // Manager In-App Messaging Reply
     await page.goto('/dashboard/messages');
     await page.waitForTimeout(1000);
-    await setHud(
-      '💬 Real-Time Messaging: Property Manager Replies to Tenant Inquiry',
-      '#3b82f6',
-    );
+    await setHud('💬 Real-Time Messaging: Property Manager Replies to Tenant Inquiry', '#3b82f6');
     const mgrConv = page
       .locator('button:has-text("Move-in & Key Collection"), button:has-text("Jordan Hayes")')
       .first();
@@ -1314,7 +1368,9 @@ async function main() {
     await smoothScroll(350);
     await page.waitForTimeout(3000);
 
-    const viewJobBtn = page.locator('button:has-text("View Job"), a:has-text("View"), button:has-text("Create Invoice")').first();
+    const viewJobBtn = page
+      .locator('button:has-text("View Job"), a:has-text("View"), button:has-text("Create Invoice")')
+      .first();
     if (await viewJobBtn.isVisible()) {
       await setHud('🔍 Inspecting Work Order: Resident Ticket, Scope & Urgency Level', '#ef4444');
       await smoothClick(viewJobBtn);
@@ -1405,12 +1461,17 @@ async function main() {
     // Interactive Lightbox Demonstration
     const screenshotCard = page.locator('.screenshot-item').first();
     if (await screenshotCard.isVisible()) {
-      await setHud('🔍 Interactive High-Res Guide Lightbox: Platform Screenshots Gallery', '#3b82f6');
+      await setHud(
+        '🔍 Interactive High-Res Guide Lightbox: Platform Screenshots Gallery',
+        '#3b82f6',
+      );
       await smoothClick(screenshotCard);
       await page.waitForTimeout(5000);
 
       // Next screenshot navigation
-      const nextBtn = page.locator('button[aria-label="Next screenshot"], button:has-text("Next")').first();
+      const nextBtn = page
+        .locator('button[aria-label="Next screenshot"], button:has-text("Next")')
+        .first();
       if (await nextBtn.isVisible()) {
         await smoothClick(nextBtn);
         await page.waitForTimeout(4500);

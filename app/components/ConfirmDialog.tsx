@@ -44,7 +44,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm duration-200"
       onClick={onCancel}
     >
       <div
@@ -56,7 +56,7 @@ export function ConfirmDialog({
         <button
           onClick={onCancel}
           disabled={isLoading}
-          className="absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
@@ -94,7 +94,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -102,7 +102,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-50 transition-colors ${
+            className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors disabled:opacity-50 ${
               isDanger
                 ? 'bg-red-600 hover:bg-red-700'
                 : isWarning
