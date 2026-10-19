@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import { canManageProperty, isPrivateUnit, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
@@ -27,10 +27,11 @@ type RouteCtx = { params: Promise<{ id: string }> };
  * unpublished listing is no longer readable by anyone who merely knows the id.
  *
  * A property is readable when ANY of these hold:
- *   1. it is published (the public tier -- mirrors the list endpoint's
- *      `isPublished: true` filter, which is the same gate. `isPublished` can
- *      only ever be flipped true after ADMIN approval, see PATCH below, so
- *      published implies moderation-approved);
+ *   1. it is published AND approved (the public tier -- mirrors the list
+ *      endpoint's filter. `isPublished` can only be flipped true after ADMIN
+ *      approval, see PATCH below, but both pages also check the approval
+ *      status so a row that is published and still pending (bad data) never
+ *      shows up publicly);
  *   2. the caller manages it (its own manager/landlord, or an ADMIN) -- their
  *      dashboard has to show a pending-review listing;
  *   3. the caller is a tenant living in it. A landlord can unpublish a
@@ -58,25 +59,36 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
-    if (!property.isPublished) {
-      const jwtSession = await getServerSession();
-      if (!jwtSession) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
-      const session = { sub: jwtSession.sub, role: jwtSession.role as Role };
+    const jwtSession = await getServerSession();
+    const session = jwtSession ? { sub: jwtSession.sub, role: jwtSession.role as Role } : null;
+    const manages = !!session && canManageProperty(session, property);
+    // Any lease at all, not just ACTIVE: a tenant mid-renewal or just past
+    // their end date still needs the property's announcements and their own
+    // unit's history.
+    const occupancy =
+      session && !manages
+        ? await prisma.lease.findFirst({
+            where: { tenantId: session.sub, unit: { propertyId: id } },
+            select: { id: true },
+          })
+        : null;
 
-      let visible = canManageProperty(session, property);
-      if (!visible) {
-        // Any lease at all, not just ACTIVE: a tenant mid-renewal or just
-        // past their end date still needs the property's announcements and
-        // their own unit's history.
-        const occupancy = await prisma.lease.findFirst({
-          where: { tenantId: session.sub, unit: { propertyId: id } },
-          select: { id: true },
-        });
-        visible = occupancy !== null;
+    if (!property.isPublished || property.moderationStatus !== 'APPROVED') {
+      if (!manages && occupancy === null) {
+        return NextResponse.json({ error: 'Property not found' }, { status: 404 });
       }
-
-      if (!visible) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
+
+    // A unit marked private is for the owner's side and the people living in the
+    // building only; everyone else gets the public units (ISS-084).
+    const seesPrivate = manages || occupancy !== null;
+    const visibleUnits = seesPrivate
+      ? property.units
+      : property.units.filter((u) => !isPrivateUnit(u));
+    if (!seesPrivate && property.units.length > 0 && visibleUnits.length === 0) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
+    property.units = visibleUnits;
 
     const { reviews, units, ...rest } = property;
     const ratings = reviews.map((r) => r.rating);
@@ -180,6 +192,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const existingPending = (currentPropertyMeta.pendingChanges as Record<string, unknown>) || null;
     const stripEdited = (notes: string | null) =>
       (notes || '').replace(/\[EDITED[^\]]*\]\s*/g, '').trim();
+    // The edit form sends every field it shows, changed or not. Only a field that
+    // differs from the live listing is a real edit: an untouched name or address
+    // must not make a description edit look like a change of identity or location.
+    const sameAsLive = (key: string, value: unknown) =>
+      JSON.stringify((property as Record<string, unknown>)[key] ?? null) ===
+      JSON.stringify(value ?? null);
+    const onlyChanged = (fields: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(fields).filter(([k, v]) => !sameAsLive(k, v)));
     const editedTag = (critical: boolean) => {
       const date = new Date().toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -280,13 +300,26 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     // 3. SUBMIT DRAFT FOR REVIEW
     if (validated.data.submitForReview) {
-      if (!existingPending) {
+      // The edit form saves and submits in one call, so fields sent with the flag
+      // are staged first; a bare flag submits the draft saved earlier.
+      const sentFields = onlyChanged(pickStaged(validated.data));
+      const draftToSubmit =
+        Object.keys(sentFields).length > 0
+          ? {
+              ...(existingPending || {}),
+              property: {
+                ...((existingPending?.property as Record<string, unknown>) || {}),
+                ...sentFields,
+              },
+            }
+          : existingPending;
+      if (!draftToSubmit) {
         return NextResponse.json(
           { error: 'No draft edits found to submit for review', code: 'NO_DRAFT' },
           { status: 400 },
         );
       }
-      const draftProp = (existingPending.property as Record<string, unknown>) || {};
+      const draftProp = (draftToSubmit.property as Record<string, unknown>) || {};
       const isCritical = touchesCritical(draftProp);
       const restoreTo = restoreToFor();
 
@@ -296,7 +329,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           metadata: {
             ...currentPropertyMeta,
             pendingChanges: {
-              ...existingPending,
+              ...draftToSubmit,
               status: 'PENDING_REVIEW',
               submittedAt: new Date().toISOString(),
               ...(restoreTo ? { restoreTo } : {}),
@@ -323,7 +356,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         ...(existingPending || {}),
         status: 'DRAFT',
         updatedAt: new Date().toISOString(),
-        property: { ...draftProp, ...pickStaged(validated.data) },
+        property: onlyChanged({ ...draftProp, ...pickStaged(validated.data) }),
       };
       const updated = await prisma.property.update({
         where: { id },
@@ -348,7 +381,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       ...cleanData
     } = validated.data;
 
-    const stagedFields = pickStaged(cleanData);
+    const stagedFields = onlyChanged(pickStaged(cleanData));
     const hasStagedEdit = Object.keys(stagedFields).length > 0;
     const isOwnerEdit = session.role !== 'ADMIN';
     const critical = touchesCritical(stagedFields);

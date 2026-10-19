@@ -21,6 +21,64 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     expect(names).not.toContain('Unpublished One');
   });
 
+  it('never shows a published listing that is still pending review or was rejected', async () => {
+    const pending = await createProperty({
+      name: 'Published But Pending',
+      isPublished: true,
+      moderationStatus: 'PENDING_REVIEW',
+    });
+    const rejected = await createProperty({
+      name: 'Published But Rejected',
+      isPublished: true,
+      moderationStatus: 'REJECTED',
+    });
+
+    const list = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties');
+    const names = list.body.data.map((p) => p.name);
+    expect(names).not.toContain('Published But Pending');
+    expect(names).not.toContain('Published But Rejected');
+
+    expect((await apiFetch(`/api/v1/properties/${pending.id}`)).status).toBe(404);
+    expect((await apiFetch(`/api/v1/properties/${rejected.id}`)).status).toBe(404);
+  });
+
+  it('keeps private units out of the public list and detail, but not from the manager', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({
+      name: 'Mixed Visibility Block',
+      isPublished: true,
+      managerId: manager.id,
+    });
+    await createUnit(property.id, { unitNumber: 'Open 1' });
+    await createUnit(property.id, { unitNumber: 'Hidden 2', amenities: ['visibility:private'] });
+    const allPrivate = await createProperty({
+      name: 'All Private Block',
+      isPublished: true,
+      managerId: manager.id,
+    });
+    await createUnit(allPrivate.id, { unitNumber: 'Hidden 3', amenities: ['visibility:private'] });
+
+    const list = await apiFetch<{ data: { name: string; units: { unitNumber: string }[] }[] }>(
+      '/api/v1/properties',
+    );
+    const listed = list.body.data.find((p) => p.name === 'Mixed Visibility Block');
+    expect(listed?.units.map((u) => u.unitNumber)).toEqual(['Open 1']);
+    expect(list.body.data.map((p) => p.name)).not.toContain('All Private Block');
+
+    const anon = await apiFetch<{ data: { units: { unitNumber: string }[] } }>(
+      `/api/v1/properties/${property.id}`,
+    );
+    expect(anon.body.data.units.map((u) => u.unitNumber)).toEqual(['Open 1']);
+    expect((await apiFetch(`/api/v1/properties/${allPrivate.id}`)).status).toBe(404);
+
+    const cookie = await authCookie(manager.id, manager.role);
+    const owner = await apiFetch<{ data: { units: { unitNumber: string }[] } }>(
+      `/api/v1/properties/${property.id}`,
+      { cookie },
+    );
+    expect(owner.body.data.units.map((u) => u.unitNumber).sort()).toEqual(['Hidden 2', 'Open 1']);
+  });
+
   it("serializes a unit's squareFeet as sqft", async () => {
     const property = await createProperty({ name: 'Sqft Property', isPublished: true });
     await createUnit(property.id, { squareFeet: 850 });
@@ -830,6 +888,40 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
     expect(res.body.data.isPublished).toBe(false);
     expect(res.body.data.moderationStatus).toBe('PENDING_REVIEW');
     expect(res.body.data.moderationNotes).toContain('[EDITED:CRITICAL');
+  });
+
+  it('stages only the fields that changed when the edit form saves and submits in one call', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'One Step Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+    });
+
+    // The form sends every field it shows; only the description is different.
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        name: prop.name,
+        address: prop.address,
+        city: prop.city,
+        description: 'A new rooftop terrace',
+        submitForReview: true,
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('PENDING_REVIEW');
+    expect(res.body.data.metadata?.pendingChanges?.property).toEqual({
+      description: 'A new rooftop terrace',
+    });
+    // Not a critical edit: the listing stays live and approved.
+    expect(res.body.data.isPublished).toBe(true);
+    expect(res.body.data.moderationStatus).toBe('APPROVED');
+    expect(res.body.data.moderationNotes).toContain('[EDITED:MINOR');
   });
 
   it('blocks deleting pending edits while under review (must cancel first)', async () => {

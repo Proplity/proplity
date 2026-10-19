@@ -101,10 +101,18 @@ export default function AdminPropertiesPage() {
   const isDuplicate = (p: Property) =>
     !p.mergedIntoId && !!p.listingHash && duplicateCounts[p.listingHash] > 1;
 
+  // A live listing whose owner submitted edits is waiting on the admin too, so the
+  // Pending Review tab shows it alongside new submissions.
+  const awaitingReview = (p: Property) =>
+    p.moderationStatus === 'PENDING_REVIEW' ||
+    (p.moderationStatus === 'APPROVED' && p.metadata?.pendingChanges?.status === 'PENDING_REVIEW');
+
   const filtered = properties.filter((p) => {
     let matchesStatus = true;
     if (statusFilter === 'MERGED') {
       matchesStatus = Boolean(p.mergedIntoId);
+    } else if (statusFilter === 'PENDING_REVIEW') {
+      matchesStatus = !p.mergedIntoId && awaitingReview(p);
     } else if (statusFilter !== 'ALL') {
       matchesStatus = !p.mergedIntoId && p.moderationStatus === statusFilter;
     }
@@ -124,6 +132,8 @@ export default function AdminPropertiesPage() {
   const statusCounts = ALL_STATUSES.slice(1).reduce<Record<string, number>>((acc, status) => {
     if (status === 'MERGED') {
       acc[status] = properties.filter((p) => Boolean(p.mergedIntoId)).length;
+    } else if (status === 'PENDING_REVIEW') {
+      acc[status] = properties.filter((p) => !p.mergedIntoId && awaitingReview(p)).length;
     } else {
       acc[status] = properties.filter(
         (p) => !p.mergedIntoId && p.moderationStatus === status,
@@ -425,9 +435,7 @@ export default function AdminPropertiesPage() {
                         onClick={() => setSelectedProperty(property)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-600 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 active:scale-[0.99]"
                       >
-                        {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
-                          ? 'Review'
-                          : 'Review Details'}
+                        {awaitingReview(property) && !isMerged ? 'Review' : 'Review Details'}
                       </button>
 
                       <button
@@ -585,9 +593,7 @@ export default function AdminPropertiesPage() {
                             onClick={() => setSelectedProperty(property)}
                             className="rounded-lg border border-blue-600 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
                           >
-                            {property.moderationStatus === 'PENDING_REVIEW' && !isMerged
-                              ? 'Review'
-                              : 'View'}
+                            {awaitingReview(property) && !isMerged ? 'Review' : 'View'}
                           </button>
 
                           <button

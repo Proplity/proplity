@@ -279,6 +279,8 @@ async function main() {
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
       floodRiskScore: 15.0,
@@ -334,6 +336,8 @@ async function main() {
       description:
         'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 95.0,
       powerReliabilityScore: 88.0,
       floodRiskScore: 10.0,
@@ -380,6 +384,8 @@ async function main() {
       description:
         'Ultra-exclusive luxury penthouse suite offering panoramic views of the ocean, custom marble finishes, and private pool.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 99.0,
       powerReliabilityScore: 99.0,
       floodRiskScore: 5.0,
@@ -419,6 +425,8 @@ async function main() {
       description:
         'Comfortable student and young professional self-contain units in the heart of Yaba tech corridor.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 84.0,
       powerReliabilityScore: 60.0,
       floodRiskScore: 25.0,

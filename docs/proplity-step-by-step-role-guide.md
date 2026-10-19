@@ -1,7 +1,7 @@
 # Proplity — Complete Step-by-Step Role Guide
 
 > **Version:** 3.1 · **Updated:** 2026-10-19 · **Platform:** Proplity — AI-Powered Nigerian Property Management  
-> **Master Walkthrough Video:** [Watch Full 1440p Video Walkthrough (16m 24s)](../public/videos/proplity-complete-userflow.webm) · [Interactive Player with Chapters](userflow-video.html)
+> **Master Walkthrough Video:** [Watch the Full Video Walkthrough (15m 20s)](../public/videos/proplity-complete-userflow.webm) · [Interactive Player with Chapters](userflow-video.html)
 
 ---
 
@@ -1075,7 +1075,7 @@ The Access Codes card lists the codes issued for the tenant unit, such as a gues
 
 - Codes belong to a unit and need an active lease. They are single use by default; a code can be made reusable for a regular visitor.
 - Two active codes for the same unit cannot share a value.
-- Creating a code is available through the API only for now (POST /api/v1/access-codes); the dashboard shows the active ones.
+- **+ New Guest Code** on the card opens a short form: guest name (optional), the gate code (a six-digit one is suggested), an optional expiry date and a One-time use box. The new code appears in the list straight away.
 - The full-page view shows everything on the tenant home: lease summary, balance and auto-pay, maintenance, access codes and documents.
 
 **Screenshots:**
@@ -1524,7 +1524,7 @@ When a tenant applies online, it lands in the manager's queue. The manager revie
 
 **Stage 4 — Activate the Lease:**
 
-- Send for e-signatures from both parties. Once both sign, lease activates.
+- Each side signs by typing a full legal name on the tenancy record (manager) and on the tenant dashboard (tenant). The lease is Fully Executed once both have signed. **Activate Lease** starts the tenancy; the tenant can still sign after activation, and the signature card stays on their dashboard until they do.
 - Screenshot: `docs/screenshots/manager_review_04_activate_lease.png`
 
 ![Manager Review 04 Activate Lease](screenshots/manager_review_04_activate_lease.png)
@@ -1550,8 +1550,9 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 1. New ticket appears in "New" column
 2. Manager reviews and clicks **Assign Vendor**
 3. Select the right vendor from the dropdown (e.g., plumber for water issue)
-4. Vendor receives a notification
-5. Status moves through the board as work progresses
+4. Vendor receives a notification, and the request becomes a scheduled job (it moves to the In Progress column)
+5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
+6. The tenant can then rate the vendor from My Maintenance Requests, and the manager pays the vendor invoice under Cost Tracking
 
 **Screenshots:**
 
@@ -1614,7 +1615,7 @@ The property page is the manager workbench. Photos and details are edited here, 
 **Key points:**
 
 - Manage Photos: upload room and exterior photos, choose the cover and exterior image, and add a 360 degree tour link.
-- Edit Property: change name, address, city, state and description. Save as Draft keeps your edits private without alerting anyone; Submit for Review sends them to the admin.
+- Edit Property: change name, address, city, state and description. Save as Draft keeps your edits private without alerting anyone; Submit for Review sends them to the admin. Only fields you actually changed are staged: a description-only edit leaves the listing live, while a changed name, address, city or state takes it offline until the admin approves.
 - While edits wait, the Listing Status card shows Proposed Edits Under Review with Cancel Approval Request. The public page keeps showing the approved version.
 - When the admin approves, the staged edits are applied; if rejected, the live listing is unchanged.
 
@@ -1644,7 +1645,7 @@ Three more tools on the property page keep day-to-day records in one place.
 - Equipment: log generators, inverters, HVAC and more with serial number, install date and warranty expiry.
 - Announcements: post a notice to the property, optionally pinned, for everyone linked to it.
 - Import Units (CSV or Excel): add many units at once from a spreadsheet. Rows with problems are reported instead of silently skipped.
-- Make Private or Make Public per unit controls whether it appears on the marketplace.
+- Make Private or Make Public per unit controls whether it appears on the marketplace. A private unit is hidden from the public site and its API; only the owner side and people living in the building still see it. A building whose units are all private is not listed at all.
 
 **Screenshots:**
 
@@ -1975,7 +1976,7 @@ Properties and Moderation is where every listing is reviewed before it goes publ
 - Filter chips: All, Pending Review, Approved, Rejected, Flagged and Merged, plus search by name, address or owner.
 - Switch between Cards and Table. Each listing carries badges for status, visibility and Possible duplicate.
 - Review opens a side drawer with owner and manager contacts, units, a moderation notes box and the approve, reject, flag or unpublish actions.
-- Staged edits from managers appear for approval here too; approving applies them to the live listing.
+- Staged edits from managers appear under Pending Review too, marked as edited. Open the drawer to see the proposed changes and press Approve Edits to apply them to the live listing.
 
 **Screenshots:**
 
