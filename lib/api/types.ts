@@ -468,6 +468,22 @@ export type AccessCode = {
   singleUse: boolean;
 };
 
+export type AccessLogEntry = {
+  id: string;
+  action: 'GRANTED' | 'DENIED' | 'EXPIRED_ATTEMPT' | 'REVOKED';
+  occurredAt: string;
+};
+
+export type AccessCodeDetail = AccessCode & { logs: AccessLogEntry[] };
+
+// POST /access-codes/verify: a code that does not exist answers { granted: false, reason: 'NOT_FOUND' }.
+export type AccessVerifyResult = {
+  granted: boolean;
+  action?: AccessLogEntry['action'];
+  reason?: 'NOT_FOUND';
+  guestName?: string | null;
+};
+
 export type CreateAccessCodeInput = {
   unitId: string;
   code: string;
