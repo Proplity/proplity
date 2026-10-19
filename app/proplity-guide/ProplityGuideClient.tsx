@@ -164,7 +164,7 @@ export function ProplityGuideClient() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-600/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/50"
-            title="Watch complete master userflow video walkthrough (from /setup, 2m 21s)"
+            title="Watch complete master userflow video walkthrough (from /setup, 16m 24s)"
           >
             <span>🎥</span>
             <span>Watch Video</span>
