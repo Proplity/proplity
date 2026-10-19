@@ -36,6 +36,7 @@ async function createUnpaidInvoiceForTenant(
   if (!lease) throw new Error('No active lease found for the seeded tenant');
 
   const invoiceRes = await request.post('/api/v1/invoices', {
+    headers: { origin: baseURL },
     data: {
       leaseId: lease.id,
       type: 'RENT',
