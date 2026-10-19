@@ -186,7 +186,13 @@ async function main() {
   }
 
   async function moveTo(locator) {
-    await locator.scrollIntoViewIfNeeded({ timeout: 8000 });
+    // A page that re-renders under the pointer (a form after hydration) is tried once more.
+    try {
+      await locator.scrollIntoViewIfNeeded({ timeout: 8000 });
+    } catch {
+      await page.waitForTimeout(600);
+      await locator.scrollIntoViewIfNeeded({ timeout: 8000 });
+    }
     const box = await locator.boundingBox();
     if (box)
       await smoothMove(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2));
@@ -1074,6 +1080,9 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
+  // The guest code the tenant makes, read from the screen so the gate check can use it later.
+  let guestCode = null;
+
   act(15, 'The tenant sees the repair done and rates the vendor', async () => {
     chapter('⭐', 'The tenant sees the repair completed and rates the vendor', '#10b981');
     if (page.url() === 'about:blank') await page.goto('/login');
@@ -1092,6 +1101,24 @@ async function main() {
     await pause(800);
     await submit(page.getByRole('button', { name: 'Create Code' }));
     await page.getByText('Dayo (cousin)').first().waitFor({ timeout: 20000 });
+    guestCode = (
+      await page
+        .locator('div.rounded-lg.border', { hasText: 'Dayo (cousin)' })
+        .last()
+        .locator('p.text-2xl')
+        .innerText()
+    ).trim();
+    if (!/^\d{6}$/.test(guestCode)) throw new Error(`Unexpected guest code: ${guestCode}`);
+    await pause(2200);
+    await hud('🚫 Changed plans? Revoke a code and the gate refuses it from then on', '#10b981');
+    await click(page.getByRole('button', { name: '+ New Guest Code' }), { settle: 800 });
+    await type(page.getByPlaceholder('Guest name (optional)'), 'Cleaner (Tuesday)');
+    await submit(page.getByRole('button', { name: 'Create Code' }));
+    const cleaner = page.locator('div.rounded-lg.border', { hasText: 'Cleaner (Tuesday)' }).last();
+    await cleaner.waitFor({ timeout: 20000 });
+    await pause(1500);
+    await submit(cleaner.getByRole('button', { name: 'Revoke' }), { settle: 800 });
+    await cleaner.getByText('Revoked', { exact: true }).waitFor({ timeout: 20000 });
     await pause(2200);
     await page.getByText('Maintenance Requests').first().scrollIntoViewIfNeeded();
     await pause(1500);
@@ -1197,7 +1224,7 @@ async function main() {
     await scroll(600);
     await hud('🔒 Make Private: Flat 2B leaves the marketplace but stays managed here', '#3b82f6');
     const flat2B = page
-      .locator('div.p-6', { has: page.getByText('Unit Flat 2B', { exact: true }) })
+      .locator('div.p-6', { has: page.locator('p', { hasText: /^Unit Flat 2B$/ }) })
       .last();
     await flat2B.scrollIntoViewIfNeeded();
     await pause(1500);
@@ -1242,10 +1269,37 @@ async function main() {
       '#3b82f6',
     );
     await click(page.getByRole('button', { name: '+ Add' }), { settle: 800 });
-    await select(page.locator('select').last(), 'GENERATOR');
+    await select(
+      page.locator('select', { has: page.locator('option[value="GENERATOR"]') }),
+      'GENERATOR',
+    );
     await type(page.getByPlaceholder('Serial number (optional)'), 'GEN-IKY-0042');
     await submit(page.getByRole('button', { name: 'Add Equipment' }), { settle: 1200 });
     await pause(2200);
+
+    await page.getByRole('heading', { name: 'Gate Check' }).scrollIntoViewIfNeeded();
+    await hud(
+      '🚪 Gate Check: the guard types the code the guest gives and sees at once whether to let them in',
+      '#3b82f6',
+    );
+    await pause(1800);
+    if (!guestCode)
+      throw new Error(
+        'The guest code from the tenant dashboard is missing (run acts 15 and 17 together)',
+      );
+    await select(page.getByLabel('Unit being visited'), { label: 'Unit Flat 1A' });
+    await type(page.getByPlaceholder('Code from the guest'), guestCode);
+    await submit(page.getByRole('button', { name: 'Check', exact: true }), { settle: 800 });
+    await page.getByText('Let in: Dayo (cousin).').waitFor({ timeout: 20000 });
+    await pause(2500);
+    await hud('♻️ A one-time code is used up: the same code is refused the second time', '#3b82f6');
+    await type(page.getByPlaceholder('Code from the guest'), guestCode);
+    await submit(page.getByRole('button', { name: 'Check', exact: true }), { settle: 800 });
+    await page.getByText(/Refused: the code was already used/).waitFor({ timeout: 20000 });
+    await pause(2500);
+    await click(page.getByRole('button', { name: 'Activity' }).first(), { settle: 1200 });
+    await hud('📜 Activity: every check of the code is logged with the time', '#3b82f6');
+    await pause(3000);
 
     await hud('👤 Each occupied unit links to its tenant record', '#3b82f6');
     await click(page.getByRole('button', { name: 'View Tenant' }).first(), { settle: 1500 });
