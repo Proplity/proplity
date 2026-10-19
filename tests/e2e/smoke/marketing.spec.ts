@@ -23,9 +23,17 @@ for (const path of PAGES) {
   });
 }
 
-test('homepage links to About, Contact and Pricing', async ({ page }) => {
+test('homepage links to About and Contact, and to Pricing only when subscriptions are on', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page.getByRole('link', { name: /about/i }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /contact/i }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: /pricing/i }).first()).toBeVisible();
+  // The Pricing link is hidden while subscriptions are off (NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED).
+  const pricing = page.getByRole('link', { name: /pricing/i });
+  if (process.env.NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED === 'true') {
+    await expect(pricing.first()).toBeVisible();
+  } else {
+    await expect(pricing).toHaveCount(0);
+  }
 });
