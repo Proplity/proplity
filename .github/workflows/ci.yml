@@ -146,6 +146,8 @@ jobs:
       # No PAYSTACK_SECRET_KEY/RESEND_API_KEY here on purpose -- both dev-only
       # testing tools below only ever activate when there's no real key.
       NEXT_PUBLIC_EMAIL_INBOX_ENABLED: 'true'
+      # The app runs as a production build here, where the inbox needs this second switch (ISS-071).
+      EMAIL_INBOX_ALLOW_IN_PRODUCTION: 'true'
       NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED: 'true'
 
     steps:
