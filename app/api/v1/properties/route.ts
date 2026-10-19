@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Prisma, PropertyType } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { notifyAdmins } from '@/lib/notifications';
 import { withAuth } from '@/lib/api/withAuth';
 import { getServerSession } from '@/lib/auth/session';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
@@ -172,6 +173,12 @@ export const POST = withAuth(
           ...(session.role === 'MANAGER' && !data.managerId ? { managerId: session.sub } : {}),
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },
+      });
+
+      await notifyAdmins({
+        title: 'Listing awaiting review',
+        body: `"${property.name}" (${property.address}, ${property.city}) was submitted for review.`,
+        link: '/admin/properties',
       });
 
       // Notify all Admins by email of the new listing awaiting review

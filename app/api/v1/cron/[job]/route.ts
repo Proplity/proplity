@@ -9,6 +9,7 @@ import { runRetention } from '@/lib/workers/retention';
 import { runPaymentReliabilityScorer } from '@/lib/workers/paymentReliabilityScorer';
 import { runPropertyTrustScorer } from '@/lib/workers/propertyTrustScorer';
 import { runAutopayCharger } from '@/lib/workers/autopayCharger';
+import { runReminders } from '@/lib/workers/reminders';
 import { handleApiError } from '@/lib/api/errors';
 
 // Never prerender or cache: this route mutates the database on every call.
@@ -24,6 +25,7 @@ const JOBS: Record<string, () => Promise<unknown>> = {
   'rent-invoicer': runRentInvoicer,
   'autopay-charger': runAutopayCharger,
   'overdue-flagger': runOverdueFlagger,
+  reminders: runReminders,
   'maintenance-schedule-dispatcher': runMaintenanceScheduleDispatcher,
   'access-code-expiry-janitor': runAccessCodeExpiryJanitor,
   'payment-reliability-scorer': runPaymentReliabilityScorer,
@@ -39,6 +41,7 @@ const ALL_JOBS_IN_ORDER = [
   'rent-invoicer',
   'autopay-charger',
   'overdue-flagger',
+  'reminders',
   'maintenance-schedule-dispatcher',
   'access-code-expiry-janitor',
   'payment-reliability-scorer',

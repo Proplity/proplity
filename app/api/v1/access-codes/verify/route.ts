@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { getClientIp } from '@/lib/auth/rateLimit';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { notifyAndEmail } from '@/lib/notifications';
 
 const verifySchema = z.object({
   unitId: z.string(),
@@ -99,6 +100,18 @@ export const POST = withAuth(
           ? [prisma.accessCode.update({ where: { id: accessCode.id }, data: { status: 'USED' } })]
           : []),
       ]);
+
+      if (granted) {
+        await notifyAndEmail(
+          accessCode.createdById,
+          {
+            title: `${accessCode.guestName ?? 'Your guest'} was let in`,
+            body: `Your guest code ${accessCode.code} was checked and accepted at the gate.`,
+            link: '/dashboard',
+          },
+          { email: false },
+        );
+      }
 
       return NextResponse.json({
         data: { granted, action, guestName: accessCode.guestName, logId: log.id },
