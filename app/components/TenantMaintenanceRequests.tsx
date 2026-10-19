@@ -9,8 +9,9 @@ import {
   X,
   ChevronDown,
   MapPin,
+  Star,
 } from 'lucide-react';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { useMaintenanceRequests, useRateVendor } from '@/hooks/useMaintenanceRequests';
 import type { MaintenanceRequest } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
 
@@ -65,7 +66,10 @@ function buildTimeline(request: MaintenanceRequest) {
 }
 
 export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceRequestsProps) {
-  const { data: allRequests, loading, error } = useMaintenanceRequests();
+  const { data: allRequests, loading, error, refetch } = useMaintenanceRequests();
+  const { submit: rateVendor, submitting: rating, error: ratingError } = useRateVendor();
+  const [stars, setStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -248,6 +252,76 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                   <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                     {request.description}
                   </div>
+
+                  {/* Rate the vendor once the job is done (one rating per request) */}
+                  {request.status === 'COMPLETED' && request.vendor && (
+                    <div className="rounded-lg border border-gray-200 p-4">
+                      <p className="mb-2 text-sm font-semibold text-gray-900">
+                        {request.vendorRating ? 'Your rating' : 'Rate this vendor'}
+                      </p>
+                      {request.vendorRating ? (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`h-5 w-5 ${n <= request.vendorRating!.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                            />
+                          ))}
+                          {request.vendorRating.comment && (
+                            <span className="ml-2 text-sm text-gray-600">
+                              {request.vendorRating.comment}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                onClick={() => setStars(n)}
+                              >
+                                <Star
+                                  className={`h-6 w-6 ${n <= stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
+                            placeholder="Add a comment (optional)"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                          {ratingError && <p className="text-xs text-red-600">{ratingError}</p>}
+                          <button
+                            type="button"
+                            disabled={stars === 0 || rating}
+                            onClick={async () => {
+                              try {
+                                await rateVendor(request.id, {
+                                  rating: stars,
+                                  ...(ratingComment.trim()
+                                    ? { comment: ratingComment.trim() }
+                                    : {}),
+                                });
+                                setStars(0);
+                                setRatingComment('');
+                                refetch();
+                              } catch {
+                                // surfaced through ratingError
+                              }
+                            }}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {rating ? 'Sending…' : 'Submit Rating'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Timeline */}
                   <div>

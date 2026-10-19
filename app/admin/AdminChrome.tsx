@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ResponsiveTables } from '@/app/components/ResponsiveTables';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
@@ -239,7 +240,10 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto">
+          <ResponsiveTables />
+          {children}
+        </main>
       </div>
 
       {showLogout && (

@@ -47,6 +47,7 @@ export const GET = withAuth(async (req, { session }) => {
           category: true,
           vendor: { select: { id: true, name: true } },
           tenant: { select: { id: true, name: true } },
+          vendorRating: { select: { rating: true, comment: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
 import { useCreateViewing } from '@/hooks/useProperties';
+import { useAuth } from '@/context/AuthContext';
 
 interface ScheduleViewingProps {
   propertyId: string;
@@ -29,13 +30,15 @@ export function ScheduleViewing({
 }: ScheduleViewingProps) {
   const backHref = `/dashboard/properties/${propertyId}`;
   const { submit, submitting, error } = useCreateViewing(propertyId);
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     date: '',
     timeSlot: '',
-    fullName: '',
-    email: '',
-    phone: '',
+    // Viewing requests are for signed-in users, so start from their own details.
+    fullName: user?.name ?? '',
+    email: user?.email ?? '',
+    phone: user?.phoneNumber ?? '',
     numberOfPeople: '1',
     specialRequirements: '',
     agreeToTerms: false,

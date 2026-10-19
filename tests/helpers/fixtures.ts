@@ -128,6 +128,7 @@ export async function createUnit(
     bedrooms: number;
     rentAmount: number;
     squareFeet: number | null;
+    amenities: string[];
   }> = {},
 ) {
   return testPrisma.unit.create({
@@ -137,6 +138,7 @@ export async function createUnit(
       bedrooms: overrides.bedrooms ?? 2,
       rentAmount: overrides.rentAmount ?? 1_000_000,
       squareFeet: overrides.squareFeet ?? null,
+      ...(overrides.amenities ? { amenities: overrides.amenities } : {}),
     },
   });
 }
