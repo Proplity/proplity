@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useBankTransfers } from '@/hooks/useBankTransfers';
 import type { Invoice } from '@/lib/api/types';
@@ -41,7 +42,13 @@ type PaymentRecord = {
 // sub-phase). An invoice with a payment renders as one paid record; an
 // invoice still owing money renders as one pending/upcoming record instead
 // -- there's no separate "scheduled payment" model to source that from.
-function toRecords(invoices: Invoice[]): PaymentRecord[] {
+// The tenant sees the vendor's bill on their own repair here too, but is not a party to it: the
+// receipt and "paid another way" are for invoices on their lease or addressed to them.
+function isOwnInvoice(invoice: Invoice, meId: string | undefined): boolean {
+  return !!meId && (invoice.lease?.tenant.id === meId || invoice.userId === meId);
+}
+
+function toRecords(invoices: Invoice[], meId: string | undefined): PaymentRecord[] {
   const records: PaymentRecord[] = [];
   for (const invoice of invoices) {
     if (invoice.status === 'CANCELLED') continue;
@@ -57,8 +64,8 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
     if (invoice.payments.length > 0) {
       for (const payment of invoice.payments) {
         records.push({
-          paymentId: payment.id,
-          receiptNumber: payment.receiptNumber,
+          paymentId: isOwnInvoice(invoice, meId) ? payment.id : null,
+          receiptNumber: isOwnInvoice(invoice, meId) ? payment.receiptNumber : null,
           id: invoice.invoiceNumber,
           period,
           description,
@@ -88,12 +95,14 @@ function toRecords(invoices: Invoice[]): PaymentRecord[] {
 }
 
 export function TenantPaymentHistory() {
+  const { user } = useAuth();
   const { data: invoices, loading, error, refetch } = useInvoices();
   const transfers = useBankTransfers();
   const [recording, setRecording] = useState(false);
   // What can still be paid: an open invoice, minus what has been paid on it already.
   const payable: PayableInvoice[] = invoices
     .filter((i) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status))
+    .filter((i) => isOwnInvoice(i, user?.id))
     .map((i) => ({
       id: i.id,
       invoiceNumber: i.invoiceNumber,
@@ -105,7 +114,7 @@ export function TenantPaymentHistory() {
     }))
     .filter((i) => i.owing > 0);
   const openTransfers = transfers.data.filter((t) => t.status !== 'APPROVED');
-  const allPayments = useMemo(() => toRecords(invoices), [invoices]);
+  const allPayments = useMemo(() => toRecords(invoices, user?.id), [invoices, user?.id]);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

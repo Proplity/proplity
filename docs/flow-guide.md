@@ -302,9 +302,6 @@ vendor browsing the same page won't see it — it's manager/landlord-only).
   Offer, Default, Expiration Alert, Termination), write a message, send.
 - **Send Invoice** (Quick Actions) — pick a type (including Service Charge),
   amount, due date, optional description; the tenant sees it immediately.
-- **Paid another way** — record a bank transfer or cash payment for the
-  tenant (with the receipt file if you have one). It waits on the **Bank
-  Transfers** tab until someone other than you confirms it.
 - **Terminate Lease**, **Message Tenant**, and lease-terms editing
   (grace period, late fee) as before.
 
@@ -315,6 +312,12 @@ request across your portfolio. Open one to:
   the tenant (and vendor, once assigned).
 - Click **Assign Vendor**, search or pick one from the list — they're
   notified and the job appears in their queue immediately.
+- On the vendor's invoice under Cost Tracking, **Pay** takes you to the
+  checkout; if you paid the vendor another way, press **Paid another way**
+  and record the transfer or cash payment with the receipt file. It waits on
+  the **Bank Transfers** tab until someone other than you confirms it.
+  (Rent paid in cash or by transfer is recorded straight away with **Record
+  payment** on the tenant's page.)
 - Once a vendor's invoice is submitted with a photo of the finished work,
   the request completes automatically by default (configurable in Admin →
   Platform Settings). There is no Mark as Completed button: only the vendor
