@@ -18,6 +18,8 @@
 //          JOURNEY_ACTS=3,4 runs only those acts (the database must already hold the earlier state);
 //          JOURNEY_NO_VIDEO=1 does not record.
 // Output:  public/videos/proplity-complete-userflow.webm and the chapter list in the two player pages.
+//          The raw video is about 100 MB (GitHub refuses a file over 100 MiB): run
+//          `node scripts/compress-journey-video.mjs` afterwards to bring it to about 40 MB.
 import { chromium } from '@playwright/test';
 import {
   copyFileSync,
