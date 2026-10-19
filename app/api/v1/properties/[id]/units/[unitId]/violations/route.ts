@@ -4,6 +4,7 @@ import { ViolationSeverity } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { tellUnitTenant } from '@/lib/notifications';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrlList } from '@/lib/api/urlField';
@@ -74,6 +75,10 @@ export const POST = withAuth(
 
       const violation = await prisma.violation.create({
         data: { unitId, reportedById: session.sub, ...validated.data },
+      });
+      await tellUnitTenant(unitId, {
+        title: 'A violation was recorded for your unit',
+        body: `${violation.severity.toLowerCase()} violation: ${violation.description}`,
       });
       return NextResponse.json({ data: violation }, { status: 201 });
     } catch (err) {

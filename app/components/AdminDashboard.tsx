@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Users,
   Building2,
@@ -11,10 +10,10 @@ import {
   Settings,
   BarChart3,
   Wrench,
-  XCircle,
 } from 'lucide-react';
 import { useAdminSummary } from '@/hooks/useDashboardSummary';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface AdminDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -29,7 +28,6 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
-  const router = useRouter();
   const [showDatabaseInfo, setShowDatabaseInfo] = useState(false);
   // Platform totals come from the server (ISS-049): the old per-list sums only
   // saw the first page of users (100), properties and invoices (20).
@@ -82,17 +80,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
     };
   });
 
-  const attentionItems = (summary?.attentionItems ?? []).map((i) => ({
-    ...i,
-    href: i.href ?? undefined,
-  }));
-
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="mb-1 text-2xl font-semibold">System Administration</h1>
         <p className="text-gray-600">Platform-wide overview and management</p>
       </div>
+
+      <AttentionCard />
 
       {loading && <p className="text-sm text-gray-500">Loading platform data…</p>}
 
@@ -151,39 +146,6 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps = {}) {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* Items Needing Attention */}
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 p-6">
-            <h2 className="font-semibold">Items Needing Attention</h2>
-          </div>
-          <div className="divide-y divide-gray-200">
-            {attentionItems.map((issue, index) => (
-              <div
-                key={index}
-                onClick={issue.href ? () => router.push(issue.href!) : undefined}
-                className={`p-4 hover:bg-gray-50 ${issue.href ? 'cursor-pointer' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  {issue.severity === 'high' ? (
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-yellow-600" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{issue.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(issue.time).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {attentionItems.length === 0 && !loading && (
-              <p className="p-4 text-sm text-gray-400">Nothing needs attention right now.</p>
-            )}
           </div>
         </div>
       </div>

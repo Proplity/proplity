@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { NoticeStatus, NoticeType } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { notifyAndEmail, notifyPropertyTeam, type NotifyRequest } from '@/lib/notifications';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
@@ -58,6 +59,25 @@ const bodySchema = z.object({
   status: z.nativeEnum(NoticeStatus).optional(),
 });
 
+// A notice only matters once it is sent: the tenant is told in the app and by email.
+async function tellTenantOfNotice(
+  lease: { tenantId: string; unit: { unitNumber: string; property: { name: string } } },
+  type: string,
+  content: string | null,
+  req: NotifyRequest,
+) {
+  const label = type.replace(/_/g, ' ').toLowerCase();
+  await notifyAndEmail(
+    lease.tenantId,
+    {
+      title: `New notice: ${label}`,
+      body: `You have a ${label} for unit ${lease.unit.unitNumber} at ${lease.unit.property.name}.${content ? `\n\n${content}` : ''}`,
+      link: '/dashboard',
+    },
+    { req },
+  );
+}
+
 const TENANT_SETTABLE_STATUSES: NoticeStatus[] = ['VIEWED', 'ACCEPTED', 'REJECTED', 'COUNTERED'];
 
 export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -99,6 +119,20 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
               : {}),
           },
         });
+        // A counter or a rejection needs the property team to act; a plain read does not.
+        if (status !== 'VIEWED') {
+          await notifyPropertyTeam(
+            lease.unit.property,
+            {
+              title: `Tenant ${status.toLowerCase()} a ${notice.type.replace(/_/g, ' ').toLowerCase()}`,
+              body: `The tenant of unit ${lease.unit.unitNumber} at ${lease.unit.property.name} ${
+                status === 'COUNTERED' ? 'sent a counter-proposal to' : `${status.toLowerCase()}`
+              } the ${notice.type.replace(/_/g, ' ').toLowerCase()}.`,
+              link: `/dashboard/tenants/${lease.id}`,
+            },
+            { req },
+          );
+        }
         return NextResponse.json({ data: updated });
       }
 
@@ -116,6 +150,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
             : {}),
         },
       });
+      if (status === 'SENT' && notice.status !== 'SENT') {
+        await tellTenantOfNotice(lease, updated.type, updated.content, req);
+      }
       return NextResponse.json({ data: updated });
     }
 
@@ -136,6 +173,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
         ...(status === 'SENT' ? { sentAt: new Date() } : {}),
       },
     });
+    if (created.status === 'SENT') {
+      await tellTenantOfNotice(lease, created.type, created.content, req);
+    }
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (err) {
     return handleApiError(err);
