@@ -98,6 +98,13 @@ are configured for this environment before treating it as a defect.
 - [ ] Pay rent (via Paystack, or the mock gateway in test environments) —
       the invoice becomes paid, a payment appears in history, and the
       manager/landlord get a notification
+- [ ] **I paid by bank transfer** (payment history): record a transfer with
+      its reference and, if uploads are on, a receipt file. It waits under
+      **Transfers you recorded** until the property team confirms it; then the
+      invoice is paid, the payment shows a **Receipt** link and you are told
+- [ ] Every payment row has a **Receipt**: it shows who paid whom, how, the
+      reference and what is still owing, and **Print / Save as PDF** works. A
+      stranger (another tenant, a vendor, a signed-out visitor) cannot open it
 - [ ] Set up auto-pay — with no card payment yet it says "No saved card yet";
       after a card payment it offers **Enable Auto-Pay**, shows "Auto-pay is
       active (card ending …)", and **Cancel Auto-Pay** reverts it
@@ -148,6 +155,12 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] On a lease: **Renew Lease** (creates the new lease, expires the old),
       **Send Notice** (each type), **Send Invoice** (each type incl.
       Service Charge) — the tenant sees both
+- [ ] **Bank Transfers** tab: transfers waiting for confirmation, confirmed
+      and rejected. **Confirm payment** pays the invoice, creates the receipt
+      and tells the tenant and vendor; **Reject** needs a reason. You cannot
+      confirm a transfer you recorded yourself (only withdraw it); if you are
+      the only one who could, an admin is told. A tenant's record has **Paid
+      another way** for a transfer or cash payment
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
 - [ ] On a finished repair the **Sign-off** card shows the tenant's answer;
@@ -181,6 +194,9 @@ Same as landlord, plus the day-to-day operational tools:
       marks the job Completed is a platform-wide setting an admin controls
       (Admin → Platform Settings); ask what it's set to before assuming
       either way
+- [ ] **Invoices** shows a **Receipt** link on each payment, and you are
+      told (bell, and an email for a payment recorded by hand) when an invoice
+      is paid
 - [ ] Get notified when a new job is assigned to them
 - [ ] Message the manager/landlord about a job
 - [ ] Change password from inside the dashboard (Settings)
@@ -195,6 +211,9 @@ Same as landlord, plus the day-to-day operational tools:
       roles: - Toggle between Cards view and Table view on desktop and mobile - Sticky compact toolbar remains visible on vertical scroll - Landlords and managers prominently display their active Properties Count
 - [ ] Properties — the moderation queue: - Toggle between responsive Cards view and Table view on desktop and mobile - Sticky compact toolbar with status tabs (All, Pending Review, Approved, Rejected, Flagged, Merged) - Click "Review" or "View" to open slide-over popup drawer (right-side desktop, bottom sheet mobile, click-outside backdrop) - Inspect Landlord & Manager contact information in drawer and on full property page - Check Approved Date and [EDITED] badges on resubmitted listings - Quick Approve / Reject / Publish actions in drawer or full page - "FULL VIEW" link navigates directly to `/admin/properties/[id]`
 - [ ] Landlord Property Controls: - Request Admin Approval without publishing immediately - Edit property details (auto-resubmits to `PENDING_REVIEW` with `[EDITED]` status and notifies admins) - Selective unit visibility: toggle individual units between Public (Marketplace) and Private (Selected Few)
+- [ ] **Bank Transfers** (`/admin/payments`) — the same list as the property
+      team's; confirm a transfer a manager recorded when no landlord can, and
+      check you cannot confirm one you recorded yourself
 - [ ] Security — the audit log page loads (a mostly-empty list is expected)
 - [ ] Admin Controls tiles on System Overview: User Management, Security and
       Settings navigate; **Database** shows the "no in-app database console"
@@ -236,13 +255,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 497 tests across 42 files under
-  `tests/` (424 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 73 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 535 tests across 45 files under
+  `tests/` (459 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 76 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (73 tests across 12 files, executes in ~2.8s without DB drops).
+  (76 tests across 13 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
@@ -250,7 +269,7 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 55 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 56 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
   the dev email widget, and the mobile tab bar. Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the

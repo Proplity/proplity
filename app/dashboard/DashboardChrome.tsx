@@ -57,6 +57,12 @@ function getTabsForRole(role: Role) {
         { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
         { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+        {
+          href: '/dashboard/reconciliation',
+          label: 'Bank Transfers',
+          shortLabel: 'Transfers',
+          icon: Receipt,
+        },
       ];
     case 'tenant':
       return [
@@ -82,6 +88,12 @@ function getTabsForRole(role: Role) {
         { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
         { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+        {
+          href: '/dashboard/reconciliation',
+          label: 'Bank Transfers',
+          shortLabel: 'Transfers',
+          icon: Receipt,
+        },
       ];
     case 'vendor':
       return [

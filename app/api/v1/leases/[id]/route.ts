@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { LeaseStatus, PaymentFrequency, LateFeeType } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -45,7 +46,7 @@ function loadLease(id: string) {
       tenant: { select: tenantSelect },
       notices: { orderBy: { createdAt: 'desc' } },
       invoices: {
-        include: { payments: { orderBy: { paidAt: 'desc' } } },
+        include: { payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } } },
         orderBy: { createdAt: 'desc' },
       },
       renewedFrom: true,

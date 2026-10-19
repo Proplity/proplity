@@ -6,7 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
-import { notifyUser } from '@/lib/notifications';
+import { notifyAndEmail, notifyUser } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -44,7 +44,7 @@ export const POST = withAuth(
       if (!validated.success) return validated.response;
       const { amount, method, reference, paidAt, notes } = validated.data;
 
-      let result: { status: string; paidTotal: number };
+      let result: { status: string; paidTotal: number; paymentId: string };
       try {
         result = await prisma.$transaction(async (tx) => {
           await tx.$queryRaw`SELECT "id" FROM "Invoice" WHERE "id" = ${id} FOR UPDATE`;
@@ -58,7 +58,7 @@ export const POST = withAuth(
           if (outstanding <= 0) throw new Error('ALREADY_PAID');
           if (amount > outstanding) throw new Error(`TOO_MUCH:${outstanding}`);
 
-          await tx.payment.create({
+          const created = await tx.payment.create({
             data: {
               invoiceId: id,
               amount,
@@ -81,7 +81,7 @@ export const POST = withAuth(
               metadata: { amount, method, reference: reference ?? null, status, paidTotal },
             },
           });
-          return { status, paidTotal };
+          return { status, paidTotal, paymentId: created.id };
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
@@ -107,7 +107,16 @@ export const POST = withAuth(
           type: 'SYSTEM',
           title: 'Payment recorded',
           body: `A payment of ₦${amount.toLocaleString()} was recorded on your account.`,
-          link: '/dashboard/payment-history',
+          link: `/receipts/${result.paymentId}`,
+        });
+      }
+      // A vendor's invoice paid by hand: the vendor is told, with the receipt.
+      if (invoice.maintenanceRequest?.vendorId) {
+        await notifyAndEmail(invoice.maintenanceRequest.vendorId, {
+          type: 'SYSTEM',
+          title: `Payment received: ${invoice.invoiceNumber}`,
+          body: `₦${amount.toLocaleString()} was recorded as paid on your invoice ${invoice.invoiceNumber}. Open the receipt to view or print it.`,
+          link: `/receipts/${result.paymentId}`,
         });
       }
 

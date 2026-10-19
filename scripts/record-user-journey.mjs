@@ -124,6 +124,7 @@ async function makeSampleImages() {
     ['sink-after', 'Sink trap replaced (after)', '#d5ecde'],
     ['still-wet', 'Cabinet floor still wet', '#e8e2d0'],
     ['sink-fixed', 'Dried out and sealed (second visit)', '#d0e6ec'],
+    ['transfer-receipt', 'Bank transfer receipt (GTBank)', '#e3ecd5'],
   ];
   for (const [key, label, bg] of items) {
     await p.setContent(
@@ -1361,7 +1362,94 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(18, 'Tenant and manager message each other', async () => {
+  act(18, 'The tenant pays another way and the manager confirms it', async () => {
+    chapter(
+      '🏦',
+      'The tenant pays by bank transfer; the manager confirms; a receipt is issued',
+      '#10b981',
+    );
+    if (page.url() === 'about:blank') await page.goto('/login');
+    if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
+    else {
+      await signOut();
+      await signIn(NEW_TENANT.email);
+    }
+    await click(page.getByRole('link', { name: 'Payment History' }).first(), { settle: 1500 });
+    await page.waitForURL('**/dashboard/payment-history', { timeout: 40000 });
+    await page.getByRole('button', { name: 'I paid by bank transfer' }).waitFor({ timeout: 40000 });
+    await hud(
+      '🧾 Payment History: every payment has a receipt, and an invoice can be paid another way',
+      '#10b981',
+    );
+    await pause(3000);
+    await click(page.getByRole('button', { name: 'I paid by bank transfer' }), { settle: 800 });
+    const form = page.getByRole('dialog', { name: 'Paid another way' });
+    await form.waitFor({ timeout: 20000 });
+    await hud('🏦 Paid another way: the tenant records a transfer made outside the app', '#10b981');
+    await pause(2200);
+    await type(form.getByPlaceholder('e.g. GTBank'), 'GTBank');
+    await type(form.getByPlaceholder('The transfer or session reference'), 'GTB-TRF-JOURNEY-4471');
+    await hud('📎 The bank reference, and the receipt photo from the banking app', '#10b981');
+    await form.locator('input[type="file"]').setInputFiles(images['transfer-receipt']);
+    await form.getByText('transfer-receipt.png').waitFor({ timeout: 30000 });
+    await pause(2000);
+    await submit(form.getByRole('button', { name: 'Record payment' }));
+    await page
+      .getByRole('region', { name: 'Transfers you recorded' })
+      .getByText('Waiting for your property team to confirm')
+      .waitFor({ timeout: 30000 });
+    await hud(
+      '⏳ Recorded, but the invoice does not change until someone else confirms it',
+      '#f59e0b',
+    );
+    await pause(3200);
+
+    await signOut();
+    await signIn('manager@proplity.com');
+    await click(page.getByRole('link', { name: 'Bank Transfers' }).first(), { settle: 1500 });
+    await page.waitForURL('**/dashboard/reconciliation', { timeout: 40000 });
+    await page.getByText('GTB-TRF-JOURNEY-4471').waitFor({ timeout: 40000 });
+    await hud(
+      '👔 The manager sees the transfer waiting, with the tenant’s receipt photo',
+      '#3b82f6',
+    );
+    await pause(3200);
+    await submit(page.getByRole('button', { name: 'Confirm payment' }));
+    await page.getByRole('tab', { name: 'Confirmed' }).click();
+    await page
+      .getByText(/^Receipt RCT-/)
+      .first()
+      .waitFor({ timeout: 30000 });
+    await hud(
+      '✅ Confirmed: the invoice is paid and a receipt exists. The tenant is told',
+      '#10b981',
+    );
+    await pause(3200);
+
+    await signOut();
+    await signIn(NEW_TENANT.email);
+    await click(page.getByRole('link', { name: 'Payment History' }).first(), { settle: 1500 });
+    await page.waitForURL('**/dashboard/payment-history', { timeout: 40000 });
+    await page
+      .getByRole('link', { name: /^Receipt RCT-/ })
+      .first()
+      .waitFor({ timeout: 40000 });
+    await hud('🧾 The payment now shows in history with its receipt', '#10b981');
+    await pause(2500);
+    await click(page.getByRole('link', { name: /^Receipt RCT-/ }).first(), { settle: 1500 });
+    await page.waitForURL('**/receipts/**', { timeout: 40000 });
+    await page.getByText('Bank transfer').first().waitFor({ timeout: 30000 });
+    await hud(
+      '🧾 The receipt: who paid whom, how, the reference, who confirmed it and what is left',
+      '#10b981',
+    );
+    await pause(4000);
+    await scroll(300);
+    await pause(2200);
+  });
+
+  // ---------------------------------------------------------------------------------------------
+  act(19, 'Tenant and manager message each other', async () => {
     chapter('💬', 'The tenant and the manager message each other', '#06b6d4');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
@@ -1412,7 +1500,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(19, 'The manager uses the property tools', async () => {
+  act(20, 'The manager uses the property tools', async () => {
     chapter(
       '🏢',
       'The manager works the property page: photos, private units, edits, notices and equipment',
@@ -1531,7 +1619,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(20, 'The admin approves the edit and tours the console', async () => {
+  act(21, 'The admin approves the edit and tours the console', async () => {
     chapter('🛡', 'The admin approves the staged edit and checks the platform', '#a78bfa');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('admin@proplity.com');
@@ -1601,7 +1689,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(21, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
+  act(22, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
     chapter('🔧', 'The vendor sees the payment arrive', '#ef4444');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('vendor@proplity.com');
@@ -1616,6 +1704,15 @@ async function main() {
     await page.getByText('Replace kitchen sink trap and seal').first().waitFor({ timeout: 30000 });
     await hud('🧾 Vendor Invoices: the job invoice and its payment status', '#ef4444');
     await pause(3500);
+    await page
+      .getByRole('link', { name: /^Receipt RCT-/ })
+      .first()
+      .waitFor({ timeout: 30000 });
+    await hud(
+      '🧾 The payment shows with its receipt, and the vendor was told when it arrived',
+      '#ef4444',
+    );
+    await pause(3000);
     await signOut();
 
     chapter('🌍', 'The public pages for each kind of user', '#10b981');

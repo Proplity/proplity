@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
 
-const PROTECTED_ROUTES = ['/dashboard', '/admin'];
+// /receipts is open to every signed-in role; the API decides whose receipt it is.
+const PROTECTED_ROUTES = ['/dashboard', '/admin', '/receipts'];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -33,4 +34,4 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ['/dashboard/:path*', '/admin/:path*'] };
+export const config = { matcher: ['/dashboard/:path*', '/admin/:path*', '/receipts/:path*'] };

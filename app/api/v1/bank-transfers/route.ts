@@ -63,6 +63,11 @@ export const GET = withAuth(async (req, { session }) => {
           ],
         },
       });
+    } else if (session.role !== 'ADMIN') {
+      // Anyone else (a vendor, say) has no business with other people's transfers: the list used
+      // to fall through with no filter and return every submission on the platform, with sender
+      // names, account numbers and submitter emails.
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     // ADMIN sees all
 
@@ -106,6 +111,7 @@ export const GET = withAuth(async (req, { session }) => {
               amount: true,
               paidAt: true,
               transactionRef: true,
+              receiptNumber: true,
             },
           },
         },

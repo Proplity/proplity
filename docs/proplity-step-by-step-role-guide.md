@@ -116,12 +116,12 @@ Every action — from paying rent to submitting a repair request to approving a 
 38. **Online Rent Checkout**: Card, USSD, and bank transfer payment via Paystack checkout with real-time balance recalculation.
 39. **Card Tokenization & Reusable Mandates**: Secure storage of payment authorization tokens (\`AutoPayMandate\`) for recurring rent charging (ISS-056).
 40. **Automatic Rent Charging Background Worker**: Daily worker charging due invoices using saved mandate tokens (\`autopayCharger.ts\`, ISS-011).
-41. **Offline Bank Transfer Proof Submission**: File upload and transaction metadata submission for offline bank deposits (\`/api/v1/bank-transfers\`, ISS-012).
+41. **Offline Bank Transfer Proof Submission**: The "Paid another way" form records a bank transfer or cash payment with its reference and an optional receipt file; it counts once someone else confirms it (\`PaidAnotherWayForm.tsx\`, ISS-103).
 42. **Bank Transfer Duplicate Reference Guard**: Prevents re-submitting previously registered transfer references (\`bankTransferService.ts\`, ISS-012).
 43. **Transfer Reconciliation Status Tracker**: Real-time visibility into whether transfer proof is PENDING, APPROVED, or REJECTED with notes.
 44. **Digital Lease Agreement Console**: View active and historical tenancy agreements, clauses, rent cycles, and deposit terms (\`/dashboard/rentals\`).
 45. **In-Browser Digital E-Signature Execution**: Sign binding lease agreements online with digital signature image, timestamp, and IP logging.
-46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and downloadable receipts.
+46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and a receipt for every payment (receipt number, who paid whom, what is still owing; print or save as PDF; ISS-103).
 47. **3-Step Structured Tenancy Application**: Form capturing personal identity, employer info, monthly income, and references (\`PropertyApplicationForm.tsx\`).
 48. **Mandatory Profile Completion Verification Gate**: Enforced profile completion screen (\`/dashboard/profile/complete\`) before application submission.
 49. **Identity Document Gateway Upload**: Secure upload of government IDs (NIN, Driver's License, Passport) behind private file gateway.
@@ -165,7 +165,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 77. **Visual Kanban Maintenance Board**: Multi-column board organizing repairs into Submitted, Assigned, In Progress, and Completed stages.
 78. **Vendor Job Assignment with Email Alerts**: Assign maintenance tickets to verified vendors with automated email dispatch and direct ticket linkage.
 79. **Manager-Scoped Invoice Creation**: Generates rent or utility invoices strictly scoped to managed leases, preventing out-of-portfolio billing (ISS-050).
-80. **Bank Transfer Statement Reconciliation**: Review tenant transfer proofs, verify bank receipt files, and atomically mark invoices as paid (ISS-012).
+80. **Bank Transfer Statement Reconciliation**: The Bank Transfers page lists recorded transfers and their receipt files; someone other than the person who recorded one confirms or rejects it, and confirming marks the invoice paid and creates the receipt (ISS-012, ISS-103).
 81. **Vendor Maintenance Payout Processing**: Initiate vendor payouts for completed jobs and execute disbursement via Paystack Transfer API or manual log (ISS-012).
 82. **Neighborhood Report Metric Editor**: Custom editor screen allowing managers to update area safety and infrastructure scores (ISS-016).
 83. **Unit Move-In / Move-Out Condition Reports**: Create detailed room-by-room condition checklists with rating scores, notes, and inspection photos.
@@ -759,6 +759,15 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 4. Choose payment method: card, bank transfer, or USSD
 5. Complete payment on Paystack
 6. Redirected back to Proplity with "Payment Successful" confirmation
+
+**Paid another way (bank transfer or cash):**
+
+1. Open **Payment History** and press **I paid by bank transfer**
+2. Pick the invoice, enter the amount, the bank you paid from, the name on the account, the date and the bank's reference. Attach the receipt or proof if you have it (a photo or PDF)
+3. Press **Record payment**. It appears under **Transfers you recorded** and the invoice does not change yet
+4. Your property team confirms it (someone other than you). When they do, the invoice is paid, you are told, and the payment shows a **Receipt** link. If they reject it you are told why
+
+Every payment in your history has a **Receipt**: it shows the receipt number, who paid whom, how, the reference and what is still owing. **Print / Save as PDF** gives you a copy. Only you, the person paid, your property team and admins can open it.
 
 **Screenshots:**
 
@@ -1491,7 +1500,7 @@ Full list of all current and past tenants. Where daily tenant management happens
 
 - View profiles, payment history, lease details
 - Send invoices manually
-- Record payments
+- Record payments: **Paid another way** records a bank transfer or cash payment for a tenant. It waits on the **Bank Transfers** tab until someone other than you confirms it
 - Issue lease renewal or termination notices
 
 **Screenshots:**
@@ -1594,6 +1603,12 @@ Only the vendor can finish a job (the old "Mark as Completed" button is gone). O
 
 **What this is:**
 All financial activity across the manager's properties — rent collected, outstanding invoices, payment history per tenant.
+
+**Bank Transfers** (a tab in the navigation, `/dashboard/reconciliation`): payments recorded as paid another way wait here for confirmation.
+
+- **Confirm payment** — marks the invoice paid, creates the receipt and tells the tenant and the vendor. Open **View receipt or proof** first.
+- **Reject** — needs a reason; whoever recorded it is told why.
+- You cannot confirm a transfer **you** recorded (you can withdraw it). If nobody else on the property can confirm it, an admin is told.
 
 **Screenshot:** `docs/screenshots/manager_09_financials_desktop.png`
 
@@ -1846,6 +1861,7 @@ Invoices sent for completed jobs are listed with their amount and payment status
 
 - Awaiting payment turns to paid once the manager settles the invoice.
 - A vendor can bill only their own jobs, and every new invoice starts unpaid.
+- You are told when an invoice is paid (by card, or recorded by hand), and each payment on **Invoices** has a **Receipt** link.
 
 **Screenshots:**
 
@@ -2100,6 +2116,11 @@ TENANT                          MANAGER                         SYSTEM
   │                                │                               │
   │  ◄── Repair confirmed ─────────┤                               │
 ```
+
+## Step 6.10 — Bank Transfers
+
+**What this is:**
+The same list the property team uses (`/admin/payments`, the **Bank Transfers** tab): payments recorded as paid another way, waiting for confirmation, confirmed or rejected. An admin confirms a transfer when nobody else on the property can, for example a manager's entry on a property with no landlord. An admin cannot confirm an entry they recorded themselves either.
 
 ---
 
