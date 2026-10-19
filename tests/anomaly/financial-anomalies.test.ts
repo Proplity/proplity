@@ -17,6 +17,8 @@ vi.mock('@/lib/db', () => {
     },
     autoPayMandate: {
       update: vi.fn(),
+      // the charger claims a mandate before charging it
+      updateMany: vi.fn(async () => ({ count: 1 })),
     },
     payment: {
       create: vi.fn(),

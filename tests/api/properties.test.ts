@@ -797,7 +797,9 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
     // Staged in metadata.pendingChanges
     expect(res.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
     expect(res.body.data.metadata?.pendingChanges?.property?.name).toBe('Proposed New Name');
-    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe('Proposed New Description');
+    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe(
+      'Proposed New Description',
+    );
   });
 
   it('promotes draft to PENDING_REVIEW when submitted for review', async () => {
@@ -847,11 +849,14 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
     });
 
     // Attempting delete directly while PENDING_REVIEW must return 400
-    const delRes = await apiFetch<{ error: string; code: string }>(`/api/v1/properties/${prop.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { deletePendingEdits: true },
-    });
+    const delRes = await apiFetch<{ error: string; code: string }>(
+      `/api/v1/properties/${prop.id}`,
+      {
+        method: 'PATCH',
+        cookie,
+        body: { deletePendingEdits: true },
+      },
+    );
 
     expect(delRes.status).toBe(400);
     expect(delRes.body.code).toBe('UNDER_REVIEW_CANNOT_DELETE');
@@ -870,6 +875,8 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
         pendingChanges: {
           status: 'PENDING_REVIEW',
           property: { name: 'Proposed Edits' },
+          // recorded by the server when the edit left an approved listing
+          restoreTo: { moderationStatus: 'APPROVED', isPublished: true },
         },
       },
     });
@@ -917,3 +924,291 @@ describe('properties: pending changes metadata, draft staging, cancel approval, 
   });
 });
 
+describe('properties: staged edits cannot bypass moderation (ISS-059, ISS-060, ISS-061)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('cancelling pending edits does not approve or publish a rejected listing', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'REJECTED', isPublished: false },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, description: 'x' },
+    });
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.status).toBe(200);
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.moderationStatus).toBe('REJECTED');
+    expect(row?.isPublished).toBe(false);
+  });
+
+  it('cancelling a review request returns an approved listing to approved', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { name: 'Renamed' },
+    });
+    expect(edit.body.data.isPublished).toBe(false);
+    expect(edit.body.data.moderationStatus).toBe('PENDING_REVIEW');
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.body.data.isPublished).toBe(true);
+    expect(cancel.body.data.moderationStatus).toBe('APPROVED');
+  });
+
+  it('rejects a client-sent metadata field (it cannot carry staged unit edits)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const victimMgr = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: victimMgr.id });
+    const vUnit = await createUnit(victim.id, {});
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${mine.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        metadata: {
+          pendingChanges: { status: 'PENDING_REVIEW', units: { [vUnit.id]: { rentAmount: 1 } } },
+        },
+      },
+    });
+    await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const after = await testPrisma.unit.findUnique({ where: { id: vUnit.id } });
+    expect(after?.rentAmount).toBe(vUnit.rentAmount);
+  });
+
+  it('approval skips a staged unit that belongs to another property', async () => {
+    const m = await createUser(Role.MANAGER);
+    const other = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: other.id });
+    const vUnit = await createUnit(victim.id, {});
+    const myUnit = await createUnit(mine.id, {});
+    await testPrisma.property.update({
+      where: { id: mine.id },
+      data: {
+        metadata: {
+          pendingChanges: {
+            status: 'PENDING_REVIEW',
+            units: { [vUnit.id]: { rentAmount: 1 }, [myUnit.id]: { rentAmount: 777 } },
+          },
+        },
+      },
+    });
+    const res = await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(res.status).toBe(200);
+    expect((await testPrisma.unit.findUnique({ where: { id: vUnit.id } }))?.rentAmount).toBe(
+      vUnit.rentAmount,
+    );
+    expect((await testPrisma.unit.findUnique({ where: { id: myUnit.id } }))?.rentAmount).toBe(777);
+  });
+
+  it('an owner edit to an approved listing is staged, not applied, until an admin approves', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Before' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'Fake luxury penthouse' },
+    });
+    expect(edit.status).toBe(200);
+    let row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).not.toBe('Fake luxury penthouse');
+    expect(row?.isPublished).toBe(true); // minor edit: stays live as it was
+    expect(
+      (row?.metadata as { pendingChanges?: { property?: { description?: string } } })
+        ?.pendingChanges?.property?.description,
+    ).toBe('Fake luxury penthouse');
+
+    const appr = await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(appr.status).toBe(200);
+    row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).toBe('Fake luxury penthouse');
+  });
+
+  it('draft edits are applied when an admin approves them (not lost)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Old Name' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, name: 'New Name', address: '9 New Address', city: 'Abuja' },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { submitForReview: true },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.name).toBe('New Name');
+    expect(row?.address).toBe('9 New Address');
+    expect(row?.listingHash).toBeTruthy();
+    expect(row?.moderationStatus).toBe('APPROVED');
+  });
+});
+
+describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('refuses a cross-origin or origin-less write on an authenticated route', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const p = await createProperty({ managerId: m.id });
+    const foreign = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      headers: { Origin: 'https://evil.example' },
+      body: { description: 'x' },
+    });
+    expect(foreign.status).toBe(403);
+    const ok = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'x' },
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('will not merge away a listing that others were merged into, or one with active leases', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const a = await createProperty({});
+    const b = await createProperty({});
+    const c = await createProperty({});
+    await testPrisma.property.update({ where: { id: a.id }, data: { mergedIntoId: b.id } });
+    const chain = await apiFetch(`/api/v1/properties/${b.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: c.id },
+    });
+    expect(chain.status).toBe(400);
+
+    const tenant = await createUser(Role.TENANT);
+    const d = await createProperty({});
+    const unit = await createUnit(d.id);
+    const lease = await createLease(unit.id, tenant.id);
+    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'ACTIVE' } });
+    const e = await createProperty({});
+    const live = await apiFetch(`/api/v1/properties/${d.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: e.id },
+    });
+    expect(live.status).toBe(400);
+    expect(live.body.error).toContain('active leases');
+  });
+});
+
+describe('invoices: vendor billing limits', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it("a vendor cannot attach a job invoice to someone else's lease or create it as paid", async () => {
+    const vendor = await createUser(Role.VENDOR);
+    const tenant = await createUser(Role.TENANT);
+    const stranger = await createUser(Role.TENANT);
+    const prop = await createProperty({});
+    const unit = await createUnit(prop.id);
+    const lease = await createLease(unit.id, stranger.id);
+    const mr = await testPrisma.maintenanceRequest.create({
+      data: {
+        unitId: unit.id,
+        tenantId: tenant.id,
+        title: 'x',
+        description: 'y',
+        vendorId: vendor.id,
+      },
+    });
+    const cookie = await authCookie(vendor.id, vendor.role);
+    const onLease = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        leaseId: lease.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(onLease.status).toBe(403);
+    const paid = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        status: 'PAID',
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(paid.status).toBe(400);
+    const ok = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(ok.status).toBe(201);
+  });
+});

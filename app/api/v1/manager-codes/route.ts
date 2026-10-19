@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
@@ -30,7 +31,7 @@ export const GET = withAuth(
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const part = (len: number) =>
-    Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    Array.from({ length: len }, () => chars[randomInt(chars.length)]).join('');
   return `LLD-${part(4)}-${part(2)}`;
 }
 

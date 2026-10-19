@@ -1,5 +1,12 @@
 import { chromium } from '/home/rojitech/Desktop/CODEC/NextJS/proplity/node_modules/@playwright/test/index.mjs';
-import { copyFileSync, mkdirSync, statSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdirSync,
+  statSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+} from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -148,19 +155,22 @@ async function main() {
   }
 
   async function setHud(text, accent = '#3b82f6') {
-    await page.evaluate(({ t, a }) => {
-      const el = document.getElementById('playwright-hud-text');
-      const dot = document.querySelector('#playwright-hud span:first-child');
-      const hud = document.getElementById('playwright-hud');
-      if (el) el.textContent = t;
-      if (dot) {
-        dot.style.background = a;
-        dot.style.boxShadow = `0 0 12px ${a}`;
-      }
-      if (hud) {
-        hud.style.borderColor = a + '88';
-      }
-    }, { t: text, a: accent });
+    await page.evaluate(
+      ({ t, a }) => {
+        const el = document.getElementById('playwright-hud-text');
+        const dot = document.querySelector('#playwright-hud span:first-child');
+        const hud = document.getElementById('playwright-hud');
+        if (el) el.textContent = t;
+        if (dot) {
+          dot.style.background = a;
+          dot.style.boxShadow = `0 0 12px ${a}`;
+        }
+        if (hud) {
+          hud.style.borderColor = a + '88';
+        }
+      },
+      { t: text, a: accent },
+    );
   }
 
   async function smoothScroll(distance, stepSize = 35, delayMs = 18) {
@@ -183,7 +193,9 @@ async function main() {
         if (await menuLogout.isVisible()) {
           await smoothClick(menuLogout);
           await page.waitForTimeout(400);
-          const confirmBtn = page.locator('button:has-text("Sign Out"), button[aria-label="Confirm sign out"]').first();
+          const confirmBtn = page
+            .locator('button:has-text("Sign Out"), button[aria-label="Confirm sign out"]')
+            .first();
           if (await confirmBtn.isVisible()) {
             await smoothClick(confirmBtn);
             await page.waitForTimeout(1000);
@@ -212,7 +224,9 @@ async function main() {
       if (!page.url().includes('/login')) {
         await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
       }
-      await page.waitForSelector('input[placeholder*="email"], input[type="email"]', { timeout: 12000 }).catch(() => {});
+      await page
+        .waitForSelector('input[placeholder*="email"], input[type="email"]', { timeout: 12000 })
+        .catch(() => {});
       await page.waitForTimeout(600);
     } catch {}
   }
@@ -222,7 +236,7 @@ async function main() {
       const res = await fetch(`${BASE}/api/v1/dev/emails`);
       const json = await res.json();
       const list = json.data || [];
-      const match = list.reverse().find(e => e.to === email && e.body?.includes('token='));
+      const match = list.reverse().find((e) => e.to === email && e.body?.includes('token='));
       if (match) {
         const m = match.body.match(/token=([a-f0-9]+)/);
         return m ? m[1] : null;
@@ -288,7 +302,11 @@ async function main() {
     // ACT 2: MULTIPLE LANDLORD SELF-REGISTRATIONS & VERIFICATION
     // =========================================================================
     console.log('--- Act 2: Multiple Landlord Self-Registrations ---');
-    recordChapter('🏰', 'Act 2: Multiple Landlord Self-Registrations & Email Verification', '#10b981');
+    recordChapter(
+      '🏰',
+      'Act 2: Multiple Landlord Self-Registrations & Email Verification',
+      '#10b981',
+    );
 
     // Landlord 1: Victoria Sterling
     await page.goto(`${BASE}/register?role=landlord`);
@@ -365,7 +383,11 @@ async function main() {
     // ACT 3: LANDLORD LOGIN, SETTINGS & PROPERTY CREATION WIZARD
     // =========================================================================
     console.log('--- Act 3: Landlord Login, Settings & Property Creation ---');
-    recordChapter('🏰', 'Act 3: Landlord Dashboard & Listing "The Grand Azure Residences"', '#10b981');
+    recordChapter(
+      '🏰',
+      'Act 3: Landlord Dashboard & Listing "The Grand Azure Residences"',
+      '#10b981',
+    );
     await ensureLoginPage();
     await setHud('🔑 Signing in as Landlord Victoria Sterling', '#10b981');
     await page.getByPlaceholder('Enter your email').fill(landlordEmail1);
@@ -400,12 +422,16 @@ async function main() {
     const aptBtn = page.locator('button:has-text("Apartment")').first();
     if (await aptBtn.isVisible()) await smoothClick(aptBtn);
 
-    const propAddr = page.locator('input[placeholder*="Block 15"], input[placeholder*="Address"]').first();
+    const propAddr = page
+      .locator('input[placeholder*="Block 15"], input[placeholder*="Address"]')
+      .first();
     if (await propAddr.isVisible()) {
       await humanType(propAddr, 'Plot 14B Admiralty Way, Lekki Phase 1');
     }
 
-    const propCity = page.locator('input[placeholder*="Lagos"], input[placeholder*="City"]').first();
+    const propCity = page
+      .locator('input[placeholder*="Lagos"], input[placeholder*="City"]')
+      .first();
     if (await propCity.isVisible()) {
       await humanType(propCity, 'Lagos');
     }
@@ -459,7 +485,9 @@ async function main() {
     await setHud('🚀 Step 4/4: Listing Audit & Submitting for Verification', '#10b981');
     await smoothScroll(400);
     await page.waitForTimeout(1000);
-    const submitBtn = page.locator('button:has-text("Submit for Verification"), button:has-text("Submit Property")').first();
+    const submitBtn = page
+      .locator('button:has-text("Submit for Verification"), button:has-text("Submit Property")')
+      .first();
     if (await submitBtn.isVisible()) {
       await smoothClick(submitBtn);
       await page.waitForTimeout(2500);
@@ -576,14 +604,18 @@ async function main() {
 
       // Inspect Landlord info & Units inside Drawer
       await setHud('🔍 Review Drawer: Landlord & Manager Contacts, Units & Audit Trail', '#a78bfa');
-      const drawerScroll = page.locator('aside[aria-label="Property Review Drawer"] div.overflow-y-auto');
+      const drawerScroll = page.locator(
+        'aside[aria-label="Property Review Drawer"] div.overflow-y-auto',
+      );
       if (await drawerScroll.isVisible()) {
         await drawerScroll.evaluate((el) => el.scrollBy({ top: 250, behavior: 'smooth' }));
         await page.waitForTimeout(1200);
       }
 
       // Approve listing in Drawer
-      const approveBtn = page.locator('aside button:has-text("Approve Listing"), button:has-text("Approve Listing")').first();
+      const approveBtn = page
+        .locator('aside button:has-text("Approve Listing"), button:has-text("Approve Listing")')
+        .first();
       if (await approveBtn.isVisible()) {
         await setHud('✅ Super Admin Approves Property in Review Drawer', '#10b981');
         await smoothClick(approveBtn);
@@ -591,14 +623,20 @@ async function main() {
       }
 
       // Re-open or toggle publish if drawer closed on approval
-      const publishBtn = page.locator('aside button:has-text("Publish Listing"), button:has-text("Publish Listing"), button:has-text("Publish")').first();
+      const publishBtn = page
+        .locator(
+          'aside button:has-text("Publish Listing"), button:has-text("Publish Listing"), button:has-text("Publish")',
+        )
+        .first();
       if (await publishBtn.isVisible()) {
         await setHud('🌐 Publishing Listing for Public Discovery', '#10b981');
         await smoothClick(publishBtn);
         await page.waitForTimeout(1800);
       }
 
-      const closeDrawerBtn = page.locator('button[aria-label="Close review popup"], aside button:has-text("Close")').first();
+      const closeDrawerBtn = page
+        .locator('button[aria-label="Close review popup"], aside button:has-text("Close")')
+        .first();
       if (await closeDrawerBtn.isVisible()) {
         await smoothClick(closeDrawerBtn);
         await page.waitForTimeout(1000);
@@ -678,10 +716,14 @@ async function main() {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
 
-    const msgInput = page.locator('input[placeholder*="Type a message"], textarea[placeholder*="Type a message"]').first();
+    const msgInput = page
+      .locator('input[placeholder*="Type a message"], textarea[placeholder*="Type a message"]')
+      .first();
     if (await msgInput.isVisible()) {
       await humanType(msgInput, 'Hello Marcus! Confirming move-in arrangements and key pickup.');
-      const sendBtn = page.locator('button:has-text("Send"), button[aria-label="Send message"]').first();
+      const sendBtn = page
+        .locator('button:has-text("Send"), button[aria-label="Send message"]')
+        .first();
       if (await sendBtn.isVisible()) await smoothClick(sendBtn);
       await page.waitForTimeout(1500);
     }
@@ -700,10 +742,17 @@ async function main() {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
 
-    const managerMsgInput = page.locator('input[placeholder*="Type a message"], textarea[placeholder*="Type a message"]').first();
+    const managerMsgInput = page
+      .locator('input[placeholder*="Type a message"], textarea[placeholder*="Type a message"]')
+      .first();
     if (await managerMsgInput.isVisible()) {
-      await humanType(managerMsgInput, 'Hi Sophia! All set. The concierge has your welcome package ready.');
-      const sendBtn = page.locator('button:has-text("Send"), button[aria-label="Send message"]').first();
+      await humanType(
+        managerMsgInput,
+        'Hi Sophia! All set. The concierge has your welcome package ready.',
+      );
+      const sendBtn = page
+        .locator('button:has-text("Send"), button[aria-label="Send message"]')
+        .first();
       if (await sendBtn.isVisible()) await smoothClick(sendBtn);
       await page.waitForTimeout(1500);
     }
@@ -718,7 +767,10 @@ async function main() {
 
     // Tenant creates ticket
     await ensureLoginPage();
-    await setHud('🔧 Tenant Submits Maintenance Request (/dashboard/maintenance-request/new)', '#ef4444');
+    await setHud(
+      '🔧 Tenant Submits Maintenance Request (/dashboard/maintenance-request/new)',
+      '#ef4444',
+    );
     await page.getByPlaceholder('Enter your email').fill('tenant@proplity.com');
     await page.getByPlaceholder('Enter your password').fill(PW);
     await page.getByRole('button', { name: 'Sign In' }).click();
@@ -728,14 +780,19 @@ async function main() {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1200);
 
-    const maintTitle = page.locator('input[placeholder*="title"], input[placeholder*="brief"]').first();
+    const maintTitle = page
+      .locator('input[placeholder*="title"], input[placeholder*="brief"]')
+      .first();
     if (await maintTitle.isVisible()) {
       await humanType(maintTitle, 'Kitchen Sink Pipe Pressure Drop');
     }
 
     const maintDesc = page.locator('textarea').first();
     if (await maintDesc.isVisible()) {
-      await humanType(maintDesc, 'Water pressure has decreased in kitchen faucet and requires plumber inspection.');
+      await humanType(
+        maintDesc,
+        'Water pressure has decreased in kitchen faucet and requires plumber inspection.',
+      );
     }
 
     const maintSubmit = page.locator('button:has-text("Submit"), button[type="submit"]').first();
@@ -782,7 +839,11 @@ async function main() {
     // ACT 11: SUPER ADMIN GOVERNANCE, AUDIT LOGS & SETTINGS
     // =========================================================================
     console.log('--- Act 11: Super Admin Governance ---');
-    recordChapter('🏛', 'Act 11: Super Admin Governance, Audit Trail & Fixed Sidebar Avatar', '#8b5cf6');
+    recordChapter(
+      '🏛',
+      'Act 11: Super Admin Governance, Audit Trail & Fixed Sidebar Avatar',
+      '#8b5cf6',
+    );
     await ensureLoginPage();
     await setHud('🏛 Super Admin System Overview: Metrics, Analytics & Revenue', '#8b5cf6');
     await page.getByPlaceholder('Enter your email').fill('admin@proplity.com');
@@ -845,7 +906,6 @@ async function main() {
     // Final Victory Hold
     await setHud('🎉 Proplity Live Master Walkthrough Complete (100% Feature Coverage)', '#10b981');
     await page.waitForTimeout(3500);
-
   } catch (err) {
     console.error('Recording step error:', err);
   } finally {
@@ -857,7 +917,7 @@ async function main() {
 
   // Find generated video in VIDEO_DIR
   console.log('Finding video in', VIDEO_DIR);
-  const files = readdirSync(VIDEO_DIR).filter(f => f.endsWith('.webm'));
+  const files = readdirSync(VIDEO_DIR).filter((f) => f.endsWith('.webm'));
   if (files.length > 0) {
     const latestVideo = files.sort((a, b) => {
       return statSync(resolve(VIDEO_DIR, b)).mtimeMs - statSync(resolve(VIDEO_DIR, a)).mtimeMs;
@@ -887,7 +947,10 @@ async function main() {
           .join('\n');
 
         const listRegex = /<ul class="chapter-list">[\s\S]*?<\/ul>/;
-        html = html.replace(listRegex, `<ul class="chapter-list">\n${chapterItemsHtml}\n        </ul>`);
+        html = html.replace(
+          listRegex,
+          `<ul class="chapter-list">\n${chapterItemsHtml}\n        </ul>`,
+        );
         html = html.replace(
           /<div class="meta-pill">Duration: <strong id="dur-display">.*?<\/strong><\/div>/,
           `<div class="meta-pill">Duration: <strong id="dur-display">${totalDurStr}</strong></div>`,

@@ -6,6 +6,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -45,6 +46,23 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = JSON.parse(rawBody);
+
+    // Vendor payouts: Paystack reports the real outcome of a transfer here (ISS-063).
+    if (
+      payload.event === 'transfer.success' ||
+      payload.event === 'transfer.failed' ||
+      payload.event === 'transfer.reversed'
+    ) {
+      const reference: string | undefined = payload.data?.reference;
+      if (reference) {
+        await settleTransferFromWebhook(
+          reference,
+          payload.event.replace('transfer.', '') as 'success' | 'failed' | 'reversed',
+          payload.data?.reason,
+        );
+      }
+      return NextResponse.json({ received: true });
+    }
 
     if (payload.event === 'charge.success') {
       const data = payload.data;

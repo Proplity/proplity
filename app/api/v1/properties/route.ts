@@ -169,9 +169,7 @@ export const POST = withAuth(
           where: { id: session.sub },
           select: { name: true, email: true, role: true },
         });
-        const adminEmails = [
-          ...new Set([...admins.map((a) => a.email), 'admin@proplity.com']),
-        ];
+        const adminEmails = [...new Set([...admins.map((a) => a.email), 'admin@proplity.com'])];
         for (const adminEmail of adminEmails) {
           await sendEmail({
             to: adminEmail,

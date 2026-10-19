@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { neutraliseFormula } from '@/lib/csv';
 
 export async function toXlsx(
   rows: Record<string, unknown>[],
@@ -8,7 +9,13 @@ export async function toXlsx(
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(sheetName);
   sheet.columns = columns.map((c) => ({ header: c, key: c, width: 18 }));
-  sheet.addRows(rows);
+  sheet.addRows(
+    rows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? neutraliseFormula(v) : v]),
+      ),
+    ),
+  );
   sheet.getRow(1).font = { bold: true };
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

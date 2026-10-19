@@ -342,10 +342,10 @@ export function PropertyReviewDrawer({ property, onClose, onUpdated }: PropertyR
           {property.metadata?.pendingChanges && (
             <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold tracking-wider text-amber-900 uppercase flex items-center gap-1.5">
+                <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-amber-900 uppercase">
                   <Sparkles className="h-4 w-4 text-amber-600" /> Proposed Edits Awaiting Review
                 </h3>
-                <span className="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                <span className="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 uppercase">
                   {property.metadata.pendingChanges.status === 'PENDING_REVIEW'
                     ? 'In Review'
                     : 'Draft'}
@@ -353,7 +353,7 @@ export function PropertyReviewDrawer({ property, onClose, onUpdated }: PropertyR
               </div>
 
               {property.metadata.pendingChanges.property && (
-                <div className="rounded-lg bg-white p-3 border border-amber-100 text-xs space-y-1.5">
+                <div className="space-y-1.5 rounded-lg border border-amber-100 bg-white p-3 text-xs">
                   <p className="font-semibold text-gray-700">Proposed Property Details:</p>
                   {property.metadata.pendingChanges.property.name && (
                     <p className="text-gray-600">
@@ -433,10 +433,11 @@ export function PropertyReviewDrawer({ property, onClose, onUpdated }: PropertyR
                       </div>
 
                       {stagedUnit && (
-                        <div className="mt-2 rounded-lg bg-amber-50 p-2 border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between">
+                        <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">
                           <div>
                             <span className="font-semibold">Proposed Edit: </span>
-                            {stagedUnit.rentAmount && `Rent: ₦${stagedUnit.rentAmount.toLocaleString()} `}
+                            {stagedUnit.rentAmount &&
+                              `Rent: ₦${stagedUnit.rentAmount.toLocaleString()} `}
                             {stagedUnit.bedrooms && `· ${stagedUnit.bedrooms} bed `}
                             {stagedUnit.bathrooms && `· ${stagedUnit.bathrooms} bath`}
                           </div>

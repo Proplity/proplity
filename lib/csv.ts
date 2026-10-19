@@ -2,9 +2,19 @@
 // simple. Excel (.xlsx) goes through exceljs instead (lib/xlsx.ts), which
 // needs real binary handling a hand-rolled parser can't provide.
 
+// A text cell that starts with = + - @ (or a tab or carriage return) is run as a formula
+// when the file is opened in Excel or Sheets, so a property named `=HYPERLINK(...)` would
+// execute in whoever opens the export. Prefix such text with an apostrophe. Real numbers
+// are left alone.
+export function neutraliseFormula(value: unknown): string {
+  if (typeof value === 'number') return String(value);
+  const s = String(value);
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+}
+
 export function toCsv(rows: Record<string, unknown>[], columns: string[]): string {
   const escape = (value: unknown) => {
-    const s = value === null || value === undefined ? '' : String(value);
+    const s = value === null || value === undefined ? '' : neutraliseFormula(value);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const lines = [columns.map(escape).join(',')];

@@ -7,6 +7,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
+import { applyPendingChanges } from '@/lib/propertyPendingChanges';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -49,34 +50,7 @@ export const PATCH = withAuth(
           .trim();
         updatedNotes = `[APPROVED:${approvalDateIso}]${cleanedNotes ? ` ${cleanedNotes}` : ''}`;
 
-        // If pending changes included unit modifications, apply them to the live units
-        if (pendingChanges?.units && typeof pendingChanges.units === 'object') {
-          const unitsDict = pendingChanges.units as Record<string, Record<string, unknown>>;
-          for (const [unitId, unitChanges] of Object.entries(unitsDict)) {
-            const { sqft, ...fields } = unitChanges;
-            await prisma.unit.update({
-              where: { id: unitId },
-              data: {
-                ...fields,
-                ...(sqft !== undefined ? { squareFeet: sqft as number } : {}),
-              },
-            });
-          }
-        }
-
-        // Approve any pending units for this property by removing 'approval:pending'
-        const pendingUnits = await prisma.unit.findMany({
-          where: { propertyId: id, amenities: { has: 'approval:pending' } },
-          select: { id: true, amenities: true },
-        });
-        for (const u of pendingUnits) {
-          await prisma.unit.update({
-            where: { id: u.id },
-            data: {
-              amenities: u.amenities.filter((a) => a !== 'approval:pending'),
-            },
-          });
-        }
+        // The staged edits are applied with the approval, in one transaction below.
       }
 
       // Clear pendingChanges on approval or rejection
@@ -99,15 +73,31 @@ export const PATCH = withAuth(
         data.isPublished = false;
       }
 
-      const updated = await prisma.property.update({ where: { id }, data });
+      const updated = await prisma.$transaction(async (tx) => {
+        if (isApproved) {
+          // Staged property and unit edits are applied here; units of other
+          // properties are skipped (ISS-060).
+          await applyPendingChanges(tx, property, pendingChanges);
+          // Approve any pending units for this property by removing 'approval:pending'
+          const pendingUnits = await tx.unit.findMany({
+            where: { propertyId: id, amenities: { has: 'approval:pending' } },
+            select: { id: true, amenities: true },
+          });
+          for (const u of pendingUnits) {
+            await tx.unit.update({
+              where: { id: u.id },
+              data: { amenities: u.amenities.filter((a) => a !== 'approval:pending') },
+            });
+          }
+        }
+        return tx.property.update({ where: { id }, data });
+      });
 
       // Notify BOTH the manager and the landlord by email
       const recipients = [property.manager, property.landlord].filter(
         (u): u is NonNullable<typeof u> => Boolean(u?.email),
       );
-      const uniqueRecipients = [
-        ...new Map(recipients.map((r) => [r.email, r])).values(),
-      ];
+      const uniqueRecipients = [...new Map(recipients.map((r) => [r.email, r])).values()];
 
       for (const recipient of uniqueRecipients) {
         if (validated.data.status !== 'FLAGGED') {

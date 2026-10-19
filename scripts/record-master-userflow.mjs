@@ -9,11 +9,9 @@ const __dirname = dirname(__filename);
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3025';
 const PW = 'Password123!';
-const VIDEO_DIR = resolve(__dirname, '../docs/videos');
 const PUBLIC_VIDEO_DIR = resolve(__dirname, '../public/videos');
 const OUT_VIDEO_DIR = resolve(__dirname, '../out/video');
 
-mkdirSync(VIDEO_DIR, { recursive: true });
 mkdirSync(PUBLIC_VIDEO_DIR, { recursive: true });
 mkdirSync(OUT_VIDEO_DIR, { recursive: true });
 
@@ -325,7 +323,9 @@ async function main() {
     await smoothScroll(-1200);
     await page.waitForTimeout(2500);
 
-    const watchDemoBtn = page.locator('button:has-text("Watch Demo"), a:has-text("Watch Demo")').first();
+    const watchDemoBtn = page
+      .locator('button:has-text("Watch Demo"), a:has-text("Watch Demo")')
+      .first();
     if (await watchDemoBtn.isVisible()) {
       await smoothClick(watchDemoBtn);
       await page.waitForTimeout(2500);
@@ -340,7 +340,9 @@ async function main() {
       }
 
       // Close demo modal
-      const closeDemo = page.locator('button[aria-label="Close demo modal"], button:has-text("Close")').first();
+      const closeDemo = page
+        .locator('button[aria-label="Close demo modal"], button:has-text("Close")')
+        .first();
       if (await closeDemo.isVisible()) {
         await smoothClick(closeDemo);
         await page.waitForTimeout(2000);
@@ -686,14 +688,21 @@ async function main() {
 
       const descBox = page.locator('textarea').first();
       if (await descBox.isVisible()) {
-        await humanType(descBox, ' Luxury waterfront suites with 24/7 power, private elevator & biometric access.', 25);
+        await humanType(
+          descBox,
+          ' Luxury waterfront suites with 24/7 power, private elevator & biometric access.',
+          25,
+        );
         await page.waitForTimeout(1000);
       }
 
       // Click "Save as Draft"
       const saveDraftBtn = page.locator('button:has-text("Save as Draft")');
       if (await saveDraftBtn.isVisible()) {
-        await setHud('💾 Saving Changes to Property.metadata.pendingChanges (Draft Mode)', '#f59e0b');
+        await setHud(
+          '💾 Saving Changes to Property.metadata.pendingChanges (Draft Mode)',
+          '#f59e0b',
+        );
         await smoothClick(saveDraftBtn);
         await page.waitForTimeout(2000);
       }
@@ -703,7 +712,9 @@ async function main() {
       await page.waitForTimeout(2500);
 
       // Request Admin Review
-      const reqReviewBtn = page.locator('button:has-text("Request Admin Review"), button:has-text("Request Review")').first();
+      const reqReviewBtn = page
+        .locator('button:has-text("Request Admin Review"), button:has-text("Request Review")')
+        .first();
       if (await reqReviewBtn.isVisible()) {
         await setHud('📤 Submitting Staged Edits for Admin Moderation Review', '#f59e0b');
         await smoothClick(reqReviewBtn);
@@ -711,19 +722,27 @@ async function main() {
       }
 
       // Show under review state
-      await setHud('⏳ Changes Under Admin Review (Direct Deletion Blocked by Safety Guard)', '#a78bfa');
+      await setHud(
+        '⏳ Changes Under Admin Review (Direct Deletion Blocked by Safety Guard)',
+        '#a78bfa',
+      );
       await page.waitForTimeout(2500);
 
       // Cancel approval request -> returns to draft
       const cancelApprovalBtn = page.locator('button:has-text("Cancel Approval Request")').first();
       if (await cancelApprovalBtn.isVisible()) {
-        await setHud('↩️ Canceling Approval Request: Safely Reverting Staged Edits to Draft', '#3b82f6');
+        await setHud(
+          '↩️ Canceling Approval Request: Safely Reverting Staged Edits to Draft',
+          '#3b82f6',
+        );
         await smoothClick(cancelApprovalBtn);
         await page.waitForTimeout(2000);
       }
 
       // Discard draft
-      const discardDraftBtn = page.locator('button:has-text("Discard Draft"), button:has-text("Discard")').first();
+      const discardDraftBtn = page
+        .locator('button:has-text("Discard Draft"), button:has-text("Discard")')
+        .first();
       if (await discardDraftBtn.isVisible()) {
         await setHud('🗑 Discarding Staged Draft Edits cleanly', '#ef4444');
         await smoothClick(discardDraftBtn);
@@ -731,11 +750,18 @@ async function main() {
       }
 
       // Now create final proposed revision and submit for review
-      await setHud('✨ Final Listing Polish: Submitting Staged Revisions for Admin Approval', '#10b981');
+      await setHud(
+        '✨ Final Listing Polish: Submitting Staged Revisions for Admin Approval',
+        '#10b981',
+      );
       await smoothClick(editPropBtn);
       await page.waitForTimeout(1000);
       if (await descBox.isVisible()) {
-        await humanType(descBox, ' High-spec waterfront executive residence with 24/7 power and security in Lekki.', 25);
+        await humanType(
+          descBox,
+          ' High-spec waterfront executive residence with 24/7 power and security in Lekki.',
+          25,
+        );
       }
       const saveAndSubmitBtn = page.locator('button:has-text("Save & Submit for Review")');
       if (await saveAndSubmitBtn.isVisible()) {
@@ -745,11 +771,16 @@ async function main() {
     }
 
     // 2. Unit Visibility Control
-    await setHud('👁️ Unit Visibility: Toggling Marketplace Public vs Internal Private Units', '#3b82f6');
+    await setHud(
+      '👁️ Unit Visibility: Toggling Marketplace Public vs Internal Private Units',
+      '#3b82f6',
+    );
     await smoothScroll(400);
     await page.waitForTimeout(2000);
 
-    const unitVisBtn = page.locator('button:has-text("Public"), button:has-text("Private")').first();
+    const unitVisBtn = page
+      .locator('button:has-text("Public"), button:has-text("Private")')
+      .first();
     if (await unitVisBtn.isVisible()) {
       await smoothClick(unitVisBtn);
       await page.waitForTimeout(2000);
@@ -835,7 +866,10 @@ async function main() {
     // Inspect Merged Tab (Duplicate Detection & Merge History)
     const mergedChip = page.locator('button:has-text("Merged")');
     if (await mergedChip.isVisible()) {
-      await setHud('🔗 Duplicate Detection: Merged Listings Audit & De-duplication History', '#a78bfa');
+      await setHud(
+        '🔗 Duplicate Detection: Merged Listings Audit & De-duplication History',
+        '#a78bfa',
+      );
       await smoothClick(mergedChip);
       await page.waitForTimeout(2500);
       await smoothScroll(250);
@@ -977,7 +1011,10 @@ async function main() {
     // Tenant Management Table
     await page.goto('/dashboard/tenants');
     await page.waitForTimeout(2500);
-    await setHud('📋 Active & Terminated Leases Directory: Payment Tracking & Compliance', '#3b82f6');
+    await setHud(
+      '📋 Active & Terminated Leases Directory: Payment Tracking & Compliance',
+      '#3b82f6',
+    );
     await smoothScroll(300);
     await page.waitForTimeout(3000);
 
@@ -1017,7 +1054,9 @@ async function main() {
     );
 
     // Search properties by keyword
-    const searchInput = page.locator('input[placeholder*="Search by city, area, or property name" i], input[type="text"]').first();
+    const searchInput = page
+      .locator('input[placeholder*="Search by city, area, or property name" i], input[type="text"]')
+      .first();
     if (await searchInput.isVisible()) {
       await humanType(searchInput, 'Highland');
       await page.waitForTimeout(3000);
@@ -1069,7 +1108,9 @@ async function main() {
       await setHud('📅 Interactive Schedule Viewing Modal: Tour Booking System', '#10b981');
       await smoothClick(scheduleBtn);
       await page.waitForTimeout(3500);
-      const closeSched = page.locator('button:has-text("Cancel"), button[aria-label="Close"]').first();
+      const closeSched = page
+        .locator('button:has-text("Cancel"), button[aria-label="Close"]')
+        .first();
       if (await closeSched.isVisible()) {
         await smoothClick(closeSched);
         await page.waitForTimeout(2000);
@@ -1079,7 +1120,10 @@ async function main() {
     // Demonstrate clicking Neighbourhood Report scrolls directly to scores without subscription upselling
     const neighBtn = page.locator('button:has-text("Neighbourhood Report")').first();
     if (await neighBtn.isVisible()) {
-      await setHud('📊 Neighbourhood Intelligence: Direct Insight Access (Zero Subscription Upsell)', '#10b981');
+      await setHud(
+        '📊 Neighbourhood Intelligence: Direct Insight Access (Zero Subscription Upsell)',
+        '#10b981',
+      );
       await smoothClick(neighBtn);
       await page.waitForTimeout(4000);
     }
@@ -1090,7 +1134,11 @@ async function main() {
     // ACT 6: TENANT LIVING — DIGITAL LEASE, RENT CHECKOUT & MAINTENANCE
     // =========================================================================
     console.log('--- Act 6: Tenant Living ---');
-    recordChapter('🏠', 'Act 6: Tenant Portal, Digital Lease, Rent Checkout & Messaging', '#3b82f6');
+    recordChapter(
+      '🏠',
+      'Act 6: Tenant Portal, Digital Lease, Rent Checkout & Messaging',
+      '#3b82f6',
+    );
     await page.goto('/login');
     await page.waitForTimeout(800);
     await setHud('🏠 Tenant Portal: Lease Agreement & Digital Signing', '#3b82f6');
@@ -1138,7 +1186,10 @@ async function main() {
       // Demonstrate Download PDF with Incoming Feature badge & toast
       const dlBtn = page.locator('button:has-text("Download PDF")').first();
       if (await dlBtn.isVisible()) {
-        await setHud('✨ Incoming Feature Notice: Honest UI/UX Gating Without Misleading Alerts', '#3b82f6');
+        await setHud(
+          '✨ Incoming Feature Notice: Honest UI/UX Gating Without Misleading Alerts',
+          '#3b82f6',
+        );
         await smoothClick(dlBtn);
         await page.waitForTimeout(4000);
       }
@@ -1240,7 +1291,11 @@ async function main() {
     // ACT 7: MANAGER MAINTENANCE OPERATIONS & VENDOR DISPATCH
     // =========================================================================
     console.log('--- Act 7: Manager Maintenance Operations ---');
-    recordChapter('📋', 'Act 7: Manager Messaging Reply, Kanban Dispatch & Vendor Assignment', '#3b82f6');
+    recordChapter(
+      '📋',
+      'Act 7: Manager Messaging Reply, Kanban Dispatch & Vendor Assignment',
+      '#3b82f6',
+    );
     await setHud(
       '📋 Act 7: Manager Operations — Triaging Ticket & Dispatching to Vendor',
       '#3b82f6',
@@ -1255,10 +1310,7 @@ async function main() {
     // Manager In-App Messaging Reply
     await page.goto('/dashboard/messages');
     await page.waitForTimeout(1000);
-    await setHud(
-      '💬 Real-Time Messaging: Property Manager Replies to Tenant Inquiry',
-      '#3b82f6',
-    );
+    await setHud('💬 Real-Time Messaging: Property Manager Replies to Tenant Inquiry', '#3b82f6');
     const mgrConv = page
       .locator('button:has-text("Move-in & Key Collection"), button:has-text("Jordan Hayes")')
       .first();
@@ -1314,7 +1366,9 @@ async function main() {
     await smoothScroll(350);
     await page.waitForTimeout(3000);
 
-    const viewJobBtn = page.locator('button:has-text("View Job"), a:has-text("View"), button:has-text("Create Invoice")').first();
+    const viewJobBtn = page
+      .locator('button:has-text("View Job"), a:has-text("View"), button:has-text("Create Invoice")')
+      .first();
     if (await viewJobBtn.isVisible()) {
       await setHud('🔍 Inspecting Work Order: Resident Ticket, Scope & Urgency Level', '#ef4444');
       await smoothClick(viewJobBtn);
@@ -1390,14 +1444,370 @@ async function main() {
     await smoothScroll(350);
     await page.waitForTimeout(3500);
 
+    // =========================================================================
+    // ACTS 10-13: FEATURE TOUR (admin moderation tools, manager property tools,
+    // landlord breakdowns, tenant auto-pay, vendor invoices, public pages, phone layout)
+    // =========================================================================
+    // A failing step in the tour is logged and skipped so one missing control cannot end the video.
+    const tryStep = async (label, fn) => {
+      try {
+        await fn();
+      } catch (err) {
+        console.warn(`⚠️ Tour step skipped (${label}): ${String(err).split('\n')[0]}`);
+      }
+    };
+    // Same-origin API call from the page, so the browser sends the session cookie and Origin.
+    const api = (method, path, body) =>
+      page.evaluate(
+        async ({ method, path, body }) => {
+          const res = await fetch(path, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+          });
+          let json = null;
+          try {
+            json = await res.json();
+          } catch {}
+          return { status: res.status, json };
+        },
+        { method, path, body },
+      );
+    const signIn = async (email, urlGlob) => {
+      await humanType(page.getByPlaceholder('Enter your email'), email);
+      await humanType(page.getByPlaceholder('Enter your password'), PW);
+      await smoothClick(page.getByRole('button', { name: 'Sign In' }));
+      await page.waitForURL(urlGlob, { timeout: 20000 });
+      await page.waitForTimeout(1500);
+    };
+    const closeDialog = async () => {
+      const btn = page.getByRole('button', { name: /^(Cancel|Close)$/ }).first();
+      if (await btn.isVisible().catch(() => false)) await smoothClick(btn);
+      else await page.keyboard.press('Escape');
+      await page.waitForTimeout(800);
+    };
+
+    // ---- Act 10: admin moderation tools (still signed in as admin)
+    console.log('--- Act 10: Admin Moderation Tools ---');
+    recordChapter(
+      '🛡',
+      'Act 10: Admin Moderation Queue, Review Drawer & Duplicate Merge',
+      '#a78bfa',
+    );
+    await tryStep('duplicate listing', async () => {
+      const props = await api('GET', '/api/v1/properties?scope=mine');
+      const base = props.json?.data?.find((p) => !p.name.includes('(second listing)'));
+      if (base) {
+        await api('POST', '/api/v1/properties', {
+          name: `${base.name} (second listing)`,
+          address: base.address,
+          city: base.city,
+        });
+      }
+    });
+    await page.goto('/admin/properties');
+    await page.waitForTimeout(2500);
+    await setHud('🛡 Properties & Moderation: Filter Chips, Search & Status Badges', '#a78bfa');
+    await tryStep('all chip', async () => {
+      await smoothClick(page.getByRole('button', { name: /^All \(/ }));
+      await page.waitForTimeout(2500);
+    });
+    await smoothScroll(300);
+    await page.waitForTimeout(2500);
+    await tryStep('table view', async () => {
+      await setHud('📊 Cards or Table: Switch the Moderation Queue Layout', '#a78bfa');
+      await smoothClick(page.getByTitle('Switch to Table view'));
+      await page.waitForTimeout(3500);
+      await smoothClick(page.locator('button:has-text("Cards")').first());
+      await page.waitForTimeout(2000);
+    });
+    await tryStep('review drawer', async () => {
+      await setHud('🔎 Review Drawer: Owners, Units, Moderation Notes & Actions', '#a78bfa');
+      await smoothClick(page.getByRole('button', { name: /^Review( Details)?$/ }).first());
+      await page.waitForTimeout(4500);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(1200);
+    });
+    await tryStep('merge modal', async () => {
+      await setHud('🧬 Possible Duplicate: Merge Into the Listing to Keep', '#a78bfa');
+      await smoothClick(page.getByTitle('Merge Duplicate').first());
+      await page.waitForTimeout(4500);
+      await smoothClick(page.getByRole('button', { name: 'Confirm Merge' }));
+      await page.waitForTimeout(3000);
+      await setHud('↩️ Undo Merge: Restore the Merged Listing Any Time', '#a78bfa');
+      await smoothClick(page.getByTitle('Undo Merge').first());
+      await page.waitForTimeout(1500);
+      const confirmUndo = page.getByRole('button', { name: /Undo Merge|Confirm|Yes/ }).last();
+      if (await confirmUndo.isVisible().catch(() => false)) await smoothClick(confirmUndo);
+      await page.waitForTimeout(2500);
+    });
+    for (const [path, hud] of [
+      ['/admin/breakdown/users', '👥 Platform Breakdown: Every User by Role & Status'],
+      ['/admin/breakdown/transactions', '💳 Platform Breakdown: Transactions & Payment Providers'],
+      ['/admin/notifications', '🔔 Admin Notification Centre: Platform Alerts'],
+    ]) {
+      await tryStep(path, async () => {
+        await page.goto(path);
+        await page.waitForTimeout(2200);
+        await setHud(hud, '#a78bfa');
+        await smoothScroll(300);
+        await page.waitForTimeout(3000);
+      });
+    }
+
+    // ---- Act 11: manager property tools
+    console.log('--- Act 11: Manager Property Tools ---');
+    recordChapter(
+      '👔',
+      'Act 11: Manager Property Page, Staged Edits, Equipment & Tenant Record',
+      '#3b82f6',
+    );
+    await logout();
+    await signIn('manager@proplity.com', '**/dashboard**');
+    let propertyId = null;
+    await tryStep('find property', async () => {
+      const props = await api('GET', '/api/v1/properties?scope=mine');
+      propertyId = props.json?.data?.find((p) => !p.name.includes('(second listing)'))?.id ?? null;
+    });
+    if (propertyId) {
+      await page.goto(`/dashboard/properties/${propertyId}`);
+      await page.waitForTimeout(2500);
+      await setHud('🏢 Manager Property Page: Photos, Units, Equipment & Announcements', '#3b82f6');
+      await smoothScroll(500);
+      await page.waitForTimeout(2500);
+      await smoothScroll(-500);
+      await tryStep('photos', async () => {
+        await setHud('📷 Manage Photos & Media: Cover Image, Gallery & 360° Tour', '#3b82f6');
+        await smoothClick(page.getByRole('button', { name: /Manage Photos|Add Photos/ }).first());
+        await page.waitForTimeout(4000);
+        await closeDialog();
+      });
+      await tryStep('edit property', async () => {
+        await setHud('✏️ Edit Property: Save as Draft or Submit for Admin Review', '#3b82f6');
+        await smoothClick(page.getByRole('button', { name: /Edit Property/ }));
+        await page.waitForTimeout(3500);
+        const desc = page.locator('textarea').first();
+        if (await desc.isVisible().catch(() => false)) {
+          await humanType(desc, 'Refurbished common areas, new gate and a 24-hour guard post.', 25);
+          await page.waitForTimeout(1200);
+        }
+        const submit = page.getByRole('button', { name: 'Submit for Review' });
+        if (await submit.isVisible().catch(() => false)) {
+          await setHud(
+            '📨 Edits Are Staged: The Live Listing Stays Unchanged Until Approved',
+            '#3b82f6',
+          );
+          await smoothClick(submit);
+          await page.waitForTimeout(3500);
+        } else {
+          await closeDialog();
+        }
+      });
+      await tryStep('equipment', async () => {
+        await setHud('🔧 Equipment & Warranty Tracking', '#3b82f6');
+        await smoothClick(page.getByText('+ Add').first());
+        await page.waitForTimeout(3500);
+        await closeDialog();
+      });
+      await tryStep('announcement', async () => {
+        await setHud('📣 Property Announcements: Post a Notice to Residents', '#3b82f6');
+        await smoothClick(page.getByRole('button', { name: /New Announcement/ }));
+        await page.waitForTimeout(1500);
+        const title = page.getByPlaceholder(/title/i).first();
+        if (await title.isVisible().catch(() => false)) {
+          await humanType(title, 'Water tank cleaning on Saturday');
+          const body = page.locator('textarea').last();
+          await humanType(
+            body,
+            'Water will be off from 9am to 12pm. Please store water ahead.',
+            25,
+          );
+          await page.waitForTimeout(1000);
+          const post = page.getByRole('button', { name: /^(Post|Publish|Save|Create)/ }).last();
+          if (await post.isVisible().catch(() => false)) await smoothClick(post);
+          await page.waitForTimeout(2500);
+        } else {
+          await closeDialog();
+        }
+      });
+      await tryStep('import units', async () => {
+        await setHud('📥 Import Units from CSV or Excel', '#3b82f6');
+        await smoothClick(page.getByText(/Import Units/).first());
+        await page.waitForTimeout(3500);
+        await closeDialog();
+      });
+      await tryStep('tenant record', async () => {
+        await setHud(
+          '👤 Tenant Record: Lease, Late Fees, Signatures, Violations & Notes',
+          '#3b82f6',
+        );
+        await smoothClick(page.getByRole('button', { name: /View Tenant/ }).first());
+        await page.waitForURL(/\/dashboard\/tenants\//, { timeout: 20000 });
+        await page.getByText('Loading tenant…').waitFor({ state: 'detached', timeout: 20000 });
+        await page.waitForTimeout(2500);
+        await smoothScroll(500);
+        await page.waitForTimeout(3000);
+        await smoothScroll(500);
+        await page.waitForTimeout(3000);
+      });
+    }
+    await tryStep('invoice for tenant', async () => {
+      const leases = await api('GET', '/api/v1/leases');
+      const lease = leases.json?.data?.find(
+        (l) => l.status === 'ACTIVE' && l.tenant?.email === 'tenant@proplity.com',
+      );
+      if (lease) {
+        await api('POST', '/api/v1/invoices', {
+          leaseId: lease.id,
+          type: 'RENT',
+          amount: 150000,
+          dueDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+          description: 'Monthly rent',
+        });
+      }
+    });
+    await tryStep('account settings', async () => {
+      await page.goto('/dashboard/settings');
+      await page.waitForTimeout(2000);
+      await setHud(
+        '⚙️ Account Settings: Profile, Password, Verification & Bank Accounts',
+        '#3b82f6',
+      );
+      await page.waitForTimeout(2500);
+      await smoothClick(page.getByRole('button', { name: /Setup & Verification/ }));
+      await page.waitForTimeout(2500);
+      await smoothClick(page.getByRole('button', { name: /Payout & Bank Accounts/ }));
+      await page.waitForTimeout(3000);
+    });
+    await tryStep('breakdown + notifications', async () => {
+      await page.goto('/dashboard/breakdown/properties');
+      await page.waitForTimeout(2500);
+      await setHud('📊 Portfolio Breakdown: Every Property, Unit & Occupancy', '#3b82f6');
+      await smoothScroll(300);
+      await page.waitForTimeout(2500);
+      await page.goto('/dashboard/notifications');
+      await page.waitForTimeout(2500);
+      await setHud('🔔 Notification Centre: Everything in One List', '#3b82f6');
+      await page.waitForTimeout(2500);
+    });
+
+    // ---- Act 12: landlord breakdowns and tenant extras
+    console.log('--- Act 12: Landlord Breakdowns & Tenant Auto-Pay ---');
+    recordChapter('🏗', 'Act 12: Landlord Breakdowns, Tenant Auto-Pay & Access Codes', '#f59e0b');
+    await logout();
+    await signIn('landlord@proplity.com', '**/dashboard**');
+    for (const [type, hud] of [
+      ['tenants', '👥 Landlord Breakdown: Tenants Across the Portfolio'],
+      ['rent', '💰 Landlord Breakdown: Rent Collected, Trends & Payment Methods'],
+      ['maintenance', '🛠 Landlord Breakdown: Maintenance Across Properties'],
+      ['renewals', '📅 Landlord Breakdown: Leases Due for Renewal'],
+    ]) {
+      await tryStep(`breakdown ${type}`, async () => {
+        await page.goto(`/dashboard/breakdown/${type}`);
+        await page.waitForTimeout(2200);
+        await setHud(hud, '#f59e0b');
+        await smoothScroll(type === 'rent' ? 450 : 250);
+        await page.waitForTimeout(3000);
+      });
+    }
+    await tryStep('landlord rentals', async () => {
+      await page.goto('/dashboard/rentals');
+      await page.waitForTimeout(2200);
+      await setHud('📄 My Rentals: Every Lease on Record', '#f59e0b');
+      await page.waitForTimeout(3000);
+    });
+
+    await logout();
+    await signIn('tenant@proplity.com', '**/dashboard**');
+    await tryStep('tenant pays by card', async () => {
+      await page.goto('/dashboard');
+      await page.waitForTimeout(2500);
+      await setHud('💳 Pay Rent Online: One Card Payment Saves the Card for Auto-Pay', '#10b981');
+      const payBtn = page.getByRole('button', { name: 'Pay Rent Online' });
+      if (await payBtn.isEnabled().catch(() => false)) {
+        await smoothClick(payBtn);
+        await page.waitForURL(/mock-checkout/, { timeout: 20000 });
+        await page.waitForTimeout(3000);
+        await smoothClick(page.getByRole('button', { name: /^Pay ₦/ }));
+        await page.waitForTimeout(3500);
+      }
+    });
+    await tryStep('auto-pay', async () => {
+      await page.goto('/dashboard');
+      await page.waitForTimeout(2500);
+      await setHud('🔁 Auto-Pay: Reuse the Saved Card for Each Rent Invoice', '#10b981');
+      await smoothClick(page.getByRole('button', { name: 'Setup Auto-Pay' }));
+      await page.waitForTimeout(3500);
+      await smoothClick(page.getByRole('button', { name: 'Enable Auto-Pay' }));
+      await page.getByText(/Auto-pay is active/).waitFor({ timeout: 10000 });
+      await setHud('✅ Auto-Pay Active: Cancel Any Time', '#10b981');
+      await page.waitForTimeout(3500);
+    });
+    await tryStep('access codes', async () => {
+      await setHud('🔑 Access Codes: Guest and Delivery Codes for the Unit', '#10b981');
+      await smoothScroll(700);
+      await page.waitForTimeout(3500);
+    });
+    await tryStep('tenant neighbourhood', async () => {
+      await page.goto('/dashboard/neighbourhood-report');
+      await page.waitForTimeout(2500);
+      await setHud('📍 Neighbourhood Report: Area Ratings for Security, Power & Water', '#10b981');
+      await smoothScroll(400);
+      await page.waitForTimeout(3000);
+    });
+    await tryStep('tenant phone layout', async () => {
+      await setHud('📱 Phone Layout: Bottom Tab Bar and More Sheet', '#6366f1');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/dashboard');
+      await page.waitForTimeout(3000);
+      await smoothClick(page.getByRole('button', { name: /More/ }).last());
+      await page.waitForTimeout(3500);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(800);
+    });
+    await page.setViewportSize({ width: 1440, height: 900 }).catch(() => undefined);
+
+    // ---- Act 13: vendor invoices and the public pages
+    console.log('--- Act 13: Vendor Invoices & Public Pages ---');
+    recordChapter('🔧', 'Act 13: Vendor Invoices & Public Marketing Pages', '#ef4444');
+    await logout();
+    await signIn('vendor@proplity.com', '**/dashboard**');
+    await tryStep('vendor invoices', async () => {
+      await page.goto('/dashboard/vendor/invoices');
+      await page.waitForTimeout(2500);
+      await setHud('🧾 Vendor Invoices: Outstanding Total & Payment Status', '#ef4444');
+      await page.waitForTimeout(3500);
+    });
+    await logout();
+    for (const [path, hud] of [
+      ['/for-landlords', '🌍 Public Page: Proplity for Landlords'],
+      ['/for-tenants', '🌍 Public Page: Proplity for Tenants'],
+      ['/for-vendors', '🌍 Public Page: Proplity for Service Providers'],
+      ['/pricing', '🌍 Public Page: Pricing'],
+      ['/about', '🌍 Public Page: About Proplity'],
+      ['/contact', '🌍 Public Page: Contact Form'],
+    ]) {
+      await tryStep(path, async () => {
+        await page.goto(path);
+        await page.waitForTimeout(2200);
+        await setHud(hud, '#10b981');
+        await smoothScroll(450);
+        await page.waitForTimeout(2500);
+      });
+    }
+
+    // ---- Act 14 setup: back to the admin for the guide
+    console.log('--- Act 14: Master Guide ---');
+    recordChapter('📋', 'Act 14: In-App Master Guide & 170-Screenshot Lightbox', '#3b82f6');
+    await page.goto('/login');
+    await page.waitForTimeout(800);
+    await signIn('admin@proplity.com', '**/admin**');
+
     // Proplity In-App Master Directory & Capabilities Guide
     console.log('Navigating to Proplity Guide...');
     await page.goto('/proplity-guide');
     await page.waitForTimeout(3000);
-    await setHud(
-      '📋 In-App Master Feature Directory: 154 Platform Capabilities Across All Roles',
-      '#3b82f6',
-    );
+    await setHud('📋 In-App Master Feature Directory: Every Capability, Role by Role', '#3b82f6');
 
     await smoothScroll(450);
     await page.waitForTimeout(3500);
@@ -1405,12 +1815,17 @@ async function main() {
     // Interactive Lightbox Demonstration
     const screenshotCard = page.locator('.screenshot-item').first();
     if (await screenshotCard.isVisible()) {
-      await setHud('🔍 Interactive High-Res Guide Lightbox: Platform Screenshots Gallery', '#3b82f6');
+      await setHud(
+        '🔍 Interactive High-Res Guide Lightbox: Platform Screenshots Gallery',
+        '#3b82f6',
+      );
       await smoothClick(screenshotCard);
       await page.waitForTimeout(5000);
 
       // Next screenshot navigation
-      const nextBtn = page.locator('button[aria-label="Next screenshot"], button:has-text("Next")').first();
+      const nextBtn = page
+        .locator('button[aria-label="Next screenshot"], button:has-text("Next")')
+        .first();
       if (await nextBtn.isVisible()) {
         await smoothClick(nextBtn);
         await page.waitForTimeout(4500);
@@ -1429,7 +1844,7 @@ async function main() {
     }
 
     // Highlight Role Guide chapters
-    await setHud('📖 High-Resolution 88-Page Step-by-Step Interactive Workflow Manual', '#3b82f6');
+    await setHud('📖 Step-by-Step Role Guide: 170 Screenshots with Lightbox', '#3b82f6');
     await smoothScroll(650);
     await page.waitForTimeout(4500);
     await smoothScroll(650);
@@ -1448,7 +1863,7 @@ async function main() {
     await smoothMove(720, 450);
     await page.waitForTimeout(18000);
 
-    console.log('✨ All 9 Acts recorded successfully!');
+    console.log('✨ All 14 Acts recorded successfully!');
   } catch (error) {
     console.error('❌ Error during walkthrough recording:', error);
   } finally {
@@ -1464,22 +1879,19 @@ async function main() {
       const rawVideoPath = await video.path();
       console.log(`Video captured at raw path: ${rawVideoPath}`);
 
-      const finalDocsVideo = resolve(VIDEO_DIR, 'proplity-complete-userflow.webm');
       const finalPublicVideo = resolve(PUBLIC_VIDEO_DIR, 'proplity-complete-userflow.webm');
       const outDir = resolve(__dirname, '../out/video');
       mkdirSync(outDir, { recursive: true });
       const finalOutVideo = resolve(outDir, 'proplity-complete-userflow.webm');
       const finalOutLiveVideo = resolve(outDir, 'master-userflow-live.webm');
 
-      copyFileSync(rawVideoPath, finalDocsVideo);
       copyFileSync(rawVideoPath, finalPublicVideo);
       copyFileSync(rawVideoPath, finalOutVideo);
       copyFileSync(rawVideoPath, finalOutLiveVideo);
 
-      const stats = statSync(finalDocsVideo);
+      const stats = statSync(finalPublicVideo);
       const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
 
-      console.log(`✅ Saved master video: ${finalDocsVideo} (${sizeMb} MB)`);
       console.log(`✅ Saved public video: ${finalPublicVideo} (${sizeMb} MB)`);
       console.log(`✅ Saved out video: ${finalOutVideo} (${sizeMb} MB)`);
       console.log(`✅ Saved out live video: ${finalOutLiveVideo} (${sizeMb} MB)`);

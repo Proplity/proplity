@@ -47,6 +47,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
 
+  // A second, per-account budget across all IPs, so a distributed guesser cannot get
+  // a fresh allowance from every address. Higher than the per-IP one so a victim is not
+  // easily locked out by someone else's bad guesses; released on success like the first.
+  const account = await reserveAttempt(`login-account/${email}`, undefined, 30);
+  if (!account.allowed) {
+    await releaseAttempt(attemptId);
+    return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+  }
+
   const user = await findUserByEmail(email);
   const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
@@ -62,6 +71,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
   }
+  await releaseAttempt(account.attemptId);
 
   if (user.status === 'SUSPENDED') {
     await releaseAttempt(attemptId);

@@ -155,8 +155,12 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-medium leading-tight text-gray-900">{auth.user?.name}</span>
-                  <span className="text-xs text-gray-500 capitalize leading-tight">{role || 'User'}</span>
+                  <span className="text-sm leading-tight font-medium text-gray-900">
+                    {auth.user?.name}
+                  </span>
+                  <span className="text-xs leading-tight text-gray-500 capitalize">
+                    {role || 'User'}
+                  </span>
                 </div>
               </button>
               <button
@@ -193,11 +197,11 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                     aria-hidden="true"
                   />
                   <div className="absolute top-full right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
-                    <div className="px-4 py-1.5 border-b border-gray-100">
-                      <p className="truncate text-sm font-medium text-gray-900 leading-tight">
+                    <div className="border-b border-gray-100 px-4 py-1.5">
+                      <p className="truncate text-sm leading-tight font-medium text-gray-900">
                         {auth.user?.name}
                       </p>
-                      <p className="truncate text-xs text-gray-500 capitalize leading-tight">
+                      <p className="truncate text-xs leading-tight text-gray-500 capitalize">
                         {role || 'User'}
                       </p>
                     </div>
@@ -282,7 +286,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Fixed bottom avatar & logout menu */}
-          <div className="relative mt-auto pt-3 border-t border-gray-200 shrink-0">
+          <div className="relative mt-auto shrink-0 border-t border-gray-200 pt-3">
             {sidebarMenuOpen && (
               <>
                 <div
@@ -293,9 +297,9 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                 <div
                   role="menu"
                   aria-label="User account options"
-                  className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
+                  className="absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
                 >
-                  <div className="px-3 py-2 border-b border-gray-100">
+                  <div className="border-b border-gray-100 px-3 py-2">
                     <p className="truncate text-sm font-semibold text-gray-900">
                       {auth.user?.name || 'My Account'}
                     </p>
@@ -308,7 +312,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                     <Link
                       href="/dashboard/settings"
                       onClick={() => setSidebarMenuOpen(false)}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     >
                       <Settings className="h-4 w-4 text-gray-500" />
                       <span>Settings</span>
@@ -320,7 +324,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                         setSidebarMenuOpen(false);
                         setShowLogout(true);
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4 text-red-500" />
                       <span>Log Out</span>
@@ -330,11 +334,11 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               </>
             )}
 
-            <div className="flex items-center justify-between gap-2 rounded-xl p-2 hover:bg-gray-100/80 transition-colors">
+            <div className="flex items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-gray-100/80">
               <button
                 type="button"
                 onClick={() => setSidebarMenuOpen((prev) => !prev)}
-                className="flex flex-1 items-center gap-3 min-w-0 text-left focus:outline-none"
+                className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none"
                 aria-label="Account options"
                 aria-expanded={sidebarMenuOpen}
               >
@@ -345,11 +349,11 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                 >
                   <User className="h-4 w-4" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900 leading-tight">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm leading-tight font-medium text-gray-900">
                     {auth.user?.name || 'Account'}
                   </p>
-                  <p className="truncate text-xs text-gray-500 capitalize leading-tight">
+                  <p className="truncate text-xs leading-tight text-gray-500 capitalize">
                     {role || 'User'}
                   </p>
                 </div>
@@ -365,7 +369,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                 onClick={() => setShowLogout(true)}
                 title="Log Out"
                 aria-label="Log Out"
-                className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               >
                 <LogOut className="h-4 w-4" />
               </button>

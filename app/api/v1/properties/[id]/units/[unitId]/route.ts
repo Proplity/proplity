@@ -141,7 +141,10 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     // Admin direct approval/rejection of a pending unit
     if (validated.data.action) {
       if (session.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Only admins can approve or reject units' }, { status: 403 });
+        return NextResponse.json(
+          { error: 'Only admins can approve or reject units' },
+          { status: 403 },
+        );
       }
 
       if (validated.data.action === 'APPROVE') {
@@ -152,7 +155,8 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         // Check if there are staged changes for this unit in property.metadata
         const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
         const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
-        const pendingUnits = (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+        const pendingUnits =
+          (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
         const unitStaged = pendingUnits[unitId];
 
         let unitUpdateData: Record<string, unknown> = { amenities: cleanedAmenities };
@@ -189,7 +193,8 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         // Discard staged changes or pending unit
         const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
         const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
-        const pendingUnits = (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+        const pendingUnits =
+          (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
         if (pendingUnits[unitId]) {
           delete pendingUnits[unitId];
           await prisma.property.update({
@@ -227,10 +232,17 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       data.bathrooms !== undefined;
 
     // Handle Landlord saving unit changes as draft or proposing changes to a live unit
-    if (isLandlordOrManager && (saveAsDraft || (isEditingCritical && found.property.isPublished && !found.unit.amenities.includes('approval:pending')))) {
+    if (
+      isLandlordOrManager &&
+      (saveAsDraft ||
+        (isEditingCritical &&
+          found.property.isPublished &&
+          !found.unit.amenities.includes('approval:pending')))
+    ) {
       const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
       const existingPending = (currentMeta.pendingChanges as Record<string, unknown>) || {};
-      const existingUnits = (existingPending.units as Record<string, Record<string, unknown>>) || {};
+      const existingUnits =
+        (existingPending.units as Record<string, Record<string, unknown>>) || {};
 
       const stagedUnit = {
         ...(existingUnits[unitId] || {}),

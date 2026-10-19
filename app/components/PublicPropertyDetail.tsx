@@ -441,7 +441,8 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                       </div>
                     );
                   })}
-                {(cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:')).length === 0 && (
+                {(cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:'))
+                  .length === 0 && (
                   <p className="text-sm text-gray-400">No amenities listed yet.</p>
                 )}
               </div>

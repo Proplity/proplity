@@ -200,6 +200,7 @@ review while keeping the property unpublished to the public marketplace until re
 
 **3c. Edit property, Draft Staging, Cancel Approval & Delete Lifecycle** — click **Edit Property** in the Listing Status card
 to revise property name, address, city, state, or description.
+
 - **Save as Draft (`saveAsDraft: true`)**: Stages proposed changes inside `property.metadata.pendingChanges` with status `DRAFT`. The live public marketplace listing remains published with its current verified details, and no admin emails are triggered.
 - **Submit for Review (`submitForReview: true`)**: Promotes draft changes to `PENDING_REVIEW` and alerts platform administrators. If critical identity/location fields are modified, the listing is temporarily unpublished until re-approved; minor content edits leave the listing active while changes await review.
 - **Cancel Pending Edits / Approval Request (`cancelPendingEdits: true`)**: Landlords can cancel an active approval request at any time. This restores the listing's published/approved status and returns the proposed edits safely back to `DRAFT`.
@@ -350,6 +351,7 @@ address (e.g. `/dashboard/discover`), they are sent back to `/admin`.
 **3. User Management** — every account on the platform, filterable by
 role (chips: All / Admin / Manager / Landlord / Tenant / Vendor) and status,
 searchable by name, email, or phone.
+
 - **Card & Table Views**: toggle between modern User Cards (highlighting each user's avatar, role badge, status, and **Properties Count**) and traditional tabular view on both desktop and mobile.
 - **Sticky Compact Toolbar**: toolbar stays sticky at the top on scroll without consuming excessive vertical space.
 - Admins can click **Suspend Account** to deactivate any account (mandatory reason recorded in the audit log; user's session is terminated immediately) or reactivate it, and change roles where eligible.
@@ -359,6 +361,7 @@ searchable by name, email, or phone.
 **5. Properties** — the **moderation queue**. Filter chips (Pending Review
 by default, Approved, Rejected, Flagged, Merged) and search show who submitted each
 listing.
+
 - **Cards & Table Views**: toggle between responsive Property Cards and traditional Table view on desktop and mobile.
 - **Sticky Compact Toolbar**: sticky at top on scroll with minimal vertical footprint.
 - **Review Drawer Popup**: clicking **Review** or **View** on a property opens a responsive slide-over drawer (right-side drawer on desktop, bottom sheet on mobile, click-outside backdrop) displaying property overview, approved/edited dates, landlord and manager contact info, public/private units list, moderation notes, quick Approve/Reject/Publish actions, and a **FULL VIEW** button to inspect the full property page.

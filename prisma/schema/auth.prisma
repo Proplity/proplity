@@ -215,9 +215,9 @@ model ManagerInviteCode {
 }
 
 model BankAccount {
-  id            String   @id @default(uuid())
+  id            String         @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountNumber String
   bankCode      String
   bankName      String
