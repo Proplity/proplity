@@ -75,7 +75,9 @@ are configured for this environment before treating it as a defect.
 ## Tenant flows
 
 - [ ] Browse available properties and view details on one
-- [ ] Schedule a viewing for a property before renting it
+- [ ] Schedule a viewing for a property before renting it: pick a date from tomorrow (a Sunday is refused) and a start time between 9:00 AM and 5:00 PM (Lagos time)
+- [ ] The dashboard's **Needs your attention** list shows a lease to sign, payments due or overdue, finished repairs to rate and an unfinished profile; each row opens the right screen
+- [ ] Notifications arrive (bell, and an email in the dev inbox) for a lease to sign, a new invoice, a completed repair and an overdue payment
 - [ ] Complete your profile (first **Apply Now** redirects to _Complete Your
       Profile_) — phone, year of birth, emergency contact, ID upload;
       previous landlord optional. Confirm the application can't be reached
@@ -149,6 +151,10 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] Message tenants and vendors
 - [ ] Change password from inside the dashboard (Settings)
 
+- [ ] A viewing request shows the visitor's email, phone, "ID on file" and member-since; the ID link itself is never shown
+- [ ] On a finished repair, **View invoice** under Cost Tracking lists the vendor's lines, VAT, total and notes
+- [ ] The dashboard's **Needs your attention** list shows applications, viewing requests, repairs with no vendor, vendor invoices to pay and overdue rent
+
 ## Vendor (contractor) flows
 
 - [ ] See assigned jobs — the maintenance requests they've been assigned to
@@ -212,7 +218,7 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 480 tests across 41 files in
+- **API Integration suite (Vitest)** — `pnpm test`. 494 tests across 42 files in
   `tests/api/` (including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`),
   real HTTP against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
@@ -231,6 +237,10 @@ Same as landlord, plus the day-to-day operational tools:
   the dev email widget, and the mobile tab bar. Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
   `E2E (Playwright)` job against a production build.
+- **Running the API suite on a shared machine:** the suite's server uses port
+  3101 (`tests/setup/constants.ts`). If another project's server is on that port
+  every test fails with 404; change the port locally (do not commit it) and
+  delete `.next-test/` if the build looks stale after switching branches.
 - **Not covered by either**: the live Paystack charge call, real Cloudinary
   uploads, and recurring auto-charging (not built). The manual checklist
   above is where those are verified by hand.
