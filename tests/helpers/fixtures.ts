@@ -16,6 +16,7 @@ import {
   NotificationType,
 } from '@prisma/client';
 import { testPrisma } from './db';
+import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
 
 let counter = 0;
 function unique(prefix: string) {
@@ -353,4 +354,12 @@ export async function createBankAccount(
       isDefault: overrides.isDefault ?? true,
     },
   });
+}
+
+/** A bookable viewing time: 10:00 AM Lagos time, `daysAhead` days out, moved off a Sunday. */
+export function bookableViewingTime(daysAhead = 3): string {
+  const day = new Date();
+  day.setDate(day.getDate() + daysAhead);
+  if (day.getDay() === 0) day.setDate(day.getDate() + 1);
+  return viewingInstant(toLocalDateKey(day), '10:00').toISOString();
 }

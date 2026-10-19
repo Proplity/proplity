@@ -194,7 +194,14 @@ export type PropertyViewing = {
   id: string;
   propertyId: string;
   requestedById: string;
-  requestedBy?: { name: string; email: string };
+  requestedBy?: {
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    createdAt: string;
+    kycStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+    hasIdOnFile: boolean;
+  };
   scheduledAt: string;
   status: 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   notes: string | null;
@@ -242,6 +249,9 @@ export type MaintenanceRequest = {
     invoiceNumber: string;
     amount: number;
     status: string;
+    description: string | null;
+    dueDate: string;
+    createdAt: string;
     payments: { amount: number }[];
   }[];
   createdAt: string;
