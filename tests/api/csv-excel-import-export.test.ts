@@ -94,6 +94,33 @@ describe('properties: units import (POST /properties/[id]/units/import)', () => 
     expect(res.status).toBe(403);
   });
 
+  it('marks imported units pending approval and caps the number of rows', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({ managerId: manager.id });
+    const cookie = await authCookie(manager.id, manager.role);
+
+    const ok = new FormData();
+    ok.append('file', csvFile('unitNumber,rentAmount\n9A,100000'));
+    const res = await apiFetch(`/api/v1/properties/${property.id}/units/import`, {
+      method: 'POST',
+      cookie,
+      body: ok,
+    });
+    expect(res.status).toBe(201);
+    const unit = await testPrisma.unit.findFirst({ where: { propertyId: property.id } });
+    expect(unit?.amenities).toContain('approval:pending');
+
+    const rows = ['unitNumber,rentAmount', ...Array.from({ length: 501 }, (_, i) => `U${i},1000`)];
+    const big = new FormData();
+    big.append('file', csvFile(rows.join('\n')));
+    const tooMany = await apiFetch(`/api/v1/properties/${property.id}/units/import`, {
+      method: 'POST',
+      cookie,
+      body: big,
+    });
+    expect(tooMany.status).toBe(400);
+  });
+
   it('creates valid rows and reports errors for invalid ones without aborting the whole import', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });

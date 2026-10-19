@@ -1152,3 +1152,63 @@ describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
     expect(live.body.error).toContain('active leases');
   });
 });
+
+describe('invoices: vendor billing limits', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it("a vendor cannot attach a job invoice to someone else's lease or create it as paid", async () => {
+    const vendor = await createUser(Role.VENDOR);
+    const tenant = await createUser(Role.TENANT);
+    const stranger = await createUser(Role.TENANT);
+    const prop = await createProperty({});
+    const unit = await createUnit(prop.id);
+    const lease = await createLease(unit.id, stranger.id);
+    const mr = await testPrisma.maintenanceRequest.create({
+      data: {
+        unitId: unit.id,
+        tenantId: tenant.id,
+        title: 'x',
+        description: 'y',
+        vendorId: vendor.id,
+      },
+    });
+    const cookie = await authCookie(vendor.id, vendor.role);
+    const onLease = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        leaseId: lease.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(onLease.status).toBe(403);
+    const paid = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        status: 'PAID',
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(paid.status).toBe(400);
+    const ok = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(ok.status).toBe(201);
+  });
+});

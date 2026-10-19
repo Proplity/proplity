@@ -53,6 +53,10 @@ export const POST = withAuth(
       }
 
       const signature = await prisma.$transaction(async (tx) => {
+        // Serialise signers of the same lease: without this a tenant and a landlord
+        // signing at the same moment each see only their own signature and the lease
+        // is never marked fully signed.
+        await tx.$queryRaw`SELECT "id" FROM "Lease" WHERE "id" = ${id} FOR UPDATE`;
         const created = await tx.leaseSignature.create({
           data: {
             leaseId: id,
