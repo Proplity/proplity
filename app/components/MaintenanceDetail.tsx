@@ -364,27 +364,33 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Tenant Info */}
+          {/* Who raised it: the tenant, or the property team for a work order */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <h2 className="mb-4 font-semibold">Submitted By</h2>
+            <h2 className="mb-4 font-semibold">{request.tenant ? 'Submitted By' : 'Raised By'}</h2>
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 font-semibold text-white">
-                {(request.tenant?.name ?? '?').charAt(0)}
+                {(request.tenant?.name ?? request.createdBy?.name ?? '?').charAt(0)}
               </div>
               <div>
-                <p className="font-medium">{request.tenant?.name ?? 'Unknown tenant'}</p>
-                <p className="text-xs text-gray-600">Tenant</p>
+                <p className="font-medium">
+                  {request.tenant?.name ?? request.createdBy?.name ?? 'Property team'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  {request.tenant ? 'Tenant' : 'Property team (work order, no tenant)'}
+                </p>
               </div>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="h-4 w-4" />
-                {request.tenant?.phoneNumber ?? 'N/A'}
+            {request.tenant && (
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Phone className="h-4 w-4" />
+                  {request.tenant.phoneNumber ?? 'N/A'}
+                </div>
+                <div className="flex items-center gap-2 break-all text-gray-600">
+                  {request.tenant.email}
+                </div>
               </div>
-              <div className="flex items-center gap-2 break-all text-gray-600">
-                {request.tenant?.email}
-              </div>
-            </div>
+            )}
             <button
               onClick={() =>
                 openConversation({ type: 'MAINTENANCE_THREAD', maintenanceRequestId: request.id })
@@ -499,7 +505,9 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                         }.`
                       : request.confirmationStatus === 'DISPUTED'
                         ? 'The tenant says it is still a problem.'
-                        : 'The tenant was not asked to confirm this repair.'}
+                        : request.tenantId
+                          ? 'The tenant was not asked to confirm this repair.'
+                          : 'This is a work order, so there is no tenant to confirm it. Check the vendor’s photos and approve it.'}
                 </p>
 
                 {request.disputeReason && request.confirmationStatus === 'DISPUTED' && (

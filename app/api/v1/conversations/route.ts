@@ -116,7 +116,9 @@ export const POST = withAuth(async (req, { session }) => {
         return NextResponse.json({ data: existing });
       }
 
-      const participantUserIds = new Set<string>([request.tenantId]);
+      // A work order the property team raised has no tenant.
+      const participantUserIds = new Set<string>();
+      if (request.tenantId) participantUserIds.add(request.tenantId);
       if (request.vendorId) participantUserIds.add(request.vendorId);
       if (request.unit.property.managerId) participantUserIds.add(request.unit.property.managerId);
       if (request.unit.property.landlordId)
