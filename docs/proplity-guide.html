@@ -2057,6 +2057,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">2.7</span>Maintenance Request (Report a Repair)</h3>
   <p>Something broken? Submit a maintenance request — the manager assigns a tradesperson (vendor) to fix it. Pick a category, urgency, describe the problem, and optionally attach photos.</p>
+  <p>When the vendor says the work is done, the request shows <strong>Needs your answer</strong>. Open it, look at the vendor's photos and choose one:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;"><strong>Confirm fixed</strong>: records that the repair is fixed. Nothing else changes.</li>
+    <li style="margin-bottom:6px;"><strong>Still a problem</strong>: say what is still wrong (required) and add photos if you like. Your property team is told and decides whether the same vendor comes back, another vendor takes it, or the work is approved anyway.</li>
+  </ul>
+  <p>Your answer never changes what is owed to the vendor, and an admin can switch the question off.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_04_maintenance_list_desktop.png" alt="Maintenance list" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Maintenance requests list (tracker) <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2347,6 +2353,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div id="manager-maintenance" class="step-card">
   <h3><span class="step-num">4.5</span>Maintenance Board (Kanban View)</h3>
   <p>The manager's maintenance control centre — a Kanban board (like Trello) showing all repair requests from all tenants. Manager assigns vendors to jobs and tracks progress through New → In Progress → Resolved → Closed.</p>
+  <p>Only the vendor can finish a job. When they have, the repair page shows the vendor's before and after photos and a <strong>Sign-off</strong> card:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;"><strong>Approve work</strong> records your sign-off, separate from the vendor finishing. It does not pay or hold back the vendor invoice.</li>
+    <li style="margin-bottom:6px;">If the tenant says it is still a problem you see their reason and photos and choose <strong>Send back to vendor</strong>, <strong>Give to another vendor</strong> (the first vendor unpaid invoice is cancelled; if it has already been paid the job cannot move) or <strong>Approve anyway</strong>.</li>
+    <li style="margin-bottom:6px;">The tenant may not have answered yet: you can wait for them, or approve straight away.</li>
+  </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/manager_07_maintenance_desktop.png" alt="Maintenance kanban" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Maintenance Kanban board <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2474,6 +2486,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">5.2</span>Job Detail & Status Updates</h3>
   <p>Full details of a single maintenance job — problem description, tenant photos, property address, preferred access time, and timeline. Vendor clicks "Update Status" to move from In Progress → Completed.</p>
+  <p>Under <strong>Work Photos</strong> the vendor adds before photos (optional) and after photos. At least one after photo is needed to close the job, whether it is closed by the invoice or by <strong>Mark work done</strong>.</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
+    <li style="margin-bottom:6px;">If the tenant says the repair is still a problem, a red box shows their reason and photos. Fix it, add new photos and press <strong>Mark work done</strong>: the invoice is not sent again.</li>
+    <li style="margin-bottom:6px;">Photos lock once the property team approves the repair or the tenant confirms it.</li>
+  </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/vendor_02_job_detail_desktop.png" alt="Job detail" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Job detail page <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2539,6 +2556,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">6.2</span>Properties Moderation, Reports, Audit Logs & Settings</h3>
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
+  <p>Platform Settings has two switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>

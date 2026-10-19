@@ -10,13 +10,14 @@ import {
   Phone,
   CheckCircle,
   Clock,
-  Image as ImageIcon,
   MessageSquare,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { useMaintenanceRequest, useUpdateMaintenanceRequest } from '@/hooks/useMaintenanceRequests';
-import { useAccessCodes } from '@/hooks/useAccessCodes';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
+import { MAX_EVIDENCE_PHOTOS } from '@/lib/repairEvidence';
+import { PhotoGrid, PhotoPicker } from './RepairPhotos';
 import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface VendorJobDetailProps {
@@ -56,14 +57,26 @@ function buildTimeline(request: NonNullable<ReturnType<typeof useMaintenanceRequ
       text: 'Marked completed',
       time: new Date(request.completedAt).toLocaleString(),
     });
+  if (request.confirmationRespondedAt)
+    entries.push({
+      text:
+        request.confirmationStatus === 'DISPUTED'
+          ? 'Tenant says it is still a problem'
+          : 'Tenant confirmed it is fixed',
+      time: new Date(request.confirmationRespondedAt).toLocaleString(),
+    });
+  if (request.approvedAt)
+    entries.push({
+      text: `Approved by ${request.approvedBy?.name ?? 'the property team'}`,
+      time: new Date(request.approvedAt).toLocaleString(),
+    });
   return entries.reverse();
 }
 
 export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
   const { data: job, loading, refetch } = useMaintenanceRequest(jobId);
   const { open: openConversation } = useOpenConversation();
-  const { submit: updateJob, submitting } = useUpdateMaintenanceRequest(jobId);
-  const { data: accessCodes, loading: accessCodesLoading } = useAccessCodes(job?.unitId ?? null);
+  const { submit: updateJob, submitting, error: updateError } = useUpdateMaintenanceRequest(jobId);
   const [notes, setNotes] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -90,7 +103,32 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
   const status = statusConfig[job.status] ?? statusConfig.SCHEDULED;
   const StatusIcon = status.icon;
   const timeline = buildTimeline(job);
-  const activeCode = accessCodes.find((c) => c.status === 'ACTIVE');
+  const isOpen = job.status !== 'COMPLETED' && job.status !== 'CANCELLED';
+  // Once the tenant has confirmed or the property team has approved, the evidence is locked.
+  const signedOff = Boolean(job.approvedAt) || job.confirmationStatus === 'CONFIRMED';
+  const canEditPhotos = job.status !== 'CANCELLED' && !signedOff;
+  const alreadyInvoiced = (job.invoices ?? []).some((inv) => inv.status !== 'CANCELLED');
+
+  const savePhotos = async (side: 'beforePhotoUrls' | 'afterPhotoUrls', urls: string[]) => {
+    setActionError(null);
+    try {
+      await updateJob({ [side]: urls.slice(0, MAX_EVIDENCE_PHOTOS) });
+      refetch();
+    } catch {
+      // surfaced through updateError
+    }
+  };
+
+  // A job that was sent back already has its invoice, so finishing it again needs no new bill.
+  const handleMarkDone = async () => {
+    setActionError(null);
+    try {
+      await updateJob({ status: 'COMPLETED' });
+      refetch();
+    } catch {
+      // surfaced through updateError
+    }
+  };
 
   const handleUpdateStatus = async () => {
     setActionError(null);
@@ -128,9 +166,12 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
         Back to Jobs
       </Link>
 
-      {actionError && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {actionError}
+      {(actionError ?? updateError) && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {actionError ?? updateError}
         </div>
       )}
 
@@ -203,6 +244,20 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
+          {/* The tenant said the earlier work did not fix it */}
+          {job.disputeReason && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+              <h2 className="mb-2 flex items-center gap-2 font-semibold text-red-900">
+                <AlertTriangle className="h-5 w-5" />
+                The tenant says this is still a problem
+              </h2>
+              <p className="text-sm whitespace-pre-line text-red-900">{job.disputeReason}</p>
+              <div className="mt-3">
+                <PhotoGrid urls={job.disputePhotoUrls ?? []} label="Tenant photo" />
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <h2 className="mb-3 font-semibold">Job Description</h2>
@@ -226,13 +281,10 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
                 </div>
               </div>
               <div>
-                <p className="mb-1 text-sm text-gray-600">Access Code</p>
-                <p className="text-sm">
-                  {accessCodesLoading
-                    ? 'Loading…'
-                    : activeCode
-                      ? `${activeCode.code} (${activeCode.guestName ?? 'gate access'})`
-                      : 'No active access code on file — contact tenant to arrange entry.'}
+                <p className="mb-1 text-sm text-gray-600">Entry</p>
+                <p className="text-sm text-gray-700">
+                  Entry is arranged with the tenant: message them or call the number shown here.
+                  Gate codes are not shared with vendors in the app.
                 </p>
               </div>
             </div>
@@ -280,24 +332,82 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
 
           {/* Photos */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <h2 className="mb-4 font-semibold">Work Documentation</h2>
-            {job.mediaUrls.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3">
-                {job.mediaUrls.map((url, i) => (
-                  <div
-                    key={i}
-                    className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-100"
-                  >
-                    <div className="text-center">
-                      <ImageIcon className="mx-auto mb-1 h-6 w-6 text-gray-400" />
-                      <p className="text-xs text-gray-500">{url}</p>
-                    </div>
+            <h2 className="mb-1 font-semibold">Work Photos</h2>
+            <p className="mb-4 text-sm text-gray-500">
+              Show the work. At least one photo of the finished job is needed to close it.
+              {signedOff && ' This repair has been signed off, so its photos are locked.'}
+            </p>
+
+            <div className="space-y-5">
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">Before the work</p>
+                <PhotoGrid
+                  urls={job.beforePhotoUrls ?? []}
+                  label="Before photo"
+                  emptyText="No before photos yet."
+                  onRemove={
+                    canEditPhotos
+                      ? (url) =>
+                          savePhotos(
+                            'beforePhotoUrls',
+                            (job.beforePhotoUrls ?? []).filter((u) => u !== url),
+                          )
+                      : undefined
+                  }
+                />
+                {canEditPhotos && (
+                  <div className="mt-2">
+                    <PhotoPicker
+                      label="Add before photos"
+                      disabled={submitting}
+                      full={(job.beforePhotoUrls ?? []).length >= MAX_EVIDENCE_PHOTOS}
+                      onUploaded={(urls) =>
+                        savePhotos('beforePhotoUrls', [...(job.beforePhotoUrls ?? []), ...urls])
+                      }
+                    />
                   </div>
-                ))}
+                )}
               </div>
-            ) : (
-              <p className="text-sm text-gray-400">No photos uploaded for this job yet.</p>
-            )}
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">After the work</p>
+                <PhotoGrid
+                  urls={job.afterPhotoUrls ?? []}
+                  label="After photo"
+                  emptyText="No after photos yet."
+                  onRemove={
+                    canEditPhotos
+                      ? (url) =>
+                          savePhotos(
+                            'afterPhotoUrls',
+                            (job.afterPhotoUrls ?? []).filter((u) => u !== url),
+                          )
+                      : undefined
+                  }
+                />
+                {canEditPhotos && (
+                  <div className="mt-2">
+                    <PhotoPicker
+                      label="Add after photos"
+                      disabled={submitting}
+                      full={(job.afterPhotoUrls ?? []).length >= MAX_EVIDENCE_PHOTOS}
+                      onUploaded={(urls) =>
+                        savePhotos('afterPhotoUrls', [...(job.afterPhotoUrls ?? []), ...urls])
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-700">Photos from the tenant</p>
+                <PhotoGrid
+                  urls={job.mediaUrls ?? []}
+                  label="Tenant photo"
+                  emptyText="The tenant attached no photos."
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -372,7 +482,7 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
           </div>
 
           {/* Complete Job */}
-          {job.status !== 'COMPLETED' && job.status !== 'CANCELLED' && (
+          {isOpen && !alreadyInvoiced && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-6">
               <h3 className="mb-2 font-semibold text-green-900">Ready to Complete?</h3>
               <p className="mb-4 text-sm text-green-800">
@@ -384,6 +494,40 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
               >
                 Mark Complete & Create Invoice
               </button>
+            </div>
+          )}
+
+          {isOpen && alreadyInvoiced && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+              <h3 className="mb-2 font-semibold text-green-900">Finished the work?</h3>
+              <p className="mb-4 text-sm text-green-800">
+                Your invoice is already sent, so there is no new bill. Add a photo of the finished
+                work, then mark the job done.
+              </p>
+              <button
+                onClick={handleMarkDone}
+                disabled={submitting}
+                className="w-full rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {submitting ? 'Saving…' : 'Mark work done'}
+              </button>
+            </div>
+          )}
+
+          {job.status === 'COMPLETED' && (
+            <div className="rounded-lg border border-gray-200 bg-white p-6">
+              <h3 className="mb-2 font-semibold">Sign-off</h3>
+              <p className="text-sm text-gray-700">
+                {job.approvedAt
+                  ? `Approved by ${job.approvedBy?.name ?? 'the property team'}.`
+                  : job.confirmationStatus === 'CONFIRMED'
+                    ? 'The tenant confirmed the repair is fixed.'
+                    : job.confirmationStatus === 'AWAITING_TENANT'
+                      ? 'Waiting for the tenant to confirm the repair is fixed. This does not hold up your payment.'
+                      : job.confirmationStatus === 'DISPUTED'
+                        ? 'The tenant says it is still a problem. The property team will decide what happens next.'
+                        : 'Finished. Nothing more is needed from you.'}
+              </p>
             </div>
           )}
         </div>

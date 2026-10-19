@@ -5,6 +5,8 @@ import type {
   CreateMaintenanceRequestInput,
   MaintenanceCategory,
   MaintenanceRequest,
+  RepairAnswerInput,
+  RepairReviewInput,
   UpdateMaintenanceRequestInput,
 } from '@/lib/api/types';
 
@@ -114,5 +116,19 @@ export function useMaintenanceRequest(id: string | null) {
 export function useUpdateMaintenanceRequest(id: string) {
   return useApiSubmit((body: UpdateMaintenanceRequestInput) =>
     api.maintenance.update(id, body).then((res) => res.data.data),
+  );
+}
+
+// The tenant's answer once a repair is finished: confirm it, or say it is still a problem.
+export function useAnswerRepair() {
+  return useApiSubmit((id: string, body: RepairAnswerInput) =>
+    api.maintenance.answerRepair(id, body).then((res) => res.data.data),
+  );
+}
+
+// The property team's decision on a finished repair: approve, send back, or give to another vendor.
+export function useReviewRepair(id: string) {
+  return useApiSubmit((body: RepairReviewInput) =>
+    api.maintenance.reviewRepair(id, body).then((res) => res.data.data),
   );
 }
