@@ -23,6 +23,7 @@ export function VendorCreateInvoice({ jobId }: VendorCreateInvoiceProps) {
   const needsPhotos =
     !!job &&
     job.workflow?.autoCompleteOnInvoice === true &&
+    job.workflow?.evidenceRequired === true &&
     ['SUBMITTED', 'SCHEDULED', 'IN_PROGRESS'].includes(job.status) &&
     (job.afterPhotoUrls ?? []).length === 0 &&
     !job.completionProofUrl;

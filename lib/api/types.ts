@@ -258,7 +258,7 @@ export type MaintenanceRequest = {
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
   // Present on the single-request fetch only.
-  workflow?: { autoCompleteOnInvoice: boolean };
+  workflow?: { autoCompleteOnInvoice: boolean; evidenceRequired: boolean };
   // Present on the single-request fetch only (ISS-051).
   invoices?: {
     id: string;
@@ -268,7 +268,7 @@ export type MaintenanceRequest = {
     description: string | null;
     dueDate: string;
     createdAt: string;
-    payments: { amount: number }[];
+    payments: Pick<Payment, 'id' | 'amount' | 'paidAt' | 'paymentMethod' | 'receiptNumber'>[];
   }[];
   createdAt: string;
   updatedAt: string;
@@ -428,6 +428,8 @@ export type Payment = {
   transactionRef: string | null;
   paidAt: string;
   notes: string | null;
+  /** The number printed on this payment's receipt (`/receipts/<id>`). */
+  receiptNumber: string;
 };
 
 export type AutoPayMandate = {
@@ -1033,7 +1035,13 @@ export type BankTransferSubmission = {
   };
   submittedBy?: { id: string; name: string; email: string };
   reconciledBy?: { id: string; name: string; role: string } | null;
-  payment?: { id: string; amount: number; paidAt: string; transactionRef: string | null } | null;
+  payment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    transactionRef: string | null;
+    receiptNumber: string;
+  } | null;
 };
 
 export type SubmitBankTransferInput = {

@@ -63,6 +63,7 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
     unassigned,
     completedRepairs,
     disputedRepairs,
+    transfers,
     overdue,
     pendingLeases,
     endingLeases,
@@ -108,6 +109,16 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
       orderBy: { confirmationRespondedAt: 'asc' },
       select: { id: true, title: true },
     }),
+    // Transfers someone else recorded, waiting for this person (or an admin) to confirm.
+    prisma.bankTransferSubmission.findMany({
+      where: {
+        status: 'PENDING',
+        submittedById: { not: userId },
+        invoice: { OR: [{ lease: inProperty }, { maintenanceRequest: inProperty }] },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { amount: true, invoice: { select: { invoiceNumber: true } } },
+    }),
     prisma.invoice.findMany({
       where: { status: 'OVERDUE', lease: inProperty },
       orderBy: { dueDate: 'asc' },
@@ -151,6 +162,16 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
         ? `/dashboard/maintenance/${disputedRepairs[0].id}`
         : '/dashboard/maintenance',
       disputedRepairs[0]?.title,
+    ),
+    ...row(
+      'transfers-to-confirm',
+      'Bank transfers to confirm',
+      transfers.length,
+      'medium',
+      '/dashboard/reconciliation',
+      transfers[0]
+        ? `${transfers[0].invoice.invoiceNumber}, ₦${transfers[0].amount.toLocaleString()}`
+        : null,
     ),
     ...row(
       'repairs-to-pay',
@@ -476,8 +497,8 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
   ];
 }
 
-async function adminAttention(): Promise<AttentionItem[]> {
-  const [listings, vendors, overdue] = await Promise.all([
+async function adminAttention(userId: string): Promise<AttentionItem[]> {
+  const [listings, vendors, overdue, transfers] = await Promise.all([
     prisma.property.findMany({
       where: { moderationStatus: 'PENDING_REVIEW' },
       orderBy: { createdAt: 'asc' },
@@ -489,6 +510,11 @@ async function adminAttention(): Promise<AttentionItem[]> {
       select: { businessName: true },
     }),
     prisma.invoice.count({ where: { status: 'OVERDUE' } }),
+    prisma.bankTransferSubmission.findMany({
+      where: { status: 'PENDING', submittedById: { not: userId } },
+      orderBy: { createdAt: 'asc' },
+      select: { amount: true, invoice: { select: { invoiceNumber: true } } },
+    }),
   ]);
 
   return [
@@ -507,6 +533,16 @@ async function adminAttention(): Promise<AttentionItem[]> {
       'high',
       '/admin/users',
       vendors[0]?.businessName,
+    ),
+    ...row(
+      'admin-transfers',
+      'Bank transfers to confirm',
+      transfers.length,
+      'medium',
+      '/admin/payments',
+      transfers[0]
+        ? `${transfers[0].invoice.invoiceNumber}, ₦${transfers[0].amount.toLocaleString()}`
+        : null,
     ),
     ...row(
       'admin-overdue',
@@ -529,7 +565,7 @@ export async function attentionFor(
       : role === 'VENDOR'
         ? await vendorAttention(userId)
         : role === 'ADMIN'
-          ? await adminAttention()
+          ? await adminAttention(userId)
           : await teamAttention(userId, now);
 
   // Most urgent first; within a level, the biggest pile first.

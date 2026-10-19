@@ -1264,6 +1264,8 @@ describe('invoices: vendor billing limits', () => {
         title: 'x',
         description: 'y',
         vendorId: vendor.id,
+        // A vendor invoice closes the job, which needs a photo of the finished work.
+        afterPhotoUrls: ['/api/v1/files/finished-work'],
       },
     });
     const cookie = await authCookie(vendor.id, vendor.role);
