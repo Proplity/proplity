@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   DollarSign,
   Home,
@@ -28,8 +27,7 @@ import {
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
-import { useAuth } from '@/context/AuthContext';
-import { missingTenantProfileFields } from '@/lib/tenantProfile';
+import { AttentionCard } from './AttentionCard';
 
 interface TenantDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -144,9 +142,6 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const showSignatureCard =
     !!signLease && (signLease.status === 'PENDING' || (signLease.signatures ?? []).length > 0);
 
-  const { user } = useAuth();
-  const missingProfileFields = user ? missingTenantProfileFields(user) : [];
-
   const property = lease?.unit?.property;
   const balance = summary?.money.balance ?? 0;
   const nextDue = summary?.nextDue ?? null;
@@ -173,26 +168,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
 
-      {missingProfileFields.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-            <div>
-              <p className="text-sm font-medium text-amber-900">Complete your profile</p>
-              <p className="text-sm text-amber-800">
-                {6 - missingProfileFields.length} of 6 details filled in. Landlords ask for these
-                before approving an application.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/dashboard/settings?tab=completion"
-            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
-          >
-            Finish profile
-          </Link>
-        </div>
-      )}
+      <AttentionCard />
 
       {signLease && showSignatureCard && (
         <LeaseSignatureCard lease={signLease} onSigned={refetchSignLease} />

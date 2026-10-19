@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { notifyAndEmail } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -48,6 +49,18 @@ export const POST = withAuth(
           comment: validated.data.comment,
         },
       });
+      await notifyAndEmail(
+        request.vendorId,
+        {
+          type: 'MAINTENANCE_STATUS',
+          title: `You were rated ${rating.rating}/5`,
+          body: `The tenant rated "${request.title}" ${rating.rating} out of 5.${
+            rating.comment ? ` "${rating.comment}"` : ''
+          }`,
+          link: `/dashboard/vendor/jobs/${request.id}`,
+        },
+        { email: false },
+      );
       return NextResponse.json({ data: rating }, { status: 201 });
     } catch (err) {
       return handleApiError(err);

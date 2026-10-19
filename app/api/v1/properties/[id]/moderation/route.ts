@@ -7,6 +7,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
+import { notifyPropertyTeam } from '@/lib/notifications';
 import { applyPendingChanges } from '@/lib/propertyPendingChanges';
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -92,6 +93,31 @@ export const PATCH = withAuth(
         }
         return tx.property.update({ where: { id }, data });
       });
+
+      // In the app too, for all three outcomes (the email below skips FLAGGED).
+      const outcome = {
+        APPROVED: {
+          title: 'Listing approved',
+          body: `"${property.name}" was approved and can now be published.`,
+        },
+        REJECTED: {
+          title: 'Listing needs changes',
+          body: `"${property.name}" was not approved.${
+            validated.data.moderationNotes
+              ? ` Reviewer notes: ${validated.data.moderationNotes}`
+              : ''
+          }`,
+        },
+        FLAGGED: {
+          title: 'Listing flagged',
+          body: `"${property.name}" was flagged and taken offline while it is checked.`,
+        },
+      }[validated.data.status];
+      await notifyPropertyTeam(
+        property,
+        { ...outcome, link: `/dashboard/properties/${property.id}` },
+        { email: false },
+      );
 
       // Notify BOTH the manager and the landlord by email
       const recipients = [property.manager, property.landlord].filter(

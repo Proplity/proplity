@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { PaymentFrequency } from '@prisma/client';
+import { notifyAndEmail } from '@/lib/notifications';
 
 function addCycle(date: Date, frequency: PaymentFrequency): Date {
   const next = new Date(date);
@@ -35,7 +36,7 @@ export async function runRentInvoicer(): Promise<{ created: number; leasesChecke
     });
     if (existing) continue;
 
-    await prisma.invoice.create({
+    const rentInvoice = await prisma.invoice.create({
       data: {
         leaseId: lease.id,
         type: 'RENT',
@@ -45,6 +46,11 @@ export async function runRentInvoicer(): Promise<{ created: number; leasesChecke
       },
     });
     created += 1;
+    await notifyAndEmail(lease.tenantId, {
+      title: `Rent invoice ${rentInvoice.invoiceNumber} issued`,
+      body: `Your next rent invoice is ₦${rentInvoice.amount.toLocaleString()}, due ${nextDueDate.toDateString()}.`,
+      link: '/dashboard',
+    });
 
     // Same cycle as rent, billed as its own line (see CLAUDE.md) -- guarded
     // by the same idempotency check pattern as RENT above, on its own type.

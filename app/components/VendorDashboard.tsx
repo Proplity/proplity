@@ -15,6 +15,7 @@ import { api } from '@/lib/apiClient';
 import { useVendorSummary } from '@/hooks/useDashboardSummary';
 import { usePagedList } from '@/hooks/usePagedList';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface VendorDashboardProps {
   onNavigate: (page: Page) => void;
@@ -78,6 +79,8 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
         <h1 className="mb-1 text-2xl font-semibold">Vendor Dashboard</h1>
         <p className="text-gray-600">Manage your jobs and track your earnings</p>
       </div>
+
+      <AttentionCard />
 
       {auth.user?.vendorVerification === 'PENDING' && (
         <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
