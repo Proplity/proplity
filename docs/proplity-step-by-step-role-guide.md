@@ -1,7 +1,7 @@
 # Proplity — Complete Step-by-Step Role Guide
 
-> **Version:** 3.0 · **Updated:** 2026-10-04 · **Platform:** Proplity — AI-Powered Nigerian Property Management  
-> **Master Walkthrough Video:** [Watch Full 1440p Video Walkthrough (2m 21s)](videos/proplity-complete-userflow.webm) · [Interactive Player with Chapters](userflow-video.html)
+> **Version:** 3.1 · **Updated:** 2026-10-19 · **Platform:** Proplity — AI-Powered Nigerian Property Management  
+> **Master Walkthrough Video:** [Watch Full 1440p Video Walkthrough (16m 24s)](../public/videos/proplity-complete-userflow.webm) · [Interactive Player with Chapters](userflow-video.html)
 
 ---
 
@@ -644,6 +644,45 @@ Landlord: dashboard → **Manager Access Codes** → **Invite via Email**. The m
 
 ---
 
+## Step 1.12 — Marketing and Information Pages
+
+**What this is:**
+Besides the homepage, the public site has a page for each audience plus company pages. They explain what Proplity does for each role and lead to sign-up.
+
+**Key points:**
+
+- Pricing: the plans overview (the menu link only appears when subscriptions are switched on).
+- For Landlords, For Tenants and For Service Providers: what each role gets, with a call to action to register.
+- About and Contact: who builds Proplity and a contact form that sends a message to the team.
+
+**Screenshots:**
+
+- Pricing page: `docs/screenshots/feat_marketing_pricing.png`
+
+![Pricing page](screenshots/feat_marketing_pricing.png)
+
+- For Landlords page: `docs/screenshots/feat_marketing_for_landlords.png`
+
+![For Landlords page](screenshots/feat_marketing_for_landlords.png)
+
+- For Tenants page: `docs/screenshots/feat_marketing_for_tenants.png`
+
+![For Tenants page](screenshots/feat_marketing_for_tenants.png)
+
+- For Service Providers page: `docs/screenshots/feat_marketing_for_vendors.png`
+
+![For Service Providers page](screenshots/feat_marketing_for_vendors.png)
+
+- About page: `docs/screenshots/feat_marketing_about.png`
+
+![About page](screenshots/feat_marketing_about.png)
+
+- Contact page: `docs/screenshots/feat_marketing_contact.png`
+
+![Contact page](screenshots/feat_marketing_contact.png)
+
+---
+
 # 🏠 SECTION 2: TENANT FLOW
 
 > **Login:** `tenant@proplity.com` / `Password123!`
@@ -1002,6 +1041,77 @@ An integrated AI chat assistant designed to answer tenant inquiries, explain Nig
 
 ---
 
+## Step 2.13 — Auto-Pay for Rent
+
+**What this is:**
+A tenant can let Proplity pay each rent invoice automatically. Auto-pay reuses the card the tenant last paid with online, so one card payment has to happen first.
+
+**Key points:**
+
+- Open Setup Auto-Pay on the dashboard Payment Information card. With no saved card it explains that one rent invoice must be paid by card first.
+- With a saved card it shows the card (last four digits and bank) and asks you to confirm with Enable Auto-Pay.
+- Once on, the card shows Auto-pay is active with a Cancel Auto-Pay link. Cancel any time.
+- The background charger (off until the operator sets AUTOPAY_WORKER_ENABLED) charges each open invoice once its due date arrives, never twice for the same invoice and day.
+- After three failed charges in a row auto-pay pauses and the tenant is notified to update the card or pay the invoice by hand.
+
+**Screenshots:**
+
+- Set up auto-pay: confirm the saved card: `docs/screenshots/feat_tenant_autopay_setup.png`
+
+![Auto-pay set-up prompt](screenshots/feat_tenant_autopay_setup.png)
+
+- Auto-pay active, with Cancel Auto-Pay: `docs/screenshots/feat_tenant_autopay_active.png`
+
+![Auto-pay active](screenshots/feat_tenant_autopay_active.png)
+
+---
+
+## Step 2.14 — Access Codes and the Full Dashboard
+
+**What this is:**
+The Access Codes card lists the codes issued for the tenant unit, such as a guest or delivery code. Each shows the guest name, the code and when it expires.
+
+**Key points:**
+
+- Codes belong to a unit and need an active lease. They are single use by default; a code can be made reusable for a regular visitor.
+- Two active codes for the same unit cannot share a value.
+- Creating a code is available through the API only for now (POST /api/v1/access-codes); the dashboard shows the active ones.
+- The full-page view shows everything on the tenant home: lease summary, balance and auto-pay, maintenance, access codes and documents.
+
+**Screenshots:**
+
+- Access Codes card: `docs/screenshots/feat_tenant_access_codes.png`
+
+![Tenant access codes](screenshots/feat_tenant_access_codes.png)
+
+- Tenant dashboard, full page: `docs/screenshots/feat_tenant_dashboard_full.png`
+
+![Tenant dashboard in full](screenshots/feat_tenant_dashboard_full.png)
+
+---
+
+## Step 2.15 — Neighbourhood Report and Notification Centre
+
+**What this is:**
+Tenants can read the neighbourhood report the manager keeps for their property (security, electricity, water and more, each rated out of 10) and see every notification in one list.
+
+**Key points:**
+
+- Quick Actions on the dashboard open the Neighbourhood Report.
+- The notification page lists payments, maintenance updates, messages and system notices, with unread highlighted and mark-all-read.
+
+**Screenshots:**
+
+- Neighbourhood report: `docs/screenshots/feat_tenant_neighbourhood_report.png`
+
+![Neighbourhood report, tenant view](screenshots/feat_tenant_neighbourhood_report.png)
+
+- Notification centre: `docs/screenshots/feat_tenant_notifications.png`
+
+![Tenant notification centre](screenshots/feat_tenant_notifications.png)
+
+---
+
 # 🏗 SECTION 3: LANDLORD FLOW
 
 > **Login:** `landlord@proplity.com` / `Password123!`
@@ -1185,6 +1295,60 @@ Landlords generate special codes and share them with people they want to appoint
 3. Share the code with the person you want as manager (WhatsApp, email, etc.)
 4. When they register as "Property Manager", they paste your code in the form
 5. They appear in your manager list automatically
+
+---
+
+## Step 3.8 — Dashboard Breakdown Pages
+
+**What this is:**
+Each tile on the landlord dashboard opens a breakdown page with the detail behind the number.
+
+**Key points:**
+
+- Tenants: every tenant across the portfolio with unit, rent and status.
+- Rent collected: this month collected, total collected, pending and collection rate, with a six-month trend, rent by property, payment methods and a searchable transaction table.
+- Maintenance: open and recent repair requests across properties.
+- Renewals: leases ending soon, so renewals can be started early.
+
+**Screenshots:**
+
+- Breakdown: tenants: `docs/screenshots/feat_breakdown_tenants.png`
+
+![Breakdown: tenants](screenshots/feat_breakdown_tenants.png)
+
+- Breakdown: rent collected: `docs/screenshots/feat_breakdown_rent.png`
+
+![Breakdown: rent collected](screenshots/feat_breakdown_rent.png)
+
+- Breakdown: maintenance: `docs/screenshots/feat_breakdown_maintenance.png`
+
+![Breakdown: maintenance](screenshots/feat_breakdown_maintenance.png)
+
+- Breakdown: renewals: `docs/screenshots/feat_breakdown_renewals.png`
+
+![Breakdown: renewals](screenshots/feat_breakdown_renewals.png)
+
+---
+
+## Step 3.9 — Property Page and My Rentals
+
+**What this is:**
+A landlord opens any property to see photos, units and tenants, ownership and management contacts, equipment, the neighbourhood report, financials, applications, viewings and announcements. My Rentals lists every lease on record.
+
+**Key points:**
+
+- Edits to a published listing are sent to the admin as proposed changes; the live listing is untouched until approved.
+- My Rentals shows each lease with property, unit, dates, annual rent and status.
+
+**Screenshots:**
+
+- Property page (landlord view): `docs/screenshots/feat_landlord_property_detail.png`
+
+![Landlord property page](screenshots/feat_landlord_property_detail.png)
+
+- My Rentals: every lease on record: `docs/screenshots/feat_landlord_rentals.png`
+
+![My Rentals](screenshots/feat_landlord_rentals.png)
 
 ---
 
@@ -1442,6 +1606,118 @@ A built-in AI chat assistant for property management questions, drafting notices
 
 ---
 
+## Step 4.11 — Photos, Media and Listing Edits
+
+**What this is:**
+The property page is the manager workbench. Photos and details are edited here, and changes to an approved listing go through admin review before they go live.
+
+**Key points:**
+
+- Manage Photos: upload room and exterior photos, choose the cover and exterior image, and add a 360 degree tour link.
+- Edit Property: change name, address, city, state and description. Save as Draft keeps your edits private without alerting anyone; Submit for Review sends them to the admin.
+- While edits wait, the Listing Status card shows Proposed Edits Under Review with Cancel Approval Request. The public page keeps showing the approved version.
+- When the admin approves, the staged edits are applied; if rejected, the live listing is unchanged.
+
+**Screenshots:**
+
+- Property page, full view: `docs/screenshots/feat_pd_manager.png`
+
+![Manager property page](screenshots/feat_pd_manager.png)
+
+- Manage Photos and Media: `docs/screenshots/feat_pd_photos_modal.png`
+
+![Manage photos and media](screenshots/feat_pd_photos_modal.png)
+
+- Edit Property: Save as Draft or Submit for Review: `docs/screenshots/feat_pd_edit_modal.png`
+
+![Edit property details](screenshots/feat_pd_edit_modal.png)
+
+---
+
+## Step 4.12 — Equipment, Announcements and Unit Import
+
+**What this is:**
+Three more tools on the property page keep day-to-day records in one place.
+
+**Key points:**
+
+- Equipment: log generators, inverters, HVAC and more with serial number, install date and warranty expiry.
+- Announcements: post a notice to the property, optionally pinned, for everyone linked to it.
+- Import Units (CSV or Excel): add many units at once from a spreadsheet. Rows with problems are reported instead of silently skipped.
+- Make Private or Make Public per unit controls whether it appears on the marketplace.
+
+**Screenshots:**
+
+- Add equipment: `docs/screenshots/feat_pd_equipment_modal.png`
+
+![Add equipment](screenshots/feat_pd_equipment_modal.png)
+
+- New announcement: `docs/screenshots/feat_pd_announcement_modal.png`
+
+![New announcement](screenshots/feat_pd_announcement_modal.png)
+
+- Import units from CSV or Excel: `docs/screenshots/feat_pd_import_units.png`
+
+![Import units](screenshots/feat_pd_import_units.png)
+
+---
+
+## Step 4.13 — The Tenant Record
+
+**What this is:**
+View Tenant on a unit opens the full record for that tenant and lease.
+
+**Key points:**
+
+- Lease information with Terminate, Renew and Send Notice, plus late fee and grace period settings.
+- Lease agreement signature: the tenant and the manager each sign by typing their full legal name.
+- Violations and condition reports (move-in and move-out), payment history, maintenance requests and manager notes.
+- Quick actions: call, message, email, WhatsApp, send an invoice or record a cash or transfer payment. Payment Reliability summarises how the tenant pays.
+
+**Screenshots:**
+
+- Tenant record: `docs/screenshots/feat_tenant_detail.png`
+
+![Tenant record](screenshots/feat_tenant_detail.png)
+
+---
+
+## Step 4.14 — Account Settings, Notifications and Portfolio Breakdown
+
+**What this is:**
+Every signed-in user has Account Settings behind the gear icon, and a notification centre behind the bell.
+
+**Key points:**
+
+- General and Security: name, phone, bio and Change Password (other devices are signed out).
+- Setup and Verification: the checklist of what the account still needs.
+- Payout and Bank Accounts: the accounts payouts are sent to.
+- The breakdown page lists every property with units and occupancy; the notification page lists everything with unread highlighted.
+
+**Screenshots:**
+
+- Account Settings: general and security: `docs/screenshots/feat_account_settings.png`
+
+![Account settings](screenshots/feat_account_settings.png)
+
+- Setup and Verification tab: `docs/screenshots/feat_account_setup_verification.png`
+
+![Setup and verification tab](screenshots/feat_account_setup_verification.png)
+
+- Payout and Bank Accounts tab: `docs/screenshots/feat_account_bank_accounts.png`
+
+![Payout and bank accounts tab](screenshots/feat_account_bank_accounts.png)
+
+- Breakdown: properties: `docs/screenshots/feat_breakdown_properties.png`
+
+![Breakdown: properties](screenshots/feat_breakdown_properties.png)
+
+- Notification centre: `docs/screenshots/feat_notifications_page.png`
+
+![Notification centre](screenshots/feat_notifications_page.png)
+
+---
+
 # 🔧 SECTION 5: VENDOR / SERVICE PROVIDER FLOW
 
 > **Login:** `vendor@proplity.com` / `Password123!`
@@ -1536,6 +1812,24 @@ Direct messaging with the property manager — for clarifying job details, reque
 **Screenshot:** `docs/screenshots/vendor_04_messages.png`
 
 ![Vendor 04 Messages](screenshots/vendor_04_messages.png)
+
+---
+
+## Step 5.5 — The Invoices Page
+
+**What this is:**
+Invoices sent for completed jobs are listed with their amount and payment status, with the outstanding total at the top. A new invoice is raised from a job with Mark Complete and Create Invoice.
+
+**Key points:**
+
+- Awaiting payment turns to paid once the manager settles the invoice.
+- A vendor can bill only their own jobs, and every new invoice starts unpaid.
+
+**Screenshots:**
+
+- Invoices: outstanding total and sent invoices: `docs/screenshots/feat_vendor_invoices.png`
+
+![Vendor invoices page](screenshots/feat_vendor_invoices.png)
 
 ---
 
@@ -1671,6 +1965,84 @@ System-wide configuration — feature toggles, payment settings, email template 
 
 ---
 
+## Step 6.7 — Moderation Queue: Filters, Cards and Table
+
+**What this is:**
+Properties and Moderation is where every listing is reviewed before it goes public.
+
+**Key points:**
+
+- Filter chips: All, Pending Review, Approved, Rejected, Flagged and Merged, plus search by name, address or owner.
+- Switch between Cards and Table. Each listing carries badges for status, visibility and Possible duplicate.
+- Review opens a side drawer with owner and manager contacts, units, a moderation notes box and the approve, reject, flag or unpublish actions.
+- Staged edits from managers appear for approval here too; approving applies them to the live listing.
+
+**Screenshots:**
+
+- Moderation queue (cards): `docs/screenshots/feat_admin_properties_queue.png`
+
+![Moderation queue](screenshots/feat_admin_properties_queue.png)
+
+- Moderation queue (table): `docs/screenshots/feat_admin_properties_table.png`
+
+![Moderation queue table](screenshots/feat_admin_properties_table.png)
+
+- Review drawer for a pending listing: `docs/screenshots/feat_admin_review_drawer.png`
+
+![Property review drawer](screenshots/feat_admin_review_drawer.png)
+
+---
+
+## Step 6.8 — Duplicate Listings: Merge and Undo
+
+**What this is:**
+When a new listing has the same address as an existing one it is marked Possible duplicate. The admin can merge it into the listing to keep.
+
+**Key points:**
+
+- Merge Duplicate lists candidates with the same address fingerprint and explains what will happen.
+- The duplicate is unpublished, marked rejected and linked to the kept listing; tenants and search only see the kept one.
+- Undo Merge on a merged listing restores it. Full View opens the property in its own page.
+
+**Screenshots:**
+
+- Merge Duplicate Listing: `docs/screenshots/feat_admin_merge_modal.png`
+
+![Merge duplicate listing](screenshots/feat_admin_merge_modal.png)
+
+- Property full view (admin): `docs/screenshots/feat_admin_property_full.png`
+
+![Admin property full view](screenshots/feat_admin_property_full.png)
+
+---
+
+## Step 6.9 — Platform Breakdowns and the Notification Centre
+
+**What this is:**
+Tiles on the admin overview open breakdown pages for users, properties, transactions and maintenance. The bell opens the admin notification centre.
+
+**Key points:**
+
+- Users: everyone on the platform by role and status.
+- Transactions: payments across the platform with provider and reference.
+- Notifications: platform alerts such as new listings to review and vendor verifications.
+
+**Screenshots:**
+
+- Breakdown: users: `docs/screenshots/feat_admin_breakdown_users.png`
+
+![Breakdown: users](screenshots/feat_admin_breakdown_users.png)
+
+- Breakdown: transactions: `docs/screenshots/feat_admin_breakdown_transactions.png`
+
+![Breakdown: transactions](screenshots/feat_admin_breakdown_transactions.png)
+
+- Admin notification centre: `docs/screenshots/feat_admin_notifications_page.png`
+
+![Admin notification centre](screenshots/feat_admin_notifications_page.png)
+
+---
+
 # 🔀 CROSS-ROLE LIFECYCLE: FULL TENANT APPLICATION → ACTIVE LEASE
 
 This shows how all roles work together in sequence for the platform's most important workflow.
@@ -1721,3 +2093,30 @@ Homepage, Login, Registration, Property detail, Tenant dashboard, Schedule viewi
 ---
 
 _Generated: 2026-10-04 · Proplity v0.1.0 · Screenshots at 1400×900 desktop unless labelled_
+
+---
+
+## Step R.1 — Phone Layout: Tab Bar, More Sheet and Long Pages
+
+**What this is:**
+On a phone the sidebar becomes a bottom tab bar. Items that do not fit move into a More sheet, with Log out at the bottom.
+
+**Key points:**
+
+- Tab bar and the Quick Actions grid are sized for thumbs.
+- The More sheet holds the remaining pages for the role.
+- Long pages such as a property stack into one column.
+
+**Screenshots:**
+
+- Tenant dashboard with tab bar: `docs/screenshots/feat_mobile_tenant_tabbar.png`
+
+![Tenant dashboard on a phone](screenshots/feat_mobile_tenant_tabbar.png)
+
+- More sheet: `docs/screenshots/feat_mobile_more_sheet.png`
+
+![More sheet on a phone](screenshots/feat_mobile_more_sheet.png)
+
+- Manager property page: `docs/screenshots/feat_mobile_manager_property.png`
+
+![Manager property page on a phone](screenshots/feat_mobile_manager_property.png)
