@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react';
-import { fromLocalDateKey, upcomingViewingDays } from '@/lib/viewingSlots';
+import {
+  VIEWING_TIMES,
+  fromLocalDateKey,
+  isSunday,
+  viewingDateRange,
+  viewingInstant,
+} from '@/lib/viewingSlots';
 import { useCreateViewing } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 
@@ -9,18 +15,6 @@ interface ScheduleViewingProps {
   propertyId: string;
   propertyTitle: string;
   propertyAddress: string;
-}
-
-// Parses a "10:00 AM" / "2:00 PM" slot label into a 24h hour -- the API
-// takes one scheduledAt timestamp, not a separate date + label.
-function slotToHour(slot: string): number {
-  const match = slot.match(/^(\d{1,2}):00\s*(AM|PM)$/i);
-  if (!match) return 9;
-  let hour = parseInt(match[1], 10);
-  const meridiem = match[2].toUpperCase();
-  if (meridiem === 'PM' && hour !== 12) hour += 12;
-  if (meridiem === 'AM' && hour === 12) hour = 0;
-  return hour;
 }
 
 export function ScheduleViewing({
@@ -45,8 +39,11 @@ export function ScheduleViewing({
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [availableDates] = useState(() => upcomingViewingDays());
-  const selectedDate = availableDates.find((d) => d.date === formData.date);
+  const [range] = useState(() => viewingDateRange());
+  const timeLabel = VIEWING_TIMES.find((t) => t.value === formData.timeSlot)?.label ?? '';
+  const dayLabel = formData.date
+    ? fromLocalDateKey(formData.date).toLocaleDateString('en-US', { weekday: 'long' })
+    : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,14 +53,20 @@ export function ScheduleViewing({
       return;
     }
 
-    const hour = slotToHour(formData.timeSlot);
-    const scheduledAt = fromLocalDateKey(formData.date);
-    scheduledAt.setHours(hour, 0, 0, 0);
+    const peopleLabel =
+      formData.numberOfPeople === '4' ? '4 or more people' : `${formData.numberOfPeople} people`;
+    const scheduledAt = viewingInstant(formData.date, formData.timeSlot);
 
     try {
       await submit({
         scheduledAt: scheduledAt.toISOString(),
-        notes: formData.specialRequirements || undefined,
+        notes:
+          [
+            formData.numberOfPeople !== '1' ? `${peopleLabel} attending.` : '',
+            formData.specialRequirements,
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined,
       });
       setStep(3);
     } catch {
@@ -83,9 +86,9 @@ export function ScheduleViewing({
             <p className="mb-6 text-gray-600">
               Your viewing request has been sent for{' '}
               <strong>
-                {selectedDate?.day}, {formData.date}
+                {dayLabel}, {formData.date}
               </strong>{' '}
-              at <strong>{formData.timeSlot}</strong>
+              at <strong>{timeLabel}</strong> (Lagos time)
             </p>
             <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
               <p className="mb-2 text-sm font-medium text-blue-900">What&apos;s Next?</p>
@@ -161,71 +164,69 @@ export function ScheduleViewing({
           {/* Step 1: Date & Time Selection */}
           {step === 1 && (
             <div className="space-y-6">
-              {/* Date Selection */}
               <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                   <Calendar className="h-5 w-5" />
                   Select a Date
                 </h2>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {availableDates.map((dateOption) => (
-                    <button
-                      key={dateOption.date}
-                      type="button"
-                      onClick={() =>
-                        setFormData({
-                          ...formData,
-                          date: dateOption.date,
-                          timeSlot: '',
-                        })
-                      }
-                      className={`rounded-lg border-2 p-4 text-left transition-all ${
-                        formData.date === dateOption.date
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <p className="font-semibold">{dateOption.day}</p>
-                      <p className="text-sm text-gray-600">
-                        {fromLocalDateKey(dateOption.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {dateOption.slots.length} slots available
-                      </p>
-                    </button>
-                  ))}
-                </div>
+                <label
+                  htmlFor="viewing-date"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Viewing date
+                </label>
+                <input
+                  id="viewing-date"
+                  type="date"
+                  min={range.min}
+                  max={range.max}
+                  value={formData.date}
+                  onChange={(e) => {
+                    const date = e.target.value;
+                    if (date && isSunday(date)) {
+                      setFormError('Viewings are held Monday to Saturday. Choose another day.');
+                      setFormData({ ...formData, date: '' });
+                      return;
+                    }
+                    setFormError(null);
+                    setFormData({ ...formData, date });
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Monday to Saturday, from tomorrow up to 60 days ahead.
+                </p>
               </div>
 
-              {/* Time Slot Selection */}
-              {formData.date && selectedDate && (
-                <div className="rounded-lg border border-gray-200 bg-white p-6">
-                  <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-                    <Clock className="h-5 w-5" />
-                    Select a Time
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {selectedDate.slots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, timeSlot: slot })}
-                        className={`rounded-lg border-2 p-3 text-center transition-all ${
-                          formData.timeSlot === slot
-                            ? 'border-blue-600 bg-blue-50 font-semibold'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="rounded-lg border border-gray-200 bg-white p-6">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                  <Clock className="h-5 w-5" />
+                  Select a Time
+                </h2>
+                <label
+                  htmlFor="viewing-time"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Start time
+                </label>
+                <select
+                  id="viewing-time"
+                  value={formData.timeSlot}
+                  onChange={(e) => setFormData({ ...formData, timeSlot: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">Choose a time</option>
+                  {VIEWING_TIMES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-500">
+                  9:00 AM to 5:00 PM, Lagos time. The property team confirms or suggests another
+                  time.
+                </p>
+              </div>
 
               {/* Important Information */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -253,14 +254,14 @@ export function ScheduleViewing({
                 <p className="mb-1 text-sm font-medium text-green-900">Selected Viewing</p>
                 <p className="text-sm text-green-800">
                   <strong>
-                    {selectedDate?.day},{' '}
+                    {dayLabel},{' '}
                     {fromLocalDateKey(formData.date).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                   </strong>{' '}
-                  at <strong>{formData.timeSlot}</strong>
+                  at <strong>{timeLabel}</strong> (Lagos time)
                 </p>
               </div>
 
@@ -382,6 +383,10 @@ export function ScheduleViewing({
                 onClick={() => {
                   if (!formData.date || !formData.timeSlot) {
                     setFormError('Please select both a date and time');
+                    return;
+                  }
+                  if (formData.date < range.min || formData.date > range.max) {
+                    setFormError('Choose a date from tomorrow up to 60 days ahead.');
                     return;
                   }
                   setFormError(null);

@@ -6,6 +6,7 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
+import { formatViewingTime, viewingTimeProblem } from '@/lib/viewingSlots';
 
 // Lists are capped so one busy record cannot return an unbounded response (ISS-073).
 const LIST_LIMIT = 500;
@@ -23,11 +24,34 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     const viewings = await prisma.propertyViewing.findMany({
       take: LIST_LIMIT,
       where: { propertyId: id, ...(canSeeAll ? {} : { requestedById: session.sub }) },
-      include: canSeeAll ? { requestedBy: { select: { name: true, email: true } } } : undefined,
+      include: canSeeAll
+        ? {
+            requestedBy: {
+              select: {
+                name: true,
+                email: true,
+                phoneNumber: true,
+                createdAt: true,
+                kycStatus: true,
+                idDocumentUrl: true,
+              },
+            },
+          }
+        : undefined,
       orderBy: { scheduledAt: 'asc' },
     });
 
-    return NextResponse.json({ data: viewings });
+    // The property team gets a short profile of who is coming (contact, ID on
+    // file, account age). The ID document link itself stays out of this list.
+    const data = viewings.map((v) => {
+      const visitor =
+        'requestedBy' in v ? (v.requestedBy as { idDocumentUrl?: string | null }) : null;
+      if (!visitor) return v;
+      const { idDocumentUrl, ...rest } = visitor;
+      return { ...v, requestedBy: { ...rest, hasIdOnFile: !!idDocumentUrl } };
+    });
+
+    return NextResponse.json({ data });
   } catch (err) {
     return handleApiError(err);
   }
@@ -50,6 +74,14 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (scheduledAt.getTime() <= Date.now()) {
       return NextResponse.json(
         { error: 'Choose a viewing time in the future', code: 'PAST_DATE' },
+        { status: 400 },
+      );
+    }
+
+    const outOfHours = viewingTimeProblem(scheduledAt);
+    if (outOfHours) {
+      return NextResponse.json(
+        { error: outOfHours, code: 'OUTSIDE_VIEWING_HOURS' },
         { status: 400 },
       );
     }
@@ -88,7 +120,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       prisma.property.findUnique({ where: { id } }),
     ]);
     if (requester && property) {
-      const when = scheduledAt.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+      const when = `${formatViewingTime(scheduledAt, 'full')} (Lagos time)`;
       await notifyByEmail(
         requester.email,
         `Viewing requested: ${property.name}`,

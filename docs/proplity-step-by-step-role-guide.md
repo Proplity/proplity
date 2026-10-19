@@ -76,7 +76,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 8. **360° Virtual Tour & Video Tour Embedding**: Direct integration of 360-degree virtual tours and video walkthroughs (\`Property.virtualTourUrl\`).
 9. **Neighborhood Quality Metrics & Radar Ratings**: Scored breakdown (0-10) for Safety, Flood Risk, Roads, Power, Water, and Schools (\`NeighbourhoodReport.tsx\`, ISS-016).
 10. **Dynamic Property Trust Score Badge**: Algorithmic trust rating badge computed daily by background workers (\`Property.trustScore\`, ISS-013).
-11. **Inspection Viewing Booking**: Interactive calendar picker with morning/afternoon slots for on-site property visits (\`ScheduleViewing.tsx\`).
+11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
 13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
 14. **Platform Inquiries & Contact Form**: Validated platform contact and support submission form (\`/contact\`, \`ContactPage.tsx\`).
@@ -844,11 +844,11 @@ Before applying, you can request to physically visit a property. The manager con
 **Steps:**
 
 1. On a property detail page, click **Schedule Viewing**
-2. A modal appears with a date picker and time slot
-3. Pick your preferred date and time
-4. Click **Submit Request**
-5. Manager receives the request and confirms (or suggests a new time)
-6. Confirmation email is sent to you
+2. Pick a **date** with the date field (tomorrow up to 60 days ahead, Monday to Saturday) and a **start time** from the dropdown (every 30 minutes, 9:00 AM to 5:00 PM, Lagos time)
+3. Click **Continue**, check your details (filled in from your account) and add any notes
+4. Click **Confirm Viewing**
+5. The manager sees who is coming (contact, whether an ID is on file, how long they have had an account) and confirms or declines
+6. A confirmation email is sent to you
 
 **Screenshots:**
 

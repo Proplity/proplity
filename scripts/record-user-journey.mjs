@@ -739,11 +739,21 @@ async function main() {
       .last();
     await card.scrollIntoViewIfNeeded();
     await pause(1500);
-    await hud('📅 Schedule Tour: pick a day and a time slot', '#10b981');
+    await hud('📅 Schedule Tour: pick a date and a start time', '#10b981');
     await click(card.getByRole('button', { name: 'Schedule Tour' }), { settle: 1200 });
     await page.getByRole('heading', { name: 'Select a Date' }).waitFor();
-    await click(page.locator('button', { hasText: /slots available/ }).first(), { settle: 500 });
-    await click(page.locator('button', { hasText: /^\d{1,2}:\d{2}/ }).first(), { settle: 500 });
+    // Three days out, moved off a Sunday: viewings run Monday to Saturday.
+    const viewingDay = new Date();
+    viewingDay.setDate(viewingDay.getDate() + 3);
+    if (viewingDay.getDay() === 0) viewingDay.setDate(viewingDay.getDate() + 1);
+    const viewingKey = [
+      viewingDay.getFullYear(),
+      String(viewingDay.getMonth() + 1).padStart(2, '0'),
+      String(viewingDay.getDate()).padStart(2, '0'),
+    ].join('-');
+    await page.getByLabel('Viewing date').fill(viewingKey);
+    await pause(800);
+    await page.getByLabel('Start time').selectOption('10:00');
     await pause(800);
     await click(page.getByRole('button', { name: 'Continue' }), { settle: 800 });
     await hud('📝 Name, email and phone are already filled in from the account', '#10b981');
@@ -1069,6 +1079,11 @@ async function main() {
     await page.getByText('Cost Tracking').scrollIntoViewIfNeeded();
     await hud('🧾 Cost Tracking: the vendor invoice is waiting to be paid', '#3b82f6');
     await pause(2500);
+    await click(page.getByRole('button', { name: 'View invoice' }), { settle: 1200 });
+    await page.getByText('Replace kitchen sink trap and seal').waitFor({ timeout: 10000 });
+    await page.getByText('Vendor notes: Payment by bank transfer or online').waitFor();
+    await hud('🔎 View invoice: the vendor’s itemised lines, VAT, total and notes', '#3b82f6');
+    await pause(3500);
     await click(page.getByRole('button', { name: /^Pay ₦/ }), { settle: 1500 });
     await page.waitForURL('**/dev/mock-checkout**', { timeout: 40000 });
     await hud('💳 Pay the vendor through the same checkout', '#3b82f6');
