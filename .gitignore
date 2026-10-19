@@ -30,3 +30,7 @@ install.log
 /.stryker-tmp
 .env*
 /.local-storage
+
+# Recorded walkthrough video is only kept in public/videos (served by /userflow-video.html)
+/docs/videos/
+/out/
