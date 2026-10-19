@@ -218,9 +218,9 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 494 tests across 42 files in
-  `tests/api/` (including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`),
-  real HTTP against a spawned `next dev` server and a dedicated
+- **API Integration suite (Vitest)** — `pnpm test`. 497 tests across 42 files under
+  `tests/` (424 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 73 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+  the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
@@ -232,7 +232,7 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 52 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 55 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
   the dev email widget, and the mobile tab bar. Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
