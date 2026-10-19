@@ -13,6 +13,16 @@ enum MaintenanceStatus {
   CANCELLED
 }
 
+// Where a finished repair stands with the tenant. NOT_REQUESTED covers a job that is not finished,
+// repairs finished before this step existed, and any job finished while the admin switch
+// (SystemSettings.requireTenantRepairConfirmation) was off. It never blocks payment.
+enum RepairConfirmationStatus {
+  NOT_REQUESTED
+  AWAITING_TENANT
+  CONFIRMED
+  DISPUTED
+}
+
 enum ScheduleFrequency {
   WEEKLY
   MONTHLY
@@ -37,36 +47,52 @@ model MaintenanceCategory {
 }
 
 model MaintenanceRequest {
-  id                 String               @id @default(uuid())
-  unitId             String
-  unit               Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId           String
-  tenant             User                 @relation("TenantMaintenance", fields: [tenantId], references: [id])
-  vendorId           String?
-  vendor             User?                @relation("VendorJobs", fields: [vendorId], references: [id])
-  title              String
-  description        String
+  id                      String                   @id @default(uuid())
+  unitId                  String
+  unit                    Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId                String
+  tenant                  User                     @relation("TenantMaintenance", fields: [tenantId], references: [id])
+  vendorId                String?
+  vendor                  User?                    @relation("VendorJobs", fields: [vendorId], references: [id])
+  title                   String
+  description             String
   // Nullable, unlike MaintenanceSchedule.category below: a tenant's request
   // often isn't categorized until the AI-triage step classifies it after
   // submission (PRD §5.1 "AI-triaged issue categorization"), so it shouldn't
   // be forced to a value at creation time.
-  categoryId         String?
-  category           MaintenanceCategory? @relation(fields: [categoryId], references: [id])
-  priority           MaintenancePriority  @default(MEDIUM)
-  status             MaintenanceStatus    @default(SUBMITTED)
-  mediaUrls          String[]
-  vendorNotes        String?
-  completionProofUrl String?
-  scheduledFor       DateTime?
-  completedAt        DateTime?
-  costEstimate       Float?
-  finalCost          Float?
-  invoices           Invoice[]
-  vendorPayouts      VendorPayout[]
-  conversation       Conversation?
-  vendorRating       VendorRating?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  categoryId              String?
+  category                MaintenanceCategory?     @relation(fields: [categoryId], references: [id])
+  priority                MaintenancePriority      @default(MEDIUM)
+  status                  MaintenanceStatus        @default(SUBMITTED)
+  mediaUrls               String[]
+  vendorNotes             String?
+  completionProofUrl      String?
+  // Photos the assigned vendor uploads (gateway URLs, folder maintenance-requests). At least one
+  // "after" photo is needed to close the job; "before" photos are optional.
+  beforePhotoUrls         String[]                 @default([])
+  afterPhotoUrls          String[]                 @default([])
+  // Tenant sign-off after completion. A dispute keeps its reason and photos until the vendor
+  // finishes the job again, so the vendor and the manager can read them.
+  confirmationStatus      RepairConfirmationStatus @default(NOT_REQUESTED)
+  confirmationRespondedAt DateTime?
+  disputeReason           String?
+  disputePhotoUrls        String[]                 @default([])
+  // The property team's own sign-off, separate from the vendor completing the job.
+  approvedAt              DateTime?
+  approvedById            String?
+  approvedBy              User?                    @relation("RepairApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
+  scheduledFor            DateTime?
+  completedAt             DateTime?
+  costEstimate            Float?
+  finalCost               Float?
+  invoices                Invoice[]
+  vendorPayouts           VendorPayout[]
+  conversation            Conversation?
+  vendorRating            VendorRating?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@index([confirmationStatus])
 }
 
 model MaintenanceSchedule {

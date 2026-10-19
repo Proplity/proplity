@@ -221,6 +221,9 @@ export type CreateMaintenanceRequestInput = {
   mediaUrls?: string[];
 };
 
+export type RepairConfirmationStatus =
+  'NOT_REQUESTED' | 'AWAITING_TENANT' | 'CONFIRMED' | 'DISPUTED';
+
 export type MaintenanceRequest = {
   id: string;
   unitId: string;
@@ -238,11 +241,24 @@ export type MaintenanceRequest = {
   mediaUrls: string[];
   vendorNotes: string | null;
   completionProofUrl: string | null;
+  /** The vendor's photos of the work, uploaded through the file gateway. */
+  beforePhotoUrls: string[];
+  afterPhotoUrls: string[];
+  /** The tenant's answer once the job is finished (the admin can switch the step off). */
+  confirmationStatus: RepairConfirmationStatus;
+  confirmationRespondedAt: string | null;
+  disputeReason: string | null;
+  disputePhotoUrls: string[];
+  /** The property team's sign-off. */
+  approvedAt: string | null;
+  approvedBy?: { id: string; name: string } | null;
   scheduledFor: string | null;
   completedAt: string | null;
   costEstimate: number | null;
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
+  // Present on the single-request fetch only.
+  workflow?: { autoCompleteOnInvoice: boolean };
   // Present on the single-request fetch only (ISS-051).
   invoices?: {
     id: string;
@@ -267,6 +283,23 @@ export type UpdateMaintenanceRequestInput = {
   completionProofUrl?: string;
   finalCost?: number;
   vendorNotes?: string;
+  /** Each list replaces the stored photos (assigned vendor only). */
+  beforePhotoUrls?: string[];
+  afterPhotoUrls?: string[];
+};
+
+export type RepairAnswerInput =
+  { outcome: 'CONFIRMED' } | { outcome: 'DISPUTED'; reason: string; photoUrls?: string[] };
+
+export type RepairReviewInput =
+  | { action: 'APPROVE' }
+  | { action: 'REOPEN'; note?: string }
+  | { action: 'REASSIGN'; vendorId: string; note?: string };
+
+export type PlatformSettings = {
+  setupComplete: boolean;
+  autoCompleteMaintenanceOnInvoice: boolean;
+  requireTenantRepairConfirmation: boolean;
 };
 
 export type Vendor = {

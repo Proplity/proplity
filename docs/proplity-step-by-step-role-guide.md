@@ -936,6 +936,15 @@ Something broken? Use this form to report it. The manager assigns a tradesperson
 3. Click **Submit Request**
 4. Your request appears in "Track a Maintenance Request" on your dashboard
 
+**When the vendor says the work is done:**
+
+The request shows **Needs your answer** (and the dashboard's Needs your attention list shows **Repairs to confirm**). Open it, look at the vendor's before and after photos, then choose:
+
+- **Confirm fixed** — records that the repair is fixed. Nothing else changes.
+- **Still a problem** — say what is still wrong (required) and add photos if you like. Your property team is told and decides whether the same vendor comes back, another vendor takes it, or the work is approved anyway.
+
+Your answer never changes what is owed to the vendor. An admin can switch the question off in Platform Settings; a repair already waiting for an answer can still be answered.
+
 **Screenshots:**
 
 - Maintenance list: `docs/screenshots/tenant_04_maintenance_list_desktop.png`
@@ -1555,6 +1564,14 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
 6. The tenant can then rate the vendor from My Maintenance Requests, and the manager opens **View invoice** under Cost Tracking (the vendor's itemised lines, VAT, total and notes) and pays it
 
+**Finished repairs: the Sign-off card**
+
+Only the vendor can finish a job (the old "Mark as Completed" button is gone). Once they have, the repair page shows their before and after photos and a **Sign-off** card:
+
+- **Approve work** — records your sign-off, separate from the vendor finishing. It does not pay or hold back the vendor's invoice.
+- If the tenant answered **Still a problem** you see their reason and photos and choose **Send back to vendor** (the job is open again and the vendor is told), **Give to another vendor** (the first vendor's unpaid invoice is cancelled; if it has already been paid the job cannot move) or **Approve anyway**.
+- The tenant may not have answered yet: you can wait for them, or approve straight away.
+
 **Screenshots:**
 
 - Kanban board (desktop): `docs/screenshots/manager_07_maintenance_desktop.png`
@@ -1766,6 +1783,9 @@ Full details of a single maintenance job — what needs fixing, where, when, and
 - Preferred access time
 - Job timeline/history
 - **Update Status** button (move job from In Progress → Completed)
+- **Work Photos** — add before photos (optional) and after photos; at least one after photo is needed to close the job, whether the invoice or **Mark work done** closes it
+- A red box with the tenant's reason and photos if they said the repair is still a problem; fix it, add new photos and press **Mark work done** (the invoice is not sent again)
+- Photos lock once the property team approves the repair or the tenant confirms it
 
 **Screenshots:**
 
@@ -1960,6 +1980,11 @@ A chronological log of significant actions on the platform — used for security
 
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
+
+It has two switches:
+
+- **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
+- **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 

@@ -256,7 +256,18 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (!involved) return false;
     const request = await prisma.maintenanceRequest.findFirst({
       where: {
-        AND: [involved, { OR: [{ mediaUrls: { has: url } }, { completionProofUrl: url }] }],
+        AND: [
+          involved,
+          {
+            OR: [
+              { mediaUrls: { has: url } },
+              { completionProofUrl: url },
+              { beforePhotoUrls: { has: url } },
+              { afterPhotoUrls: { has: url } },
+              { disputePhotoUrls: { has: url } },
+            ],
+          },
+        ],
       },
       select: { id: true },
     });

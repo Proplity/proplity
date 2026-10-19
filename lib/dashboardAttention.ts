@@ -62,6 +62,7 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
     viewings,
     unassigned,
     completedRepairs,
+    disputedRepairs,
     overdue,
     pendingLeases,
     endingLeases,
@@ -95,6 +96,16 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
         },
       },
       orderBy: { completedAt: 'asc' },
+      select: { id: true, title: true },
+    }),
+    prisma.maintenanceRequest.findMany({
+      where: {
+        status: 'COMPLETED',
+        confirmationStatus: 'DISPUTED',
+        approvedAt: null,
+        ...inProperty,
+      },
+      orderBy: { confirmationRespondedAt: 'asc' },
       select: { id: true, title: true },
     }),
     prisma.invoice.findMany({
@@ -131,6 +142,16 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
     list.length === 1 ? `/dashboard/properties/${list[0].id}` : fallback;
 
   return [
+    ...row(
+      'repairs-disputed',
+      'Repairs the tenant says are not fixed',
+      disputedRepairs.length,
+      'high',
+      disputedRepairs.length === 1
+        ? `/dashboard/maintenance/${disputedRepairs[0].id}`
+        : '/dashboard/maintenance',
+      disputedRepairs[0]?.title,
+    ),
     ...row(
       'repairs-to-pay',
       'Finished repairs with a vendor invoice to pay',
@@ -237,7 +258,7 @@ const TENANT_PROFILE_FIELDS = [
 ] as const;
 
 async function tenantAttention(userId: string, now: Date): Promise<AttentionItem[]> {
-  const [user, unsigned, invoices, unrated, viewings, unread] = await Promise.all([
+  const [user, unsigned, invoices, unrated, toConfirm, viewings, unread] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: Object.fromEntries(TENANT_PROFILE_FIELDS.map((f) => [f, true])) as Record<
@@ -267,6 +288,11 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
       orderBy: { completedAt: 'desc' },
       select: { title: true },
     }),
+    prisma.maintenanceRequest.findMany({
+      where: { tenantId: userId, status: 'COMPLETED', confirmationStatus: 'AWAITING_TENANT' },
+      orderBy: { completedAt: 'asc' },
+      select: { id: true, title: true },
+    }),
     prisma.propertyViewing.findMany({
       where: { requestedById: userId, status: 'CONFIRMED', scheduledAt: { gt: now } },
       orderBy: { scheduledAt: 'asc' },
@@ -291,6 +317,16 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
       'high',
       '/dashboard',
       unsigned[0] ? `Unit ${unsigned[0].unit.unitNumber}, ${unsigned[0].unit.property.name}` : null,
+    ),
+    ...row(
+      'repairs-to-confirm',
+      'Repairs to confirm',
+      toConfirm.length,
+      'high',
+      toConfirm.length === 1
+        ? `/dashboard/tenant-maintenance?request=${toConfirm[0].id}`
+        : '/dashboard/tenant-maintenance',
+      toConfirm[0]?.title,
     ),
     ...row(
       'invoices-overdue',
@@ -358,7 +394,7 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
     prisma.maintenanceRequest.findMany({
       where: { vendorId: userId, status: 'IN_PROGRESS' },
       orderBy: { updatedAt: 'asc' },
-      select: { id: true, title: true },
+      select: { id: true, title: true, disputeReason: true },
     }),
     prisma.maintenanceRequest.findMany({
       where: {
@@ -382,6 +418,9 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
 
   const job = (list: { id: string }[]) =>
     list.length === 1 ? `/dashboard/vendor/jobs/${list[0].id}` : '/dashboard';
+  // A repair the property team sent back keeps the tenant's reason until it is finished again.
+  const sentBack = inProgress.filter((j) => j.disputeReason);
+  const active = inProgress.filter((j) => !j.disputeReason);
 
   return [
     ...row(
@@ -393,6 +432,14 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
       profile?.verificationStatus === 'REJECTED'
         ? 'Verification was declined. Update your details.'
         : 'An admin is reviewing your details.',
+    ),
+    ...row(
+      'jobs-sent-back',
+      'Repairs sent back to you',
+      sentBack.length,
+      'high',
+      job(sentBack),
+      sentBack[0]?.title,
     ),
     ...row(
       'jobs-to-invoice',
@@ -417,14 +464,7 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
       'medium',
       '/dashboard/messages',
     ),
-    ...row(
-      'jobs-active',
-      'Jobs in progress',
-      inProgress.length,
-      'low',
-      job(inProgress),
-      inProgress[0]?.title,
-    ),
+    ...row('jobs-active', 'Jobs in progress', active.length, 'low', job(active), active[0]?.title),
     ...row(
       'invoices-unpaid',
       'Invoices waiting to be paid',

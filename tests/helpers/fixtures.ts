@@ -8,6 +8,7 @@ import {
   LateFeeType,
   MaintenancePriority,
   MaintenanceStatus,
+  RepairConfirmationStatus,
   ScheduleFrequency,
   InvoiceType,
   InvoiceStatus,
@@ -205,6 +206,14 @@ export async function createMaintenanceRequest(
     vendorId: string | null;
     priority: MaintenancePriority;
     status: MaintenanceStatus;
+    // Repair follow-through: the vendor's photos, the tenant's answer and the team's sign-off.
+    afterPhotoUrls: string[];
+    beforePhotoUrls: string[];
+    confirmationStatus: RepairConfirmationStatus;
+    disputeReason: string | null;
+    approvedAt: Date | null;
+    finalCost: number | null;
+    completedAt: Date | null;
   }> = {},
 ) {
   return testPrisma.maintenanceRequest.create({
@@ -217,6 +226,13 @@ export async function createMaintenanceRequest(
       vendorId: overrides.vendorId ?? null,
       priority: overrides.priority ?? MaintenancePriority.MEDIUM,
       status: overrides.status ?? MaintenanceStatus.SUBMITTED,
+      afterPhotoUrls: overrides.afterPhotoUrls,
+      beforePhotoUrls: overrides.beforePhotoUrls,
+      confirmationStatus: overrides.confirmationStatus,
+      disputeReason: overrides.disputeReason,
+      approvedAt: overrides.approvedAt,
+      finalCost: overrides.finalCost,
+      completedAt: overrides.completedAt,
     },
   });
 }

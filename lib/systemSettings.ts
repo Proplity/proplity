@@ -9,5 +9,6 @@ export async function getSystemSettings() {
   return {
     setupComplete: settings?.setupComplete ?? false,
     autoCompleteMaintenanceOnInvoice: settings?.autoCompleteMaintenanceOnInvoice ?? true,
+    requireTenantRepairConfirmation: settings?.requireTenantRepairConfirmation ?? true,
   };
 }

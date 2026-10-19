@@ -106,7 +106,10 @@ describe('invoices: create', () => {
     const tenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
     const otherVendor = await createUser(Role.VENDOR);
-    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    const request = await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      afterPhotoUrls: ['/api/v1/files/after-photo'],
+    });
     const vendorCookie = await authCookie(vendor.id, vendor.role);
 
     const wrongType = await apiFetch('/api/v1/invoices', {
@@ -483,7 +486,11 @@ describe('vendor invoices: who pays, one per job (ISS-051)', () => {
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
-    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    const request = await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      // A vendor's invoice closes the job, which needs photos of the finished work.
+      afterPhotoUrls: ['/api/v1/files/after-photo'],
+    });
     return { manager, landlord, tenant, vendor, request };
   }
 
@@ -542,17 +549,30 @@ describe('vendor invoices: who pays, one per job (ISS-051)', () => {
   it('does not create a second invoice when completing a job that already has one', async () => {
     const { vendor, request } = await setup();
     const cookie = await authCookie(vendor.id, vendor.role);
-    await testPrisma.systemSettings
-      .updateMany({ data: { autoCompleteMaintenanceOnInvoice: false } })
-      .catch(() => undefined);
-    expect((await post(cookie, request.id, 4000)).status).toBe(201);
-    const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+    // Auto-complete off, so the invoice alone does not close the job. (updateMany would do nothing
+    // when the settings row does not exist yet, which left auto-complete on.)
+    await testPrisma.systemSettings.upsert({
+      where: { id: 'global' },
+      update: { autoCompleteMaintenanceOnInvoice: false },
+      create: { id: 'global', autoCompleteMaintenanceOnInvoice: false },
     });
-    expect(done.status).toBe(200);
-    expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(1);
+    try {
+      expect((await post(cookie, request.id, 4000)).status).toBe(201);
+      const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
+        method: 'PATCH',
+        cookie,
+        body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+      });
+      expect(done.status).toBe(200);
+      expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(
+        1,
+      );
+    } finally {
+      await testPrisma.systemSettings.update({
+        where: { id: 'global' },
+        data: { autoCompleteMaintenanceOnInvoice: true },
+      });
+    }
   });
 });
 
