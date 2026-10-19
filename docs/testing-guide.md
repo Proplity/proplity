@@ -159,8 +159,11 @@ Same as landlord, plus the day-to-day operational tools:
       and rejected. **Confirm payment** pays the invoice, creates the receipt
       and tells the tenant and vendor; **Reject** needs a reason. You cannot
       confirm a transfer you recorded yourself (only withdraw it); if you are
-      the only one who could, an admin is told. A tenant's record has **Paid
-      another way** for a transfer or cash payment
+      the only one who could, an admin is told. On a repair's vendor
+      invoice (Cost Tracking), **Paid another way** records a transfer or cash
+      payment to the vendor, with the receipt file, and it waits for someone else
+      to confirm. Rent recorded with **Record payment** on a tenant's record
+      takes effect straight away
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
 - [ ] On a finished repair the **Sign-off** card shows the tenant's answer;

@@ -1500,7 +1500,7 @@ Full list of all current and past tenants. Where daily tenant management happens
 
 - View profiles, payment history, lease details
 - Send invoices manually
-- Record payments: **Paid another way** records a bank transfer or cash payment for a tenant. It waits on the **Bank Transfers** tab until someone other than you confirms it
+- Record payments: **Record payment** marks rent paid straight away (reference only; the action is audit-logged)
 - Issue lease renewal or termination notices
 
 **Screenshots:**
@@ -1609,6 +1609,7 @@ All financial activity across the manager's properties — rent collected, outst
 - **Confirm payment** — marks the invoice paid, creates the receipt and tells the tenant and the vendor. Open **View receipt or proof** first.
 - **Reject** — needs a reason; whoever recorded it is told why.
 - You cannot confirm a transfer **you** recorded (you can withdraw it). If nobody else on the property can confirm it, an admin is told.
+- To pay a vendor another way, open the repair, and under the vendor's invoice press **Paid another way**: record the transfer or cash payment with the receipt file. It waits here until someone other than you confirms it.
 
 **Screenshot:** `docs/screenshots/manager_09_financials_desktop.png`
 
