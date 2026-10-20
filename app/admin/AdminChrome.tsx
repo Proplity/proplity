@@ -234,7 +234,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                 onClick={() => setShowLogout(true)}
                 title="Log Out"
                 aria-label="Log Out"
-                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                className="shrink-0 rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 sm:p-1.5"
               >
                 <LogOut className="h-4 w-4" />
               </button>

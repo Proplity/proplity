@@ -207,7 +207,7 @@ export default function AdminPropertiesPage() {
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`rounded-full px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors sm:px-2.5 sm:py-1 ${
                     statusFilter === status
                       ? isMerged
                         ? 'bg-purple-700 text-white'

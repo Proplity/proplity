@@ -110,7 +110,7 @@ function Row({
         </div>
 
         {item.status === 'PENDING' && (
-          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:w-44">
+          <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-44">
             {mine ? (
               <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
                 You recorded this, so someone else has to confirm it.
@@ -120,7 +120,7 @@ function Row({
                 type="button"
                 disabled={submitting}
                 onClick={() => decide('APPROVE')}
-                className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                className="rounded-lg bg-green-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 sm:py-2"
               >
                 {submitting ? 'Saving…' : 'Confirm payment'}
               </button>
@@ -129,7 +129,7 @@ function Row({
               type="button"
               disabled={submitting}
               onClick={() => setRejecting((v) => !v)}
-              className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="rounded-lg border border-red-300 px-3 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 sm:py-2"
             >
               {mine ? 'Withdraw' : 'Reject'}
             </button>
