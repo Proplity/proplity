@@ -15,13 +15,13 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 102 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
     Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 31 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (600 tests) + Playwright (67 tests)"]
+    Tests["🧪 Vitest (604 tests) + Playwright (69 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 102 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 103 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
@@ -80,7 +80,7 @@ proplity/
 │   │   ├── 📁 applications/, manager-codes/ # Rental applications; landlord→manager invite codes (+check, +redeem)
 │   │   ├── 📁 maintenance/                  # categories, requests (+[id], +rating), schedules
 │   │   ├── 📁 leases/                       # +[id], notes, notices, sign
-│   │   ├── 📁 invoices/, payments/          # payments: initialize, webhook, autopay, authorization
+│   │   ├── 📁 invoices/, payments/          # payments: initialize, availability, webhook, autopay, authorization
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
 │   │   ├── 📁 conversations/, notifications/ # +[id]/messages; +[id], mark-all-read
@@ -125,7 +125,7 @@ proplity/
 │   ├── 📄 contact.ts                        # Contact form: schema, CONTACT_EMAIL recipient, the email, messageWentOut()
 │   ├── 📁 api/                              # withAuth, validate, errors, pagination, propertyAccess, types
 │   ├── 📁 auth/                             # cookies, csrf, jwt, rateLimit (reserveAttempt/releaseAttempt), session
-│   ├── 📁 payments/mockGateway.ts           # Paystack-shaped fake used by the mock checkout
+│   ├── 📁 payments/                         # mockGateway.ts (Paystack-shaped fake for the mock checkout), availability.ts (can cards be used yet)
 │   └── 📁 workers/                          # rentInvoicer, overdueFlagger, maintenanceScheduleDispatcher, accessCodeExpiryJanitor, paymentReliabilityScorer, auth
 │
 ├── 📄 proxy.ts                              # Next 16's middleware replacement — edge guard for /dashboard, /admin
@@ -134,9 +134,9 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 17 Vitest files — 101 tests, mocked Prisma, no server (pnpm test:unit)
-│   ├── 📁 api/                              # 34 Vitest files — 499 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 67 tests in 18 files (pnpm test:e2e)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 104 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 api/                              # 34 Vitest files — 500 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 69 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget

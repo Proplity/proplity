@@ -24,7 +24,7 @@ import {
 import { useVendors } from '@/hooks/useVendors';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useAuth } from '@/context/AuthContext';
-import { usePayInvoice } from '@/hooks/useInvoices';
+import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PhotoGrid } from './RepairPhotos';
 import { InvoicePayments } from './InvoicePayments';
@@ -103,6 +103,7 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
   const { data: vendors, loading: vendorsLoading } = useVendors();
   const auth = useAuth();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { available: cardsAvailable } = useCardPayments();
   // The vendor's bill is paid by whoever runs the property (ISS-051).
   const canPayVendor = ['manager', 'landlord', 'admin'].includes(auth.user?.role ?? '');
   const handlePay = async (invoiceId: string) => {
@@ -607,15 +608,20 @@ export function MaintenanceDetail({ requestId }: MaintenanceDetailProps) {
                         {inv.status.replace('_', ' ')}
                         {payable && paid > 0 ? ` · ₦${owing.toLocaleString()} left to pay` : ''}
                       </span>
-                      {payable && (
-                        <button
-                          onClick={() => handlePay(inv.id)}
-                          disabled={paying}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          {paying ? 'Opening…' : `Pay ₦${owing.toLocaleString()}`}
-                        </button>
-                      )}
+                      {payable &&
+                        (cardsAvailable === false ? (
+                          <span className="text-xs text-gray-500">
+                            Card payments are not available yet
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handlePay(inv.id)}
+                            disabled={paying}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {paying ? 'Opening…' : `Pay ₦${owing.toLocaleString()}`}
+                          </button>
+                        ))}
                     </div>
                   </div>
                 );

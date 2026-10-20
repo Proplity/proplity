@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   DollarSign,
   Home,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
 import { useTenantSummary } from '@/hooks/useDashboardSummary';
-import { usePayInvoice } from '@/hooks/useInvoices';
+import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useAccessCodes, useCreateAccessCode } from '@/hooks/useAccessCodes';
 import { AccessCodeCard } from './AccessCodeCard';
@@ -93,6 +94,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     openConversation({ type: 'LEASE_THREAD', leaseId: lease.id });
   };
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { available: cardsAvailable } = useCardPayments();
 
   const {
     data: autoPayMandates,
@@ -347,15 +349,30 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                 <div className="space-y-2">
                   <button
                     onClick={handlePayRent}
-                    disabled={!nextDue || paying}
+                    disabled={!nextDue || paying || cardsAvailable === false}
                     className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {paying
                       ? 'Redirecting to Paystack…'
-                      : nextDue
-                        ? 'Pay Rent Online'
-                        : 'No Balance Due'}
+                      : !nextDue
+                        ? 'No Balance Due'
+                        : cardsAvailable === false
+                          ? 'Card Payment Not Available Yet'
+                          : 'Pay Rent Online'}
                   </button>
+                  {nextDue && cardsAvailable === false && (
+                    <p className="text-sm text-gray-600">
+                      Card payments are not available yet. You can still pay by bank transfer or
+                      cash and record it under{' '}
+                      <Link
+                        href="/dashboard/payment-history"
+                        className="font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Payment History
+                      </Link>{' '}
+                      (&quot;Paid another way&quot;).
+                    </p>
+                  )}
                   {payError && <p className="text-sm text-red-600">{payError}</p>}
 
                   {activeMandate ? (
@@ -415,8 +432,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                           <div className="flex items-start gap-2 text-sm text-gray-700">
                             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                             <span>
-                              No saved card yet. Pay one rent invoice online with a card first —
-                              auto-pay reuses that same card for future charges.
+                              {cardsAvailable === false
+                                ? 'Card payments are not available yet, so auto-pay cannot be set up.'
+                                : 'No saved card yet. Pay one rent invoice online with a card first — auto-pay reuses that same card for future charges.'}
                             </span>
                           </div>
                           <button

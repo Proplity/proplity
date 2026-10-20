@@ -30,7 +30,9 @@ failing.
   profile ID, property photos/video) — real file storage requires a
   storage provider key. Without it you can still select a file, but you'll
   see a note that it won't be saved.
-- **Rent payment** (Paystack) — requires a Paystack key. Test environments
+- **Rent payment** (Paystack) — requires a Paystack key; until one is set,
+  the screens say "Card payments are not available yet" and you can still
+  record a bank transfer or cash payment. Test environments
   can instead switch on the **mock payment gateway**, which shows a
   Paystack-style checkout page; "paying" there runs the real payment
   recording logic.
@@ -135,8 +137,10 @@ Click one to open that property's page.
 
 **10. Pay rent** — open _Payment History_ (or use the payment panel on your
 dashboard). If you owe a balance, **Pay Rent Online** takes you to the
-payment page (Paystack, or the mock gateway in test environments); once
-paid, the invoice flips to paid and your manager is notified. Past
+payment page (Paystack, or the mock gateway in test environments); if card
+payments are not available yet the button says so, and **Paid another way**
+(below) still works. Once paid, the invoice flips to paid and your manager is
+notified. Past
 payments are listed under Recent Payments.
 
 **10b. Paid another way, and receipts** — if you paid by bank transfer or
