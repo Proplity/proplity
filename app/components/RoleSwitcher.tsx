@@ -33,7 +33,10 @@ export function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcherProps) {
 
   return (
     <div className="group relative">
-      <button className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 hover:bg-gray-50">
+      <button
+        aria-label="Switch role (development only)"
+        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-2.5 py-2 hover:bg-gray-50 sm:px-4"
+      >
         {roles.find((r) => r.id === currentRole)?.icon && (
           <>
             {(() => {
@@ -42,7 +45,7 @@ export function RoleSwitcher({ currentRole, onRoleChange }: RoleSwitcherProps) {
             })()}
           </>
         )}
-        <span className="text-sm font-medium">
+        <span className="hidden text-sm font-medium sm:inline">
           {roles.find((r) => r.id === currentRole)?.label}
         </span>
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
