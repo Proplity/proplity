@@ -484,6 +484,7 @@ export const api = {
       apiClient.delete<{ data: { id: string } }>(`/api/v1/notifications/${id}`),
   },
   payments: {
+    availability: () => apiClient.get<{ data: { card: boolean } }>('/api/v1/payments/availability'),
     initialize: (invoiceId: string) =>
       apiClient.post<{ data: { authorizationUrl: string; reference: string } }>(
         '/api/v1/payments/initialize',

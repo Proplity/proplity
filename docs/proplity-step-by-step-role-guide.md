@@ -36,16 +36,16 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ## Before You Begin: Important Notes
 
-| Feature                  | Works?           | Notes                                   |
-| :----------------------- | :--------------- | :-------------------------------------- |
-| Browsing properties      | ✅ Yes           | No setup needed                         |
-| Login / Registration     | ✅ Yes           | Works immediately                       |
-| Maintenance requests     | ✅ Yes           | All workflows work                      |
-| Messaging                | ✅ Yes           | Real-time messages                      |
-| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app |
-| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                   |
-| Rent payments (Paystack) | ⚙️ Config needed | Use mock gateway for testing            |
-| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI          |
+| Feature                  | Works?           | Notes                                        |
+| :----------------------- | :--------------- | :------------------------------------------- |
+| Browsing properties      | ✅ Yes           | No setup needed                              |
+| Login / Registration     | ✅ Yes           | Works immediately                            |
+| Maintenance requests     | ✅ Yes           | All workflows work                           |
+| Messaging                | ✅ Yes           | Real-time messages                           |
+| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app      |
+| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                        |
+| Rent payments (Paystack) | ⚙️ Config needed | Shows "not available yet" until a key is set |
+| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI               |
 
 ---
 
@@ -754,6 +754,8 @@ Shows all lease agreements on your account — current and past.
 Rent is paid directly through Proplity using Paystack. Monthly invoices are generated automatically — you just click to pay.
 
 **How to pay:**
+
+> **Not available yet?** Until a Paystack key is set up for this site, the button reads **Card Payment Not Available Yet** and a note points you to **Paid another way** (below). It switches on by itself once card payments are ready.
 
 1. On your dashboard, look for the outstanding invoice in the Payment Panel
 2. Click **Pay Now** → a modal shows the exact amount due
