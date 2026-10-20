@@ -12,8 +12,8 @@
 // Usage:   E2E_BASE_URL=http://localhost:3030 node scripts/record-user-journey.mjs
 // Needs:   the app on `next dev` (local file storage is refused in production builds) against a freshly
 //          seeded database (pnpm db:seed2), with NEXT_PUBLIC_STORAGE_ENABLED=true, STORAGE_PROVIDER=local,
-//          NEXT_PUBLIC_EMAIL_INBOX_ENABLED=true and NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED=true (no real Paystack
-//          key). Run it on a throwaway database: it creates real records.
+//          NEXT_PUBLIC_EMAIL_INBOX_ENABLED=true, NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED=true (no real Paystack
+//          key) and CONTACT_EMAIL set to any address (the contact form in act 23 refuses without it). Run it on a throwaway database: it creates real records.
 // Options: JOURNEY_FAST=1 skips the pacing (to debug a step quickly, no video worth keeping);
 //          JOURNEY_ACTS=3,4 runs only those acts (the database must already hold the earlier state);
 //          JOURNEY_NO_VIDEO=1 does not record.
@@ -2165,6 +2165,36 @@ async function main() {
     await scroll(450);
     await pause(1800);
 
+    // Charging cards and deleting ID documents are off by default and ask before turning on (ADR-0015).
+    const retentionSwitch = page.getByRole('switch', {
+      name: 'Delete identity documents when kept long enough',
+    });
+    await retentionSwitch.scrollIntoViewIfNeeded();
+    await hud(
+      '🗂 Two more cards, both off: charging auto-pay tenants, and deleting old ID documents',
+      '#a78bfa',
+    );
+    await pause(3200);
+    await click(retentionSwitch, { settle: 600 });
+    await page.getByText('Turn on deletion?').waitFor();
+    await hud('⚠️ Deletion is permanent, so it asks first. Cancel keeps it off', '#f59e0b');
+    await pause(3200);
+    await click(page.getByRole('button', { name: 'Cancel' }), { settle: 600 });
+    await hud(
+      '🗂 The periods are settings too, and a typo is refused: 3 days is too short',
+      '#a78bfa',
+    );
+    await pause(1800);
+    await type(page.getByLabel('Days to keep ID documents after a tenancy ends'), '3');
+    await click(page.getByRole('button', { name: 'Save periods' }), { settle: 800 });
+    await page
+      .getByText(/at least 30 days/i)
+      .first()
+      .waitFor({ timeout: 15000 });
+    await pause(3000);
+    await page.reload();
+    await pause(1200);
+
     await click(page.getByRole('link', { name: 'Bank Transfers' }).first(), { settle: 1200 });
     await page.waitForURL('**/admin/payments**');
     await hud(
@@ -2257,6 +2287,29 @@ async function main() {
       await pause(2000);
       await toTop();
     }
+
+    chapter('✉️', 'The contact form sends a real message', '#10b981');
+    await click(page.getByRole('link', { name: 'Contact Us', exact: true }).first(), {
+      settle: 1500,
+    });
+    await page.waitForURL('**/contact**');
+    await hud('✉️ Contact: a visitor writes to the team', '#10b981');
+    await pause(1800);
+    await type(page.getByPlaceholder('First Name'), 'Ada');
+    await type(page.getByPlaceholder('Last Name'), 'Obi');
+    await type(page.getByPlaceholder('you@company.com'), 'ada.obi@example.com');
+    await type(
+      page.getByPlaceholder('Tell us about your portfolio...'),
+      'We manage 12 flats in Yaba.',
+    );
+    await click(page.getByRole('button', { name: 'Send Message' }), { settle: 1500 });
+    await page.getByText('Message sent!').waitFor({ timeout: 20000 });
+    await hud(
+      '✅ Sent only once the email has really gone out; the team can reply to the visitor',
+      '#10b981',
+    );
+    await pause(3000);
+    await goHome();
 
     chapter('📱', 'Proplity on a phone', '#06b6d4');
     await page.setViewportSize({ width: 390, height: 844 });
