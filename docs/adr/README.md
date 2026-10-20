@@ -21,6 +21,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0013](0013-staged-property-and-unit-edits-are-stored-in-metadata-json.md)                    | Staged Property and Unit Edits Are Stored in Property Metadata JSON                                     | Accepted           | 2026-10-18 | roji-tech  |
 | [0014](0014-a-repair-can-be-raised-by-the-property-team-and-need-not-have-a-tenant.md)        | A repair can be raised by the property team and need not have a tenant                                  | Accepted           | 2026-10-20 | the owner  |
 | [0015](0015-auto-pay-and-retention-have-admin-switches-and-retention-periods-are-settings.md) | Auto-pay charging and ID-document retention have admin switches, and the retention periods are settings | Accepted           | 2026-10-20 | roji-tech  |
+| [0016](0016-a-just-rotated-refresh-token-is-accepted-once-more-for-ten-seconds.md)            | A just-rotated refresh token is accepted once more for ten seconds                                      | Proposed           |
 
 ---
 

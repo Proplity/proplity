@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role, UserStatus } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
@@ -370,9 +371,66 @@ describe('auth: refresh without a cookie does not use up the rate-limit budget',
   });
 });
 
+// Makes a token look as if it was rotated long ago, i.e. outside the grace window.
+async function ageRotation(cookie: string) {
+  const raw = /refresh_token=([^;]+)/.exec(cookie)![1];
+  const hash = createHash('sha256').update(raw).digest('hex');
+  await testPrisma.refreshToken.update({
+    where: { tokenHash: hash },
+    data: { revokedAt: new Date(Date.now() - 60_000) },
+  });
+}
+
 describe('auth: refresh rotation + reuse detection', () => {
   beforeAll(async () => {
     await resetDb();
+  });
+
+  it('accepts the old refresh token once more right after a rotation whose response was lost (ADR-0016)', async () => {
+    await createUser(Role.TENANT, { email: 'refresh-grace@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-grace@test.local', password: FIXTURE_PASSWORD },
+    });
+    const cookieA = cookieHeaderFrom(login.setCookies);
+
+    // The first refresh rotated A, but its response never reached the browser (cookieB is dropped).
+    const lost = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(lost.status).toBe(200);
+    const cookieLost = cookieHeaderFrom(lost.setCookies);
+
+    // The browser retries with A: it gets a fresh pair, and the family stays alive.
+    const retry = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(retry.status).toBe(200);
+    const cookieC = cookieHeaderFrom(retry.setCookies);
+    expect(cookieC).not.toBe(cookieLost);
+    const next = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieC });
+    expect(next.status).toBe(200);
+
+    // The replacement nobody received is out of service.
+    const dropped = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieLost });
+    expect(dropped.status).toBe(401);
+  });
+
+  it('accepts the old refresh token only once inside the grace window, and does not revoke the family for the second try', async () => {
+    await createUser(Role.TENANT, { email: 'refresh-grace-once@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-grace-once@test.local', password: FIXTURE_PASSWORD },
+    });
+    const cookieA = cookieHeaderFrom(login.setCookies);
+    await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+
+    const first = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(first.status).toBe(200);
+    const cookieC = cookieHeaderFrom(first.setCookies);
+    const second = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(second.status).toBe(401);
+    expect(second.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
+
+    // The winner's session is untouched.
+    const still = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieC });
+    expect(still.status).toBe(200);
   });
 
   it('rotates the refresh token on use, and detects reuse of the old one by revoking the whole family', async () => {
@@ -388,9 +446,10 @@ describe('auth: refresh rotation + reuse detection', () => {
     const cookieB = cookieHeaderFrom(refresh1.setCookies);
     expect(cookieB).not.toBe(cookieA);
 
-    // Replaying the now-rotated-away token A is reuse -- must be detected and
-    // must revoke the ENTIRE family, not just token A. This atomicity is the
-    // security-critical property CLAUDE.md calls out explicitly.
+    // Replaying the now-rotated-away token A after the grace window (ADR-0016) is
+    // reuse -- must be detected and must revoke the ENTIRE family, not just token A.
+    // This atomicity is the security-critical property CLAUDE.md calls out explicitly.
+    await ageRotation(cookieA);
     const replay = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
     expect(replay.status).toBe(401);
 
@@ -401,6 +460,65 @@ describe('auth: refresh rotation + reuse detection', () => {
       cookie: cookieB,
     });
     expect(afterFamilyRevoke.status).toBe(401);
+  });
+
+  it('does not bring a session back inside the grace window once it was signed out', async () => {
+    const user = await createUser(Role.TENANT, { email: 'refresh-grace-logout@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-grace-logout@test.local', password: FIXTURE_PASSWORD },
+    });
+    const cookieA = cookieHeaderFrom(login.setCookies);
+    await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+
+    const logout = await apiFetch('/api/v1/auth/logout', {
+      method: 'POST',
+      cookie: await authCookie(user.id, Role.TENANT),
+    });
+    expect(logout.status).toBe(200);
+
+    // A was rotated a moment ago, but its replacement was signed out, so nothing is accepted.
+    const replay = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(replay.status).toBe(401);
+    expect(replay.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
+    expect(
+      await testPrisma.refreshToken.count({ where: { userId: user.id, revokedAt: null } }),
+    ).toBe(0);
+  });
+
+  it('a retry that lands while the replacement is still being written does not revoke the family', async () => {
+    const user = await createUser(Role.TENANT, { email: 'refresh-grace-inflight@test.local' });
+    const login = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: { email: 'refresh-grace-inflight@test.local', password: FIXTURE_PASSWORD },
+    });
+    const cookieA = cookieHeaderFrom(login.setCookies);
+    const hash = (raw: string) => createHash('sha256').update(raw).digest('hex');
+    const rowA = await testPrisma.refreshToken.findFirstOrThrow({ where: { userId: user.id } });
+
+    // The state the first request leaves between its atomic rotation and creating the new row.
+    await testPrisma.refreshToken.update({
+      where: { id: rowA.id },
+      data: { revokedAt: new Date(), replacedBy: hash('not-written-yet') },
+    });
+    // Another live token of the same family, which a wrongful family revocation would kill.
+    await testPrisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hash('sibling'),
+        familyId: rowA.familyId,
+        expiresAt: rowA.expiresAt,
+      },
+    });
+
+    const retry = await apiFetch('/api/v1/auth/refresh', { method: 'POST', cookie: cookieA });
+    expect(retry.status).toBe(401);
+
+    const sibling = await apiFetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      cookie: 'refresh_token=sibling',
+    });
+    expect(sibling.status).toBe(200);
   });
 
   it('preserves the original rememberMe-based expiry across rotation, not a flat +7 days', async () => {
