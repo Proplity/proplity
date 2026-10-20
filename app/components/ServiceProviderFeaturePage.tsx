@@ -138,7 +138,7 @@ export function ServiceProviderFeaturePage() {
             <Wrench className="h-4 w-4" />
             For Maintenance Professionals & Vendors
           </div>
-          <h1 className="mb-6 text-5xl leading-tight font-bold text-gray-900 md:text-6xl">
+          <h1 className="mb-6 text-4xl leading-tight font-bold text-gray-900 sm:text-5xl md:text-6xl">
             Grow Your Business with{' '}
             <span className="text-orange-600">Verified Maintenance Jobs</span>
           </h1>

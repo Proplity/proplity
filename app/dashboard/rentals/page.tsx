@@ -76,8 +76,8 @@ export default function MyRentalsPage() {
               disabled={!property?.id}
               className="w-full rounded-lg border border-gray-200 bg-white p-5 text-left hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-white"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="flex min-w-0 flex-1 basis-48 items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
                     <Building2 className="h-5 w-5 text-blue-600" />
                   </div>

@@ -379,7 +379,7 @@ export function MaintenanceSchedules() {
                   {s.lastGeneratedAt ? ` · last raised ${day(s.lastGeneratedAt)}` : ''}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex max-w-full flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => toggle(s)}

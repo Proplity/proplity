@@ -624,7 +624,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
           {managerCodes.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center gap-4 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}
+              className={`flex flex-wrap items-center gap-x-4 gap-y-3 p-4 ${item.status === 'DEACTIVATED' ? 'opacity-60' : ''}`}
             >
               <div
                 className={`shrink-0 rounded-lg border px-3 py-2 font-mono text-sm font-bold tracking-widest ${
@@ -636,7 +636,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
                 {item.code}
               </div>
 
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-48">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${

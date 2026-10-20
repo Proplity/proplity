@@ -241,14 +241,14 @@ export function AddTenantForm() {
                 {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
               </div>
               <span
-                className={`mt-1 text-xs font-medium whitespace-nowrap ${i === step ? 'text-blue-600' : 'text-gray-400'}`}
+                className={`mt-1 text-center text-[11px] font-medium sm:text-xs sm:whitespace-nowrap ${i === step ? 'text-blue-600' : 'text-gray-400'}`}
               >
                 {label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
               <div
-                className={`mx-2 mb-4 h-0.5 flex-1 transition-colors ${i < step ? 'bg-green-400' : 'bg-gray-200'}`}
+                className={`mx-1 mb-4 h-0.5 flex-1 transition-colors sm:mx-2 ${i < step ? 'bg-green-400' : 'bg-gray-200'}`}
               />
             )}
           </div>
