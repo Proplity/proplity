@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import type { RefreshToken } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { signAccessToken } from '@/lib/auth/jwt';
 import { setAuthCookies, clearAuthCookies } from '@/lib/auth/cookies';
@@ -10,6 +11,7 @@ import {
   getClientIp,
   REFRESH_MAX_ATTEMPTS,
 } from '@/lib/auth/rateLimit';
+import { REFRESH_GRACE_MS } from '@/lib/auth/refreshGrace';
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -41,23 +43,54 @@ export async function POST(req: NextRequest) {
 
   const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
 
+  // The replacement is chosen up front so the rotation stays one atomic statement that also
+  // records which token replaced this one. A retry that lands while the new row is still being
+  // written then sees the link (and gets the harmless in-window answer below) instead of a bare
+  // revocation that looks like theft (ADR-0016).
+  const newRawRefreshToken = crypto.randomBytes(32).toString('hex');
+  const newTokenHash = crypto.createHash('sha256').update(newRawRefreshToken).digest('hex');
+
   // Atomic update: only succeeds if token is active and unrevoked
   const rotated = await prisma.refreshToken.updateMany({
     where: { tokenHash, revokedAt: null, expiresAt: { gt: new Date() } },
-    data: { revokedAt: new Date() },
+    data: { revokedAt: new Date(), replacedBy: newTokenHash },
   });
+
+  // Set when the old value of a token rotated moments ago is accepted once more (ADR-0016).
+  let graceToken: RefreshToken | null = null;
 
   if (rotated.count === 0) {
     // Reuse detected or invalid/expired session — revoke family if reuse of rotated token
     const existing = await prisma.refreshToken.findUnique({ where: { tokenHash } });
     if (existing?.revokedAt) {
-      await prisma.refreshToken.updateMany({
-        where: { familyId: existing.familyId },
-        data: { revokedAt: new Date() },
-      });
+      const withinGrace =
+        existing.replacedBy !== null &&
+        existing.expiresAt > new Date() &&
+        Date.now() - existing.revokedAt.getTime() < REFRESH_GRACE_MS;
+      if (withinGrace) {
+        // The response that carried the replacement may have been lost. Take the replacement
+        // out of service with one atomic claim: only the first retry wins, so the old value
+        // can be used once more, never twice. A losing retry gets a 401 and leaves the family
+        // and the cookies alone (the winner has just set new ones).
+        const claimed = await prisma.refreshToken.updateMany({
+          where: { tokenHash: existing.replacedBy!, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        if (claimed.count === 0) {
+          return NextResponse.json({ error: 'Invalid or revoked session' }, { status: 401 });
+        }
+        graceToken = existing;
+      } else {
+        await prisma.refreshToken.updateMany({
+          where: { familyId: existing.familyId },
+          data: { revokedAt: new Date() },
+        });
+      }
     }
-    await clearAuthCookies();
-    return NextResponse.json({ error: 'Invalid or revoked session' }, { status: 401 });
+    if (!graceToken) {
+      await clearAuthCookies();
+      return NextResponse.json({ error: 'Invalid or revoked session' }, { status: 401 });
+    }
   }
 
   const currentToken = await prisma.refreshToken.findUnique({
@@ -72,14 +105,17 @@ export async function POST(req: NextRequest) {
 
   await releaseAttempt(attemptId);
 
-  const newRawRefreshToken = crypto.randomBytes(32).toString('hex');
-  const newTokenHash = crypto.createHash('sha256').update(newRawRefreshToken).digest('hex');
-
   await prisma.$transaction([
-    prisma.refreshToken.update({
-      where: { id: currentToken.id },
-      data: { replacedBy: newTokenHash },
-    }),
+    // In the grace case the old row keeps pointing at the replacement it handed out, so a
+    // second retry finds that replacement already claimed; the chain continues from it.
+    ...(graceToken?.replacedBy
+      ? [
+          prisma.refreshToken.updateMany({
+            where: { tokenHash: graceToken.replacedBy },
+            data: { replacedBy: newTokenHash },
+          }),
+        ]
+      : []),
     prisma.refreshToken.create({
       data: {
         userId: currentToken.userId,
