@@ -1,23 +1,10 @@
 import { prisma } from '@/lib/db';
 import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
-import { ScheduleFrequency } from '@prisma/client';
-
-function addInterval(date: Date, frequency: ScheduleFrequency): Date {
-  const next = new Date(date);
-  const monthsToAdd = { WEEKLY: 0, MONTHLY: 1, QUARTERLY: 3, SEMI_ANNUAL: 6, ANNUAL: 12 }[
-    frequency
-  ];
-  if (frequency === 'WEEKLY') {
-    next.setDate(next.getDate() + 7);
-  } else {
-    next.setMonth(next.getMonth() + monthsToAdd);
-  }
-  return next;
-}
+import { nextDueDate } from '@/lib/maintenanceSchedule';
 
 export async function runMaintenanceScheduleDispatcher(): Promise<{
   dispatched: number;
-  skippedNoTenant: number;
+  forVacantUnits: number;
 }> {
   const now = new Date();
   const due = await prisma.maintenanceSchedule.findMany({
@@ -26,77 +13,66 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
   });
 
   let dispatched = 0;
-  let skippedNoTenant = 0;
+  let forVacantUnits = 0;
 
   for (const schedule of due) {
-    // MaintenanceRequest.tenantId is required, but a schedule-generated
-    // request is staff-initiated preventive maintenance with no natural
-    // reporter. Attribute it to whoever currently lives there -- correct
-    // even though they didn't report it, since it's their unit being
-    // serviced. No active tenant -> skip rather than inventing one; the
-    // schema has no "no tenant" shape for a request.
+    // A schedule-generated request is staff-initiated preventive maintenance with no natural
+    // reporter. On an occupied unit it is attributed to whoever lives there (it is their unit being
+    // serviced, so they are told and can say whether it is fixed). On a vacant or unleased unit
+    // there is nobody to attribute it to: it becomes a work order with no tenant (it used to be
+    // skipped silently, so a vacant unit's servicing never happened).
     const activeLease = await prisma.lease.findFirst({
       where: { unitId: schedule.unitId, status: 'ACTIVE' },
     });
-
-    if (!activeLease) {
-      skippedNoTenant += 1;
-      // Still advance the schedule -- an unoccupied unit shouldn't cause
-      // this schedule to fire every single run once it starts being overdue.
-      await prisma.maintenanceSchedule.update({
-        where: { id: schedule.id },
-        data: {
-          nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency),
-          lastGeneratedAt: now,
-        },
-      });
-      continue;
-    }
+    const tenantId = activeLease?.tenantId ?? null;
 
     const [request] = await prisma.$transaction([
       prisma.maintenanceRequest.create({
         data: {
           unitId: schedule.unitId,
-          tenantId: activeLease.tenantId,
+          tenantId,
           categoryId: schedule.categoryId,
           title: `Scheduled maintenance: ${schedule.category.name}`,
-          description: `Routine ${schedule.frequency.toLowerCase()} maintenance for ${schedule.category.name}, auto-generated from the property's maintenance schedule.`,
+          description: `Routine ${schedule.frequency.toLowerCase().replace('_', '-')} maintenance for ${schedule.category.name}, auto-generated from the property's maintenance schedule.`,
           priority: 'MEDIUM',
         },
       }),
       prisma.maintenanceSchedule.update({
         where: { id: schedule.id },
         data: {
-          nextDueDate: addInterval(schedule.nextDueDate, schedule.frequency),
+          nextDueDate: nextDueDate(schedule.nextDueDate, schedule.frequency, schedule.dayOfMonth),
           lastGeneratedAt: now,
         },
       }),
     ]);
     dispatched += 1;
+    if (!tenantId) forVacantUnits += 1;
 
-    // The request exists with no vendor yet: the property team assigns one, the tenant is told
-    // someone will be in their unit.
+    // The request exists with no vendor yet: the property team assigns one, the tenant (if any) is
+    // told someone will be in their unit.
     await notifyPropertyTeam(
       schedule.unit.property,
       {
         type: 'MAINTENANCE_STATUS',
         title: `${request.title} needs a vendor`,
-        body: `A ${schedule.frequency.toLowerCase()} schedule raised "${request.title}" for unit ${schedule.unit.unitNumber} at ${schedule.unit.property.name}.`,
+        body: `A ${schedule.frequency.toLowerCase().replace('_', '-')} schedule raised "${request.title}" for unit ${schedule.unit.unitNumber} at ${schedule.unit.property.name}${tenantId ? '' : ' (no tenant lives there)'}.`,
         link: `/dashboard/maintenance/${request.id}`,
       },
       { email: false },
     );
-    await notifyAndEmail(
-      activeLease.tenantId,
-      {
-        type: 'MAINTENANCE_STATUS',
-        title: 'Scheduled maintenance for your unit',
-        body: `${request.title} is coming up for unit ${schedule.unit.unitNumber}. The property team will arrange a vendor.`,
-        link: `/dashboard/maintenance/${request.id}`,
-      },
-      { email: false },
-    );
+    if (tenantId) {
+      await notifyAndEmail(
+        tenantId,
+        {
+          type: 'MAINTENANCE_STATUS',
+          title: 'Scheduled maintenance for your unit',
+          body: `${request.title} is coming up for unit ${schedule.unit.unitNumber}. The property team will arrange a vendor.`,
+          link: `/dashboard/maintenance/${request.id}`,
+        },
+        { email: false },
+      );
+    }
   }
 
-  return { dispatched, skippedNoTenant };
+  return { dispatched, forVacantUnits };
 }

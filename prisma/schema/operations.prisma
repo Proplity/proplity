@@ -50,8 +50,14 @@ model MaintenanceRequest {
   id                      String                   @id @default(uuid())
   unitId                  String
   unit                    Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId                String
-  tenant                  User                     @relation("TenantMaintenance", fields: [tenantId], references: [id])
+  // Null for a work order: a repair the property team raises itself (a vacant or unleased unit, or
+  // something they found) rather than one a tenant reported. Everything that reads the tenant must
+  // cope with that: there is no tenant to confirm the repair, rate the vendor or be told.
+  tenantId                String?
+  tenant                  User?                    @relation("TenantMaintenance", fields: [tenantId], references: [id], onDelete: Restrict)
+  // Who raised a work order (null when a tenant reported it).
+  createdById             String?
+  createdBy               User?                    @relation("WorkOrdersRaised", fields: [createdById], references: [id], onDelete: SetNull)
   vendorId                String?
   vendor                  User?                    @relation("VendorJobs", fields: [vendorId], references: [id])
   title                   String
@@ -111,6 +117,10 @@ model MaintenanceSchedule {
   category        MaintenanceCategory @relation(fields: [categoryId], references: [id])
   frequency       ScheduleFrequency
   nextDueDate     DateTime
+  // The day of the month the schedule is meant to fall on (monthly and longer cycles). Adding a
+  // month to the 31st must land on the end of a short month and come back to the 31st afterwards,
+  // not drift to the 28th for good, so the intended day is kept and each date is worked out from it.
+  dayOfMonth      Int?
   lastGeneratedAt DateTime?
   isActive        Boolean             @default(true)
   createdAt       DateTime            @default(now())

@@ -283,7 +283,9 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
               <div>
                 <p className="mb-1 text-sm text-gray-600">Entry</p>
                 <p className="text-sm text-gray-700">
-                  Entry is arranged with the tenant: message them or call the number shown here.
+                  {job.tenantId
+                    ? 'Entry is arranged with the tenant: message them or call the number shown here.'
+                    : 'This is a work order from the property team, with no tenant: arrange entry with the manager.'}{' '}
                   Gate codes are not shared with vendors in the app.
                 </p>
               </div>
@@ -446,17 +448,28 @@ export function VendorJobDetail({ jobId, onNavigate }: VendorJobDetailProps) {
             )}
           </div>
 
-          {/* Tenant Info */}
+          {/* Tenant Info: a work order has none */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
-            <h2 className="mb-4 font-semibold">Tenant</h2>
+            <h2 className="mb-4 font-semibold">{job.tenant ? 'Tenant' : 'Raised by'}</h2>
             <div className="mb-4">
-              <p className="font-medium">{job.tenant?.name ?? 'Unknown tenant'}</p>
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Phone className="h-4 w-4" />
-                  {job.tenant?.phoneNumber ?? 'N/A'}
-                </div>
-              </div>
+              {job.tenant ? (
+                <>
+                  <p className="font-medium">{job.tenant.name}</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Phone className="h-4 w-4" />
+                      {job.tenant.phoneNumber ?? 'N/A'}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">{job.createdBy?.name ?? 'The property team'}</p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    A work order: there is no tenant on this job.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

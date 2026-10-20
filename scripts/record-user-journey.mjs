@@ -18,6 +18,8 @@
 //          JOURNEY_ACTS=3,4 runs only those acts (the database must already hold the earlier state);
 //          JOURNEY_NO_VIDEO=1 does not record.
 // Output:  public/videos/proplity-complete-userflow.webm and the chapter list in the two player pages.
+//          The raw video is about 100 MB (GitHub refuses a file over 100 MiB): run
+//          `node scripts/compress-journey-video.mjs` afterwards to bring it to about 40 MB.
 import { chromium } from '@playwright/test';
 import {
   copyFileSync,
@@ -1587,7 +1589,150 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(19, 'Tenant and manager message each other', async () => {
+  act(19, 'The manager raises a work order and sets up recurring maintenance', async () => {
+    chapter(
+      '🛠',
+      'The manager raises a repair on an empty flat and sets up recurring maintenance',
+      '#3b82f6',
+    );
+    if (page.url() === 'about:blank') await page.goto('/login');
+    if (page.url().includes('/login')) await signIn('manager@proplity.com');
+    else {
+      await signOut();
+      await signIn('manager@proplity.com');
+    }
+    await click(page.getByRole('link', { name: 'Maintenance' }).first(), { settle: 1200 });
+    await page.waitForURL('**/dashboard/maintenance');
+    await page.getByRole('button', { name: 'Raise a repair' }).waitFor({ timeout: 40000 });
+    await hud(
+      '🛠 Until now only a tenant could report a repair. The manager can raise one too',
+      '#3b82f6',
+    );
+    await pause(2800);
+    await click(page.getByRole('button', { name: 'Raise a repair' }), { settle: 800 });
+    const form = page.getByRole('dialog', { name: 'Raise a repair' });
+    await form.waitFor({ timeout: 20000 });
+    await hud('🏚 Any unit the manager looks after will do, even an empty one', '#3b82f6');
+    await pause(2200);
+    await select(form.locator('select').nth(0), { label: 'Highland Park Residences' });
+    await select(form.locator('select').nth(1), { label: '2A (vacant)' });
+    await type(
+      form.getByPlaceholder('e.g. Repaint the vacant flat'),
+      'Fix the cracked bathroom tiles',
+    );
+    await type(
+      form.locator('textarea'),
+      'Three tiles are cracked around the shower. Re-tile before the next tenant moves in.',
+    );
+    await select(form.locator('select').nth(2), { label: 'Structural' });
+    await select(form.locator('select').nth(3), 'HIGH');
+    await select(form.locator('select').nth(4), { label: 'Apex Repairs & Plumbing Ltd' });
+    await hud(
+      '👷 It can go straight to a verified vendor, or wait for one to be chosen',
+      '#3b82f6',
+    );
+    await pause(2200);
+    await submit(form.getByRole('button', { name: 'Raise repair' }));
+    await page.getByRole('heading', { name: 'Raised By' }).waitFor({ timeout: 40000 });
+    await page.getByRole('heading', { name: 'Raised By' }).scrollIntoViewIfNeeded();
+    await hud(
+      '📋 A work order: raised by the property team, with no tenant to confirm it',
+      '#3b82f6',
+    );
+    await pause(3600);
+
+    await signOut();
+    await signIn('vendor@proplity.com');
+    await page.getByText('Fix the cracked bathroom tiles').first().waitFor({ timeout: 40000 });
+    await hud('🔧 The vendor sees the new job in their list', '#ef4444');
+    await pause(2600);
+    await click(page.getByRole('heading', { name: 'Fix the cracked bathroom tiles' }), {
+      settle: 1500,
+    });
+    await page.getByRole('heading', { name: 'Raised by' }).waitFor({ timeout: 40000 });
+    await page.getByText('A work order: there is no tenant on this job.').scrollIntoViewIfNeeded();
+    await hud(
+      '🔧 No tenant on this job: the vendor arranges entry with the manager instead',
+      '#ef4444',
+    );
+    await pause(3600);
+
+    await signOut();
+    await signIn('manager@proplity.com');
+    await click(page.getByRole('link', { name: 'Schedules' }).first(), {
+      settle: 1500,
+    });
+    await page.waitForURL('**/dashboard/schedules', { timeout: 40000 });
+    await page.getByText('Recurring maintenance').first().waitFor({ timeout: 40000 });
+    await page.getByText('Paused').first().waitFor({ timeout: 30000 });
+    await hud(
+      '🔁 Recurring maintenance: what is serviced on a rhythm, when it is next due, and what is paused',
+      '#3b82f6',
+    );
+    await pause(4000);
+    await click(page.getByRole('button', { name: 'New schedule' }), { settle: 800 });
+    const sched = page.getByRole('dialog', { name: 'New schedule' });
+    await sched.waitFor({ timeout: 20000 });
+    await select(sched.locator('select').nth(0), { label: 'Highland Park Residences' });
+    await select(sched.locator('select').nth(1), { label: '2A (vacant)' });
+    await sched.getByText(/Nobody lives in this unit/).waitFor({ timeout: 10000 });
+    await hud('🏚 On an empty unit each repair it raises is a work order with no tenant', '#f59e0b');
+    await pause(3000);
+    await select(sched.locator('select').nth(2), { label: 'Plumbing' });
+    await select(sched.locator('select').nth(3), 'MONTHLY');
+    // The next 31st: a monthly schedule that starts there must cope with the short months.
+    const next31 = (() => {
+      const now = new Date();
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i, 31));
+        if (d.getUTCDate() === 31 && d > now) return d.toISOString().slice(0, 10);
+      }
+      return null;
+    })();
+    await sched.locator('input[type="date"]').fill(next31);
+    await hud(
+      '📅 Starting on the 31st: short months land on their last day, then it returns to the 31st',
+      '#3b82f6',
+    );
+    await pause(3600);
+    await submit(sched.getByRole('button', { name: 'Create schedule' }));
+    const row = page.locator('li', { hasText: 'Plumbing' }).filter({ hasText: 'Highland Park' });
+    await row.waitFor({ timeout: 30000 });
+    await row.scrollIntoViewIfNeeded();
+    await hud('✅ Created: it shows when it is next due', '#10b981');
+    await pause(2800);
+
+    await submit(row.getByRole('button', { name: 'Pause' }));
+    await row.getByText('Paused').waitFor({ timeout: 20000 });
+    await hud('⏸ Paused: it keeps its dates and raises nothing until it is resumed', '#f59e0b');
+    await pause(3000);
+    await submit(row.getByRole('button', { name: 'Resume' }));
+    await row.getByRole('button', { name: 'Pause' }).waitFor({ timeout: 20000 });
+    await hud('▶️ Resumed', '#10b981');
+    await pause(1800);
+
+    await click(row.getByRole('button', { name: 'Edit' }), { settle: 800 });
+    const edit = page.getByRole('dialog', { name: 'Edit schedule' });
+    await edit.waitFor({ timeout: 20000 });
+    await select(edit.locator('select').nth(1), 'QUARTERLY');
+    await hud('✏️ Changing a schedule: here it moves to every three months', '#3b82f6');
+    await pause(2600);
+    await submit(edit.getByRole('button', { name: 'Save changes' }));
+    await page.getByText('Every 3 months').first().waitFor({ timeout: 20000 });
+    await pause(2200);
+
+    await click(row.getByRole('button', { name: 'Remove' }), { settle: 800 });
+    await page.getByText('Remove this schedule?').waitFor({ timeout: 10000 });
+    await hud('🗑 Removing asks first, and says pausing is the reversible choice', '#ef4444');
+    await pause(3000);
+    await submit(page.getByRole('button', { name: 'Remove schedule' }));
+    await row.waitFor({ state: 'detached', timeout: 20000 });
+    await hud('✅ Removed. Repairs it already raised stay', '#10b981');
+    await pause(2600);
+  });
+
+  // ---------------------------------------------------------------------------------------------
+  act(20, 'Tenant and manager message each other', async () => {
     chapter('💬', 'The tenant and the manager message each other', '#06b6d4');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
@@ -1638,7 +1783,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(20, 'The manager uses the property tools', async () => {
+  act(21, 'The manager uses the property tools', async () => {
     chapter(
       '🏢',
       'The manager works the property page: photos, private units, edits, notices and equipment',
@@ -1757,7 +1902,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(21, 'The admin approves the edit and tours the console', async () => {
+  act(22, 'The admin approves the edit and tours the console', async () => {
     chapter('🛡', 'The admin approves the staged edit and checks the platform', '#a78bfa');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('admin@proplity.com');
@@ -1874,7 +2019,7 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(22, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
+  act(23, 'The vendor is paid, then the public pages, the phone view and the guide', async () => {
     chapter('🔧', 'The vendor sees the payment arrive', '#ef4444');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn('vendor@proplity.com');
