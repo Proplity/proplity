@@ -65,11 +65,11 @@ the attention list, notifications) are in [`shared.md`](./shared.md).
 
 ## Applications, viewings and profile (tenant)
 
-| File                          | Description                                                                                                                                                    |
-| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PropertyApplicationForm.tsx` | The rental application for one unit: employment and income, and move-in details. Identity and vetting data come from the tenant profile, so it asks for little |
-| `CompleteProfileForm.tsx`     | The one-time tenant profile (identity, year of birth, emergency contact, previous landlord, ID document); `isTenantProfileComplete` gates applications on it   |
-| `ScheduleViewing.tsx`         | Pick a date and a half-hour start time (Lagos time, Mon to Sat) for a viewing; starts from the signed-in person's own details                                  |
+| File                          | Description                                                                                                                                                                                                                                                                                                                         |
+| :---------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PropertyApplicationForm.tsx` | The rental application for one unit: employment and income, and move-in details. Identity and vetting data come from the tenant profile, so it asks for little                                                                                                                                                                      |
+| `CompleteProfileForm.tsx`     | The one-time tenant profile (identity, year of birth, emergency contact, previous landlord, ID document); `isTenantProfileComplete` gates applications on it                                                                                                                                                                        |
+| `ScheduleViewing.tsx`         | Pick a date and a half-hour start time (Lagos time, Mon to Sat) for a viewing; starts from the signed-in person's own details. Reads the day's booked times (`useViewingAvailability`) and marks, lists and disables them; if the time is taken while the form is open, confirming sends the person back to the time step (ISS-104) |
 
 ## Vendor
 

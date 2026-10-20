@@ -105,7 +105,8 @@ Viewing**.
 
 1.  Pick a date with the date field (tomorrow up to 60 days ahead, Monday to
     Saturday) and a start time from the dropdown (every 30 minutes, 9:00 AM to
-    5:00 PM, Lagos time), then click **Continue**.
+    5:00 PM, Lagos time), then click **Continue**. A time someone else has
+    already booked at that property is marked "(booked)" and cannot be chosen.
 2.  Fill in your name, email, and phone number.
 3.  Click **Confirm Viewing**. A "Viewing Scheduled!" confirmation appears
     and a confirmation email is sent.

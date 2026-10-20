@@ -84,6 +84,7 @@ are configured for this environment before treating it as a defect.
 
 - [ ] Browse available properties and view details on one
 - [ ] Schedule a viewing for a property before renting it: pick a date from tomorrow (a Sunday is refused) and a start time between 9:00 AM and 5:00 PM (Lagos time)
+- [ ] One person at a time: with a viewing booked at a property for 10:00 AM (by another account, still requested or confirmed), open the same property's form on the same date. 10:00 AM is marked "(booked)", listed under the time field and cannot be chosen; another property, or another time, is free. After the manager declines the request (or its owner cancels it), 10:00 AM can be booked again. If someone books your time while you are on step 2, confirming sends you back to choose another time
 - [ ] The dashboard's **Needs your attention** list shows a lease to sign, payments due or overdue, finished repairs to rate and an unfinished profile; each row opens the right screen
 - [ ] Notifications arrive (bell, and an email in the dev inbox) for a lease to sign, a new invoice, a completed repair and an overdue payment
 - [ ] Complete your profile (first **Apply Now** redirects to _Complete Your
@@ -282,8 +283,8 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 589 tests across 51 files under
-  `tests/` (488 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 101 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 600 tests across 51 files under
+  `tests/` (499 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 101 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
@@ -296,9 +297,9 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 65 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 67 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
-  the dev email widget, the contact form (its two outcomes, with the route mocked), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
+  the dev email widget, the contact form (its two outcomes, with the route mocked), booked viewing times (marked on the form, and a time lost to someone else sends the person back), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
   `E2E (Playwright)` job against a production build.
 - **Running the API suite on a shared machine:** the suite's server uses port

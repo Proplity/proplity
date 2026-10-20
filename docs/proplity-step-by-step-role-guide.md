@@ -861,6 +861,8 @@ Before applying, you can request to physically visit a property. The manager con
 5. The manager sees who is coming (contact, whether an ID is on file, how long they have had an account) and confirms or declines
 6. A confirmation email is sent to you
 
+**Good to know:** only one person can hold a start time at a property. Times someone else has already booked on the day you pick are marked "(booked)", listed under the time field, and cannot be chosen. If someone books your time while you are filling in your details, you are taken back to pick another and told why. A request the manager declines, or one you cancel, gives its time back.
+
 **Screenshots:**
 
 - Viewing modal (desktop): `docs/screenshots/tenant_04_schedule_viewing_desktop.png`
