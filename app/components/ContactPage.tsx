@@ -100,11 +100,49 @@ export function ContactPage() {
     helpTopic: '',
     message: '',
   });
+  // A field a person never sees; a bot that fills it in is ignored by the server.
+  const [website, setWebsite] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // "Sent" is shown only when the server says the email went out (ISS-133).
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    if (sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/v1/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, website }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.error === 'string'
+            ? data.error
+            : "We couldn't send your message. Please try again.",
+        );
+      }
+      setSent(true);
+      setForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        company: '',
+        portfolioSize: '',
+        helpTopic: '',
+        message: '',
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "We couldn't send your message. Please try again.",
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const inputCls =
@@ -272,12 +310,37 @@ export function ContactPage() {
                   />
                 </div>
 
+                {/* Honeypot: off screen and out of the tab order; people never fill it in. */}
+                <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                  <label>
+                    Website
+                    <input
+                      type="text"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+                  >
+                    {error}
+                  </p>
+                )}
+
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                  disabled={sending}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
-                  Send Message
+                  {sending ? 'Sending…' : 'Send Message'}
                 </button>
               </form>
             )}
