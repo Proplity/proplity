@@ -19,6 +19,26 @@ export function usePayInvoice() {
   );
 }
 
+// Whether card payments can be started yet (a Paystack key is set), so a screen can say "not
+// available yet" instead of offering a button that can only fail (ISS-010). `available` stays null
+// until the server answers; only `false` hides the button, so a slow answer never blocks anyone.
+export function useCardPayments() {
+  const [available, setAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.payments
+      .availability()
+      .then((res) => {
+        if (!cancelled) setAvailable(res.data.data.card);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { available };
+}
+
 // The logged-in user's own invoices (server-scoped by role -- see
 // GET /api/v1/invoices). Used for tenant payment history and rent-status
 // summaries; each invoice carries its real payments[] now that the route

@@ -36,16 +36,16 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ## Before You Begin: Important Notes
 
-| Feature                  | Works?           | Notes                                   |
-| :----------------------- | :--------------- | :-------------------------------------- |
-| Browsing properties      | ✅ Yes           | No setup needed                         |
-| Login / Registration     | ✅ Yes           | Works immediately                       |
-| Maintenance requests     | ✅ Yes           | All workflows work                      |
-| Messaging                | ✅ Yes           | Real-time messages                      |
-| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app |
-| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                   |
-| Rent payments (Paystack) | ⚙️ Config needed | Use mock gateway for testing            |
-| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI          |
+| Feature                  | Works?           | Notes                                        |
+| :----------------------- | :--------------- | :------------------------------------------- |
+| Browsing properties      | ✅ Yes           | No setup needed                              |
+| Login / Registration     | ✅ Yes           | Works immediately                            |
+| Maintenance requests     | ✅ Yes           | All workflows work                           |
+| Messaging                | ✅ Yes           | Real-time messages                           |
+| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app      |
+| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                        |
+| Rent payments (Paystack) | ⚙️ Config needed | Shows "not available yet" until a key is set |
+| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI               |
 
 ---
 
@@ -79,7 +79,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
 13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
-14. **Platform Inquiries & Contact Form**: Validated platform contact and support submission form (\`/contact\`, \`ContactPage.tsx\`).
+14. **Platform Inquiries & Contact Form**: Contact and support form (\`/contact\`, \`ContactPage.tsx\`) that emails the Proplity team; the visitor sees "Message sent!" only when the email went out, otherwise an error with their text kept.
 15. **Interactive Platform Guide**: Visual role-by-role guide with 100+ interactive fullscreen screenshots (\`/proplity-guide\`).
 
 ---
@@ -256,7 +256,9 @@ Every action — from paying rent to submitting a repair request to approving a 
 143. **Standalone Mobile Display Mode**: Launches as an independent app without mobile browser URL bars or browser controls.
 144. **Floating Mobile Bottom Tab Bar**: Shows the top 3 role-specific tabs plus an expandable "More" sheet containing every remaining feature (ISS-026).
 145. **Mobile Admin Slide-Over Drawer**: Collapsible slide-over drawer navigation tailored for admin management on compact touchscreens.
-146. **Touch-Target Optimization**: Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.
+146. **Touch-Target Optimization**: Buttons, filter pills and switches are at least 36px high on a phone (a switch keeps its look but has a larger touch area), with touch scrolling momentum and mobile form inputs (ISS-130).
+147. **Layout Regression Guard**: Fails any page that scrolls sideways, cuts its content off, or scrolls sideways inside the dashboard main area at 320, 390 and 768px (`layout.spec.ts`, ISS-125 to ISS-130).
+148. **Sign-In Redirect Stays on the Page That Asked**: When a request fails because the session has ended, only the page that made it is sent to the sign-in screen; a slow request left behind by a page you have just signed out of can no longer pull you off the public home page (`lib/apiClient.ts`, ISS-132).
 
 ---
 
@@ -653,7 +655,7 @@ Besides the homepage, the public site has a page for each audience plus company 
 
 - Pricing: the plans overview (the menu link only appears when subscriptions are switched on).
 - For Landlords, For Tenants and For Service Providers: what each role gets, with a call to action to register.
-- About and Contact: who builds Proplity and a contact form that sends a message to the team.
+- About and Contact: who builds Proplity and a contact form that emails a message to the team. You see "Message sent!" only once the email has gone out; if it could not be sent, an error appears under the form and what you typed is kept so you can try again.
 
 **Screenshots:**
 
@@ -752,6 +754,8 @@ Shows all lease agreements on your account — current and past.
 Rent is paid directly through Proplity using Paystack. Monthly invoices are generated automatically — you just click to pay.
 
 **How to pay:**
+
+> **Not available yet?** Until a Paystack key is set up for this site, the button reads **Card Payment Not Available Yet** and a note points you to **Paid another way** (below). It switches on by itself once card payments are ready.
 
 1. On your dashboard, look for the outstanding invoice in the Payment Panel
 2. Click **Pay Now** → a modal shows the exact amount due
@@ -858,6 +862,8 @@ Before applying, you can request to physically visit a property. The manager con
 4. Click **Confirm Viewing**
 5. The manager sees who is coming (contact, whether an ID is on file, how long they have had an account) and confirms or declines
 6. A confirmation email is sent to you
+
+**Good to know:** only one person can hold a start time at a property. Times someone else has already booked on the day you pick are marked "(booked)", listed under the time field, and cannot be chosen. If someone books your time while you are filling in your details, you are taken back to pick another and told why. A request the manager declines, or one you cancel, gives its time back.
 
 **Screenshots:**
 
@@ -2010,12 +2016,14 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has four switches:
+It has six settings (four switches, then two for charging and deletion):
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
 - **Second person confirms what a tenant is recorded as paying** — on by default. When the property team records cash or a transfer on a tenant's record, it does not count until someone other than the person who entered it confirms it on Bank Transfers. Turn it off for a property with one person on the team: their entry counts at once (still logged, with a receipt). A tenant recording their own transfer is always confirmed by the team.
 - **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
+- **Charge auto-pay tenants automatically** — off by default. It charges real cards on the daily run, so it asks once more before turning on, and the deployment must also allow it (the screen says when it does not).
+- **Delete identity documents when kept long enough** — off by default, and permanent. Two periods sit beside it: days after a tenancy ends (365 unless changed) and days after a rejected application (90); the shortest accepted are 30 and 7 days. Also asks once more, and needs the deployment to allow it.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
@@ -2169,6 +2177,12 @@ On a phone the sidebar becomes a bottom tab bar. Items that do not fit move into
 - Tab bar and the Quick Actions grid are sized for thumbs.
 - The More sheet holds the remaining pages for the role.
 - Long pages such as a property stack into one column.
+- Tables become one card per row, with the column name beside each value, so nothing has to scroll sideways.
+- Rows of badges, buttons and filter pills wrap onto the next line instead of running off the screen. The tab rows in Reports and Account Settings scroll inside themselves.
+- A tenant record stacks its header on a phone: the email wraps and the Rent Paid and risk badges stay visible.
+- The repair board shows one column on a phone, two from tablet width (768 px) and three on a wide laptop screen (1280 px).
+- Buttons, filter pills and switches are at least 36 px high on a phone. A switch looks the same but has a larger area to touch.
+- This guide fits a phone too: wide tables scroll inside themselves and long addresses wrap.
 
 **Screenshots:**
 

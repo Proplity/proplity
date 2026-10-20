@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
 import type {
@@ -164,6 +164,37 @@ export function useImportUnits(propertyId: string) {
 
 export function useCreateViewing(propertyId: string) {
   return useApiSubmit((body: CreateViewingInput) => api.properties.createViewing(propertyId, body));
+}
+
+// The start times already booked at a property on a day (`YYYY-MM-DD`, Lagos), so the booking form
+// can grey them out (ISS-104). A failed lookup greys nothing out: the server still refuses a time
+// that is taken.
+export function useViewingAvailability(propertyId: string, date: string) {
+  const [loaded, setLoaded] = useState<{ date: string; taken: string[] }>({ date: '', taken: [] });
+  const latest = useRef(0);
+
+  const refetch = useCallback(async () => {
+    if (!date) return [];
+    const ticket = ++latest.current;
+    let taken: string[] = [];
+    try {
+      taken = (await api.properties.viewingAvailability(propertyId, date)).data.data.taken;
+    } catch {
+      taken = [];
+    }
+    // A slower answer for a day the person has already moved off is ignored.
+    if (ticket === latest.current) setLoaded({ date, taken });
+    return taken;
+  }, [propertyId, date]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refetch();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [refetch]);
+
+  return { taken: loaded.date === date ? loaded.taken : [], refetch };
 }
 
 export function useSetPropertyPublished(propertyId: string) {

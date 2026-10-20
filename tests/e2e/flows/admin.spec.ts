@@ -56,3 +56,40 @@ test('admin opening a tenant-style /dashboard route is sent to /admin, not a cra
   const browseAll = page.getByRole('link', { name: /Browse All Properties/ });
   await expect(browseAll).toHaveAttribute('href', '/admin');
 });
+
+// Charging cards and deleting ID documents ask once more before they switch on, and a retention
+// period short enough to be a typo is refused (ADR-0015).
+test('turning on retention asks first, and a too-short period is refused', async ({ page }) => {
+  await loginAs(page, 'admin');
+  await page.goto('/admin/settings');
+  const toggle = page.getByRole('switch', {
+    name: 'Delete identity documents when kept long enough',
+  });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+  await toggle.click();
+  await expect(page.getByText('Turn on deletion?')).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Turn on deletion?')).toHaveCount(0);
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+  await page.getByLabel('Days to keep ID documents after a tenancy ends').fill('3');
+  await page.getByRole('button', { name: 'Save periods' }).click();
+  await expect(page.getByText(/at least 30 days/i)).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Days to keep ID documents after a tenancy ends')).toHaveValue(
+    '365',
+  );
+});
+
+test('turning on auto-pay charging asks first', async ({ page }) => {
+  await loginAs(page, 'admin');
+  await page.goto('/admin/settings');
+  const toggle = page.getByRole('switch', { name: 'Charge auto-pay tenants automatically' });
+  await toggle.click();
+  await expect(page.getByText('Turn on automatic charging?')).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Turn on automatic charging?')).toHaveCount(0);
+});

@@ -15,6 +15,7 @@ import {
   AccessCodeStatus,
   ConversationType,
   NotificationType,
+  Prisma,
 } from '@prisma/client';
 import { testPrisma } from './db';
 import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
@@ -381,4 +382,13 @@ export function bookableViewingTime(daysAhead = 3): string {
   day.setDate(day.getDate() + daysAhead);
   if (day.getDay() === 0) day.setDate(day.getDate() + 1);
   return viewingInstant(toLocalDateKey(day), '10:00').toISOString();
+}
+
+/** Writes the platform settings row (resetDb empties it): e.g. the retention switch an admin flips. */
+export async function setSystemSettings(data: Prisma.SystemSettingsUncheckedUpdateInput) {
+  return testPrisma.systemSettings.upsert({
+    where: { id: 'global' },
+    update: data,
+    create: { id: 'global', ...(data as Prisma.SystemSettingsUncheckedCreateInput) },
+  });
 }

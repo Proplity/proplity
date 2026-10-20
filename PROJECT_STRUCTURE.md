@@ -12,16 +12,16 @@
 graph TD
     Client["💻 Client / Browser (React UI)"]
     Store["📦 app/store/* mock data — only AIAssistant + 3 marketing FeaturePages still read it"]
-    Hooks["🪝 Domain hooks (hooks/use*.ts) — 24 files"]
-    ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh + typed api.* client"]
+    Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
+    ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 81 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 41 models, 11 schema files, 16 migrations")]
-    Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 5 workers"]
+    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 32 migrations")]
+    Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (250 tests) + Playwright (51 tests)"]
+    Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -71,15 +71,16 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 81 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 103 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
-│   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings,
+│   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
+│   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings (+availability),
 │   │   │                                    #   neighbourhood-report, ads, announcements, equipment
 │   │   ├── 📁 applications/, manager-codes/ # Rental applications; landlord→manager invite codes (+check, +redeem)
 │   │   ├── 📁 maintenance/                  # categories, requests (+[id], +rating), schedules
 │   │   ├── 📁 leases/                       # +[id], notes, notices, sign
-│   │   ├── 📁 invoices/, payments/          # payments: initialize, webhook, autopay, authorization
+│   │   ├── 📁 invoices/, payments/          # payments: initialize, availability, webhook, autopay, authorization
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
 │   │   ├── 📁 conversations/, notifications/ # +[id]/messages; +[id], mark-all-read
@@ -108,7 +109,7 @@ proplity/
 │
 ├── 📁 context/AuthContext.tsx               # Session context; silent refresh on reload, exposes the extended User profile
 │
-├── 📁 hooks/                                # 24 files. Reads: useProperties, useLeases, useInvoices, useMaintenanceRequests, useConversations,
+├── 📁 hooks/                                # 27 files. Reads: useProperties, useLeases, useInvoices, useMaintenanceRequests, useConversations,
 │   │                                        #   useVendors, useAdminUsers, useAuditLogs, useAnnouncements, useEquipment, useViolations, …
 │   │                                        # Writes go through useApiSubmit (plain per-render submit — never wrap in useCallback([]))
 │   ├── 📄 useApiSubmit.ts, useAuthRefresh.ts (13-min proactive refresh)
@@ -121,9 +122,10 @@ proplity/
 │   ├── 📁 storage/                          # StorageDriver interface, service.ts (StoredFile rules), providers/ (cloudinary, s3-compatible, local, imagekit, vercel-blob)
 │   ├── 📄 notifications.ts, notificationSound.ts, subscriptions.ts, systemSettings.ts, setup.ts, appUrl.ts, safeRedirect.ts
 │   ├── 📄 tenantProfile.ts                  # isTenantProfileComplete() — the profile-gate rule
+│   ├── 📄 contact.ts                        # Contact form: schema, CONTACT_EMAIL recipient, the email, messageWentOut()
 │   ├── 📁 api/                              # withAuth, validate, errors, pagination, propertyAccess, types
 │   ├── 📁 auth/                             # cookies, csrf, jwt, rateLimit (reserveAttempt/releaseAttempt), session
-│   ├── 📁 payments/mockGateway.ts           # Paystack-shaped fake used by the mock checkout
+│   ├── 📁 payments/                         # mockGateway.ts (Paystack-shaped fake for the mock checkout), availability.ts (can cards be used yet)
 │   └── 📁 workers/                          # rentInvoicer, overdueFlagger, maintenanceScheduleDispatcher, accessCodeExpiryJanitor, paymentReliabilityScorer, auth
 │
 ├── 📄 proxy.ts                              # Next 16's middleware replacement — edge guard for /dashboard, /admin
@@ -132,17 +134,18 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 api/                              # 15 Vitest files — 250 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 51 tests (pnpm test:e2e)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 106 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 api/                              # 34 Vitest files — 508 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 71 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget
-│       ├── 📁 responsive/mobile-nav.spec.ts
+│       ├── 📁 responsive/                   # mobile-nav.spec.ts, layout.spec.ts (no sideways scroll or cut-off content at 320, 390, 768 px)
 │       └── 📁 helpers/auth.ts
 │
 ├── 📁 prisma/
-│   ├── 📁 schema/                           # 10 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit) — 41 models
-│   ├── 📁 migrations/                       # 16 migrations, latest: 20260928092131_tenant_year_of_birth
+│   ├── 📁 schema/                           # 11 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit, storage) — 43 models
+│   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below
@@ -161,24 +164,25 @@ proplity/
 
 ## 📚 Docs Map
 
-| File                                                           | What it is                                                                                    |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `CLAUDE.md`                                                    | Authoritative reference: state, commands, auth architecture, conventions, known gaps          |
-| `CURRENT_STATE.md`                                             | Status per subsystem, REST inventory, changelog                                               |
-| `DEPLOYMENT.md`                                                | Three-tier branches, env vars, cron, migration workflows                                      |
-| `docs/setup-guide.md`                                          | Installing and first-run setup for a new deployment                                           |
-| `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                     |
-| `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                         |
-| `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`)                  |
-| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                    |
-| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                        |
-| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                      |
-| `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                        |
-| `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                  |
-| `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                    |
-| `docs/auth-implementation-plan.md`, `docs/auth-walkthrough.md` | Original auth design — **superseded**; see `CLAUDE.md` "Auth architecture"                    |
-| `docs/development-history/phases/*.md`                         | One write-up per completed phase/feature (domain API 0–10, notifications, wizard, gap audit…) |
-| `docs/development-history/*.md`                                | Roadmaps, audits, and the plans that spawned the phases                                       |
+| File                                                           | What it is                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `CLAUDE.md`                                                    | Authoritative reference: state, commands, auth architecture, conventions, known gaps                                     |
+| `CURRENT_STATE.md`                                             | Status per subsystem, REST inventory, changelog                                                                          |
+| `DEPLOYMENT.md`                                                | Three-tier branches, env vars, cron, migration workflows                                                                 |
+| `docs/setup-guide.md`                                          | Installing and first-run setup for a new deployment                                                                      |
+| `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                                                |
+| `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                                                    |
+| `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`; the generated PDF is no longer kept in git) |
+| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                                               |
+| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                                                   |
+| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                                                 |
+| `docs/pages/`, `docs/components/`, `docs/functions/`           | Catalogs: every page route, component and hook/lib/worker file with a one-line description (start at each `index.md`)    |
+| `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                                                   |
+| `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                                             |
+| `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                                               |
+| `docs/auth-implementation-plan.md`, `docs/auth-walkthrough.md` | Original auth design — **superseded**; see `CLAUDE.md` "Auth architecture"                                               |
+| `docs/development-history/phases/*.md`                         | One write-up per completed phase/feature (domain API 0–10, notifications, wizard, gap audit…)                            |
+| `docs/development-history/*.md`                                | Roadmaps, audits, and the plans that spawned the phases                                                                  |
 
 ---
 

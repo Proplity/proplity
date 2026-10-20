@@ -1,6 +1,6 @@
 # Work orders and recurring-schedule screens — repairs the property team raises, and a screen for recurring maintenance
 
-**Status:** Built on `feat/work-orders-and-schedules` (stacked on `feat/offline-payments-and-receipts`). **Date:** 2026-10-19. **Issues:** ISS-120 to ISS-124. **Migration:** `20261019221827_work_orders_and_schedules`. **Decisions:** ADR-0014, **Proposed**: the owner asked for the work to start without answering the open questions, so the defaults below were chosen and need accepting or changing.
+**Status:** Built on `feat/work-orders-and-schedules` (stacked on `feat/offline-payments-and-receipts`). **Date:** 2026-10-19. **Issues:** ISS-120 to ISS-124. **Migration:** `20261019221827_work_orders_and_schedules`. **Decisions:** ADR-0014, **Accepted 2026-10-20**: the owner asked for the work to start without answering the open questions, so the defaults below were chosen; the owner accepted them as drafted a day later.
 
 ## Why
 
@@ -17,7 +17,7 @@ Only a tenant with an active lease could raise a repair, so a manager or landlor
 - **Month-end drift.** `lib/maintenanceSchedule.ts` works out each date from the schedule's intended day (`MaintenanceSchedule.dayOfMonth`, filled from the first due date and back-filled by the migration): 31 January, 28 February, 31 March, 30 April. The old rule (`setMonth`) turned 31 January plus a month into **3 March**, skipping February.
 - **Seeds.** `seed2` has a work order on the vacant flat (waiting for a vendor) and three schedules: one running, one on the vacant flat, one paused.
 
-## Decisions worth remembering (ADR-0014, Proposed)
+## Decisions worth remembering (ADR-0014, Accepted)
 
 - Any unit of a property the person looks after qualifies, whatever its status; admins, managers and landlords may raise a work order; the property team pays, as for a tenant's repair.
 - No tenant confirmation, rating or tenant notices for a work order; the unit's current tenant is only told that work is planned.
