@@ -84,7 +84,7 @@ export function TenantFeaturePage() {
             <Home className="h-4 w-4" />
             Built for Nigerian Tenants
           </div>
-          <h1 className="mb-6 text-5xl leading-tight font-bold text-gray-900 md:text-6xl">
+          <h1 className="mb-6 text-4xl leading-tight font-bold text-gray-900 sm:text-5xl md:text-6xl">
             Find & Rent Your Perfect Home <span className="text-green-600">with Confidence</span>
           </h1>
           <p className="mx-auto mb-10 max-w-3xl text-xl leading-relaxed text-gray-600">

@@ -364,7 +364,7 @@ export function DashboardBreakdownPage({
                   </td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      className={`rounded-full px-3 py-2 text-xs font-medium sm:px-2.5 sm:py-1 ${
                         status === 'Fully Occupied'
                           ? 'bg-green-100 text-green-700'
                           : status === 'Partially Occupied'

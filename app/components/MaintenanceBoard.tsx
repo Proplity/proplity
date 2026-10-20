@@ -44,7 +44,7 @@ function Column({
   loading: boolean;
 }) {
   return (
-    <div className="w-full rounded-lg bg-gray-50 p-4 md:min-w-[320px] md:flex-1">
+    <div className="w-full min-w-0 rounded-lg bg-gray-50 p-4">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className={`h-5 w-5 ${color}`} />
@@ -145,7 +145,7 @@ function Column({
               <div className="flex gap-2">
                 <button
                   onClick={() => onNavigate({ type: 'maintenance-detail', requestId: request.id })}
-                  className="flex-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:py-1.5 sm:text-xs"
                 >
                   View Details
                 </button>
@@ -176,7 +176,7 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-1 text-2xl font-semibold">Maintenance Board</h1>
           <p className="text-gray-600">Kanban-style maintenance request management</p>
@@ -184,7 +184,7 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
         <button
           type="button"
           onClick={() => setRaising(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
           Raise a repair
@@ -206,7 +206,7 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Kanban Board */}
-      <div className="flex flex-col gap-4 pb-4 md:flex-row md:overflow-x-auto">
+      <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
         <Column
           title="New Requests"
           requests={newRequests}

@@ -227,7 +227,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               onClick={() => onNavigate({ type: 'vendor-job-detail', jobId: job.id })}
               className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
             >
-              <div className="mb-4 flex items-start justify-between">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}
@@ -241,7 +241,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}
                   >
