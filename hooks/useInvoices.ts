@@ -9,23 +9,6 @@ export function useCreateInvoice() {
   );
 }
 
-// Records cash, a bank transfer or a cheque against an invoice -- the only way
-// to mark one paid by hand (ISS-053).
-export function useRecordPayment() {
-  return useApiSubmit(
-    (args: {
-      invoiceId: string;
-      amount: number;
-      method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
-      reference?: string;
-      notes?: string;
-    }) => {
-      const { invoiceId, ...body } = args;
-      return api.invoices.recordPayment(invoiceId, body).then((res) => res.data.data);
-    },
-  );
-}
-
 // Starts a real Paystack checkout for one invoice -- POST /payments/initialize
 // (fully built, just never had a UI caller). Resolves to the authorization
 // URL to redirect the browser to; the actual Payment row is only created
