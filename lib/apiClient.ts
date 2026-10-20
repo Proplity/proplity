@@ -219,6 +219,11 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    viewingAvailability: (propertyId: string, date: string) =>
+      apiClient.get<{ data: { date: string; taken: string[] } }>(
+        `/api/v1/properties/${propertyId}/viewings/availability`,
+        { params: { date } },
+      ),
     listViewings: (propertyId: string) =>
       apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
     updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
