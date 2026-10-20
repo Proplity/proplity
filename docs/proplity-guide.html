@@ -1394,8 +1394,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manual Cash & Transfer Payment Recording</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Allows managers/landlords to record manual payments with payment method audit logs (CASH, TRANSFER).</div>
-        <code>POST /invoices/[id]/payments</code> &bull; <code>ISS-053</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Managers and landlords record a cash or transfer payment on a tenant record; it is paid only once someone else confirms it.</div>
+        <code>POST /bank-transfers</code> &bull; <code>ISS-053</code> &bull; <code>ISS-117</code>
       </div>
     </div>
   </div>
@@ -2571,7 +2571,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">6.2</span>Properties Moderation, Reports, Audit Logs & Settings</h3>
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
-  <p>Platform Settings has two switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered.</p>
+  <p>Platform Settings has four switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered. The other two, <strong>Second person confirms what a tenant is recorded as paying</strong> and <strong>Second person confirms what is paid to a vendor</strong>, are on by default: a cash or transfer payment the property team records does not count until someone other than the person who entered it confirms it. Turn one off for a property with one person on the team and their entry counts at once (still logged, with a receipt).</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>

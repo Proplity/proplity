@@ -11,9 +11,15 @@ import { notifyAndEmail, notifyUser } from '@/lib/notifications';
 type RouteCtx = { params: Promise<{ id: string }> };
 
 // A payment that did not go through the payment provider -- cash handed over,
-// a bank transfer or a cheque (ISS-053). It is the only way to mark an invoice
-// paid by hand: the invoice status follows from the payments recorded, and
-// every entry is written to the audit log with who recorded it.
+// a bank transfer or a cheque (ISS-053). The invoice status follows from the
+// payments recorded, and every entry is written to the audit log with who
+// recorded it.
+//
+// This route is only for an invoice that belongs to no lease and no repair (an account
+// holder's own invoice, which only an admin can reach). Money a tenant owes, or that is paid to a
+// vendor, is recorded as a transfer (POST /bank-transfers), which keeps the proof, issues the
+// receipt and, unless an admin switched the two-person rule off for that kind of money, waits for
+// someone other than the person who recorded it to confirm it (ISS-117).
 const schema = z.object({
   amount: z.number().positive(),
   method: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK']),
@@ -38,6 +44,16 @@ export const POST = withAuth(
       const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
       if (session.role !== 'ADMIN' && !(property && canManageProperty(session, property))) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      if (invoice.leaseId || invoice.maintenanceRequestId) {
+        return NextResponse.json(
+          {
+            error:
+              'A tenant or vendor invoice is recorded as paid another way (it keeps the proof and issues a receipt), not through this route.',
+          },
+          { status: 409 },
+        );
       }
 
       const validated = await validateBody(req, schema);

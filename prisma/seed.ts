@@ -308,12 +308,16 @@ async function main() {
       setupComplete: true,
       autoCompleteMaintenanceOnInvoice: true,
       requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
     },
     create: {
       id: 'global',
       setupComplete: true,
       autoCompleteMaintenanceOnInvoice: true,
       requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
     },
   });
 

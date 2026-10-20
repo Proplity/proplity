@@ -69,6 +69,7 @@ import type {
   RepairAnswerInput,
   RepairReviewInput,
   PlatformSettings,
+  PaymentRules,
   Vendor,
   Violation,
   BankTransferStatus,
@@ -368,19 +369,6 @@ export const api = {
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
-    recordPayment: (
-      invoiceId: string,
-      body: {
-        amount: number;
-        method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
-        reference?: string;
-        notes?: string;
-      },
-    ) =>
-      apiClient.post<{ data: { status: string; paidTotal: number } }>(
-        `/api/v1/invoices/${invoiceId}/payments`,
-        body,
-      ),
   },
   accessCodes: {
     list: (unitId: string) =>
@@ -448,15 +436,12 @@ export const api = {
     },
     settings: {
       get: () => apiClient.get<{ data: PlatformSettings }>('/api/v1/admin/settings'),
-      update: (
-        data: Partial<
-          Pick<
-            PlatformSettings,
-            'autoCompleteMaintenanceOnInvoice' | 'requireTenantRepairConfirmation'
-          >
-        >,
-      ) => apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
+      update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
+        apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
     },
+  },
+  settings: {
+    paymentRules: () => apiClient.get<{ data: PaymentRules }>('/api/v1/settings/payment-rules'),
   },
   notifications: {
     list: (params?: { limit?: number; cursor?: string }) =>
