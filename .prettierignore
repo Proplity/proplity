@@ -4,6 +4,7 @@ package-lock.json
 node_modules
 .next
 .next-test
+.next-journey
 out
 build
 .vercel

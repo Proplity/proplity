@@ -55,6 +55,7 @@ async function main() {
 
   // 0. Clear existing data to allow safe, repeatable re-runs
   console.log('🧹 Cleaning old table data...');
+  await prisma.bankTransferSubmission.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.vendorRating.deleteMany();
@@ -185,6 +186,8 @@ async function main() {
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
       floodRiskScore: 15.0,
@@ -301,8 +304,21 @@ async function main() {
   // 8. Mark platform setup as complete
   await prisma.systemSettings.upsert({
     where: { id: 'global' },
-    update: { setupComplete: true },
-    create: { id: 'global', setupComplete: true },
+    update: {
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
+    },
+    create: {
+      id: 'global',
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
+    },
   });
 
   console.log('🌱 PRD-enhanced Seed completed successfully!');

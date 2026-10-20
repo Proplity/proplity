@@ -30,7 +30,15 @@ export const POST = withAuth(
       }
 
       const [source, target] = await Promise.all([
-        prisma.property.findUnique({ where: { id } }),
+        prisma.property.findUnique({
+          where: { id },
+          include: {
+            _count: { select: { mergedFrom: true } },
+            units: {
+              select: { id: true, leases: { where: { status: 'ACTIVE' }, select: { id: true } } },
+            },
+          },
+        }),
         prisma.property.findUnique({ where: { id: targetPropertyId } }),
       ]);
 
@@ -44,6 +52,27 @@ export const POST = withAuth(
       if (source.mergedIntoId) {
         return NextResponse.json(
           { error: 'This property has already been merged into another listing' },
+          { status: 400 },
+        );
+      }
+
+      // A listing that other listings were merged into cannot itself be merged away:
+      // that would leave those pointing at a merged listing (a chain).
+      if (source._count.mergedFrom > 0) {
+        return NextResponse.json(
+          {
+            error:
+              'Other listings were merged into this one. Undo those merges first, or merge into this listing instead.',
+          },
+          { status: 400 },
+        );
+      }
+
+      // Merging rejects and unpublishes the source; units and leases are not moved, so a
+      // listing with live tenancies must not be merged away.
+      if (source.units.some((u) => u.leases.length > 0)) {
+        return NextResponse.json(
+          { error: 'This listing has active leases and cannot be merged' },
           { status: 400 },
         );
       }

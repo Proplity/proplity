@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useActiveLease } from '@/hooks/useLeases';
 import { useProperty } from '@/hooks/useProperties';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { toast } from 'sonner';
 
 interface Section {
   rating?: number;
@@ -103,21 +105,22 @@ export function NeighbourhoodReport() {
   const report = property?.neighbourhoodReports[0] ?? null;
 
   const handleDownloadPDF = () => {
-    if (!isPremiumUser) {
+    if (subscriptionsEnabled() && !isPremiumUser) {
       setShowPaymentModal(true);
       return;
     }
-    alert(
-      'Downloading Neighbourhood Report as PDF...\n\nThis feature would generate a comprehensive PDF report with all the neighbourhood insights.',
-    );
+    toast.info('Incoming Feature', {
+      description:
+        'PDF report generation is an upcoming feature and will be available in a future release.',
+    });
   };
 
   const handleUpgradeToPremium = () => {
-    alert(
-      'Redirecting to payment gateway...\n\nAfter successful payment, you will have unlimited access to neighbourhood reports and other premium features.',
-    );
+    toast.info('Incoming Feature', {
+      description:
+        'Online premium subscription billing is an upcoming feature and will be available in an upcoming release.',
+    });
     setShowPaymentModal(false);
-    setIsPremiumUser(true);
   };
 
   if (leaseLoading || propertyLoading) {
@@ -157,18 +160,19 @@ export function NeighbourhoodReport() {
         </div>
         <button
           onClick={handleDownloadPDF}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+          title="PDF export is coming in an upcoming release"
         >
-          <Download className="h-4 w-4" />
-          Download PDF
+          <Download className="h-4 w-4 text-blue-600" />
+          <span>Download PDF</span>
+          <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-xs font-semibold text-blue-800">
+            Incoming Feature
+          </span>
         </button>
       </div>
 
-      {/* Premium Service Banner -- Subscription model exists in the schema
-          but isn't wired to any real gating (CLAUDE.md: "not in the PRD,
-          confirm with product before building"), so this stays local demo
-          state exactly as before, not backed by a real entitlement check. */}
-      {!isPremiumUser && (
+      {/* Premium Service Banner */}
+      {subscriptionsEnabled() && !isPremiumUser && (
         <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
@@ -233,7 +237,7 @@ export function NeighbourhoodReport() {
                   </p>
                 </div>
               </div>
-              {isPremiumUser && (
+              {subscriptionsEnabled() && isPremiumUser && (
                 <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
                   Premium Report
                 </span>
@@ -623,7 +627,7 @@ export function NeighbourhoodReport() {
                 onClick={handleUpgradeToPremium}
                 className="flex-1 rounded-lg bg-purple-600 px-4 py-3 font-medium text-white hover:bg-purple-700"
               >
-                Upgrade Now
+                Upgrade (Incoming Feature)
               </button>
             </div>
           </div>

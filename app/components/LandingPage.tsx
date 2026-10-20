@@ -8,6 +8,7 @@ import { WatchDemoModal } from './WatchDemoModal';
 import { FEATURED_GRADIENTS, FeaturedPropertyModal, featuredFields } from './FeaturedPropertyModal';
 import { useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 import {
   ArrowRight,
   Shield,
@@ -696,97 +697,101 @@ export function LandingPage() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <p className="mt-3 text-sm text-gray-600">
-              Join free to view all available properties and apply online
+              {user
+                ? 'Browse available properties and view full listings'
+                : 'Join free to view all available properties and apply online'}
             </p>
           </div>
         </div>
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="bg-linear-to-br from-blue-50 to-green-50 py-20">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-gray-600">Choose the plan that fits your portfolio size</p>
-          </div>
+      {subscriptionsEnabled() && (
+        <section id="pricing" className="bg-linear-to-br from-blue-50 to-green-50 py-20">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-16 text-center">
+              <h2 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h2>
+              <p className="text-xl text-gray-600">Choose the plan that fits your portfolio size</p>
+            </div>
 
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-3">
-            {[
-              {
-                name: 'Starter',
-                price: '₦9,999',
-                units: 'Up to 10 units',
-                features: [
-                  'Property & Tenant Management',
-                  'Rent Collection',
-                  'Basic Maintenance',
-                  'Email Support',
-                ],
-              },
-              {
-                name: 'Professional',
-                price: '₦29,999',
-                units: 'Up to 50 units',
-                features: [
-                  'Everything in Starter',
-                  'AI Assistant',
-                  'WhatsApp Integration',
-                  'Advanced Analytics',
-                  'Priority Support',
-                ],
-                popular: true,
-              },
-              {
-                name: 'Enterprise',
-                price: 'Custom',
-                units: '100+ units',
-                features: [
-                  'Everything in Professional',
-                  'Custom Integration',
-                  'Dedicated Account Manager',
-                  'SLA Guarantee',
-                  '24/7 Phone Support',
-                ],
-              },
-            ].map((plan, index) => (
-              <div
-                key={index}
-                className={`rounded-xl border-2 bg-white p-8 ${plan.popular ? 'scale-105 border-blue-600 shadow-xl' : 'border-gray-200'} relative`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 transform rounded-full bg-blue-600 px-4 py-1 text-sm font-medium text-white">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="mb-2 text-2xl font-bold">{plan.name}</h3>
-                <p className="mb-4 text-gray-600">{plan.units}</p>
-                <p className="mb-6 text-4xl font-bold">
-                  {plan.price}
-                  <span className="text-lg text-gray-600">/month</span>
-                </p>
-                <ul className="mb-8 space-y-3">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/register?plan=${plan.name.toLowerCase()}`}
-                  className={`block w-full rounded-lg py-3 text-center font-semibold ${
-                    plan.popular
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'border-2 border-gray-300 hover:bg-gray-50'
-                  }`}
+            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-3">
+              {[
+                {
+                  name: 'Starter',
+                  price: '₦9,999',
+                  units: 'Up to 10 units',
+                  features: [
+                    'Property & Tenant Management',
+                    'Rent Collection',
+                    'Basic Maintenance',
+                    'Email Support',
+                  ],
+                },
+                {
+                  name: 'Professional',
+                  price: '₦29,999',
+                  units: 'Up to 50 units',
+                  features: [
+                    'Everything in Starter',
+                    'AI Assistant',
+                    'WhatsApp Integration',
+                    'Advanced Analytics',
+                    'Priority Support',
+                  ],
+                  popular: true,
+                },
+                {
+                  name: 'Enterprise',
+                  price: 'Custom',
+                  units: '100+ units',
+                  features: [
+                    'Everything in Professional',
+                    'Custom Integration',
+                    'Dedicated Account Manager',
+                    'SLA Guarantee',
+                    '24/7 Phone Support',
+                  ],
+                },
+              ].map((plan, index) => (
+                <div
+                  key={index}
+                  className={`rounded-xl border-2 bg-white p-8 ${plan.popular ? 'scale-105 border-blue-600 shadow-xl' : 'border-gray-200'} relative`}
                 >
-                  Get Started
-                </Link>
-              </div>
-            ))}
+                  {plan.popular && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 transform rounded-full bg-blue-600 px-4 py-1 text-sm font-medium text-white">
+                      Most Popular
+                    </div>
+                  )}
+                  <h3 className="mb-2 text-2xl font-bold">{plan.name}</h3>
+                  <p className="mb-4 text-gray-600">{plan.units}</p>
+                  <p className="mb-6 text-4xl font-bold">
+                    {plan.price}
+                    <span className="text-lg text-gray-600">/month</span>
+                  </p>
+                  <ul className="mb-8 space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/register?plan=${plan.name.toLowerCase()}`}
+                    className={`block w-full rounded-lg py-3 text-center font-semibold ${
+                      plan.popular
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'border-2 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Get Started
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="bg-blue-600 py-20 text-white">
@@ -833,11 +838,13 @@ export function LandingPage() {
                     Features
                   </a>
                 </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Pricing
-                  </a>
-                </li>
+                {subscriptionsEnabled() && (
+                  <li>
+                    <a href="#pricing" className="hover:text-white">
+                      Pricing
+                    </a>
+                  </li>
+                )}
                 <li>
                   <button
                     type="button"

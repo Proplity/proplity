@@ -59,6 +59,8 @@ model User {
   leaseSignatures              LeaseSignature[]
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
+  approvedRepairs              MaintenanceRequest[]      @relation("RepairApprovals")
+  workOrdersRaised             MaintenanceRequest[]      @relation("WorkOrdersRaised")
   bankAccounts                 BankAccount[]
   issuedAccessCodes            AccessCode[]
   announcements                Announcement[]            @relation("AnnouncementAuthor")
@@ -85,6 +87,11 @@ model User {
   createdAt                    DateTime                  @default(now())
   updatedAt                    DateTime                  @updatedAt
   storedFiles                  StoredFile[]              @relation("UploadedFiles")
+  bankTransfersSubmitted       BankTransferSubmission[]  @relation("BankTransfersSubmitted")
+  bankTransfersReconciled      BankTransferSubmission[]  @relation("BankTransfersReconciled")
+  vendorPayoutsReceived        VendorPayout[]            @relation("VendorPayoutsReceived")
+  vendorPayoutsInitiated       VendorPayout[]            @relation("VendorPayoutsInitiated")
+  vendorPayoutsApproved        VendorPayout[]            @relation("VendorPayoutsApproved")
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
@@ -210,16 +217,17 @@ model ManagerInviteCode {
 }
 
 model BankAccount {
-  id            String   @id @default(uuid())
+  id            String         @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountNumber String
   bankCode      String
   bankName      String
   accountName   String
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isDefault     Boolean        @default(false)
+  vendorPayouts VendorPayout[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model RefreshToken {

@@ -595,3 +595,93 @@ describe('admin: audit log filters, paging and names (ISS-055)', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('admin: switches for auto-pay and retention, and the retention periods (ADR-0015)', () => {
+  let admin: Awaited<ReturnType<typeof createUser>>;
+  let adminCookie: string;
+  const patch = (body: unknown, cookie = adminCookie) =>
+    apiFetch('/api/v1/admin/settings', { method: 'PATCH', cookie, body });
+
+  beforeAll(async () => {
+    await resetDb();
+    admin = await createUser(Role.ADMIN);
+    adminCookie = await authCookie(admin.id, admin.role);
+  });
+
+  it('starts with both switches off and ADR-0012 periods, and says what the deployment allows', async () => {
+    const res = await apiFetch('/api/v1/admin/settings', { cookie: adminCookie });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      autopayChargingEnabled: false,
+      retentionEnabled: false,
+      retentionAfterTenancyDays: 365,
+      retentionAfterRejectionDays: 90,
+    });
+    // The test server runs with both deployment flags on (tests/setup/globalSetup.ts).
+    expect(res.body.data.deploymentAllows).toEqual({ autopay: true, retention: true });
+  });
+
+  it('is for admins only', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const cookie = await authCookie(manager.id, manager.role);
+    expect((await patch({ retentionEnabled: true }, cookie)).status).toBe(403);
+    expect((await apiFetch('/api/v1/admin/settings', { cookie })).status).toBe(403);
+  });
+
+  it('refuses periods short enough to be a typo, or not whole days', async () => {
+    for (const body of [
+      { retentionAfterTenancyDays: 3 },
+      { retentionAfterTenancyDays: 29 },
+      { retentionAfterTenancyDays: 4000 },
+      { retentionAfterRejectionDays: 6 },
+      { retentionAfterRejectionDays: 12.5 },
+      { retentionAfterRejectionDays: '90' },
+    ]) {
+      const res = await patch(body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+    }
+    const after = await apiFetch('/api/v1/admin/settings', { cookie: adminCookie });
+    expect(after.body.data.retentionAfterTenancyDays).toBe(365);
+    expect(after.body.data.retentionAfterRejectionDays).toBe(90);
+  });
+
+  it('saves the switches and periods, answers with the new settings and logs who changed what', async () => {
+    const res = await patch({
+      autopayChargingEnabled: true,
+      retentionEnabled: true,
+      retentionAfterTenancyDays: 730,
+      retentionAfterRejectionDays: 30,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      autopayChargingEnabled: true,
+      retentionEnabled: true,
+      retentionAfterTenancyDays: 730,
+      retentionAfterRejectionDays: 30,
+    });
+    expect(res.body.data.deploymentAllows).toBeDefined();
+
+    const logs = await testPrisma.auditLog.findMany({
+      where: { action: 'SETTINGS_CHANGED', actorId: admin.id },
+    });
+    expect(logs).toHaveLength(1);
+    expect(logs[0].metadata).toEqual({
+      changes: {
+        autopayChargingEnabled: { from: false, to: true },
+        retentionEnabled: { from: false, to: true },
+        retentionAfterTenancyDays: { from: 365, to: 730 },
+        retentionAfterRejectionDays: { from: 90, to: 30 },
+      },
+    });
+
+    // Sending the same values again changes nothing, so it is not logged again.
+    await patch({ retentionEnabled: true });
+    expect(
+      await testPrisma.auditLog.count({ where: { action: 'SETTINGS_CHANGED', actorId: admin.id } }),
+    ).toBe(1);
+
+    const off = await patch({ autopayChargingEnabled: false });
+    expect(off.body.data.autopayChargingEnabled).toBe(false);
+    expect(off.body.data.retentionEnabled).toBe(true);
+  });
+});

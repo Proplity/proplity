@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PropertyType, Role } from '@prisma/client';
+import { PropertyType, Role, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import { canManageProperty, isPrivateUnit, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
+import { sendEmail } from '@/lib/email';
+import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
+import { appUrl } from '@/lib/appUrl';
+import {
+  STAGED_PROPERTY_FIELDS,
+  pickStaged,
+  touchesCritical,
+  readRestoreTo,
+  type RestoreTo,
+} from '@/lib/propertyPendingChanges';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -18,10 +28,11 @@ type RouteCtx = { params: Promise<{ id: string }> };
  * unpublished listing is no longer readable by anyone who merely knows the id.
  *
  * A property is readable when ANY of these hold:
- *   1. it is published (the public tier -- mirrors the list endpoint's
- *      `isPublished: true` filter, which is the same gate. `isPublished` can
- *      only ever be flipped true after ADMIN approval, see PATCH below, so
- *      published implies moderation-approved);
+ *   1. it is published AND approved (the public tier -- mirrors the list
+ *      endpoint's filter. `isPublished` can only be flipped true after ADMIN
+ *      approval, see PATCH below, but both pages also check the approval
+ *      status so a row that is published and still pending (bad data) never
+ *      shows up publicly);
  *   2. the caller manages it (its own manager/landlord, or an ADMIN) -- their
  *      dashboard has to show a pending-review listing;
  *   3. the caller is a tenant living in it. A landlord can unpublish a
@@ -41,31 +52,44 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
         units: true,
         neighbourhoodReports: { orderBy: { generatedAt: 'desc' }, take: 1 },
         reviews: { orderBy: { createdAt: 'desc' } },
+        manager: { select: { id: true, name: true, email: true, phoneNumber: true, role: true } },
+        landlord: { select: { id: true, name: true, email: true, phoneNumber: true, role: true } },
         mergedInto: { select: { id: true, name: true, address: true, city: true } },
         mergedFrom: { select: { id: true, name: true, address: true, city: true } },
       },
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
-    if (!property.isPublished) {
-      const jwtSession = await getServerSession();
-      if (!jwtSession) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
-      const session = { sub: jwtSession.sub, role: jwtSession.role as Role };
+    const jwtSession = await getServerSession();
+    const session = jwtSession ? { sub: jwtSession.sub, role: jwtSession.role as Role } : null;
+    const manages = !!session && canManageProperty(session, property);
+    // Any lease at all, not just ACTIVE: a tenant mid-renewal or just past
+    // their end date still needs the property's announcements and their own
+    // unit's history.
+    const occupancy =
+      session && !manages
+        ? await prisma.lease.findFirst({
+            where: { tenantId: session.sub, unit: { propertyId: id } },
+            select: { id: true },
+          })
+        : null;
 
-      let visible = canManageProperty(session, property);
-      if (!visible) {
-        // Any lease at all, not just ACTIVE: a tenant mid-renewal or just
-        // past their end date still needs the property's announcements and
-        // their own unit's history.
-        const occupancy = await prisma.lease.findFirst({
-          where: { tenantId: session.sub, unit: { propertyId: id } },
-          select: { id: true },
-        });
-        visible = occupancy !== null;
+    if (!property.isPublished || property.moderationStatus !== 'APPROVED') {
+      if (!manages && occupancy === null) {
+        return NextResponse.json({ error: 'Property not found' }, { status: 404 });
       }
-
-      if (!visible) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
+
+    // A unit marked private is for the owner's side and the people living in the
+    // building only; everyone else gets the public units (ISS-084).
+    const seesPrivate = manages || occupancy !== null;
+    const visibleUnits = seesPrivate
+      ? property.units
+      : property.units.filter((u) => !isPrivateUnit(u));
+    if (!seesPrivate && property.units.length > 0 && visibleUnits.length === 0) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
+    property.units = visibleUnits;
 
     const { reviews, units, ...rest } = property;
     const ratings = reviews.map((r) => r.rating);
@@ -105,6 +129,10 @@ const updatePropertySchema = z.object({
   // /moderation route). Gated below: can only ever flip true once ADMIN has
   // approved the listing; false (unpublish) is always allowed.
   isPublished: z.boolean().optional(),
+  saveAsDraft: z.boolean().optional(),
+  submitForReview: z.boolean().optional(),
+  cancelPendingEdits: z.boolean().optional(),
+  deletePendingEdits: z.boolean().optional(),
 });
 
 export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -160,22 +188,285 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
       );
     }
 
+    const currentPropertyMeta = ((property.metadata as Record<string, unknown> | null) ||
+      {}) as Record<string, unknown>;
+    const existingPending = (currentPropertyMeta.pendingChanges as Record<string, unknown>) || null;
+    const stripEdited = (notes: string | null) =>
+      (notes || '').replace(/\[EDITED[^\]]*\]\s*/g, '').trim();
+    // The edit form sends every field it shows, changed or not. Only a field that
+    // differs from the live listing is a real edit: an untouched name or address
+    // must not make a description edit look like a change of identity or location.
+    const sameAsLive = (key: string, value: unknown) =>
+      JSON.stringify((property as Record<string, unknown>)[key] ?? null) ===
+      JSON.stringify(value ?? null);
+    const onlyChanged = (fields: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(fields).filter(([k, v]) => !sameAsLive(k, v)));
+    const editedTag = (critical: boolean) => {
+      const date = new Date().toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const rest = stripEdited(property.moderationNotes);
+      return critical
+        ? `[EDITED:CRITICAL on ${date}] Location or identity updated by ${session.role.toLowerCase()}${rest ? ` | ${rest}` : ''}`
+        : `[EDITED:MINOR on ${date}] Photos or description updated by ${session.role.toLowerCase()}${rest ? ` | ${rest}` : ''}`;
+    };
+    // Where to return the listing if the owner cancels the review request: only an
+    // approved listing has anything to go back to (ISS-059).
+    const restoreToFor = (): RestoreTo | undefined =>
+      readRestoreTo(existingPending) ??
+      (property.moderationStatus === 'APPROVED'
+        ? { moderationStatus: 'APPROVED', isPublished: property.isPublished }
+        : undefined);
+
+    const notifyAdmins = async (subject: string, body: string) => {
+      try {
+        const admins = await prisma.user.findMany({
+          where: { role: 'ADMIN' },
+          select: { email: true },
+        });
+        for (const email of new Set(admins.map((a) => a.email))) {
+          await sendEmail({ to: email, subject, body });
+        }
+      } catch (err) {
+        console.error('Failed to notify admins of a property edit', err);
+      }
+    };
+    const editorLabel = async () => {
+      const editor = await prisma.user.findUnique({
+        where: { id: session.sub },
+        select: { name: true, email: true, role: true },
+      });
+      return `${editor?.name ?? 'User'} (${editor?.email ?? ''}, ${editor?.role ?? ''})`;
+    };
+
+    // 1. CANCEL PENDING EDITS: move the edits back to DRAFT and, if the listing was
+    // approved before the edit, return it to that state. Never raises a listing.
+    if (validated.data.cancelPendingEdits) {
+      if (!existingPending) {
+        return NextResponse.json({ data: property, message: 'No pending edits to cancel' });
+      }
+      const restoreTo = readRestoreTo(existingPending);
+      const now = new Date().toISOString();
+      const restored = await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentPropertyMeta,
+            pendingChanges: {
+              ...existingPending,
+              status: 'DRAFT',
+              updatedAt: now,
+              cancelledAt: now,
+            },
+          } as Prisma.InputJsonObject,
+          moderationNotes: stripEdited(property.moderationNotes) || null,
+          ...(restoreTo
+            ? { moderationStatus: restoreTo.moderationStatus, isPublished: restoreTo.isPublished }
+            : {}),
+        },
+      });
+      return NextResponse.json({
+        data: restored,
+        message: 'Approval request cancelled. Edits moved back to draft.',
+      });
+    }
+
+    // 2. DELETE PENDING EDITS (discard a draft). Edits under review must be cancelled first.
+    if (validated.data.deletePendingEdits) {
+      if (!existingPending) {
+        return NextResponse.json({ data: property, message: 'No draft edits to delete' });
+      }
+      if (existingPending.status === 'PENDING_REVIEW') {
+        return NextResponse.json(
+          {
+            error:
+              'Edits currently under review cannot be deleted directly. You must cancel the approval request first before deleting.',
+            code: 'UNDER_REVIEW_CANNOT_DELETE',
+          },
+          { status: 400 },
+        );
+      }
+      const { pendingChanges: _removed, ...restMeta } = currentPropertyMeta;
+      const restored = await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: restMeta as Prisma.InputJsonObject,
+          moderationNotes: stripEdited(property.moderationNotes) || null,
+        },
+      });
+      return NextResponse.json({ data: restored, message: 'Draft edits deleted successfully.' });
+    }
+
+    // 3. SUBMIT DRAFT FOR REVIEW
+    if (validated.data.submitForReview) {
+      // The edit form saves and submits in one call, so fields sent with the flag
+      // are staged first; a bare flag submits the draft saved earlier.
+      const sentFields = onlyChanged(pickStaged(validated.data));
+      const draftToSubmit =
+        Object.keys(sentFields).length > 0
+          ? {
+              ...(existingPending || {}),
+              property: {
+                ...((existingPending?.property as Record<string, unknown>) || {}),
+                ...sentFields,
+              },
+            }
+          : existingPending;
+      if (!draftToSubmit) {
+        return NextResponse.json(
+          { error: 'No draft edits found to submit for review', code: 'NO_DRAFT' },
+          { status: 400 },
+        );
+      }
+      const draftProp = (draftToSubmit.property as Record<string, unknown>) || {};
+      const isCritical = touchesCritical(draftProp);
+      const restoreTo = restoreToFor();
+
+      const updated = await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentPropertyMeta,
+            pendingChanges: {
+              ...draftToSubmit,
+              status: 'PENDING_REVIEW',
+              submittedAt: new Date().toISOString(),
+              ...(restoreTo ? { restoreTo } : {}),
+            },
+          } as Prisma.InputJsonObject,
+          moderationNotes: editedTag(isCritical),
+          ...(isCritical ? { moderationStatus: 'PENDING_REVIEW', isPublished: false } : {}),
+        },
+      });
+
+      await notifyAdminsInApp({
+        title: isCritical ? 'Critical edit awaiting review' : 'Listing edit awaiting review',
+        body: `Edits to "${updated.name}" were submitted for review.`,
+        link: '/admin/properties',
+      });
+      await notifyAdmins(
+        isCritical
+          ? `[CRITICAL REVIEW] Property Location/Identity Updated: ${updated.name}`
+          : `[CONTENT UPDATE] Property Photos/Description Updated: ${updated.name}`,
+        `Hi Admin,\n\nThe property listing "${updated.name}" had its draft edits submitted for review by ${await editorLabel()}.\n\n${isCritical ? 'Because critical fields were edited, the listing has been temporarily UNPUBLISHED and resubmitted to PENDING_REVIEW.' : 'The listing remains LIVE while awaiting review.'}\n\nPlease inspect the changes in the Moderation Queue:\n${appUrl(`/admin/properties`, req)}`,
+      );
+      return NextResponse.json({ data: updated, message: 'Draft edits submitted for review.' });
+    }
+
+    // 4. SAVE AS DRAFT: staged only, nothing changes on the live listing.
+    if (validated.data.saveAsDraft) {
+      const draftProp = (existingPending?.property as Record<string, unknown>) || {};
+      const updatedPending = {
+        ...(existingPending || {}),
+        status: 'DRAFT',
+        updatedAt: new Date().toISOString(),
+        property: onlyChanged({ ...draftProp, ...pickStaged(validated.data) }),
+      };
+      const updated = await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentPropertyMeta,
+            pendingChanges: updatedPending,
+          } as Prisma.InputJsonObject,
+        },
+      });
+      return NextResponse.json({ data: updated });
+    }
+
+    // 5. DIRECT EDIT
+    const {
+      saveAsDraft: _draftFlag,
+      submitForReview: _submitFlag,
+      cancelPendingEdits: _cancelFlag,
+      deletePendingEdits: _deleteFlag,
+      managerId,
+      landlordId,
+      ...cleanData
+    } = validated.data;
+
+    const stagedFields = onlyChanged(pickStaged(cleanData));
+    const hasStagedEdit = Object.keys(stagedFields).length > 0;
+    const isOwnerEdit = session.role !== 'ADMIN';
+    const critical = touchesCritical(stagedFields);
+
+    // An owner's edit to an APPROVED listing is staged for review and does not touch
+    // the live row until an admin approves it (ISS-061). On a listing that is not
+    // approved nothing is public yet, so the edit applies directly; a rejected or
+    // flagged listing goes back to the queue.
+    const stageForReview = isOwnerEdit && hasStagedEdit && property.moderationStatus === 'APPROVED';
+    const resubmit =
+      isOwnerEdit &&
+      hasStagedEdit &&
+      !stageForReview &&
+      (property.moderationStatus === 'REJECTED' || property.moderationStatus === 'FLAGGED');
+
+    const liveData: Record<string, unknown> = { ...cleanData };
+    let reviewData: Record<string, unknown> = {};
+    if (stageForReview) {
+      for (const key of STAGED_PROPERTY_FIELDS) delete liveData[key];
+      const restoreTo = restoreToFor();
+      reviewData = {
+        moderationNotes: editedTag(critical),
+        ...(critical ? { moderationStatus: 'PENDING_REVIEW', isPublished: false } : {}),
+        metadata: {
+          ...currentPropertyMeta,
+          pendingChanges: {
+            ...(existingPending || {}),
+            status: 'PENDING_REVIEW',
+            submittedAt: new Date().toISOString(),
+            property: {
+              ...((existingPending?.property as Record<string, unknown>) || {}),
+              ...stagedFields,
+            },
+            ...(restoreTo ? { restoreTo } : {}),
+          },
+        } as Prisma.InputJsonObject,
+      };
+    } else if (resubmit) {
+      reviewData = {
+        moderationStatus: 'PENDING_REVIEW',
+        isPublished: false,
+        moderationNotes: editedTag(critical),
+      };
+    }
+
     const addressChanged =
-      validated.data.address !== undefined || validated.data.city !== undefined;
+      !stageForReview && (cleanData.address !== undefined || cleanData.city !== undefined);
     const updated = await prisma.property.update({
       where: { id },
       data: {
-        ...validated.data,
+        ...liveData,
+        ...(managerId ? { managerId } : {}),
+        ...(landlordId ? { landlordId } : {}),
+        ...reviewData,
         ...(addressChanged
           ? {
               listingHash: listingHash(
-                validated.data.address ?? property.address,
-                validated.data.city ?? property.city,
+                cleanData.address ?? property.address,
+                cleanData.city ?? property.city,
               ),
             }
           : {}),
       },
     });
+
+    if (stageForReview || resubmit) {
+      await notifyAdminsInApp({
+        title: critical ? 'Critical edit awaiting review' : 'Listing edit awaiting review',
+        body: `Edits to "${updated.name}" were submitted for review.`,
+        link: '/admin/properties',
+      });
+      await notifyAdmins(
+        critical
+          ? `[CRITICAL REVIEW] Property Location/Identity Updated: ${updated.name}`
+          : `[CONTENT UPDATE] Property Photos/Description Updated: ${updated.name}`,
+        `Hi Admin,\n\nThe property listing "${updated.name}" was edited by ${await editorLabel()}.\n\n${critical ? 'Because critical fields were edited, the listing has been temporarily UNPUBLISHED and resubmitted to PENDING_REVIEW.' : 'The edits are held for review and the listing stays as it was until you approve them.'}\n\nPlease inspect the changes in the Moderation Queue:\n${appUrl(`/admin/properties`, req)}`,
+      );
+    }
+
     return NextResponse.json({ data: updated });
   } catch (err) {
     return handleApiError(err);

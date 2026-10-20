@@ -8,6 +8,9 @@ import { parseXlsx } from '@/lib/xlsx';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
+const MAX_IMPORT_BYTES = 2_000_000;
+const MAX_IMPORT_ROWS = 500;
+
 // Required: unitNumber, rentAmount. Everything else optional, matching
 // Unit's own schema defaults. One row failing (bad number, duplicate
 // unitNumber) doesn't abort the rest -- each row is its own create, with
@@ -29,6 +32,13 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'A file field is required' }, { status: 400 });
       }
 
+      if (file.size > MAX_IMPORT_BYTES) {
+        return NextResponse.json(
+          { error: 'The file is too large (2 MB at most)' },
+          { status: 413 },
+        );
+      }
+
       const filename = 'name' in file ? String((file as File).name) : '';
       const isXlsx = filename.toLowerCase().endsWith('.xlsx');
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -37,6 +47,14 @@ export const POST = withAuth(
       if (rows.length === 0) {
         return NextResponse.json({ error: 'No data rows found in file' }, { status: 400 });
       }
+      if (rows.length > MAX_IMPORT_ROWS) {
+        return NextResponse.json(
+          { error: `Import at most ${MAX_IMPORT_ROWS} units at a time` },
+          { status: 400 },
+        );
+      }
+      // Units added by an owner or manager wait for admin approval, same as adding one by hand.
+      const pendingApproval = session.role === 'LANDLORD' || session.role === 'MANAGER';
 
       let created = 0;
       const errors: { row: number; error: string }[] = [];
@@ -64,6 +82,7 @@ export const POST = withAuth(
               bedrooms: r.bedrooms ? Number(r.bedrooms) || 1 : undefined,
               bathrooms: r.bathrooms ? Number(r.bathrooms) || 1 : undefined,
               squareFeet: r.sqft ? Number(r.sqft) || null : undefined,
+              ...(pendingApproval ? { amenities: ['approval:pending'] } : {}),
             },
           });
           created += 1;

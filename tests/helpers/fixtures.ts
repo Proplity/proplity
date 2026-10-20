@@ -8,14 +8,17 @@ import {
   LateFeeType,
   MaintenancePriority,
   MaintenanceStatus,
+  RepairConfirmationStatus,
   ScheduleFrequency,
   InvoiceType,
   InvoiceStatus,
   AccessCodeStatus,
   ConversationType,
   NotificationType,
+  Prisma,
 } from '@prisma/client';
 import { testPrisma } from './db';
+import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
 
 let counter = 0;
 function unique(prefix: string) {
@@ -101,6 +104,8 @@ export async function createProperty(
     managerId: string | null;
     landlordId: string | null;
     isPublished: boolean;
+    moderationStatus: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
+    metadata: any;
   }> = {},
 ) {
   return testPrisma.property.create({
@@ -112,6 +117,9 @@ export async function createProperty(
       managerId: overrides.managerId ?? null,
       landlordId: overrides.landlordId ?? null,
       isPublished: overrides.isPublished ?? false,
+      moderationStatus:
+        overrides.moderationStatus ?? (overrides.isPublished ? 'APPROVED' : 'PENDING_REVIEW'),
+      ...(overrides.metadata !== undefined ? { metadata: overrides.metadata } : {}),
     },
   });
 }
@@ -123,6 +131,7 @@ export async function createUnit(
     bedrooms: number;
     rentAmount: number;
     squareFeet: number | null;
+    amenities: string[];
   }> = {},
 ) {
   return testPrisma.unit.create({
@@ -132,6 +141,7 @@ export async function createUnit(
       bedrooms: overrides.bedrooms ?? 2,
       rentAmount: overrides.rentAmount ?? 1_000_000,
       squareFeet: overrides.squareFeet ?? null,
+      ...(overrides.amenities ? { amenities: overrides.amenities } : {}),
     },
   });
 }
@@ -189,26 +199,44 @@ export async function createMaintenanceCategory(
 
 export async function createMaintenanceRequest(
   unitId: string,
-  tenantId: string,
+  // Null for a work order: a repair the property team raised itself.
+  tenantId: string | null,
   overrides: Partial<{
+    createdById: string | null;
     title: string;
     description: string;
     categoryId: string | null;
     vendorId: string | null;
     priority: MaintenancePriority;
     status: MaintenanceStatus;
+    // Repair follow-through: the vendor's photos, the tenant's answer and the team's sign-off.
+    afterPhotoUrls: string[];
+    beforePhotoUrls: string[];
+    confirmationStatus: RepairConfirmationStatus;
+    disputeReason: string | null;
+    approvedAt: Date | null;
+    finalCost: number | null;
+    completedAt: Date | null;
   }> = {},
 ) {
   return testPrisma.maintenanceRequest.create({
     data: {
       unitId,
       tenantId,
+      createdById: overrides.createdById ?? null,
       title: overrides.title ?? 'Leaky faucet',
       description: overrides.description ?? 'The kitchen faucet is leaking.',
       categoryId: overrides.categoryId ?? null,
       vendorId: overrides.vendorId ?? null,
       priority: overrides.priority ?? MaintenancePriority.MEDIUM,
       status: overrides.status ?? MaintenanceStatus.SUBMITTED,
+      afterPhotoUrls: overrides.afterPhotoUrls,
+      beforePhotoUrls: overrides.beforePhotoUrls,
+      confirmationStatus: overrides.confirmationStatus,
+      disputeReason: overrides.disputeReason,
+      approvedAt: overrides.approvedAt,
+      finalCost: overrides.finalCost,
+      completedAt: overrides.completedAt,
     },
   });
 }
@@ -323,5 +351,44 @@ export async function createConversation(
       maintenanceRequestId: overrides.maintenanceRequestId,
       participants: { create: participantIds.map((userId) => ({ userId })) },
     },
+  });
+}
+
+export async function createBankAccount(
+  userId: string,
+  overrides: Partial<{
+    accountNumber: string;
+    bankCode: string;
+    bankName: string;
+    accountName: string;
+    isDefault: boolean;
+  }> = {},
+) {
+  return testPrisma.bankAccount.create({
+    data: {
+      userId,
+      accountNumber: overrides.accountNumber ?? '0123456789',
+      bankCode: overrides.bankCode ?? '058',
+      bankName: overrides.bankName ?? 'Guaranty Trust Bank',
+      accountName: overrides.accountName ?? 'Test Vendor Account',
+      isDefault: overrides.isDefault ?? true,
+    },
+  });
+}
+
+/** A bookable viewing time: 10:00 AM Lagos time, `daysAhead` days out, moved off a Sunday. */
+export function bookableViewingTime(daysAhead = 3): string {
+  const day = new Date();
+  day.setDate(day.getDate() + daysAhead);
+  if (day.getDay() === 0) day.setDate(day.getDate() + 1);
+  return viewingInstant(toLocalDateKey(day), '10:00').toISOString();
+}
+
+/** Writes the platform settings row (resetDb empties it): e.g. the retention switch an admin flips. */
+export async function setSystemSettings(data: Prisma.SystemSettingsUncheckedUpdateInput) {
+  return testPrisma.systemSettings.upsert({
+    where: { id: 'global' },
+    update: data,
+    create: { id: 'global', ...(data as Prisma.SystemSettingsUncheckedCreateInput) },
   });
 }

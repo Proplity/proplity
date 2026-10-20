@@ -21,6 +21,64 @@ describe('properties: public browsing (default, unauthenticated)', () => {
     expect(names).not.toContain('Unpublished One');
   });
 
+  it('never shows a published listing that is still pending review or was rejected', async () => {
+    const pending = await createProperty({
+      name: 'Published But Pending',
+      isPublished: true,
+      moderationStatus: 'PENDING_REVIEW',
+    });
+    const rejected = await createProperty({
+      name: 'Published But Rejected',
+      isPublished: true,
+      moderationStatus: 'REJECTED',
+    });
+
+    const list = await apiFetch<{ data: { name: string }[] }>('/api/v1/properties');
+    const names = list.body.data.map((p) => p.name);
+    expect(names).not.toContain('Published But Pending');
+    expect(names).not.toContain('Published But Rejected');
+
+    expect((await apiFetch(`/api/v1/properties/${pending.id}`)).status).toBe(404);
+    expect((await apiFetch(`/api/v1/properties/${rejected.id}`)).status).toBe(404);
+  });
+
+  it('keeps private units out of the public list and detail, but not from the manager', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const property = await createProperty({
+      name: 'Mixed Visibility Block',
+      isPublished: true,
+      managerId: manager.id,
+    });
+    await createUnit(property.id, { unitNumber: 'Open 1' });
+    await createUnit(property.id, { unitNumber: 'Hidden 2', amenities: ['visibility:private'] });
+    const allPrivate = await createProperty({
+      name: 'All Private Block',
+      isPublished: true,
+      managerId: manager.id,
+    });
+    await createUnit(allPrivate.id, { unitNumber: 'Hidden 3', amenities: ['visibility:private'] });
+
+    const list = await apiFetch<{ data: { name: string; units: { unitNumber: string }[] }[] }>(
+      '/api/v1/properties',
+    );
+    const listed = list.body.data.find((p) => p.name === 'Mixed Visibility Block');
+    expect(listed?.units.map((u) => u.unitNumber)).toEqual(['Open 1']);
+    expect(list.body.data.map((p) => p.name)).not.toContain('All Private Block');
+
+    const anon = await apiFetch<{ data: { units: { unitNumber: string }[] } }>(
+      `/api/v1/properties/${property.id}`,
+    );
+    expect(anon.body.data.units.map((u) => u.unitNumber)).toEqual(['Open 1']);
+    expect((await apiFetch(`/api/v1/properties/${allPrivate.id}`)).status).toBe(404);
+
+    const cookie = await authCookie(manager.id, manager.role);
+    const owner = await apiFetch<{ data: { units: { unitNumber: string }[] } }>(
+      `/api/v1/properties/${property.id}`,
+      { cookie },
+    );
+    expect(owner.body.data.units.map((u) => u.unitNumber).sort()).toEqual(['Hidden 2', 'Open 1']);
+  });
+
   it("serializes a unit's squareFeet as sqft", async () => {
     const property = await createProperty({ name: 'Sqft Property', isPublished: true });
     await createUnit(property.id, { squareFeet: 850 });
@@ -764,3 +822,487 @@ describe('properties: merge & unmerge duplicate listings (ISS-025)', () => {
   });
 });
 
+describe('properties: pending changes metadata, draft staging, cancel approval, and delete lifecycle', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('allows landlord to save edits as draft without unpublishing or alerting admins', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Original Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+    });
+
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        name: 'Proposed New Name',
+        description: 'Proposed New Description',
+        saveAsDraft: true,
+      },
+    });
+
+    expect(res.status).toBe(200);
+    // Live property fields remain unchanged
+    expect(res.body.data.name).toBe('Original Live Prop');
+    expect(res.body.data.isPublished).toBe(true);
+    expect(res.body.data.moderationStatus).toBe('APPROVED');
+    // Staged in metadata.pendingChanges
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
+    expect(res.body.data.metadata?.pendingChanges?.property?.name).toBe('Proposed New Name');
+    expect(res.body.data.metadata?.pendingChanges?.property?.description).toBe(
+      'Proposed New Description',
+    );
+  });
+
+  it('promotes draft to PENDING_REVIEW when submitted for review', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Draft Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+      metadata: {
+        pendingChanges: {
+          status: 'DRAFT',
+          property: { name: 'Critical New Name' },
+        },
+      },
+    });
+
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { submitForReview: true },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('PENDING_REVIEW');
+    // Critical field modification unpublishes listing until approved
+    expect(res.body.data.isPublished).toBe(false);
+    expect(res.body.data.moderationStatus).toBe('PENDING_REVIEW');
+    expect(res.body.data.moderationNotes).toContain('[EDITED:CRITICAL');
+  });
+
+  it('stages only the fields that changed when the edit form saves and submits in one call', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'One Step Live Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+    });
+
+    // The form sends every field it shows; only the description is different.
+    const res = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        name: prop.name,
+        address: prop.address,
+        city: prop.city,
+        description: 'A new rooftop terrace',
+        submitForReview: true,
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.metadata?.pendingChanges?.status).toBe('PENDING_REVIEW');
+    expect(res.body.data.metadata?.pendingChanges?.property).toEqual({
+      description: 'A new rooftop terrace',
+    });
+    // Not a critical edit: the listing stays live and approved.
+    expect(res.body.data.isPublished).toBe(true);
+    expect(res.body.data.moderationStatus).toBe('APPROVED');
+    expect(res.body.data.moderationNotes).toContain('[EDITED:MINOR');
+  });
+
+  it('blocks deleting pending edits while under review (must cancel first)', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Under Review Prop',
+      landlordId: landlord.id,
+      isPublished: false,
+      moderationStatus: 'PENDING_REVIEW',
+      metadata: {
+        pendingChanges: {
+          status: 'PENDING_REVIEW',
+          property: { name: 'Under Review Edits' },
+        },
+      },
+    });
+
+    // Attempting delete directly while PENDING_REVIEW must return 400
+    const delRes = await apiFetch<{ error: string; code: string }>(
+      `/api/v1/properties/${prop.id}`,
+      {
+        method: 'PATCH',
+        cookie,
+        body: { deletePendingEdits: true },
+      },
+    );
+
+    expect(delRes.status).toBe(400);
+    expect(delRes.body.code).toBe('UNDER_REVIEW_CANNOT_DELETE');
+    expect(delRes.body.error).toContain('cancel the approval request first before deleting');
+  });
+
+  it('allows landlord to cancel approval request, safely returning edits to DRAFT', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Cancel Review Prop',
+      landlordId: landlord.id,
+      isPublished: false,
+      moderationStatus: 'PENDING_REVIEW',
+      metadata: {
+        pendingChanges: {
+          status: 'PENDING_REVIEW',
+          property: { name: 'Proposed Edits' },
+          // recorded by the server when the edit left an approved listing
+          restoreTo: { moderationStatus: 'APPROVED', isPublished: true },
+        },
+      },
+    });
+
+    const cancelRes = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.data.metadata?.pendingChanges?.status).toBe('DRAFT');
+    expect(cancelRes.body.data.isPublished).toBe(true);
+    expect(cancelRes.body.data.moderationStatus).toBe('APPROVED');
+  });
+
+  it('allows landlord to delete pending edits once in DRAFT', async () => {
+    const landlord = await createUser(Role.LANDLORD);
+    const cookie = await authCookie(landlord.id, landlord.role);
+    const prop = await createProperty({
+      name: 'Draft Deletable Prop',
+      landlordId: landlord.id,
+      isPublished: true,
+      moderationStatus: 'APPROVED',
+      metadata: {
+        pendingChanges: {
+          status: 'DRAFT',
+          property: { name: 'Unwanted Draft' },
+        },
+      },
+    });
+
+    const delRes = await apiFetch<{ data: any }>(`/api/v1/properties/${prop.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { deletePendingEdits: true },
+    });
+
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.data.metadata?.pendingChanges).toBeUndefined();
+
+    const dbProp = await testPrisma.property.findUnique({ where: { id: prop.id } });
+    const dbMeta = (dbProp?.metadata as any) || {};
+    expect(dbMeta.pendingChanges).toBeUndefined();
+  });
+});
+
+describe('properties: staged edits cannot bypass moderation (ISS-059, ISS-060, ISS-061)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('cancelling pending edits does not approve or publish a rejected listing', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'REJECTED', isPublished: false },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, description: 'x' },
+    });
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.status).toBe(200);
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.moderationStatus).toBe('REJECTED');
+    expect(row?.isPublished).toBe(false);
+  });
+
+  it('cancelling a review request returns an approved listing to approved', async () => {
+    const m = await createUser(Role.MANAGER);
+    const p = await createProperty({ managerId: m.id });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { name: 'Renamed' },
+    });
+    expect(edit.body.data.isPublished).toBe(false);
+    expect(edit.body.data.moderationStatus).toBe('PENDING_REVIEW');
+    const cancel = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { cancelPendingEdits: true },
+    });
+    expect(cancel.body.data.isPublished).toBe(true);
+    expect(cancel.body.data.moderationStatus).toBe('APPROVED');
+  });
+
+  it('rejects a client-sent metadata field (it cannot carry staged unit edits)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const victimMgr = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: victimMgr.id });
+    const vUnit = await createUnit(victim.id, {});
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${mine.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: {
+        metadata: {
+          pendingChanges: { status: 'PENDING_REVIEW', units: { [vUnit.id]: { rentAmount: 1 } } },
+        },
+      },
+    });
+    await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const after = await testPrisma.unit.findUnique({ where: { id: vUnit.id } });
+    expect(after?.rentAmount).toBe(vUnit.rentAmount);
+  });
+
+  it('approval skips a staged unit that belongs to another property', async () => {
+    const m = await createUser(Role.MANAGER);
+    const other = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const mine = await createProperty({ managerId: m.id });
+    const victim = await createProperty({ managerId: other.id });
+    const vUnit = await createUnit(victim.id, {});
+    const myUnit = await createUnit(mine.id, {});
+    await testPrisma.property.update({
+      where: { id: mine.id },
+      data: {
+        metadata: {
+          pendingChanges: {
+            status: 'PENDING_REVIEW',
+            units: { [vUnit.id]: { rentAmount: 1 }, [myUnit.id]: { rentAmount: 777 } },
+          },
+        },
+      },
+    });
+    const res = await apiFetch(`/api/v1/properties/${mine.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(res.status).toBe(200);
+    expect((await testPrisma.unit.findUnique({ where: { id: vUnit.id } }))?.rentAmount).toBe(
+      vUnit.rentAmount,
+    );
+    expect((await testPrisma.unit.findUnique({ where: { id: myUnit.id } }))?.rentAmount).toBe(777);
+  });
+
+  it('an owner edit to an approved listing is staged, not applied, until an admin approves', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Before' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    const edit = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'Fake luxury penthouse' },
+    });
+    expect(edit.status).toBe(200);
+    let row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).not.toBe('Fake luxury penthouse');
+    expect(row?.isPublished).toBe(true); // minor edit: stays live as it was
+    expect(
+      (row?.metadata as { pendingChanges?: { property?: { description?: string } } })
+        ?.pendingChanges?.property?.description,
+    ).toBe('Fake luxury penthouse');
+
+    const appr = await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    expect(appr.status).toBe(200);
+    row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.description).toBe('Fake luxury penthouse');
+  });
+
+  it('draft edits are applied when an admin approves them (not lost)', async () => {
+    const m = await createUser(Role.MANAGER);
+    const admin = await createUser(Role.ADMIN);
+    const p = await createProperty({ managerId: m.id, name: 'Old Name' });
+    await testPrisma.property.update({
+      where: { id: p.id },
+      data: { moderationStatus: 'APPROVED', isPublished: true },
+    });
+    const cookie = await authCookie(m.id, m.role);
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { saveAsDraft: true, name: 'New Name', address: '9 New Address', city: 'Abuja' },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { submitForReview: true },
+    });
+    await apiFetch(`/api/v1/properties/${p.id}/moderation`, {
+      method: 'PATCH',
+      cookie: await authCookie(admin.id, admin.role),
+      body: { status: 'APPROVED' },
+    });
+    const row = await testPrisma.property.findUnique({ where: { id: p.id } });
+    expect(row?.name).toBe('New Name');
+    expect(row?.address).toBe('9 New Address');
+    expect(row?.listingHash).toBeTruthy();
+    expect(row?.moderationStatus).toBe('APPROVED');
+  });
+});
+
+describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('refuses a cross-origin or origin-less write on an authenticated route', async () => {
+    const m = await createUser(Role.MANAGER);
+    const cookie = await authCookie(m.id, m.role);
+    const p = await createProperty({ managerId: m.id });
+    const foreign = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      headers: { Origin: 'https://evil.example' },
+      body: { description: 'x' },
+    });
+    expect(foreign.status).toBe(403);
+    const ok = await apiFetch(`/api/v1/properties/${p.id}`, {
+      method: 'PATCH',
+      cookie,
+      body: { description: 'x' },
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('will not merge away a listing that others were merged into, or one with active leases', async () => {
+    const admin = await createUser(Role.ADMIN);
+    const cookie = await authCookie(admin.id, admin.role);
+    const a = await createProperty({});
+    const b = await createProperty({});
+    const c = await createProperty({});
+    await testPrisma.property.update({ where: { id: a.id }, data: { mergedIntoId: b.id } });
+    const chain = await apiFetch(`/api/v1/properties/${b.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: c.id },
+    });
+    expect(chain.status).toBe(400);
+
+    const tenant = await createUser(Role.TENANT);
+    const d = await createProperty({});
+    const unit = await createUnit(d.id);
+    const lease = await createLease(unit.id, tenant.id);
+    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'ACTIVE' } });
+    const e = await createProperty({});
+    const live = await apiFetch(`/api/v1/properties/${d.id}/merge`, {
+      method: 'POST',
+      cookie,
+      body: { targetPropertyId: e.id },
+    });
+    expect(live.status).toBe(400);
+    expect(live.body.error).toContain('active leases');
+  });
+});
+
+describe('invoices: vendor billing limits', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it("a vendor cannot attach a job invoice to someone else's lease or create it as paid", async () => {
+    const vendor = await createUser(Role.VENDOR);
+    const tenant = await createUser(Role.TENANT);
+    const stranger = await createUser(Role.TENANT);
+    const prop = await createProperty({});
+    const unit = await createUnit(prop.id);
+    const lease = await createLease(unit.id, stranger.id);
+    const mr = await testPrisma.maintenanceRequest.create({
+      data: {
+        unitId: unit.id,
+        tenantId: tenant.id,
+        title: 'x',
+        description: 'y',
+        vendorId: vendor.id,
+        // A vendor invoice closes the job, which needs a photo of the finished work.
+        afterPhotoUrls: ['/api/v1/files/finished-work'],
+      },
+    });
+    const cookie = await authCookie(vendor.id, vendor.role);
+    const onLease = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        leaseId: lease.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(onLease.status).toBe(403);
+    const paid = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        status: 'PAID',
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(paid.status).toBe(400);
+    const ok = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      cookie,
+      body: {
+        type: 'MAINTENANCE',
+        maintenanceRequestId: mr.id,
+        amount: 5000,
+        dueDate: new Date().toISOString(),
+      },
+    });
+    expect(ok.status).toBe(201);
+  });
+});

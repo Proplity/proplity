@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { handleApiError } from '@/lib/api/errors';
-import { notifyUser, notifyUsers } from '@/lib/notifications';
+import { notifyAndEmail, notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -45,6 +47,23 @@ export async function POST(req: NextRequest) {
 
     const payload = JSON.parse(rawBody);
 
+    // Vendor payouts: Paystack reports the real outcome of a transfer here (ISS-063).
+    if (
+      payload.event === 'transfer.success' ||
+      payload.event === 'transfer.failed' ||
+      payload.event === 'transfer.reversed'
+    ) {
+      const reference: string | undefined = payload.data?.reference;
+      if (reference) {
+        await settleTransferFromWebhook(
+          reference,
+          payload.event.replace('transfer.', '') as 'success' | 'failed' | 'reversed',
+          payload.data?.reason,
+        );
+      }
+      return NextResponse.json({ received: true });
+    }
+
     if (payload.event === 'charge.success') {
       const data = payload.data;
       const invoiceId: string | undefined = data?.metadata?.invoiceId;
@@ -77,12 +96,17 @@ export async function POST(req: NextRequest) {
       // treated as "already handled" -- never a second credit (ISS-052).
       // The invoice row is locked first so two different payments landing at
       // once also total correctly.
-      let outcome: { wasPaid: boolean; status: string; paidTotal: number } | null = null;
+      let outcome: {
+        wasPaid: boolean;
+        status: string;
+        paidTotal: number;
+        paymentId: string;
+      } | null = null;
       try {
         outcome = await prisma.$transaction(async (tx) => {
           await tx.$queryRaw`SELECT "id" FROM "Invoice" WHERE "id" = ${invoiceId} FOR UPDATE`;
           const before = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
-          await tx.payment.create({
+          const created = await tx.payment.create({
             data: {
               invoiceId,
               amount,
@@ -109,7 +133,7 @@ export async function POST(req: NextRequest) {
           if (status !== before.status) {
             await tx.invoice.update({ where: { id: invoiceId }, data: { status } });
           }
-          return { wasPaid: before.status === 'PAID', status, paidTotal };
+          return { wasPaid: before.status === 'PAID', status, paidTotal, paymentId: created.id };
         });
       } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -168,10 +192,28 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // A vendor's invoice being paid: the vendor is told, with the receipt (this used to happen for
+        // rent only, so a vendor never learned they had been paid).
+        if (invoice.type === 'MAINTENANCE' && invoice.maintenanceRequestId) {
+          const job = await prisma.maintenanceRequest.findUnique({
+            where: { id: invoice.maintenanceRequestId },
+            select: { vendorId: true },
+          });
+          if (job?.vendorId) {
+            await notifyAndEmail(job.vendorId, {
+              type: 'SYSTEM',
+              title: `Payment received: ${invoice.invoiceNumber}`,
+              body: `₦${amount.toLocaleString()} was paid on your invoice ${invoice.invoiceNumber}. Open the receipt to view or print it.`,
+              link: `/receipts/${outcome.paymentId}`,
+            });
+          }
+        }
+
         // A subscription invoice paying activates the subscription itself --
         // tier/cycle have no dedicated column, encoded into the description
         // at checkout time (see subscriptions/checkout/route.ts).
         if (
+          subscriptionsEnabled() &&
           invoice.type === 'SUBSCRIPTION' &&
           invoice.userId &&
           outcome.status === 'PAID' &&

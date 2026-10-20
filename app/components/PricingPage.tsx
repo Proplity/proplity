@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from './Logo';
@@ -159,6 +159,14 @@ function Stars({ n }: { n: number }) {
 export function PricingPage() {
   const router = useRouter();
   const [annual, setAnnual] = useState(false);
+
+  useEffect(() => {
+    if (!subscriptionsEnabled()) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  if (!subscriptionsEnabled()) return null;
 
   const getPrice = (plan: (typeof PLANS)[0]) => {
     if (plan.priceLabel) return plan.priceLabel;
@@ -395,7 +403,9 @@ export function PricingPage() {
           {[
             {
               heading: 'Product',
-              links: ['Features', 'Pricing', 'Blog', 'Demo'],
+              links: subscriptionsEnabled()
+                ? ['Features', 'Pricing', 'Blog', 'Demo']
+                : ['Features', 'Blog', 'Demo'],
             },
             { heading: 'Company', links: ['About Us', 'Careers', 'Contact'] },
             { heading: 'Legal', links: ['Privacy Policy', 'Terms of Service'] },

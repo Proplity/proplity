@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
@@ -6,6 +7,8 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { sendEmail } from '@/lib/email';
+import { notifyPropertyTeam } from '@/lib/notifications';
+import { applyPendingChanges } from '@/lib/propertyPendingChanges';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -34,13 +37,35 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, moderationSchema);
       if (!validated.success) return validated.response;
 
+      const isApproved = validated.data.status === 'APPROVED';
+      const approvalDateIso = new Date().toISOString();
+      let updatedNotes = validated.data.moderationNotes ?? property.moderationNotes ?? '';
+      const currentMeta = (property.metadata as Record<string, unknown>) || {};
+      const pendingChanges = currentMeta.pendingChanges as Record<string, unknown> | undefined;
+
+      if (isApproved) {
+        // Tag with approval timestamp and clear EDITED tag
+        const cleanedNotes = updatedNotes
+          .replace(/\[APPROVED:[^\]]+\]\s*/g, '')
+          .replace(/\[EDITED[^\]]*\]\s*/g, '')
+          .trim();
+        updatedNotes = `[APPROVED:${approvalDateIso}]${cleanedNotes ? ` ${cleanedNotes}` : ''}`;
+
+        // The staged edits are applied with the approval, in one transaction below.
+      }
+
+      // Clear pendingChanges on approval or rejection
+      const { pendingChanges: _removed, ...restMeta } = currentMeta;
+
       const data: {
         moderationStatus: 'APPROVED' | 'REJECTED' | 'FLAGGED';
         moderationNotes?: string;
         isPublished?: boolean;
+        metadata?: Prisma.InputJsonObject;
       } = {
         moderationStatus: validated.data.status,
-        moderationNotes: validated.data.moderationNotes,
+        moderationNotes: updatedNotes,
+        metadata: restMeta as Prisma.InputJsonObject,
       };
       // A property rejected or flagged after having been published (e.g. a
       // later re-review) must not stay publicly visible -- unpublish it in
@@ -49,27 +74,74 @@ export const PATCH = withAuth(
         data.isPublished = false;
       }
 
-      const updated = await prisma.property.update({ where: { id }, data });
+      const updated = await prisma.$transaction(async (tx) => {
+        if (isApproved) {
+          // Staged property and unit edits are applied here; units of other
+          // properties are skipped (ISS-060).
+          await applyPendingChanges(tx, property, pendingChanges);
+          // Approve any pending units for this property by removing 'approval:pending'
+          const pendingUnits = await tx.unit.findMany({
+            where: { propertyId: id, amenities: { has: 'approval:pending' } },
+            select: { id: true, amenities: true },
+          });
+          for (const u of pendingUnits) {
+            await tx.unit.update({
+              where: { id: u.id },
+              data: { amenities: u.amenities.filter((a) => a !== 'approval:pending') },
+            });
+          }
+        }
+        return tx.property.update({ where: { id }, data });
+      });
 
-      // ListProperty.tsx tells the submitting manager/landlord "you will be
-      // notified once approved" -- make that literally true, same
-      // console-transport sendEmail() the tenant-invite flow already uses.
-      const recipient = property.manager ?? property.landlord;
-      if (recipient && validated.data.status !== 'FLAGGED') {
-        const approved = validated.data.status === 'APPROVED';
-        await sendEmail({
-          to: recipient.email,
-          subject: approved
-            ? 'Your Proplity listing was approved'
-            : 'Your Proplity listing needs changes',
-          body: approved
-            ? `Hi ${recipient.name},\n\n"${property.name}" has been approved and can now be published.\n\nSign in to Proplity to publish it: ${appUrl(`/dashboard/properties/${property.id}`)}`
-            : `Hi ${recipient.name},\n\n"${property.name}" was not approved.${
-                validated.data.moderationNotes
-                  ? `\n\nReviewer notes: ${validated.data.moderationNotes}`
-                  : ''
-              }\n\nSign in to Proplity for details: ${appUrl(`/dashboard/properties/${property.id}`)}`,
-        });
+      // In the app too, for all three outcomes (the email below skips FLAGGED).
+      const outcome = {
+        APPROVED: {
+          title: 'Listing approved',
+          body: `"${property.name}" was approved and can now be published.`,
+        },
+        REJECTED: {
+          title: 'Listing needs changes',
+          body: `"${property.name}" was not approved.${
+            validated.data.moderationNotes
+              ? ` Reviewer notes: ${validated.data.moderationNotes}`
+              : ''
+          }`,
+        },
+        FLAGGED: {
+          title: 'Listing flagged',
+          body: `"${property.name}" was flagged and taken offline while it is checked.`,
+        },
+      }[validated.data.status];
+      await notifyPropertyTeam(
+        property,
+        { ...outcome, link: `/dashboard/properties/${property.id}` },
+        { email: false },
+      );
+
+      // Notify BOTH the manager and the landlord by email
+      const recipients = [property.manager, property.landlord].filter(
+        (u): u is NonNullable<typeof u> => Boolean(u?.email),
+      );
+      const uniqueRecipients = [...new Map(recipients.map((r) => [r.email, r])).values()];
+
+      for (const recipient of uniqueRecipients) {
+        if (validated.data.status !== 'FLAGGED') {
+          const approved = validated.data.status === 'APPROVED';
+          await sendEmail({
+            to: recipient.email,
+            subject: approved
+              ? `Your Proplity listing was approved: ${property.name}`
+              : `Your Proplity listing needs changes: ${property.name}`,
+            body: approved
+              ? `Hi ${recipient.name},\n\n"${property.name}" has been approved by admin and can now be published.\n\nSign in to Proplity to publish it: ${appUrl(`/dashboard/properties/${property.id}`, req)}`
+              : `Hi ${recipient.name},\n\n"${property.name}" was not approved.${
+                  validated.data.moderationNotes
+                    ? `\n\nReviewer notes: ${validated.data.moderationNotes}`
+                    : ''
+                }\n\nSign in to Proplity for details: ${appUrl(`/dashboard/properties/${property.id}`, req)}`,
+          });
+        }
       }
 
       return NextResponse.json({ data: updated });

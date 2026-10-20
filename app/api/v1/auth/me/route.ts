@@ -6,7 +6,7 @@ import { getServerSession } from '@/lib/auth/session';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { validateBody } from '@/lib/api/validate';
 import { prisma } from '@/lib/db';
-import { safeUrlOrName } from '@/lib/api/urlField';
+import { safeUrl, safeUrlOrName } from '@/lib/api/urlField';
 
 const PROFILE_SELECT = {
   id: true,
@@ -109,6 +109,7 @@ const updateProfileSchema = z.object({
   // just the selected file's name, same "record the name, not lost
   // silently" precedent as PropertyApplicationForm's own document fields.
   idDocumentUrl: safeUrlOrName.nullable().optional(),
+  avatarUrl: safeUrl.nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -128,7 +129,11 @@ export async function PATCH(req: NextRequest) {
   // user; attaching someone else's would grant read access to it (ISS-034).
   // Plain strings -- the filename fallback and legacy values -- are untouched.
   try {
-    await assertOwnsFileUrls([validated.data.idDocumentUrl], session.sub, 'profile');
+    await assertOwnsFileUrls(
+      [validated.data.idDocumentUrl, validated.data.avatarUrl],
+      session.sub,
+      'profile',
+    );
   } catch (err) {
     if (err instanceof FileError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -140,12 +145,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  // Remember a private file that is about to be replaced so it can be removed.
   const replacing =
-    validated.data.idDocumentUrl !== undefined
+    validated.data.idDocumentUrl !== undefined || validated.data.avatarUrl !== undefined
       ? await prisma.user.findUnique({
           where: { id: session.sub },
-          select: { idDocumentUrl: true },
+          select: { idDocumentUrl: true, avatarUrl: true },
         })
       : null;
 
@@ -158,6 +162,10 @@ export async function PATCH(req: NextRequest) {
   const oldUrl = replacing?.idDocumentUrl;
   if (oldUrl && parseFileUrl(oldUrl) && oldUrl !== validated.data.idDocumentUrl) {
     await deleteFileByUrl(oldUrl, session.sub); // best effort, never fails the request
+  }
+  const oldAvatar = replacing?.avatarUrl;
+  if (oldAvatar && parseFileUrl(oldAvatar) && oldAvatar !== validated.data.avatarUrl) {
+    await deleteFileByUrl(oldAvatar, session.sub);
   }
 
   return NextResponse.json({ user: serialize(user) });

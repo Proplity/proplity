@@ -21,25 +21,32 @@ describe('uploadPolicy', () => {
       Role.VENDOR,
     ]);
     expect(FOLDER_ROLES.applications).toEqual([Role.TENANT]);
-    expect(FOLDER_ROLES.profile).toEqual([
-      Role.TENANT,
-      Role.LANDLORD,
-      Role.MANAGER,
-      Role.VENDOR,
-    ]);
+    expect(FOLDER_ROLES.profile).toEqual([Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR]);
     expect(FOLDER_ROLES.properties).toContain(Role.LANDLORD);
     expect(FOLDER_ROLES.properties).toContain(Role.MANAGER);
     expect(FOLDER_ROLES.properties).toContain(Role.ADMIN);
     expect(FOLDER_ROLES.properties).not.toContain(Role.TENANT);
+    expect(FOLDER_ROLES.notices).toEqual([Role.LANDLORD, Role.MANAGER, Role.ADMIN]);
+    expect(FOLDER_ROLES.leases).toEqual([Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN]);
+    expect(FOLDER_ROLES.communications).toEqual([
+      Role.TENANT,
+      Role.LANDLORD,
+      Role.MANAGER,
+      Role.VENDOR,
+      Role.ADMIN,
+    ]);
   });
 
-  it('allows videos only for properties folder', () => {
+  it('allows videos and documents according to folder policy', () => {
     const propTypes = allowedTypes('properties');
     expect(propTypes).toEqual(expect.arrayContaining([...IMAGE_AND_PDF_TYPES, ...VIDEO_TYPES]));
 
     const profileTypes = allowedTypes('profile');
     expect(profileTypes).toEqual(IMAGE_AND_PDF_TYPES);
     expect(profileTypes).not.toEqual(expect.arrayContaining([...VIDEO_TYPES]));
+
+    const commTypes = allowedTypes('communications');
+    expect(commTypes).toEqual(expect.arrayContaining(['audio/mpeg', 'text/plain']));
   });
 
   it('calculates size limits correctly for proxy and direct modes', () => {
@@ -57,6 +64,8 @@ describe('uploadPolicy', () => {
     expect(isInlineSafe('image/png')).toBe(true);
     expect(isInlineSafe('application/pdf')).toBe(true);
     expect(isInlineSafe('video/mp4')).toBe(true);
+    expect(isInlineSafe('audio/mpeg')).toBe(true);
+    expect(isInlineSafe('text/plain')).toBe(true);
     expect(isInlineSafe('application/octet-stream')).toBe(false);
     expect(isInlineSafe('text/html')).toBe(false);
   });

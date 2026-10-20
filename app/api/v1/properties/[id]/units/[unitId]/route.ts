@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PaymentFrequency, UnitStatus } from '@prisma/client';
+import { PaymentFrequency, UnitStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
 import { safeUrlList } from '@/lib/api/urlField';
+import { sendEmail } from '@/lib/email';
+import { appUrl } from '@/lib/appUrl';
 
 type RouteCtx = { params: Promise<{ id: string; unitId: string }> };
 
@@ -40,6 +42,10 @@ const updateUnitSchema = z.object({
   amenities: z.array(z.string()).optional(),
   mediaUrls: safeUrlList.optional(),
   sqft: z.number().int().optional(),
+  action: z.enum(['APPROVE', 'REJECT']).optional(),
+  saveAsDraft: z.boolean().optional(),
+  cancelPendingEdits: z.boolean().optional(),
+  deletePendingEdits: z.boolean().optional(),
 });
 
 export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -54,7 +60,243 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const validated = await validateBody(req, updateUnitSchema);
     if (!validated.success) return validated.response;
-    const { sqft, ...data } = validated.data;
+
+    // Handle Landlord cancelling approval request for a unit
+    if (validated.data.cancelPendingEdits) {
+      const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
+      const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
+      const pendingUnits = (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+      if (!pendingUnits[unitId]) {
+        return NextResponse.json({
+          data: serializeUnit(found.unit),
+          message: 'No pending unit edits to cancel',
+        });
+      }
+
+      const updatedPending = {
+        ...pendingChanges,
+        status: 'DRAFT',
+        updatedAt: new Date().toISOString(),
+      };
+
+      await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentMeta,
+            pendingChanges: updatedPending,
+          } as Prisma.InputJsonObject,
+        },
+      });
+
+      return NextResponse.json({
+        data: serializeUnit(found.unit),
+        message: 'Unit approval request cancelled. Edits moved back to draft.',
+      });
+    }
+
+    // Handle Landlord deleting draft edits for a unit (Blocked if under review!)
+    if (validated.data.deletePendingEdits) {
+      const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
+      const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
+      const pendingUnits = (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+      if (!pendingUnits[unitId]) {
+        return NextResponse.json({
+          data: serializeUnit(found.unit),
+          message: 'No draft unit edits to delete',
+        });
+      }
+
+      if (pendingChanges.status === 'PENDING_REVIEW') {
+        return NextResponse.json(
+          {
+            error:
+              'Unit edits currently under review cannot be deleted directly. You must cancel the approval request first before deleting.',
+            code: 'UNDER_REVIEW_CANNOT_DELETE',
+          },
+          { status: 400 },
+        );
+      }
+
+      delete pendingUnits[unitId];
+      await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentMeta,
+            pendingChanges: {
+              ...pendingChanges,
+              units: pendingUnits,
+            },
+          } as Prisma.InputJsonObject,
+        },
+      });
+
+      return NextResponse.json({
+        data: serializeUnit(found.unit),
+        message: 'Draft unit edits deleted successfully.',
+      });
+    }
+
+    // Admin direct approval/rejection of a pending unit
+    if (validated.data.action) {
+      if (session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Only admins can approve or reject units' },
+          { status: 403 },
+        );
+      }
+
+      if (validated.data.action === 'APPROVE') {
+        const cleanedAmenities = (found.unit.amenities || []).filter(
+          (a) => a !== 'approval:pending',
+        );
+
+        // Check if there are staged changes for this unit in property.metadata
+        const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
+        const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
+        const pendingUnits =
+          (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+        const unitStaged = pendingUnits[unitId];
+
+        let unitUpdateData: Record<string, unknown> = { amenities: cleanedAmenities };
+        if (unitStaged) {
+          const { sqft, ...stagedFields } = unitStaged;
+          unitUpdateData = {
+            ...unitUpdateData,
+            ...stagedFields,
+            ...(sqft !== undefined ? { squareFeet: sqft as number } : {}),
+          };
+          delete pendingUnits[unitId];
+          await prisma.property.update({
+            where: { id },
+            data: {
+              metadata: {
+                ...currentMeta,
+                pendingChanges: {
+                  ...pendingChanges,
+                  units: pendingUnits,
+                },
+              } as Prisma.InputJsonObject,
+            },
+          });
+        }
+
+        const approvedUnit = await prisma.unit.update({
+          where: { id: unitId },
+          data: unitUpdateData,
+        });
+        return NextResponse.json({ data: serializeUnit(approvedUnit) });
+      }
+
+      if (validated.data.action === 'REJECT') {
+        // Discard staged changes or pending unit
+        const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
+        const pendingChanges = (currentMeta.pendingChanges as Record<string, unknown>) || {};
+        const pendingUnits =
+          (pendingChanges.units as Record<string, Record<string, unknown>>) || {};
+        if (pendingUnits[unitId]) {
+          delete pendingUnits[unitId];
+          await prisma.property.update({
+            where: { id },
+            data: {
+              metadata: {
+                ...currentMeta,
+                pendingChanges: {
+                  ...pendingChanges,
+                  units: pendingUnits,
+                },
+              } as Prisma.InputJsonObject,
+            },
+          });
+        }
+
+        // If unit was purely a pending unit without leases, delete it
+        if (found.unit.amenities.includes('approval:pending')) {
+          const leaseCount = await prisma.lease.count({ where: { unitId } });
+          if (leaseCount === 0) {
+            await prisma.unit.delete({ where: { id: unitId } });
+            return NextResponse.json({ data: { id: unitId, rejected: true, deleted: true } });
+          }
+        }
+        return NextResponse.json({ data: { id: unitId, rejected: true } });
+      }
+    }
+
+    const { sqft, action: _act, saveAsDraft, ...data } = validated.data;
+    const isLandlordOrManager = session.role === 'LANDLORD' || session.role === 'MANAGER';
+    const isEditingCritical =
+      data.rentAmount !== undefined ||
+      data.unitNumber !== undefined ||
+      data.bedrooms !== undefined ||
+      data.bathrooms !== undefined;
+
+    // Handle Landlord saving unit changes as draft or proposing changes to a live unit
+    if (
+      isLandlordOrManager &&
+      (saveAsDraft ||
+        (isEditingCritical &&
+          found.property.isPublished &&
+          !found.unit.amenities.includes('approval:pending')))
+    ) {
+      const currentMeta = (found.property.metadata as Record<string, unknown>) || {};
+      const existingPending = (currentMeta.pendingChanges as Record<string, unknown>) || {};
+      const existingUnits =
+        (existingPending.units as Record<string, Record<string, unknown>>) || {};
+
+      const stagedUnit = {
+        ...(existingUnits[unitId] || {}),
+        ...data,
+        ...(sqft !== undefined ? { sqft } : {}),
+      };
+
+      const updatedPending = {
+        ...existingPending,
+        status: saveAsDraft ? ('DRAFT' as const) : ('PENDING_REVIEW' as const),
+        updatedAt: new Date().toISOString(),
+        units: {
+          ...existingUnits,
+          [unitId]: stagedUnit,
+        },
+      };
+
+      await prisma.property.update({
+        where: { id },
+        data: {
+          metadata: {
+            ...currentMeta,
+            pendingChanges: updatedPending,
+          } as Prisma.InputJsonObject,
+        },
+      });
+
+      if (!saveAsDraft) {
+        // Send alert to admin about pending unit edit
+        try {
+          const admins = await prisma.user.findMany({
+            where: { role: 'ADMIN' },
+            select: { email: true },
+          });
+          const adminEmails = [...new Set([...admins.map((a) => a.email), 'admin@proplity.com'])];
+          for (const email of adminEmails) {
+            await sendEmail({
+              to: email,
+              subject: `Unit Specs Edit Awaiting Review: Unit ${found.unit.unitNumber} at ${found.property.name}`,
+              body: `Hi Admin,\n\nUnit ${found.unit.unitNumber} at "${found.property.name}" has proposed updates awaiting approval.\n\nLive listing remains published while changes are staged.\n\nReview changes in the Moderation Queue:\n${appUrl('/admin/properties', req)}`,
+            });
+          }
+        } catch (emailErr) {
+          console.error('Failed to notify admins of unit edit', emailErr);
+        }
+      }
+
+      return NextResponse.json({
+        data: {
+          ...serializeUnit(found.unit),
+          pendingChanges: stagedUnit,
+        },
+      });
+    }
 
     const updated = await prisma.unit.update({
       where: { id: unitId },

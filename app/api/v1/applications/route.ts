@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApplicationStatus, Prisma } from '@prisma/client';
-import { notifyUsers } from '@/lib/notifications';
+import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { appUrl } from '@/lib/appUrl';
+
+// Lists are capped so one busy record cannot return an unbounded response (ISS-073).
+const LIST_LIMIT = 500;
 
 export const GET = withAuth(async (req, { session }) => {
   try {
@@ -36,6 +40,7 @@ export const GET = withAuth(async (req, { session }) => {
     const where: Prisma.ApplicationWhereInput = filters.length ? { AND: filters } : {};
 
     const applications = await prisma.application.findMany({
+      take: LIST_LIMIT,
       where,
       include: {
         applicant: { select: { id: true, name: true, email: true, phoneNumber: true } },
@@ -54,7 +59,9 @@ export const GET = withAuth(async (req, { session }) => {
 
 const createApplicationSchema = z.object({
   unitId: z.string(),
-  details: z.record(z.string(), z.unknown()),
+  details: z.record(z.string(), z.unknown()).refine((v) => JSON.stringify(v).length <= 50_000, {
+    message: 'Application details are too large',
+  }),
 });
 
 export const POST = withAuth(
@@ -101,12 +108,30 @@ export const POST = withAuth(
         const reviewers = [property.managerId, property.landlordId].filter(
           (id): id is string => !!id,
         );
-        await notifyUsers([...new Set(reviewers)], {
+        const reviewerIds = [...new Set(reviewers)];
+        await notifyUsers(reviewerIds, {
           type: 'SYSTEM',
           title: 'New rental application',
           body: `${applicant?.name ?? 'A tenant'} applied for unit ${unit.unitNumber} at ${property.name}.`,
           link: `/dashboard/properties/${property.id}`,
         });
+
+        // Email the manager and landlord
+        try {
+          const reviewerUsers = await prisma.user.findMany({
+            where: { id: { in: reviewerIds } },
+            select: { email: true, name: true },
+          });
+          for (const rev of reviewerUsers) {
+            await notifyByEmail(
+              rev.email,
+              `New Rental Application: Unit ${unit.unitNumber} at ${property.name}`,
+              `Hi ${rev.name},\n\n${applicant?.name ?? 'A prospective tenant'} has applied for unit ${unit.unitNumber} at ${property.name}.\n\nReview the application details in your Proplity dashboard:\n${appUrl(`/dashboard/properties/${property.id}`, req)}`,
+            );
+          }
+        } catch (revMailErr) {
+          console.error('Failed to email application reviewers', revMailErr);
+        }
       }
 
       return NextResponse.json({ data: application }, { status: 201 });

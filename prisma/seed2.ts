@@ -17,11 +17,15 @@ import {
   PaymentMethod,
   PaymentProvider,
   AccessCodeStatus,
+  RepairConfirmationStatus,
+  BankTransferStatus,
+  ScheduleFrequency,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { listingHash } from '../lib/propertyFingerprint';
+import { anchorDay } from '../lib/maintenanceSchedule';
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -59,6 +63,7 @@ async function main() {
 
   // 0. Clear existing data to allow safe, repeatable re-runs
   console.log('🧹 Cleaning old table data...');
+  await prisma.bankTransferSubmission.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.vendorRating.deleteMany();
@@ -279,6 +284,8 @@ async function main() {
       description:
         'Luxury modern apartments in Lekki Phase 1 with 24/7 power, security, and rooftop amenities.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 98.5,
       powerReliabilityScore: 92.0,
       floodRiskScore: 15.0,
@@ -334,6 +341,8 @@ async function main() {
       description:
         'Beautiful 3-bedroom apartment in the heart of Lekki Phase 1. Features modern finishes, spacious rooms, and excellent security.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 95.0,
       powerReliabilityScore: 88.0,
       floodRiskScore: 10.0,
@@ -380,6 +389,8 @@ async function main() {
       description:
         'Ultra-exclusive luxury penthouse suite offering panoramic views of the ocean, custom marble finishes, and private pool.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 99.0,
       powerReliabilityScore: 99.0,
       floodRiskScore: 5.0,
@@ -419,6 +430,8 @@ async function main() {
       description:
         'Comfortable student and young professional self-contain units in the heart of Yaba tech corridor.',
       isPublished: true,
+      // A published listing has been approved; the public pages show only approved ones.
+      moderationStatus: 'APPROVED',
       trustScore: 84.0,
       powerReliabilityScore: 60.0,
       floodRiskScore: 25.0,
@@ -449,6 +462,7 @@ async function main() {
   const unitHighland4B = propHighland.units.find((u) => u.unitNumber === '4B')!;
   const unitHeights203 = propHeights.units.find((u) => u.unitNumber === '203')!;
   const unitYaba1A = propYaba.units.find((u) => u.unitNumber === '1A')!;
+  const unitHighland2A = propHighland.units.find((u) => u.unitNumber === '2A')!;
 
   // 5. Create Leases
   const leaseJordan = await prisma.lease.create({
@@ -611,6 +625,11 @@ async function main() {
       finalCost: 15000.0,
       completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
       vendorNotes: 'Replaced faulty transformer/ballast module inside the false ceiling.',
+      // The tenant confirmed it fixed and the property team signed the work off.
+      confirmationStatus: RepairConfirmationStatus.CONFIRMED,
+      confirmationRespondedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      approvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      approvedById: manager.id,
     },
   });
 
@@ -628,8 +647,98 @@ async function main() {
       finalCost: 20000.0,
       completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       vendorNotes: 'Cleaned filters and recharged refrigerant gas.',
+      // Confirmed by the tenant; the team has not signed it off yet.
+      confirmationStatus: RepairConfirmationStatus.CONFIRMED,
+      confirmationRespondedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
     },
   });
+
+  // Finished by the vendor, waiting for the tenant to say whether it is fixed.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitHeights203.id,
+      tenantId: tenantAdewale.id,
+      vendorId: vendorAqua.id,
+      title: 'Bathroom Tap Dripping',
+      description: 'The cold tap in the bathroom basin drips all night.',
+      categoryId: categories['Plumbing'],
+      priority: MaintenancePriority.LOW,
+      status: MaintenanceStatus.COMPLETED,
+      costEstimate: 8000.0,
+      finalCost: 8000.0,
+      completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      vendorNotes: 'Replaced the worn cartridge and tested the tap.',
+      confirmationStatus: RepairConfirmationStatus.AWAITING_TENANT,
+    },
+  });
+
+  // The tenant said it is still a problem: the team has to send it back or give it to someone else.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitYaba1A.id,
+      tenantId: tenantTunde.id,
+      vendorId: vendorJohn.id,
+      title: 'Bedroom Socket Sparking',
+      description: 'The socket next to the bed sparks when a plug goes in.',
+      categoryId: categories['Electrical'],
+      priority: MaintenancePriority.HIGH,
+      status: MaintenanceStatus.COMPLETED,
+      costEstimate: 12000.0,
+      finalCost: 12000.0,
+      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      vendorNotes: 'Tightened the terminals on the socket.',
+      confirmationStatus: RepairConfirmationStatus.DISPUTED,
+      confirmationRespondedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      disputeReason: 'It still sparks when I plug in the kettle.',
+    },
+  });
+
+  // A work order: the manager raised this on a vacant flat, so it has no tenant and nobody is asked
+  // to confirm it. It is waiting for a vendor.
+  await prisma.maintenanceRequest.create({
+    data: {
+      unitId: unitHighland2A.id,
+      tenantId: null,
+      createdById: manager.id,
+      title: 'Repaint the vacant flat',
+      description:
+        'Two coats of emulsion in the lounge and bedrooms before the next tenant moves in.',
+      categoryId: categories['Other'],
+      priority: MaintenancePriority.LOW,
+      status: MaintenanceStatus.SUBMITTED,
+    },
+  });
+
+  // Recurring maintenance: one running on an occupied unit, one on the vacant flat (it will raise a
+  // work order with no tenant), and one paused.
+  const inDays = (n: number) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+  for (const schedule of [
+    {
+      unitId: unitHeights203.id,
+      categoryId: categories['HVAC'],
+      frequency: ScheduleFrequency.QUARTERLY,
+      nextDueDate: inDays(20),
+      isActive: true,
+    },
+    {
+      unitId: unitHighland2A.id,
+      categoryId: categories['Cleaning'],
+      frequency: ScheduleFrequency.MONTHLY,
+      nextDueDate: inDays(5),
+      isActive: true,
+    },
+    {
+      unitId: unitYaba1A.id,
+      categoryId: categories['Electrical'],
+      frequency: ScheduleFrequency.ANNUAL,
+      nextDueDate: inDays(90),
+      isActive: false,
+    },
+  ]) {
+    await prisma.maintenanceSchedule.create({
+      data: { ...schedule, dayOfMonth: anchorDay(schedule.nextDueDate, schedule.frequency) },
+    });
+  }
 
   // 9. Vendor Ratings
   await prisma.vendorRating.create({
@@ -699,7 +808,7 @@ async function main() {
     },
   });
 
-  await prisma.invoice.create({
+  const invUtilityAdewale = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1002',
       leaseId: leaseAdewale.id,
@@ -734,6 +843,85 @@ async function main() {
     },
   });
 
+  // Offline payments: a transfer a tenant recorded that waits for the team to confirm...
+  await prisma.bankTransferSubmission.create({
+    data: {
+      invoiceId: invUtilityAdewale.id,
+      submittedById: tenantAdewale.id,
+      amount: 45000.0,
+      bankName: 'GTBank',
+      senderAccountName: 'Adewale Johnson',
+      senderAccountNumber: '0123456789',
+      referenceNumber: 'GTB-TRF-20261018-5521',
+      paymentDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      notes: 'Paid from my salary account.',
+      status: BankTransferStatus.PENDING,
+    },
+  });
+
+  // ...and one the landlord already confirmed, which is why it has a receipt.
+  const invUtilityTunde = await prisma.invoice.create({
+    data: {
+      invoiceNumber: 'INV-2026-1004',
+      leaseId: leaseTunde.id,
+      type: InvoiceType.UTILITY,
+      amount: 18000.0,
+      dueDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      status: InvoiceStatus.PAID,
+      description: 'Water bill for September 2026',
+    },
+  });
+  const transferPaymentTunde = await prisma.payment.create({
+    data: {
+      invoiceId: invUtilityTunde.id,
+      amount: 18000.0,
+      paymentMethod: PaymentMethod.BANK_TRANSFER,
+      provider: PaymentProvider.BANK_TRANSFER,
+      transactionRef: 'FBN-TRF-20261013-3308',
+      paidAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      notes: 'Reconciled from bank transfer ref FBN-TRF-20261013-3308',
+    },
+  });
+  await prisma.bankTransferSubmission.create({
+    data: {
+      invoiceId: invUtilityTunde.id,
+      submittedById: manager.id,
+      amount: 18000.0,
+      bankName: 'First Bank',
+      senderAccountName: 'Tunde Bakare',
+      referenceNumber: 'FBN-TRF-20261013-3308',
+      paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      notes: 'Tunde paid the office by transfer and showed the alert.',
+      status: BankTransferStatus.APPROVED,
+      reconciledById: landlord.id,
+      reconciledAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      paymentId: transferPaymentTunde.id,
+    },
+  });
+
+  // The vendor's bill for the confirmed electrical repair, paid in cash by the manager.
+  const invRepairLights = await prisma.invoice.create({
+    data: {
+      invoiceNumber: 'INV-2026-1005',
+      maintenanceRequestId: reqLights.id,
+      type: InvoiceType.MAINTENANCE,
+      amount: 15000.0,
+      dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      status: InvoiceStatus.PAID,
+      description: 'Flickering lights repair, transformer module replaced',
+    },
+  });
+  await prisma.payment.create({
+    data: {
+      invoiceId: invRepairLights.id,
+      amount: 15000.0,
+      paymentMethod: PaymentMethod.CASH,
+      provider: PaymentProvider.CASH,
+      paidAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      notes: 'Paid in cash on completion.',
+    },
+  });
+
   // 12. Notes & Timeline History
   await prisma.note.create({
     data: {
@@ -748,8 +936,21 @@ async function main() {
   // Mark platform setup as complete
   await prisma.systemSettings.upsert({
     where: { id: 'global' },
-    update: { setupComplete: true },
-    create: { id: 'global', setupComplete: true },
+    update: {
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
+    },
+    create: {
+      id: 'global',
+      setupComplete: true,
+      autoCompleteMaintenanceOnInvoice: true,
+      requireTenantRepairConfirmation: true,
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
+    },
   });
 
   console.log('🌱 Rich Proplity seed2 completed successfully!');

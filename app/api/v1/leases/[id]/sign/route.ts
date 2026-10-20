@@ -8,6 +8,9 @@ import { validateBody } from '@/lib/api/validate';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { getClientIp } from '@/lib/auth/rateLimit';
+import { sendEmail } from '@/lib/email';
+import { appUrl } from '@/lib/appUrl';
+import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -51,6 +54,10 @@ export const POST = withAuth(
       }
 
       const signature = await prisma.$transaction(async (tx) => {
+        // Serialise signers of the same lease: without this a tenant and a landlord
+        // signing at the same moment each see only their own signature and the lease
+        // is never marked fully signed.
+        await tx.$queryRaw`SELECT "id" FROM "Lease" WHERE "id" = ${id} FOR UPDATE`;
         const created = await tx.leaseSignature.create({
           data: {
             leaseId: id,
@@ -80,6 +87,84 @@ export const POST = withAuth(
 
         return created;
       });
+
+      // Send signature confirmation emails
+      try {
+        const fullLease = await prisma.lease.findUnique({
+          where: { id },
+          include: {
+            tenant: { select: { email: true, name: true } },
+            unit: {
+              include: {
+                property: {
+                  include: {
+                    manager: { select: { email: true, name: true } },
+                    landlord: { select: { email: true, name: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (fullLease) {
+          const signerName = validated.data.fullName || session.role;
+          const parties = [
+            fullLease.tenant,
+            fullLease.unit.property.manager,
+            fullLease.unit.property.landlord,
+          ].filter((p): p is { email: string; name: string } => Boolean(p?.email));
+          const uniqueParties = [...new Map(parties.map((p) => [p.email, p])).values()];
+          for (const party of uniqueParties) {
+            await sendEmail({
+              to: party.email,
+              subject: `Digital Signature Recorded: Lease for Unit ${fullLease.unit.unitNumber}`,
+              body: `Hi ${party.name},\n\n${signerName} has digitally signed the lease agreement for unit ${fullLease.unit.unitNumber} at ${fullLease.unit.property.name}.\n\nView the active lease in your Proplity dashboard:\n${appUrl('/dashboard', req)}`,
+            });
+          }
+        }
+      } catch (signMailErr) {
+        console.error('Failed to dispatch lease signature email', signMailErr);
+      }
+
+      // In the app: say who needs to do what next. The emails above already went out.
+      const signedBy = session.role === 'TENANT' ? 'The tenant' : 'The property team';
+      const unitLabel = `unit ${lease.unit.unitNumber} at ${lease.unit.property.name}`;
+      const executed = await prisma.lease.findUnique({
+        where: { id },
+        select: { agreementSignedAt: true },
+      });
+      if (executed?.agreementSignedAt) {
+        const fully = {
+          title: 'Lease fully signed',
+          body: `Both sides have signed the lease for ${unitLabel}.`,
+        };
+        await notifyAndEmail(lease.tenantId, { ...fully, link: '/dashboard' }, { email: false });
+        await notifyPropertyTeam(
+          lease.unit.property,
+          { ...fully, link: `/dashboard/tenants/${id}` },
+          { email: false },
+        );
+      } else if (session.role === 'TENANT') {
+        await notifyPropertyTeam(
+          lease.unit.property,
+          {
+            title: 'Tenant signed the lease',
+            body: `${signedBy} signed the lease for ${unitLabel}. Your signature is needed to complete it.`,
+            link: `/dashboard/tenants/${id}`,
+          },
+          { email: false },
+        );
+      } else {
+        await notifyAndEmail(
+          lease.tenantId,
+          {
+            title: 'Your lease is waiting for your signature',
+            body: `${signedBy} signed the lease for ${unitLabel}. Add your signature to complete it.`,
+            link: '/dashboard',
+          },
+          { email: false },
+        );
+      }
 
       return NextResponse.json({ data: signature }, { status: 201 });
     } catch (err) {

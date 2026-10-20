@@ -4,9 +4,11 @@ import { ViolationSeverity } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { tellUnitTenant } from '@/lib/notifications';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrlList } from '@/lib/api/urlField';
+import { assertOwnsFileUrls } from '@/lib/storage/service';
 
 type RouteCtx = { params: Promise<{ id: string; unitId: string }> };
 
@@ -67,8 +69,16 @@ export const POST = withAuth(
       const validated = await validateBody(req, createViolationSchema);
       if (!validated.success) return validated.response;
 
+      if (validated.data.evidenceUrls?.length) {
+        await assertOwnsFileUrls(validated.data.evidenceUrls, session.sub, 'properties');
+      }
+
       const violation = await prisma.violation.create({
         data: { unitId, reportedById: session.sub, ...validated.data },
+      });
+      await tellUnitTenant(unitId, {
+        title: 'A violation was recorded for your unit',
+        body: `${violation.severity.toLowerCase()} violation: ${violation.description}`,
       });
       return NextResponse.json({ data: violation }, { status: 201 });
     } catch (err) {

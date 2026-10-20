@@ -9,23 +9,6 @@ export function useCreateInvoice() {
   );
 }
 
-// Records cash, a bank transfer or a cheque against an invoice -- the only way
-// to mark one paid by hand (ISS-053).
-export function useRecordPayment() {
-  return useApiSubmit(
-    (args: {
-      invoiceId: string;
-      amount: number;
-      method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
-      reference?: string;
-      notes?: string;
-    }) => {
-      const { invoiceId, ...body } = args;
-      return api.invoices.recordPayment(invoiceId, body).then((res) => res.data.data);
-    },
-  );
-}
-
 // Starts a real Paystack checkout for one invoice -- POST /payments/initialize
 // (fully built, just never had a UI caller). Resolves to the authorization
 // URL to redirect the browser to; the actual Payment row is only created
@@ -34,6 +17,26 @@ export function usePayInvoice() {
   return useApiSubmit((invoiceId: string) =>
     api.payments.initialize(invoiceId).then((res) => res.data.data),
   );
+}
+
+// Whether card payments can be started yet (a Paystack key is set), so a screen can say "not
+// available yet" instead of offering a button that can only fail (ISS-010). `available` stays null
+// until the server answers; only `false` hides the button, so a slow answer never blocks anyone.
+export function useCardPayments() {
+  const [available, setAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.payments
+      .availability()
+      .then((res) => {
+        if (!cancelled) setAvailable(res.data.data.card);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { available };
 }
 
 // The logged-in user's own invoices (server-scoped by role -- see

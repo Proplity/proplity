@@ -6,7 +6,10 @@ import { loginAs } from '../helpers/auth';
 test('manager saves a neighbourhood report note', async ({ page }) => {
   await loginAs(page, 'manager');
   await page.goto('/dashboard/properties');
-  await page.getByRole('button', { name: 'View' }).first().click();
+  await page
+    .getByRole('button', { name: /^View Details$/ })
+    .first()
+    .click();
   await page.getByRole('link', { name: /Neighbourhood report/ }).click();
   await expect(page.getByRole('heading', { name: 'Neighbourhood report' })).toBeVisible();
 

@@ -85,7 +85,7 @@ export function LandlordFeaturePage() {
             <Building2 className="h-4 w-4" />
             Designed for Nigerian Landlords
           </div>
-          <h1 className="mb-6 text-5xl leading-tight font-bold text-gray-900 md:text-6xl">
+          <h1 className="mb-6 text-4xl leading-tight font-bold text-gray-900 sm:text-5xl md:text-6xl">
             Built for Landlords Who <span className="text-purple-600">Own, Not Manage</span>
           </h1>
           <p className="mx-auto mb-10 max-w-3xl text-xl leading-relaxed text-gray-600">

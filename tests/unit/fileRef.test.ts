@@ -7,6 +7,9 @@ describe('fileRef utility', () => {
     expect(accessForFolder('applications')).toBe('private');
     expect(accessForFolder('profile')).toBe('private');
     expect(accessForFolder('properties')).toBe('public');
+    expect(accessForFolder('notices')).toBe('private');
+    expect(accessForFolder('leases')).toBe('private');
+    expect(accessForFolder('communications')).toBe('private');
     expect(FOLDER_ACCESS.properties).toBe('public');
   });
 
@@ -27,8 +30,12 @@ describe('fileRef utility', () => {
     expect(parseFileUrl('')).toBeNull();
     expect(parseFileUrl(12345 as unknown as string)).toBeNull();
     expect(parseFileUrl({} as unknown as string)).toBeNull();
-    expect(parseFileUrl(['/api/v1/files/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'] as unknown as string)).toBeNull();
-    expect(parseFileUrl('https://malicious.com/api/v1/files/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).toBeNull();
+    expect(
+      parseFileUrl(['/api/v1/files/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'] as unknown as string),
+    ).toBeNull();
+    expect(
+      parseFileUrl('https://malicious.com/api/v1/files/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+    ).toBeNull();
     expect(parseFileUrl('/api/v1/files/not-a-uuid')).toBeNull();
     expect(parseFileUrl('/api/v1/files/a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11/extra')).toBeNull();
   });

@@ -1,6 +1,6 @@
 # Deployment — Vercel + GitHub Actions
 
-Proplity is a **server-rendered** Next.js 16 app: 73 API routes, a `proxy.ts`
+Proplity is a **server-rendered** Next.js 16 app: 98 API routes, a `proxy.ts`
 auth gate, and Prisma against Postgres. It cannot be statically exported.
 
 ## 0. Branch model
@@ -49,24 +49,26 @@ Set these in **Project → Settings → Environment Variables**, scoped to
 Production (and Preview, pointing at a _different_ database — this is what
 `main`-as-staging and PR previews both build against, per §0).
 
-| Variable                                                               | Required              | Notes                                                                                                                                         |
-| ---------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                         | **yes**               | Pooled endpoint.                                                                                                                              |
-| `DIRECT_URL`                                                           | if pooled             | Only read by the Prisma CLI, not the app.                                                                                                     |
-| `JWT_SECRET`                                                           | **yes**               | `openssl rand -hex 64`. Rotating it logs everyone out.                                                                                        |
-| `CRON_SECRET`                                                          | **yes**               | Name must be exactly this — see §4.                                                                                                           |
-| `NEXT_PUBLIC_APP_URL`                                                  | strongly recommended  | Base URL for links in outbound email. Falls back to Vercel's own domain vars, but set it — it's the only value that survives a custom domain. |
-| `PAYSTACK_SECRET_KEY`                                                  | for payments          | Unset ⇒ payment routes return a clean 503 (unless the mock gateway is on — see below).                                                        |
-| `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED`                                    | **never in prod**     | `"true"` + no `PAYSTACK_SECRET_KEY` ⇒ a fake checkout page (`/dev/mock-checkout`) that fires a signed webhook. Build-time inlined.            |
-| `RESEND_API_KEY`                                                       | for real email        | Unset ⇒ console-transport (emails are logged, not sent).                                                                                      |
-| `EMAIL_FROM`                                                           | with `RESEND_API_KEY` | A verified Resend sender, e.g. `Proplity <no-reply@yourdomain>`.                                                                              |
-| `NEXT_PUBLIC_EMAIL_INBOX_ENABLED`                                      | **never in prod**     | `"true"` shows a "Sent Emails" widget and exposes unauthenticated `GET/DELETE /api/v1/dev/emails`. Build-time inlined.                        |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | for uploads           | Server-side signing of direct-to-Cloudinary uploads. Unset ⇒ `POST /api/v1/uploads/sign` 503s and the UI shows "not available".               |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `NEXT_PUBLIC_CLOUDINARY_API_KEY`  | for uploads           | Must match the pair above. Build-time inlined.                                                                                                |
-| `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED`                                    | no                    | `"true"` turns on real billing. Build-time inlined.                                                                                           |
-| `SETUP_TOKEN`                                                          | no                    | Defense-in-depth for `/setup` (first-run admin wizard). See §8.                                                                               |
-| `NEXT_PUBLIC_SETUP_REDIRECT_ENABLED`                                   | no                    | `"true"` makes `/login` auto-redirect to `/setup` until the first admin exists. Build-time inlined. See §8.                                   |
-| `NODE_ENV`                                                             | **no**                | Vercel sets it. Do not add it manually.                                                                                                       |
+| Variable                                                               | Required              | Notes                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                         | **yes**               | Pooled endpoint.                                                                                                                                                                                                                                                                                                                                     |
+| `DIRECT_URL`                                                           | if pooled             | Only read by the Prisma CLI, not the app.                                                                                                                                                                                                                                                                                                            |
+| `JWT_SECRET`                                                           | **yes**               | `openssl rand -hex 64`. Rotating it logs everyone out.                                                                                                                                                                                                                                                                                               |
+| `CRON_SECRET`                                                          | **yes**               | Name must be exactly this — see §4.                                                                                                                                                                                                                                                                                                                  |
+| `NEXT_PUBLIC_APP_URL`                                                  | strongly recommended  | Base URL for links in outbound email. Falls back to Vercel's own domain vars, but set it — it's the only value that survives a custom domain.                                                                                                                                                                                                        |
+| `PAYSTACK_SECRET_KEY`                                                  | for payments          | Unset ⇒ card payments are shown as "not available yet" (screens ask `GET /payments/availability`; `POST /payments/initialize` answers 503), unless the mock gateway is on — see below. Setting it switches cards on with no rebuild: run one test-mode payment and its webhook first. **Paid another way** (bank transfer or cash) works without it. |
+| `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED`                                    | **never in prod**     | `"true"` + no `PAYSTACK_SECRET_KEY` ⇒ a fake checkout page (`/dev/mock-checkout`) that fires a signed webhook. Build-time inlined.                                                                                                                                                                                                                   |
+| `RESEND_API_KEY`                                                       | for real email        | Unset ⇒ console-transport (emails are logged, not sent).                                                                                                                                                                                                                                                                                             |
+| `EMAIL_FROM`                                                           | with `RESEND_API_KEY` | A verified Resend sender, e.g. `Proplity <no-reply@yourdomain>`.                                                                                                                                                                                                                                                                                     |
+| `CONTACT_EMAIL`                                                        | for the contact page  | Mailbox that receives the contact form's messages (the visitor's address is the Reply-To). Unset ⇒ `POST /api/v1/contact` answers 503. Needs `RESEND_API_KEY` too: without it a message is only logged, and on a real deployment the visitor is told it could not be sent.                                                                           |
+| `NEXT_PUBLIC_EMAIL_INBOX_ENABLED`                                      | **never in prod**     | `"true"` shows a "Sent Emails" widget and exposes unauthenticated `GET/DELETE /api/v1/dev/emails`. Build-time inlined. In a production build the API also needs `EMAIL_INBOX_ALLOW_IN_PRODUCTION="true"` (staging testers only; it exposes live reset links).                                                                                        |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | for uploads           | Server-side signing of direct-to-Cloudinary uploads. Unset ⇒ `POST /api/v1/uploads/sign` 503s and the UI shows "not available".                                                                                                                                                                                                                      |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `NEXT_PUBLIC_CLOUDINARY_API_KEY`  | for uploads           | Must match the pair above. Build-time inlined.                                                                                                                                                                                                                                                                                                       |
+| `STORAGE_PROVIDER`                                                     | optional              | Defaults to `cloudinary`, the supported provider (owner decision 2026-10-20, ISS-035). `s3`/`r2`/`minio`/`supabase`, `imagekit` and `vercel-blob` are built but never tried against a real service: smoke-test one on staging before using it. `local` is refused in production.                                                                     |
+| `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED`                                    | no                    | `"true"` turns on real billing. Build-time inlined.                                                                                                                                                                                                                                                                                                  |
+| `SETUP_TOKEN`                                                          | no                    | Defense-in-depth for `/setup` (first-run admin wizard). See §8.                                                                                                                                                                                                                                                                                      |
+| `NEXT_PUBLIC_SETUP_REDIRECT_ENABLED`                                   | no                    | `"true"` makes `/login` auto-redirect to `/setup` until the first admin exists. Build-time inlined. See §8.                                                                                                                                                                                                                                          |
+| `NODE_ENV`                                                             | **no**                | Vercel sets it. Do not add it manually.                                                                                                                                                                                                                                                                                                              |
 
 ### These are needed at BUILD time, not just runtime
 
@@ -116,19 +118,24 @@ users for a database-heavy app like this one.
 
 ## 4. Background workers (cron)
 
-Five workers exist in `lib/workers/`, dispatched by
+Ten workers exist in `lib/workers/`, dispatched by
 `POST|GET /api/v1/cron/[job]`:
 
-- `rent-invoicer`
-- `overdue-flagger`
-- `maintenance-schedule-dispatcher`
+- `rent-invoicer` (tells the tenant about each new rent invoice)
+- `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true` **and** an admin switches it on in Platform Settings, ADR-0015)
+- `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
+- `reminders` (rent due in 3 days; lease ending within 60 days; one reminder each)
+- `maintenance-schedule-dispatcher` (tells the property team and the tenant)
 - `access-code-expiry-janitor`
 - `payment-reliability-scorer`
-- `all` — runs all five in dependency order (added for this deployment)
+- `property-trust-scorer`
+- `storage-janitor`
+- `retention` (disabled until `RETENTION_ENABLED=true` **and** an admin switches it on in Platform Settings, where the two periods are also set, ADR-0015)
+- `all` — runs every job above in dependency order
 
 **The Hobby plan allows 2 cron jobs at once-a-day granularity**, which is fewer
-than the five workers need. So `vercel.json` schedules a single daily job
-against `/api/v1/cron/all`, which fans out internally:
+than the ten workers need. So `vercel.json` schedules a single daily job
+against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
 
 ```json
 "crons": [{ "path": "/api/v1/cron/all", "schedule": "0 2 * * *" }]
@@ -161,6 +168,7 @@ Give each worker its own schedule and drop the fan-out:
 "crons": [
   { "path": "/api/v1/cron/rent-invoicer",                   "schedule": "0 2 * * *" },
   { "path": "/api/v1/cron/overdue-flagger",                 "schedule": "0 3 * * *" },
+  { "path": "/api/v1/cron/reminders",                       "schedule": "0 7 * * *" },
   { "path": "/api/v1/cron/maintenance-schedule-dispatcher", "schedule": "0 * * * *" },
   { "path": "/api/v1/cron/access-code-expiry-janitor",      "schedule": "*/30 * * * *" },
   { "path": "/api/v1/cron/payment-reliability-scorer",      "schedule": "0 4 * * 0" }
@@ -278,7 +286,9 @@ should expect from a live system.
 - **Email is console-only until `RESEND_API_KEY` is set.** With it, `lib/email.ts`
   delivers via Resend (set `EMAIL_FROM` to a verified sender); without it,
   verification, reset and invite emails go to the Vercel function log and
-  nowhere else. The _links_ inside those emails are correct in every
+  nowhere else. The contact page's form does not pretend: on a real deployment
+  without a key it answers "We couldn't send your message" instead of "sent",
+  and `CONTACT_EMAIL` says who receives it. The _links_ inside those emails are correct in every
   environment (`lib/appUrl.ts`).
 - **Self-registration is email-verified.** `register` creates a
   `PENDING_VERIFICATION` account and emails a 7-day link; `login` refuses it
@@ -286,7 +296,9 @@ should expect from a live system.
   ever sign in — configure Resend before opening registration.
 - **`/payments/initialize` has never run against a real Paystack account.**
   Everything around it is tested (and the mock gateway exercises the webhook
-  path); that one outbound call is not.
+  path); that one outbound call is not. Until `PAYSTACK_SECRET_KEY` is set,
+  card payments say "not available yet" on every screen and switch on by
+  themselves once it is (no rebuild).
 - **Auto-pay never charges.** Mandates can be created and cancelled, but no
   cron bills them yet.
 - **File uploads need Cloudinary.** Without the `CLOUDINARY_*` variables the

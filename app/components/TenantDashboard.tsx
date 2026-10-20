@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   DollarSign,
   Home,
@@ -6,7 +7,6 @@ import {
   Calendar,
   CreditCard,
   MapPin,
-  Key,
   FileText,
   MessageSquare,
   AlertCircle,
@@ -14,9 +14,10 @@ import {
 } from 'lucide-react';
 import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
 import { useTenantSummary } from '@/hooks/useDashboardSummary';
-import { usePayInvoice } from '@/hooks/useInvoices';
+import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
-import { useAccessCodes } from '@/hooks/useAccessCodes';
+import { useAccessCodes, useCreateAccessCode } from '@/hooks/useAccessCodes';
+import { AccessCodeCard } from './AccessCodeCard';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import {
   useAutoPayMandates,
@@ -26,6 +27,8 @@ import {
 } from '@/hooks/useAutoPay';
 import { LeaseSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { useFileViewer } from '@/context/FileViewerContext';
+import { AttentionCard } from './AttentionCard';
 
 interface TenantDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -40,12 +43,50 @@ const maintenanceStatusColor: Record<string, string> = {
 };
 
 export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
+  const { openFile } = useFileViewer();
   const { data: lease, loading: leaseLoading } = useActiveLease();
   // Balance, next due date and recent payments are summed on the server, so
   // they stay right past the first page of invoices (ISS-049).
   const { data: summary, loading: invoicesLoading } = useTenantSummary();
   const { data: maintenanceRequests } = useMaintenanceRequests();
-  const { data: accessCodes } = useAccessCodes(lease?.unitId ?? null);
+  const { data: accessCodes, refetch: refetchAccessCodes } = useAccessCodes(lease?.unitId ?? null);
+  const {
+    submit: createAccessCode,
+    submitting: creatingCode,
+    error: codeError,
+  } = useCreateAccessCode();
+  const [showCodeForm, setShowCodeForm] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [codeValue, setCodeValue] = useState('');
+  const [codeUntil, setCodeUntil] = useState('');
+  const [codeSingleUse, setCodeSingleUse] = useState(true);
+
+  const openCodeForm = () => {
+    // A fresh 6-digit code by default; the tenant can type their own.
+    setCodeValue(String(Math.floor(100000 + Math.random() * 900000)));
+    setShowCodeForm(true);
+  };
+
+  const handleCreateCode = async () => {
+    if (!lease) return;
+    try {
+      await createAccessCode({
+        unitId: lease.unitId,
+        code: codeValue.trim(),
+        guestName: guestName.trim() || undefined,
+        validFrom: new Date().toISOString(),
+        validUntil: codeUntil ? new Date(`${codeUntil}T23:59:59`).toISOString() : null,
+        singleUse: codeSingleUse,
+      });
+      setShowCodeForm(false);
+      setGuestName('');
+      setCodeUntil('');
+      setCodeSingleUse(true);
+      refetchAccessCodes();
+    } catch {
+      // surfaced through codeError
+    }
+  };
   const { open: openConversation } = useOpenConversation();
 
   const messageManager = () => {
@@ -53,6 +94,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     openConversation({ type: 'LEASE_THREAD', leaseId: lease.id });
   };
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { available: cardsAvailable } = useCardPayments();
 
   const {
     data: autoPayMandates,
@@ -91,12 +133,16 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   };
 
   // A PENDING lease (awaiting signature, before a manager activates it)
-  // never shows up via useActiveLease -- fetched separately just to surface
-  // the signing prompt, since that's the only reason a tenant needs to see
-  // it before it's ACTIVE.
+  // never shows up via useActiveLease -- fetched separately so the tenant
+  // still gets the signing prompt. A manager can also activate a lease after
+  // signing but before the tenant has, so any lease that already carries a
+  // signature keeps the card (the prompt, then the Fully Executed proof);
+  // otherwise the tenant could never sign it.
   const { data: pendingLeases } = useLeases({ status: 'PENDING' });
-  const pendingLeaseId = pendingLeases[0]?.id ?? null;
-  const { data: pendingLease, refetch: refetchPendingLease } = useLease(pendingLeaseId);
+  const signLeaseId = pendingLeases[0]?.id ?? lease?.id ?? null;
+  const { data: signLease, refetch: refetchSignLease } = useLease(signLeaseId);
+  const showSignatureCard =
+    !!signLease && (signLease.status === 'PENDING' || (signLease.signatures ?? []).length > 0);
 
   const property = lease?.unit?.property;
   const balance = summary?.money.balance ?? 0;
@@ -124,7 +170,11 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
 
-      {pendingLease && <LeaseSignatureCard lease={pendingLease} onSigned={refetchPendingLease} />}
+      <AttentionCard />
+
+      {signLease && showSignatureCard && (
+        <LeaseSignatureCard lease={signLease} onSigned={refetchSignLease} />
+      )}
 
       {/* Quick Actions */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -138,8 +188,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
               <FileText className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm font-medium">Generate Report</p>
-              <p className="text-xs text-gray-500">Neighbourhood insights</p>
+              <p className="text-sm font-medium">Neighbourhood Report</p>
+              <p className="text-xs text-gray-500">View area insights & scores</p>
             </div>
           </button>
           <button
@@ -299,15 +349,30 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                 <div className="space-y-2">
                   <button
                     onClick={handlePayRent}
-                    disabled={!nextDue || paying}
+                    disabled={!nextDue || paying || cardsAvailable === false}
                     className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {paying
                       ? 'Redirecting to Paystack…'
-                      : nextDue
-                        ? 'Pay Rent Online'
-                        : 'No Balance Due'}
+                      : !nextDue
+                        ? 'No Balance Due'
+                        : cardsAvailable === false
+                          ? 'Card Payment Not Available Yet'
+                          : 'Pay Rent Online'}
                   </button>
+                  {nextDue && cardsAvailable === false && (
+                    <p className="text-sm text-gray-600">
+                      Card payments are not available yet. You can still pay by bank transfer or
+                      cash and record it under{' '}
+                      <Link
+                        href="/dashboard/payment-history"
+                        className="font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Payment History
+                      </Link>{' '}
+                      (&quot;Paid another way&quot;).
+                    </p>
+                  )}
                   {payError && <p className="text-sm text-red-600">{payError}</p>}
 
                   {activeMandate ? (
@@ -367,8 +432,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                           <div className="flex items-start gap-2 text-sm text-gray-700">
                             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                             <span>
-                              No saved card yet. Pay one rent invoice online with a card first —
-                              auto-pay reuses that same card for future charges.
+                              {cardsAvailable === false
+                                ? 'Card payments are not available yet, so auto-pay cannot be set up.'
+                                : 'No saved card yet. Pay one rent invoice online with a card first — auto-pay reuses that same card for future charges.'}
                             </span>
                           </div>
                           <button
@@ -459,24 +525,60 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
 
           {/* Access Codes */}
           <div className="rounded-lg border border-gray-200 bg-white">
-            <div className="border-b border-gray-200 p-6">
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="font-semibold">Access Codes</h2>
+              <button
+                onClick={() => (showCodeForm ? setShowCodeForm(false) : openCodeForm())}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                {showCodeForm ? 'Cancel' : '+ New Guest Code'}
+              </button>
             </div>
             <div className="p-6">
+              {showCodeForm && (
+                <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 p-4 md:grid-cols-2">
+                  <input
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Guest name (optional)"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <input
+                    value={codeValue}
+                    onChange={(e) => setCodeValue(e.target.value)}
+                    placeholder="Gate code (4+ characters)"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <label className="text-xs text-gray-600">
+                    Valid until (optional)
+                    <input
+                      type="date"
+                      value={codeUntil}
+                      onChange={(e) => setCodeUntil(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 pt-5 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={codeSingleUse}
+                      onChange={(e) => setCodeSingleUse(e.target.checked)}
+                    />
+                    One-time use
+                  </label>
+                  {codeError && <p className="text-xs text-red-600 md:col-span-2">{codeError}</p>}
+                  <button
+                    onClick={handleCreateCode}
+                    disabled={creatingCode || codeValue.trim().length < 4}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 md:col-span-2"
+                  >
+                    {creatingCode ? 'Creating…' : 'Create Code'}
+                  </button>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {accessCodes.map((access) => (
-                  <div key={access.id} className="rounded-lg border border-gray-200 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Key className="h-4 w-4 text-blue-600" />
-                      <p className="text-sm font-medium">{access.guestName ?? 'Access Code'}</p>
-                    </div>
-                    <p className="mb-1 text-2xl font-bold text-blue-600">{access.code}</p>
-                    <p className="text-xs text-gray-500">
-                      {access.validUntil
-                        ? `Expires ${new Date(access.validUntil).toLocaleDateString()}`
-                        : 'No expiry'}
-                    </p>
-                  </div>
+                  <AccessCodeCard key={access.id} code={access} onChanged={refetchAccessCodes} />
                 ))}
                 {accessCodes.length === 0 && (
                   <p className="text-sm text-gray-400 md:col-span-3">No active access codes.</p>
@@ -492,20 +594,25 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
             </div>
             <div className="p-6">
               {lease.signedAgreementUrl ? (
-                <a
-                  href={lease.signedAgreementUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openFile({
+                      url: lease.signedAgreementUrl!,
+                      name: 'Signed Lease Agreement.pdf',
+                      type: 'application/pdf',
+                    })
+                  }
+                  className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50"
                 >
                   <div>
-                    <p className="text-sm font-medium">Signed Lease Agreement</p>
+                    <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
                     <p className="text-xs text-gray-500">
                       Since {new Date(lease.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <FileText className="h-4 w-4 text-gray-600" />
-                </a>
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </button>
               ) : (
                 <p className="text-sm text-gray-400">No documents on file yet.</p>
               )}

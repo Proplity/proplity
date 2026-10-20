@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -13,7 +14,7 @@ function loadInvoice(id: string) {
   return prisma.invoice.findUnique({
     where: { id },
     include: {
-      payments: { orderBy: { paidAt: 'desc' } },
+      payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
       lease: { include: { unit: { include: { property: true } } } },
       maintenanceRequest: { include: { unit: { include: { property: true } } } },
       user: { select: { id: true, name: true, email: true } },

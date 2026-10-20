@@ -256,12 +256,98 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (!involved) return false;
     const request = await prisma.maintenanceRequest.findFirst({
       where: {
-        AND: [involved, { OR: [{ mediaUrls: { has: url } }, { completionProofUrl: url }] }],
+        AND: [
+          involved,
+          {
+            OR: [
+              { mediaUrls: { has: url } },
+              { completionProofUrl: url },
+              { beforePhotoUrls: { has: url } },
+              { afterPhotoUrls: { has: url } },
+              { disputePhotoUrls: { has: url } },
+            ],
+          },
+        ],
       },
       select: { id: true },
     });
     return Boolean(request);
   }
+
+  if (file.folder === 'notices') {
+    const url = fileUrl(file.id);
+    const notice = await prisma.notice.findFirst({
+      where: { documentUrl: url },
+      include: { lease: { include: { unit: { include: { property: true } } } } },
+    });
+    if (!notice) return false;
+    if (notice.lease.tenantId === actor.sub) return true;
+    if (!scope) return false;
+    return (
+      notice.lease.unit.property.managerId === actor.sub ||
+      notice.lease.unit.property.landlordId === actor.sub
+    );
+  }
+
+  if (file.folder === 'leases') {
+    const url = fileUrl(file.id);
+    const lease = await prisma.lease.findFirst({
+      where: { signedAgreementUrl: url },
+      include: { unit: { include: { property: true } } },
+    });
+    if (!lease) return false;
+    if (lease.tenantId === actor.sub) return true;
+    if (!scope) return false;
+    return (
+      lease.unit.property.managerId === actor.sub || lease.unit.property.landlordId === actor.sub
+    );
+  }
+
+  if (file.folder === 'communications') {
+    const url = fileUrl(file.id);
+    const message = await prisma.message.findFirst({
+      where: { attachmentUrls: { has: url } },
+      select: { conversationId: true },
+    });
+    if (!message) return false;
+    const participant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId: message.conversationId, userId: actor.sub },
+      },
+      select: { id: true },
+    });
+    return Boolean(participant);
+  }
+
+  if (file.folder === 'reconciliation') {
+    const url = fileUrl(file.id);
+    const submission = await prisma.bankTransferSubmission.findFirst({
+      where: { proofFileUrl: url },
+      include: {
+        invoice: {
+          include: {
+            lease: { include: { unit: { include: { property: true } } } },
+            maintenanceRequest: { include: { unit: { include: { property: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission) return false;
+    if (submission.submittedById === actor.sub) return true;
+    // Once confirmed, the payer on the lease and the vendor who was paid may read the proof too:
+    // it is attached to their receipt.
+    if (submission.status === 'APPROVED') {
+      if (submission.invoice.lease?.tenantId === actor.sub) return true;
+      if (submission.invoice.maintenanceRequest?.vendorId === actor.sub) return true;
+    }
+    if (!scope) return false;
+    const property =
+      submission.invoice.lease?.unit.property ??
+      submission.invoice.maintenanceRequest?.unit.property;
+    if (!property) return false;
+    return property.managerId === actor.sub || property.landlordId === actor.sub;
+  }
+
   return false;
 }
 

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Wrench,
   CheckCircle,
@@ -9,9 +11,15 @@ import {
   X,
   ChevronDown,
   MapPin,
+  Star,
 } from 'lucide-react';
-import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import {
+  useAnswerRepair,
+  useMaintenanceRequests,
+  useRateVendor,
+} from '@/hooks/useMaintenanceRequests';
 import type { MaintenanceRequest } from '@/lib/api/types';
+import { PhotoGrid, PhotoPicker } from './RepairPhotos';
 import type { Page } from '@/app/dashboard/navigateToPage';
 
 interface TenantMaintenanceRequestsProps {
@@ -61,14 +69,134 @@ function buildTimeline(request: MaintenanceRequest) {
       time: new Date(request.completedAt).toLocaleString(),
     });
   }
+  if (request.confirmationRespondedAt) {
+    entries.push({
+      text:
+        request.confirmationStatus === 'DISPUTED'
+          ? 'You said it is still a problem'
+          : 'You confirmed it is fixed',
+      time: new Date(request.confirmationRespondedAt).toLocaleString(),
+    });
+  }
+  if (request.approvedAt) {
+    entries.push({
+      text: 'Your property team approved the work',
+      time: new Date(request.approvedAt).toLocaleString(),
+    });
+  }
   return entries.reverse();
 }
 
+// Once the vendor says a repair is done the tenant answers: it is fixed, or it is still a problem
+// (a reason is needed, photos are optional). It never holds up payment.
+function RepairAnswer({ request, onDone }: { request: MaintenanceRequest; onDone: () => void }) {
+  const { submit, submitting, error } = useAnswerRepair();
+  const [disputing, setDisputing] = useState(false);
+  const [reason, setReason] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  const answer = async (body: Parameters<typeof submit>[1], success: string) => {
+    try {
+      await submit(request.id, body);
+      toast.success(success);
+      onDone();
+    } catch {
+      // surfaced through `error`
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-gray-900">Is it fixed?</p>
+      <p className="mt-0.5 text-sm text-gray-600">
+        {request.vendor?.name ?? 'The vendor'} says this repair is done. Tell us if it is really
+        fixed. This does not change what is owed to the vendor.
+      </p>
+
+      {!disputing ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => answer({ outcome: 'CONFIRMED' }, 'Thanks, we have noted it is fixed.')}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {submitting ? 'Sending…' : 'Confirm fixed'}
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => setDisputing(true)}
+            className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            Still a problem
+          </button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="What is still wrong?"
+            aria-label="What is still wrong"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          <PhotoGrid
+            urls={photos}
+            label="Your photo"
+            onRemove={(url) => setPhotos((p) => p.filter((u) => u !== url))}
+          />
+          <PhotoPicker
+            label="Add photos (optional)"
+            disabled={submitting}
+            full={photos.length >= 6}
+            onUploaded={(urls) => setPhotos((p) => [...p, ...urls].slice(0, 6))}
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={submitting || reason.trim().length < 5}
+              onClick={() =>
+                answer(
+                  { outcome: 'DISPUTED', reason: reason.trim(), photoUrls: photos },
+                  'We have told your property team it is still a problem.',
+                )
+              }
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? 'Sending…' : 'Send to my property team'}
+            </button>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => setDisputing(false)}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceRequestsProps) {
-  const { data: allRequests, loading, error } = useMaintenanceRequests();
+  const { data: allRequests, loading, error, refetch } = useMaintenanceRequests();
+  const { submit: rateVendor, submitting: rating, error: ratingError } = useRateVendor();
+  const [stars, setStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // A notification link opens the repair it is about (?request=<id>).
+  const searchParams = useSearchParams();
+  const [expandedId, setExpandedId] = useState<string | null>(searchParams.get('request'));
 
   const filtered = allRequests.filter((r) => {
     const matchSearch =
@@ -188,6 +316,12 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                         >
                           {pConfig.label}
                         </span>
+                        {request.status === 'COMPLETED' &&
+                          request.confirmationStatus === 'AWAITING_TENANT' && (
+                            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                              Needs your answer
+                            </span>
+                          )}
                       </div>
                       <p className="font-semibold text-gray-900">{request.title}</p>
                       <p className="mt-0.5 truncate text-sm text-gray-500">{request.description}</p>
@@ -248,6 +382,137 @@ export function TenantMaintenanceRequests({ onNavigate }: TenantMaintenanceReque
                   <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                     {request.description}
                   </div>
+
+                  {/* Photos: the tenant's own, then the vendor's evidence of the work */}
+                  {(request.mediaUrls.length > 0 ||
+                    request.beforePhotoUrls.length > 0 ||
+                    request.afterPhotoUrls.length > 0) && (
+                    <div className="space-y-3">
+                      {request.mediaUrls.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 text-xs font-semibold text-gray-500">Your photos</p>
+                          <PhotoGrid urls={request.mediaUrls} label="Your photo" />
+                        </div>
+                      )}
+                      {request.beforePhotoUrls.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 text-xs font-semibold text-gray-500">
+                            Vendor photos, before the work
+                          </p>
+                          <PhotoGrid urls={request.beforePhotoUrls} label="Before photo" />
+                        </div>
+                      )}
+                      {request.afterPhotoUrls.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 text-xs font-semibold text-gray-500">
+                            Vendor photos, after the work
+                          </p>
+                          <PhotoGrid urls={request.afterPhotoUrls} label="After photo" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Confirm it is fixed, or say it is not */}
+                  {request.status === 'COMPLETED' &&
+                    request.confirmationStatus === 'AWAITING_TENANT' && (
+                      <RepairAnswer request={request} onDone={refetch} />
+                    )}
+                  {request.confirmationStatus === 'CONFIRMED' && (
+                    <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                      You confirmed this repair is fixed
+                      {request.confirmationRespondedAt
+                        ? ` on ${new Date(request.confirmationRespondedAt).toLocaleDateString()}`
+                        : ''}
+                      .
+                    </p>
+                  )}
+                  {request.disputeReason && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+                      <p className="font-semibold text-red-900">You said it is still a problem</p>
+                      <p className="mt-1 whitespace-pre-line text-red-900">
+                        {request.disputeReason}
+                      </p>
+                      <div className="mt-2">
+                        <PhotoGrid urls={request.disputePhotoUrls} label="Your photo" />
+                      </div>
+                      <p className="mt-2 text-xs text-red-800">
+                        {request.status === 'COMPLETED' && request.confirmationStatus === 'DISPUTED'
+                          ? 'Your property team has been told and will decide what happens next.'
+                          : 'Your property team sent it back to be fixed.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Rate the vendor once the job is done (one rating per request) */}
+                  {request.status === 'COMPLETED' && request.vendor && (
+                    <div className="rounded-lg border border-gray-200 p-4">
+                      <p className="mb-2 text-sm font-semibold text-gray-900">
+                        {request.vendorRating ? 'Your rating' : 'Rate this vendor'}
+                      </p>
+                      {request.vendorRating ? (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`h-5 w-5 ${n <= request.vendorRating!.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                            />
+                          ))}
+                          {request.vendorRating.comment && (
+                            <span className="ml-2 text-sm text-gray-600">
+                              {request.vendorRating.comment}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                                onClick={() => setStars(n)}
+                              >
+                                <Star
+                                  className={`h-6 w-6 ${n <= stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
+                            placeholder="Add a comment (optional)"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                          {ratingError && <p className="text-xs text-red-600">{ratingError}</p>}
+                          <button
+                            type="button"
+                            disabled={stars === 0 || rating}
+                            onClick={async () => {
+                              try {
+                                await rateVendor(request.id, {
+                                  rating: stars,
+                                  ...(ratingComment.trim()
+                                    ? { comment: ratingComment.trim() }
+                                    : {}),
+                                });
+                                setStars(0);
+                                setRatingComment('');
+                                refetch();
+                              } catch {
+                                // surfaced through ratingError
+                              }
+                            }}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {rating ? 'Sending…' : 'Submit Rating'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Timeline */}
                   <div>

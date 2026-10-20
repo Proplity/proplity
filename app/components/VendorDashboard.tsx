@@ -15,6 +15,7 @@ import { api } from '@/lib/apiClient';
 import { useVendorSummary } from '@/hooks/useDashboardSummary';
 import { usePagedList } from '@/hooks/usePagedList';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface VendorDashboardProps {
   onNavigate: (page: Page) => void;
@@ -78,6 +79,8 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
         <h1 className="mb-1 text-2xl font-semibold">Vendor Dashboard</h1>
         <p className="text-gray-600">Manage your jobs and track your earnings</p>
       </div>
+
+      <AttentionCard />
 
       {auth.user?.vendorVerification === 'PENDING' && (
         <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
@@ -224,7 +227,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
               onClick={() => onNavigate({ type: 'vendor-job-detail', jobId: job.id })}
               className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
             >
-              <div className="mb-4 flex items-start justify-between">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${priority.color}-50`}
@@ -238,7 +241,7 @@ export function VendorDashboard({ onNavigate }: VendorDashboardProps) {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full px-3 py-1 text-sm font-medium bg-${priority.color}-100 text-${priority.color}-700`}
                   >

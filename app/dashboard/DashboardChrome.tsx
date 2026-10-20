@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ResponsiveTables } from '@/app/components/ResponsiveTables';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { RoleSwitcher } from '../components/RoleSwitcher';
@@ -22,14 +23,23 @@ import {
   Building2,
   DollarSign,
   Receipt,
+  CalendarClock,
   Plus,
   LogOut,
+  ChevronUp,
 } from 'lucide-react';
 
-type Role = 'manager' | 'tenant' | 'landlord' | 'vendor';
+type Role = 'manager' | 'tenant' | 'landlord' | 'vendor' | 'admin';
 
 function getTabsForRole(role: Role) {
   switch (role) {
+    case 'admin':
+      return [
+        { href: '/admin', label: 'Admin Dashboard', icon: Home },
+        { href: '/admin/properties', label: 'Moderation Queue', icon: Building2 },
+        { href: '/admin/users', label: 'User Directory', icon: Users },
+        { href: '/admin/security', label: 'Security & Audit', icon: Settings },
+      ];
     case 'manager':
       return [
         { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -48,6 +58,18 @@ function getTabsForRole(role: Role) {
         { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
         { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+        {
+          href: '/dashboard/reconciliation',
+          label: 'Bank Transfers',
+          shortLabel: 'Transfers',
+          icon: Receipt,
+        },
+        {
+          href: '/dashboard/schedules',
+          label: 'Schedules',
+          shortLabel: 'Schedules',
+          icon: CalendarClock,
+        },
       ];
     case 'tenant':
       return [
@@ -73,6 +95,18 @@ function getTabsForRole(role: Role) {
         { href: '/dashboard/tenants', label: 'Tenants', icon: Users },
         { href: '/dashboard/maintenance', label: 'Maintenance', icon: Wrench },
         { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+        {
+          href: '/dashboard/reconciliation',
+          label: 'Bank Transfers',
+          shortLabel: 'Transfers',
+          icon: Receipt,
+        },
+        {
+          href: '/dashboard/schedules',
+          label: 'Schedules',
+          shortLabel: 'Schedules',
+          icon: CalendarClock,
+        },
       ];
     case 'vendor':
       return [
@@ -88,6 +122,7 @@ const AVATAR_COLOR: Record<Role, string> = {
   tenant: 'bg-green-600',
   landlord: 'bg-purple-600',
   vendor: 'bg-orange-600',
+  admin: 'bg-purple-700',
 };
 
 export function DashboardChrome({ children }: { children: React.ReactNode }) {
@@ -98,6 +133,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -138,13 +174,20 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard/settings" className="block rounded-lg p-2 hover:bg-gray-100">
                 <Settings className="h-5 w-5 text-gray-600" />
               </Link>
-              <button className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100">
+              <button className="flex items-center gap-2.5 rounded-lg p-2 text-left hover:bg-gray-100">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${role ? AVATAR_COLOR[role] : 'bg-gray-300'}`}
                 >
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-sm font-medium">{auth.user?.name}</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm leading-tight font-medium text-gray-900">
+                    {auth.user?.name}
+                  </span>
+                  <span className="text-xs leading-tight text-gray-500 capitalize">
+                    {role || 'User'}
+                  </span>
+                </div>
               </button>
               <button
                 onClick={() => setShowLogout(true)}
@@ -180,9 +223,14 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                     aria-hidden="true"
                   />
                   <div className="absolute top-full right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
-                    <p className="truncate px-4 py-1.5 text-sm font-medium text-gray-900">
-                      {auth.user?.name}
-                    </p>
+                    <div className="border-b border-gray-100 px-4 py-1.5">
+                      <p className="truncate text-sm leading-tight font-medium text-gray-900">
+                        {auth.user?.name}
+                      </p>
+                      <p className="truncate text-xs leading-tight text-gray-500 capitalize">
+                        {role || 'User'}
+                      </p>
+                    </div>
                     <Link
                       href="/dashboard/settings"
                       onClick={() => setAvatarMenuOpen(false)}
@@ -210,59 +258,155 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-64 border-r border-gray-200 bg-white p-4 lg:block">
-          {(role === 'manager' || role === 'landlord') && (
-            <Link
-              href="/dashboard/properties/new"
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-4 py-3 font-medium text-white hover:from-blue-700 hover:to-green-700"
-            >
-              <Plus className="h-5 w-5" />
-              List Property
-            </Link>
-          )}
+        <aside className="hidden w-64 flex-col justify-between border-r border-gray-200 bg-white p-4 lg:flex">
+          <div className="flex-1 overflow-y-auto pr-1">
+            {(role === 'manager' || role === 'landlord') && (
+              <Link
+                href="/dashboard/properties/new"
+                className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 px-4 py-3 font-medium text-white hover:from-blue-700 hover:to-green-700"
+              >
+                <Plus className="h-5 w-5" />
+                List Property
+              </Link>
+            )}
 
-          <nav className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active =
-                tab.href === '/dashboard'
-                  ? pathname === '/dashboard'
-                  : pathname.startsWith(tab.href);
-              return (
-                <Link
-                  key={tab.label}
-                  href={tab.href}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
-                    active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+            <nav className="space-y-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const active =
+                  tab.href === '/dashboard'
+                    ? pathname === '/dashboard'
+                    : pathname.startsWith(tab.href);
+                return (
+                  <Link
+                    key={tab.label}
+                    href={tab.href}
+                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-colors ${
+                      active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{tab.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {role !== 'vendor' && aiAssistantDemoEnabled && (
+              <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
+                <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
+                <p className="mb-3 text-xs text-gray-600">
+                  {role === 'tenant'
+                    ? 'Get instant help with payments, maintenance, and lease questions'
+                    : 'Get instant help with tenant queries, rent tracking, and more'}
+                </p>
+                <button
+                  onClick={() => setShowAIAssistant(!showAIAssistant)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Open AI Chat
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Fixed bottom avatar & logout menu */}
+          <div className="relative mt-auto shrink-0 border-t border-gray-200 pt-3">
+            {sidebarMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setSidebarMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  role="menu"
+                  aria-label="User account options"
+                  className="absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border border-gray-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
+                >
+                  <div className="border-b border-gray-100 px-3 py-2">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {auth.user?.name || 'My Account'}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 capitalize">
+                      {auth.user?.email || (role ? `${role} account` : 'Logged in')}
+                    </p>
+                  </div>
+
+                  <div className="mt-1 space-y-0.5">
+                    <Link
+                      href="/dashboard/settings"
+                      onClick={() => setSidebarMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                    >
+                      <Settings className="h-4 w-4 text-gray-500" />
+                      <span>Settings</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarMenuOpen(false);
+                        setShowLogout(true);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4 text-red-500" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-gray-100/80">
+              <button
+                type="button"
+                onClick={() => setSidebarMenuOpen((prev) => !prev)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none"
+                aria-label="Account options"
+                aria-expanded={sidebarMenuOpen}
+              >
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-xs ${
+                    role ? AVATAR_COLOR[role] : 'bg-gray-400'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{tab.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm leading-tight font-medium text-gray-900">
+                    {auth.user?.name || 'Account'}
+                  </p>
+                  <p className="truncate text-xs leading-tight text-gray-500 capitalize">
+                    {role || 'User'}
+                  </p>
+                </div>
+                <ChevronUp
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${
+                    sidebarMenuOpen ? 'rotate-180 text-blue-600' : ''
+                  }`}
+                />
+              </button>
 
-          {role !== 'vendor' && aiAssistantDemoEnabled && (
-            <div className="mt-8 rounded-lg bg-linear-to-br from-blue-50 to-green-50 p-4">
-              <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
-              <p className="mb-3 text-xs text-gray-600">
-                {role === 'tenant'
-                  ? 'Get instant help with payments, maintenance, and lease questions'
-                  : 'Get instant help with tenant queries, rent tracking, and more'}
-              </p>
               <button
-                onClick={() => setShowAIAssistant(!showAIAssistant)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                type="button"
+                onClick={() => setShowLogout(true)}
+                title="Log Out"
+                aria-label="Log Out"
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               >
-                <MessageSquare className="h-4 w-4" />
-                Open AI Chat
+                <LogOut className="h-4 w-4" />
               </button>
             </div>
-          )}
+          </div>
         </aside>
 
-        <main className="flex-1 overflow-auto pb-24 lg:pb-0">{children}</main>
+        <main className="flex-1 overflow-auto pb-24 lg:pb-0">
+          <ResponsiveTables />
+          {children}
+        </main>
 
         {showAIAssistant && aiAssistantDemoEnabled && (
           <AIAssistant onClose={() => setShowAIAssistant(false)} />

@@ -21,6 +21,47 @@ export type Unit = {
   amenities: string[];
 };
 
+export type PropertyPendingChanges = {
+  status: 'DRAFT' | 'PENDING_REVIEW';
+  submittedAt?: string;
+  updatedAt?: string;
+  property?: {
+    name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    type?: 'RESIDENTIAL' | 'COMMERCIAL' | 'INDUSTRIAL' | 'MIXED_USE';
+    description?: string;
+    imageUrl?: string;
+    photoUrls?: string[];
+  };
+  units?: {
+    [unitId: string]: Partial<{
+      unitNumber: string;
+      bedrooms: number;
+      bathrooms: number;
+      rentAmount: number;
+      serviceCharge: number;
+      listedPaymentFrequency: string;
+      amenities: string[];
+    }>;
+  };
+  newUnits?: Array<{
+    unitNumber: string;
+    bedrooms: number;
+    bathrooms: number;
+    rentAmount: number;
+    serviceCharge?: number;
+    listedPaymentFrequency?: string;
+    amenities?: string[];
+  }>;
+};
+
+export type PropertyMetadata = {
+  pendingChanges?: PropertyPendingChanges;
+  [key: string]: unknown;
+};
+
 export type Property = {
   id: string;
   name: string;
@@ -36,6 +77,13 @@ export type Property = {
   managerId?: string | null;
   landlordId?: string | null;
   manager?: { id: string; name: string; phoneNumber: string | null; email: string } | null;
+  landlord?: {
+    id: string;
+    name: string;
+    phoneNumber: string | null;
+    email: string;
+    role?: string;
+  } | null;
   isPublished: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
@@ -44,6 +92,7 @@ export type Property = {
   roadConditionScore: number | null;
   moderationStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
   moderationNotes?: string | null;
+  metadata?: PropertyMetadata | null;
   listingHash?: string | null;
   mergedIntoId?: string | null;
   mergedInto?: { id: string; name: string; address?: string; city?: string } | null;
@@ -51,6 +100,9 @@ export type Property = {
   waterSupplyType: 'BOREHOLE' | 'PUBLIC_GRID' | 'WATER_TANKER' | 'COMBINED';
   electricalSetup: 'PUBLIC_GRID' | 'GENERATOR' | 'INVERTER_SOLAR' | 'COMBINED';
   createdAt: string;
+  updatedAt?: string;
+  approvedAt?: string | null;
+  isEdited?: boolean;
   units: Unit[];
 };
 
@@ -105,10 +157,25 @@ export type UpdatePropertyInput = {
   exteriorPhotoUrl?: string | null;
   photoUrls?: string[];
   isPublished?: boolean;
+  moderationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
+  moderationNotes?: string;
+  metadata?: PropertyMetadata | null;
+  saveAsDraft?: boolean;
+  submitForReview?: boolean;
+  cancelPendingEdits?: boolean;
+  deletePendingEdits?: boolean;
 };
 
 export type MergePropertyInput = {
   targetPropertyId: string;
+};
+
+export type UpdateUnitInput = Partial<CreateUnitInput> & {
+  status?: string;
+  action?: 'APPROVE' | 'REJECT';
+  saveAsDraft?: boolean;
+  cancelPendingEdits?: boolean;
+  deletePendingEdits?: boolean;
 };
 
 export type CreateUnitInput = {
@@ -127,7 +194,14 @@ export type PropertyViewing = {
   id: string;
   propertyId: string;
   requestedById: string;
-  requestedBy?: { name: string; email: string };
+  requestedBy?: {
+    name: string;
+    email: string;
+    phoneNumber: string | null;
+    createdAt: string;
+    kycStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+    hasIdOnFile: boolean;
+  };
   scheduledAt: string;
   status: 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   notes: string | null;
@@ -145,14 +219,56 @@ export type CreateMaintenanceRequestInput = {
   categoryId?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'EMERGENCY';
   mediaUrls?: string[];
+  /** Work orders only: hand it to a verified vendor straight away. */
+  vendorId?: string;
 };
+
+export type ScheduleFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL';
+
+/** A recurring repair the property team has set up for a unit. */
+export type MaintenanceSchedule = {
+  id: string;
+  unitId: string;
+  unit?: Unit & { property?: { id: string; name: string } };
+  equipmentId: string | null;
+  equipment?: Equipment | null;
+  categoryId: string;
+  category?: MaintenanceCategory;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  lastGeneratedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type CreateScheduleInput = {
+  unitId: string;
+  categoryId: string;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  equipmentId?: string;
+};
+
+export type UpdateScheduleInput = Partial<{
+  categoryId: string;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  equipmentId: string | null;
+  isActive: boolean;
+}>;
+
+export type RepairConfirmationStatus =
+  'NOT_REQUESTED' | 'AWAITING_TENANT' | 'CONFIRMED' | 'DISPUTED';
 
 export type MaintenanceRequest = {
   id: string;
   unitId: string;
   unit?: Unit & { property?: Property };
-  tenantId: string;
-  tenant?: { id: string; name: string; email: string; phoneNumber: string | null };
+  /** Null on a work order: a repair the property team raised itself, with no tenant. */
+  tenantId: string | null;
+  tenant?: { id: string; name: string; email: string; phoneNumber: string | null } | null;
+  /** Who raised a work order (null when a tenant reported it). */
+  createdBy?: { id: string; name: string } | null;
   vendorId: string | null;
   vendor?: { id: string; name: string; phoneNumber?: string | null } | null;
   title: string;
@@ -164,18 +280,34 @@ export type MaintenanceRequest = {
   mediaUrls: string[];
   vendorNotes: string | null;
   completionProofUrl: string | null;
+  /** The vendor's photos of the work, uploaded through the file gateway. */
+  beforePhotoUrls: string[];
+  afterPhotoUrls: string[];
+  /** The tenant's answer once the job is finished (the admin can switch the step off). */
+  confirmationStatus: RepairConfirmationStatus;
+  confirmationRespondedAt: string | null;
+  disputeReason: string | null;
+  disputePhotoUrls: string[];
+  /** The property team's sign-off. */
+  approvedAt: string | null;
+  approvedBy?: { id: string; name: string } | null;
   scheduledFor: string | null;
   completedAt: string | null;
   costEstimate: number | null;
   finalCost: number | null;
   vendorRating?: { rating: number; comment: string | null } | null;
+  // Present on the single-request fetch only.
+  workflow?: { autoCompleteOnInvoice: boolean; evidenceRequired: boolean };
   // Present on the single-request fetch only (ISS-051).
   invoices?: {
     id: string;
     invoiceNumber: string;
     amount: number;
     status: string;
-    payments: { amount: number }[];
+    description: string | null;
+    dueDate: string;
+    createdAt: string;
+    payments: Pick<Payment, 'id' | 'amount' | 'paidAt' | 'paymentMethod' | 'receiptNumber'>[];
   }[];
   createdAt: string;
   updatedAt: string;
@@ -190,7 +322,41 @@ export type UpdateMaintenanceRequestInput = {
   completionProofUrl?: string;
   finalCost?: number;
   vendorNotes?: string;
+  /** Each list replaces the stored photos (assigned vendor only). */
+  beforePhotoUrls?: string[];
+  afterPhotoUrls?: string[];
 };
+
+export type RepairAnswerInput =
+  { outcome: 'CONFIRMED' } | { outcome: 'DISPUTED'; reason: string; photoUrls?: string[] };
+
+export type RepairReviewInput =
+  | { action: 'APPROVE' }
+  | { action: 'REOPEN'; note?: string }
+  | { action: 'REASSIGN'; vendorId: string; note?: string };
+
+export type PlatformSettings = {
+  setupComplete: boolean;
+  autoCompleteMaintenanceOnInvoice: boolean;
+  requireTenantRepairConfirmation: boolean;
+  requireSecondPersonForTenantPayments: boolean;
+  requireSecondPersonForVendorPayments: boolean;
+  autopayChargingEnabled: boolean;
+  retentionEnabled: boolean;
+  retentionAfterTenancyDays: number;
+  retentionAfterRejectionDays: number;
+};
+
+/** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
+export type AdminPlatformSettings = PlatformSettings & {
+  deploymentAllows: { autopay: boolean; retention: boolean };
+};
+
+/** What a signed-in person needs to know about the payment rules (GET /settings/payment-rules). */
+export type PaymentRules = Pick<
+  PlatformSettings,
+  'requireSecondPersonForTenantPayments' | 'requireSecondPersonForVendorPayments'
+>;
 
 export type Vendor = {
   id: string;
@@ -318,6 +484,8 @@ export type Payment = {
   transactionRef: string | null;
   paidAt: string;
   notes: string | null;
+  /** The number printed on this payment's receipt (`/receipts/<id>`). */
+  receiptNumber: string;
 };
 
 export type AutoPayMandate = {
@@ -399,6 +567,22 @@ export type AccessCode = {
   validUntil: string | null;
   status: 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED';
   singleUse: boolean;
+};
+
+export type AccessLogEntry = {
+  id: string;
+  action: 'GRANTED' | 'DENIED' | 'EXPIRED_ATTEMPT' | 'REVOKED';
+  occurredAt: string;
+};
+
+export type AccessCodeDetail = AccessCode & { logs: AccessLogEntry[] };
+
+// POST /access-codes/verify: a code that does not exist answers { granted: false, reason: 'NOT_FOUND' }.
+export type AccessVerifyResult = {
+  granted: boolean;
+  action?: AccessLogEntry['action'];
+  reason?: 'NOT_FOUND';
+  guestName?: string | null;
 };
 
 export type CreateAccessCodeInput = {
@@ -873,4 +1057,102 @@ export type VendorDashboardSummary = {
     totalPaid: number;
   };
   rating: { average: number | null; count: number };
+};
+
+// PRD §5.1 / §5.2 / ISS-012 "Bank-Transfer Reconciliation"
+export type BankTransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type BankTransferSubmission = {
+  id: string;
+  invoiceId: string;
+  submittedById: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string | null;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string | null;
+  notes?: string | null;
+  status: BankTransferStatus;
+  reconciledById?: string | null;
+  reconciledAt?: string | null;
+  rejectionReason?: string | null;
+  paymentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+    type: string;
+    dueDate: string;
+  };
+  submittedBy?: { id: string; name: string; email: string };
+  reconciledBy?: { id: string; name: string; role: string } | null;
+  payment?: {
+    id: string;
+    amount: number;
+    paidAt: string;
+    transactionRef: string | null;
+    receiptNumber: string;
+  } | null;
+};
+
+export type SubmitBankTransferInput = {
+  invoiceId: string;
+  amount: number;
+  bankName: string;
+  senderAccountName: string;
+  senderAccountNumber?: string;
+  referenceNumber: string;
+  paymentDate: string;
+  proofFileUrl?: string;
+  notes?: string;
+};
+
+// PRD §5.4 / §5.5 / ISS-012 "Vendor Payouts"
+export type VendorPayoutStatus =
+  'PENDING_APPROVAL' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED' | 'FAILED';
+
+export type PayoutMethod = 'BANK_TRANSFER' | 'PAYSTACK_TRANSFER' | 'MANUAL';
+
+export type VendorPayout = {
+  id: string;
+  payoutNumber: string;
+  vendorId: string;
+  invoiceId?: string | null;
+  maintenanceRequestId?: string | null;
+  amount: number;
+  currency: string;
+  status: VendorPayoutStatus;
+  payoutMethod: PayoutMethod;
+  bankAccountId?: string | null;
+  reference?: string | null;
+  transferCode?: string | null;
+  failureReason?: string | null;
+  notes?: string | null;
+  initiatedById: string;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: { id: string; name: string; email: string; phone?: string | null };
+  bankAccount?: { id: string; bankName: string; accountName: string; accountNumber: string } | null;
+  invoice?: { id: string; invoiceNumber: string; amount: number; status: string } | null;
+  maintenanceRequest?: { id: string; title: string; status: string } | null;
+  initiatedBy?: { id: string; name: string; role: string };
+  approvedBy?: { id: string; name: string; role: string } | null;
+};
+
+export type InitiateVendorPayoutInput = {
+  vendorId: string;
+  invoiceId?: string;
+  maintenanceRequestId?: string;
+  amount: number;
+  bankAccountId?: string;
+  payoutMethod?: PayoutMethod;
+  notes?: string;
 };

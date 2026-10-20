@@ -3,6 +3,7 @@ import { DollarSign, Home, Users, AlertCircle, CheckCircle, KeyRound } from 'luc
 import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { AttentionCard } from './AttentionCard';
 
 interface DashboardProps {
   onNavigate: (page: Page) => void;
@@ -73,19 +74,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </p>
       </div>
 
+      <AttentionCard />
+
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <button
               key={stat.label}
               onClick={() => onNavigate({ type: 'breakdown', breakdownType: stat.breakdown })}
-              className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-6 text-left transition-all hover:border-blue-400 hover:shadow-md"
+              className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:border-blue-400 hover:shadow-md sm:p-6"
             >
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between sm:mb-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 transition-colors group-hover:bg-blue-100">
                   <Icon className="h-6 w-6 text-blue-600" />
                 </div>

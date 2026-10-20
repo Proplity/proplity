@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import {
+  Plus,
   Droplet,
   Zap,
   Wrench,
@@ -11,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
+import { RaiseRepairForm } from './RaiseRepairForm';
 import type { MaintenanceRequest } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
 
@@ -41,7 +44,7 @@ function Column({
   loading: boolean;
 }) {
   return (
-    <div className="min-w-[320px] rounded-lg bg-gray-50 p-4">
+    <div className="w-full min-w-0 rounded-lg bg-gray-50 p-4">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon className={`h-5 w-5 ${color}`} />
@@ -102,7 +105,11 @@ function Column({
               <div className="mb-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <User className="h-3 w-3" />
-                  {request.tenant?.name ?? 'Unknown tenant'}
+                  {request.tenant
+                    ? request.tenant.name
+                    : request.createdBy
+                      ? `Work order raised by ${request.createdBy.name}`
+                      : 'Work order (no tenant)'}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <MapPin className="h-3 w-3" />
@@ -138,7 +145,7 @@ function Column({
               <div className="flex gap-2">
                 <button
                   onClick={() => onNavigate({ type: 'maintenance-detail', requestId: request.id })}
-                  className="flex-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  className="flex-1 rounded bg-blue-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-blue-700 sm:py-1.5 sm:text-xs"
                 >
                   View Details
                 </button>
@@ -155,7 +162,8 @@ function Column({
 }
 
 export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
-  const { data: requests, loading, error } = useMaintenanceRequests();
+  const { data: requests, loading, error, refetch } = useMaintenanceRequests();
+  const [raising, setRaising] = useState(false);
 
   const newRequests = requests.filter((r) => r.status === 'SUBMITTED');
   const inProgress = requests.filter((r) => r.status === 'IN_PROGRESS' || r.status === 'SCHEDULED');
@@ -168,18 +176,37 @@ export function MaintenanceBoard({ onNavigate }: MaintenanceBoardProps) {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-1 text-2xl font-semibold">Maintenance Board</h1>
           <p className="text-gray-600">Kanban-style maintenance request management</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setRaising(true)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          Raise a repair
+        </button>
       </div>
+
+      {raising && (
+        <RaiseRepairForm
+          onClose={() => setRaising(false)}
+          onDone={(requestId) => {
+            setRaising(false);
+            refetch();
+            onNavigate({ type: 'maintenance-detail', requestId });
+          }}
+        />
+      )}
 
       {loading && <p className="text-sm text-gray-500">Loading requests…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-3">
         <Column
           title="New Requests"
           requests={newRequests}

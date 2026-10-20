@@ -36,7 +36,7 @@ export function featuredFields(property: Property) {
     bedrooms: cheapestUnit?.bedrooms ?? 0,
     bathrooms: cheapestUnit?.bathrooms ?? 0,
     sqft: cheapestUnit?.sqft ? `${cheapestUnit.sqft.toLocaleString()} sq ft` : null,
-    amenities: cheapestUnit?.amenities ?? [],
+    amenities: (cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:')),
     verified: property.moderationStatus === 'APPROVED',
   };
 }

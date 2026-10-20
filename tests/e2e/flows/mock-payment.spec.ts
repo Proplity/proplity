@@ -36,6 +36,7 @@ async function createUnpaidInvoiceForTenant(
   if (!lease) throw new Error('No active lease found for the seeded tenant');
 
   const invoiceRes = await request.post('/api/v1/invoices', {
+    headers: { origin: baseURL },
     data: {
       leaseId: lease.id,
       type: 'RENT',
@@ -82,7 +83,9 @@ test('paying through the mock checkout marks the invoice paid via the real webho
 
   const body = await page.evaluate(
     async (id) =>
-      (await (await fetch('/api/v1/invoices')).json()).data.find((i: { id: string }) => i.id === id),
+      (await (await fetch('/api/v1/invoices')).json()).data.find(
+        (i: { id: string }) => i.id === id,
+      ),
     invoice.id,
   );
   expect(body.status).toBe('PAID');
@@ -116,8 +119,40 @@ test('a simulated declined payment leaves the invoice unpaid', async ({
 
   const body = await page.evaluate(
     async (id) =>
-      (await (await fetch('/api/v1/invoices')).json()).data.find((i: { id: string }) => i.id === id),
+      (await (await fetch('/api/v1/invoices')).json()).data.find(
+        (i: { id: string }) => i.id === id,
+      ),
     invoice.id,
   );
   expect(body.status).toBe('UNPAID');
 });
+
+// Card payments say so when they cannot be used yet (no Paystack key, ISS-010); the answer is mocked
+// here so both states can be seen whatever the environment has configured.
+for (const card of [false, true]) {
+  test(`the tenant's rent button ${card ? 'is offered' : 'says card payments are not available yet'}`, async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    await createUnpaidInvoiceForTenant(request, baseURL!, 12_000, `E2E card availability ${card}`);
+    await page.route('**/api/v1/payments/availability', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { card } }),
+      }),
+    );
+    await loginAs(page, 'tenant');
+    const online = page.getByRole('button', { name: 'Pay Rent Online' });
+    const unavailable = page.getByRole('button', { name: 'Card Payment Not Available Yet' });
+    if (card) {
+      await expect(online).toBeEnabled();
+      await expect(unavailable).toHaveCount(0);
+    } else {
+      await expect(unavailable).toBeDisabled();
+      await expect(page.getByText('Card payments are not available yet.')).toBeVisible();
+      await expect(online).toHaveCount(0);
+    }
+  });
+}

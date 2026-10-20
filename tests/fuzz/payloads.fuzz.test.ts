@@ -29,13 +29,55 @@ describe('Fuzz Testing: Schema Validation and Payload Security', () => {
     { name: true, address: 12345, city: ['Lagos'], type: 'RESIDENTIAL', rentAmount: 'cheap' },
     { name: null, address: undefined, city: false },
     // Extreme / dangerous numeric anomalies
-    { name: 'Penthouse', address: '1 Broad St', city: 'Lagos', type: 'RESIDENTIAL', rentAmount: -5000, bedrooms: 3 },
-    { name: 'Penthouse', address: '1 Broad St', city: 'Lagos', type: 'RESIDENTIAL', rentAmount: NaN, bedrooms: 3 },
-    { name: 'Penthouse', address: '1 Broad St', city: 'Lagos', type: 'RESIDENTIAL', rentAmount: Infinity, bedrooms: 3 },
-    { name: 'Penthouse', address: '1 Broad St', city: 'Lagos', type: 'RESIDENTIAL', rentAmount: 1000, bedrooms: -1 },
-    { name: 'Penthouse', address: '1 Broad St', city: 'Lagos', type: 'RESIDENTIAL', rentAmount: 1000, bedrooms: 999999 },
+    {
+      name: 'Penthouse',
+      address: '1 Broad St',
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: -5000,
+      bedrooms: 3,
+    },
+    {
+      name: 'Penthouse',
+      address: '1 Broad St',
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: NaN,
+      bedrooms: 3,
+    },
+    {
+      name: 'Penthouse',
+      address: '1 Broad St',
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: Infinity,
+      bedrooms: 3,
+    },
+    {
+      name: 'Penthouse',
+      address: '1 Broad St',
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: 1000,
+      bedrooms: -1,
+    },
+    {
+      name: 'Penthouse',
+      address: '1 Broad St',
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: 1000,
+      bedrooms: 999999,
+    },
     // Length boundary violation
-    { name: 'A'.repeat(100_000), address: 'B'.repeat(100_000), city: 'Lagos', type: 'RESIDENTIAL', rentAmount: 5000, bedrooms: 2 },
+    {
+      name: 'A'.repeat(100_000),
+      address: 'B'.repeat(100_000),
+      city: 'Lagos',
+      type: 'RESIDENTIAL',
+      rentAmount: 5000,
+      bedrooms: 2,
+    },
     // Missing required fields
     { name: 'Estate' },
   ];
@@ -82,12 +124,7 @@ describe('Fuzz Testing: Schema Validation and Payload Security', () => {
   });
 
   it('handles completely malformed non-JSON request bodies gracefully', async () => {
-    const malformedBodies = [
-      '{ this is not valid json }',
-      '<<<XML>>>',
-      '\0\0\0\0',
-      '',
-    ];
+    const malformedBodies = ['{ this is not valid json }', '<<<XML>>>', '\0\0\0\0', ''];
 
     for (const body of malformedBodies) {
       const req = new NextRequest('http://localhost:3000/api/v1/properties', {

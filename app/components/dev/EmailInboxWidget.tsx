@@ -55,8 +55,6 @@ function Linkified({ text }: { text: string }) {
           <a
             key={i}
             href={normalized}
-            target="_blank"
-            rel="noopener noreferrer"
             className="font-medium break-all text-blue-600 underline hover:text-blue-800"
           >
             {normalized}
@@ -183,7 +181,13 @@ export function EmailInboxWidget() {
       )}
 
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => {
+            const next = !o;
+            if (next) refresh();
+            return next;
+          });
+        }}
         aria-label={open ? 'Close sent emails panel' : 'Open sent emails panel'}
         className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-xl transition-transform hover:scale-105"
       >

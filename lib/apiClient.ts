@@ -1,6 +1,9 @@
 import axios from 'axios';
+import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
+  AccessCodeDetail,
+  AccessVerifyResult,
   AdCampaign,
   AdminUser,
   Announcement,
@@ -27,6 +30,7 @@ import type {
   CreateMessageInput,
   CreatePropertyInput,
   CreateUnitInput,
+  UpdateUnitInput,
   CreateViewingInput,
   MergePropertyInput,
   UpdatePropertyInput,
@@ -44,8 +48,11 @@ import type {
   Invoice,
   Lease,
   LeaseSignature,
+  CreateScheduleInput,
   MaintenanceCategory,
   MaintenanceRequest,
+  MaintenanceSchedule,
+  UpdateScheduleInput,
   ManagerInviteCode,
   Message,
   Note,
@@ -59,9 +66,22 @@ import type {
   Subscription,
   Unit,
   UpdateMaintenanceRequestInput,
+  RepairAnswerInput,
+  RepairReviewInput,
+  PlatformSettings,
+  AdminPlatformSettings,
+  PaymentRules,
   Vendor,
   Violation,
+  BankTransferStatus,
+  BankTransferSubmission,
+  SubmitBankTransferInput,
+  VendorPayoutStatus,
+  VendorPayout,
+  InitiateVendorPayoutInput,
 } from './api/types';
+import type { UploadFolder } from '@/lib/fileRef';
+import type { Receipt } from '@/lib/receiptTypes';
 
 export const apiClient = axios.create({
   headers: {
@@ -71,6 +91,29 @@ export const apiClient = axios.create({
 });
 
 let refreshPromise: Promise<boolean> | null = null;
+
+// A 401 that comes back after the person has left the page that asked used to send the whole tab
+// to /login: a slow request left behind by the page they had just signed out of threw a visitor
+// off the public home page. Only the page that made the request may be sent to the sign-in screen.
+const currentPath = () => (typeof window === 'undefined' ? '' : window.location.pathname);
+
+function sendToLogin(startedOn: string) {
+  if (typeof window === 'undefined' || window.location.pathname !== startedOn) return;
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
+  window.location.href = '/login';
+}
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** The page the request was made from (see `sendToLogin`). */
+    startedOn?: string;
+  }
+}
+
+apiClient.interceptors.request.use((config) => {
+  config.startedOn ??= currentPath();
+  return config;
+});
 
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
@@ -100,9 +143,8 @@ apiClient.interceptors.response.use(
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         return apiClient(originalRequest);
-      } else if (typeof window !== 'undefined') {
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
-        window.location.href = '/login';
+      } else {
+        sendToLogin(originalRequest.startedOn ?? currentPath());
       }
     }
 
@@ -114,15 +156,15 @@ apiClient.interceptors.response.use(
  * Backward-compatible fetch wrapper using single refresh deduplication logic
  */
 export async function apiFetch(url: string, options: RequestInit = {}) {
+  const startedOn = currentPath();
   const response = await fetch(url, options);
 
   if (response.status === 401 && !url.includes('/api/v1/auth/refresh')) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return fetch(url, options);
-    } else if (typeof window !== 'undefined') {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
-      window.location.href = '/login';
+    } else {
+      sendToLogin(startedOn);
     }
   }
 
@@ -160,6 +202,8 @@ export const api = {
       }),
     createUnit: (propertyId: string, body: CreateUnitInput) =>
       apiClient.post<{ data: Unit }>(`/api/v1/properties/${propertyId}/units`, body),
+    updateUnit: (propertyId: string, unitId: string, body: UpdateUnitInput) =>
+      apiClient.patch<{ data: Unit }>(`/api/v1/properties/${propertyId}/units/${unitId}`, body),
     importUnits: (propertyId: string, file: File) => {
       const formData = new FormData();
       formData.append('file', file);
@@ -176,6 +220,11 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    viewingAvailability: (propertyId: string, date: string) =>
+      apiClient.get<{ data: { date: string; taken: string[] } }>(
+        `/api/v1/properties/${propertyId}/viewings/availability`,
+        { params: { date } },
+      ),
     listViewings: (propertyId: string) =>
       apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
     updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
@@ -284,7 +333,29 @@ export const api = {
     update: (id: string, body: UpdateMaintenanceRequestInput) =>
       apiClient.patch<{ data: MaintenanceRequest }>(`/api/v1/maintenance/requests/${id}`, body),
     createRequest: (body: CreateMaintenanceRequestInput) =>
-      apiClient.post<{ data: unknown }>('/api/v1/maintenance/requests', body),
+      apiClient.post<{ data: { id: string } }>('/api/v1/maintenance/requests', body),
+    schedules: {
+      list: (params?: { page?: number; limit?: number }) =>
+        apiClient.get<Paginated<MaintenanceSchedule>>('/api/v1/maintenance/schedules', { params }),
+      create: (body: CreateScheduleInput) =>
+        apiClient.post<{ data: MaintenanceSchedule }>('/api/v1/maintenance/schedules', body),
+      update: (id: string, body: UpdateScheduleInput) =>
+        apiClient.patch<{ data: MaintenanceSchedule }>(`/api/v1/maintenance/schedules/${id}`, body),
+      remove: (id: string) =>
+        apiClient.delete<{ data: { id: string } }>(`/api/v1/maintenance/schedules/${id}`),
+    },
+    rateVendor: (id: string, body: { rating: number; comment?: string }) =>
+      apiClient.post<{ data: unknown }>(`/api/v1/maintenance/requests/${id}/rating`, body),
+    answerRepair: (id: string, body: RepairAnswerInput) =>
+      apiClient.post<{ data: MaintenanceRequest }>(
+        `/api/v1/maintenance/requests/${id}/confirmation`,
+        body,
+      ),
+    reviewRepair: (id: string, body: RepairReviewInput) =>
+      apiClient.post<{ data: MaintenanceRequest }>(
+        `/api/v1/maintenance/requests/${id}/review`,
+        body,
+      ),
   },
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
@@ -319,31 +390,23 @@ export const api = {
     breakdown: () => apiClient.get<{ data: OwnerBreakdownSummary }>('/api/v1/dashboard/breakdown'),
     mineTenant: () => apiClient.get<{ data: TenantDashboardSummary }>('/api/v1/dashboard/mine'),
     mineVendor: () => apiClient.get<{ data: VendorDashboardSummary }>('/api/v1/dashboard/mine'),
+    attention: () => apiClient.get<{ data: AttentionItem[] }>('/api/v1/dashboard/attention'),
   },
   invoices: {
     list: (params?: { type?: string; status?: string; page?: number; limit?: number }) =>
       apiClient.get<Paginated<Invoice>>('/api/v1/invoices', { params }),
     create: (body: CreateInvoiceInput) =>
       apiClient.post<{ data: Invoice }>('/api/v1/invoices', body),
-    recordPayment: (
-      invoiceId: string,
-      body: {
-        amount: number;
-        method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
-        reference?: string;
-        notes?: string;
-      },
-    ) =>
-      apiClient.post<{ data: { status: string; paidTotal: number } }>(
-        `/api/v1/invoices/${invoiceId}/payments`,
-        body,
-      ),
   },
   accessCodes: {
     list: (unitId: string) =>
       apiClient.get<{ data: AccessCode[] }>('/api/v1/access-codes', { params: { unitId } }),
     create: (body: CreateAccessCodeInput) =>
       apiClient.post<{ data: AccessCode }>('/api/v1/access-codes', body),
+    get: (id: string) => apiClient.get<{ data: AccessCodeDetail }>(`/api/v1/access-codes/${id}`),
+    revoke: (id: string) => apiClient.delete<{ data: AccessCode }>(`/api/v1/access-codes/${id}`),
+    verify: (body: { unitId: string; code: string }) =>
+      apiClient.post<{ data: AccessVerifyResult }>('/api/v1/access-codes/verify', body),
   },
   conversations: {
     list: () => apiClient.get<{ data: Conversation[] }>('/api/v1/conversations'),
@@ -400,15 +463,13 @@ export const api = {
         >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
-      get: () =>
-        apiClient.get<{
-          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
-        }>('/api/v1/admin/settings'),
-      update: (data: { autoCompleteMaintenanceOnInvoice: boolean }) =>
-        apiClient.patch<{
-          data: { setupComplete: boolean; autoCompleteMaintenanceOnInvoice: boolean };
-        }>('/api/v1/admin/settings', data),
+      get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
+      update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
+        apiClient.patch<{ data: AdminPlatformSettings }>('/api/v1/admin/settings', data),
     },
+  },
+  settings: {
+    paymentRules: () => apiClient.get<{ data: PaymentRules }>('/api/v1/settings/payment-rules'),
   },
   notifications: {
     list: (params?: { limit?: number; cursor?: string }) =>
@@ -424,6 +485,7 @@ export const api = {
       apiClient.delete<{ data: { id: string } }>(`/api/v1/notifications/${id}`),
   },
   payments: {
+    availability: () => apiClient.get<{ data: { card: boolean } }>('/api/v1/payments/availability'),
     initialize: (invoiceId: string) =>
       apiClient.post<{ data: { authorizationUrl: string; reference: string } }>(
         '/api/v1/payments/initialize',
@@ -431,6 +493,8 @@ export const api = {
           invoiceId,
         },
       ),
+    receipt: (paymentId: string) =>
+      apiClient.get<{ data: Receipt }>(`/api/v1/payments/${paymentId}/receipt`),
     authorization: (leaseId: string) =>
       apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
         params: { leaseId },
@@ -447,12 +511,7 @@ export const api = {
     },
   },
   uploads: {
-    sign: (body: {
-      folder: 'maintenance-requests' | 'applications' | 'profile' | 'properties';
-      fileName: string;
-      contentType: string;
-      size: number;
-    }) =>
+    sign: (body: { folder: UploadFolder; fileName: string; contentType: string; size: number }) =>
       apiClient.post<{ data: { file: { id: string; url: string }; plan: UploadPlan } }>(
         '/api/v1/uploads/sign',
         body,
@@ -502,5 +561,49 @@ export const api = {
       apiClient.post<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads`, body),
     cancel: (propertyId: string, adId: string) =>
       apiClient.patch<{ data: AdCampaign }>(`/api/v1/properties/${propertyId}/ads/${adId}`),
+  },
+  bankTransfers: {
+    list: (params?: {
+      status?: BankTransferStatus;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) => apiClient.get<Paginated<BankTransferSubmission>>('/api/v1/bank-transfers', { params }),
+    get: (id: string) =>
+      apiClient.get<{ data: BankTransferSubmission }>(`/api/v1/bank-transfers/${id}`),
+    submit: (body: SubmitBankTransferInput) =>
+      apiClient.post<{ data: BankTransferSubmission }>('/api/v1/bank-transfers', body),
+    reconcile: (
+      id: string,
+      body: { action: 'APPROVE' | 'REJECT'; notes?: string; rejectionReason?: string },
+    ) =>
+      apiClient.post<{
+        data: {
+          submission: BankTransferSubmission;
+          payment?: unknown;
+          newStatus?: string;
+        };
+      }>(`/api/v1/bank-transfers/${id}/reconcile`, body),
+  },
+  vendorPayouts: {
+    list: (params?: {
+      status?: VendorPayoutStatus;
+      vendorId?: string;
+      invoiceId?: string;
+      page?: number;
+      limit?: number;
+    }) => apiClient.get<Paginated<VendorPayout>>('/api/v1/vendor-payouts', { params }),
+    get: (id: string) => apiClient.get<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`),
+    initiate: (body: InitiateVendorPayoutInput) =>
+      apiClient.post<{ data: VendorPayout }>('/api/v1/vendor-payouts', body),
+    patch: (
+      id: string,
+      body: {
+        action: 'APPROVE' | 'PROCESS' | 'REJECT';
+        reason?: string;
+        externalReference?: string;
+        manualNote?: string;
+      },
+    ) => apiClient.patch<{ data: VendorPayout }>(`/api/v1/vendor-payouts/${id}`, body),
   },
 };

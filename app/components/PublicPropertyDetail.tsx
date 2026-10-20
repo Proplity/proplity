@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useProperty, useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionsEnabled } from '@/lib/subscriptions';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
@@ -78,7 +79,7 @@ function NeighbourhoodModal({
             onClick={onUpgrade}
             className="flex-1 rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-700"
           >
-            Upgrade Now
+            Upgrade (Incoming Feature)
           </button>
         </div>
       </div>
@@ -171,11 +172,14 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
     );
   }
 
-  // A property can have multiple units at different prices -- the booking
-  // widget uses the cheapest one, same convention as PropertyDiscovery's card.
-  const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
+  // A property can have multiple units at different prices -- only public units
+  // are visible or factored into marketplace pricing (units marked visibility:private are internal-only)
+  const publicUnits = property.units.filter((u) => !u.amenities?.includes('visibility:private'));
+  const visibleUnits = publicUnits.length > 0 ? publicUnits : property.units;
+  const cheapestUnit = [...visibleUnits].sort((a, b) => a.rentAmount - b.rentAmount)[0];
   const yearlyAmount = cheapestUnit?.rentAmount ?? 0;
   const freq = cheapestUnit?.listedPaymentFrequency ?? 'ANNUAL';
+  const serviceCharge = cheapestUnit?.serviceCharge ?? 0;
   const priceLabel = `₦${yearlyAmount.toLocaleString()}`;
   const monthly = `₦${Math.round(yearlyAmount / 12).toLocaleString()}`;
   const verified = property.moderationStatus === 'APPROVED';
@@ -253,12 +257,14 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
               <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900">
                 About Us
               </Link>
-              <Link
-                href="/pricing"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Pricing
-              </Link>
+              {subscriptionsEnabled() && (
+                <Link
+                  href="/pricing"
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  Pricing
+                </Link>
+              )}
             </div>
             <Link
               href={dashboardHref}
@@ -365,9 +371,11 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                     <CheckCircle className="h-3.5 w-3.5" /> Verified Listing
                   </span>
                 )}
-                <span className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                  <Maximize2 className="h-3.5 w-3.5" /> Virtual Tour
-                </span>
+                {property.video360Url && (
+                  <span className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                    <Maximize2 className="h-3.5 w-3.5" /> Virtual Tour
+                  </span>
+                )}
                 <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700">
                   ID #{propertyId.slice(0, 8).toUpperCase()}
                 </span>
@@ -423,18 +431,21 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
             <div>
               <h2 className="mb-4 text-lg font-bold text-gray-900">Amenities & Features</h2>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {(cheapestUnit?.amenities ?? []).map((label) => {
-                  const Icon = CheckCircle;
-                  return (
-                    <div key={label} className="flex items-center gap-2.5 text-sm text-gray-700">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                        <Icon className="h-4 w-4 text-blue-600" />
+                {(cheapestUnit?.amenities ?? [])
+                  .filter((a) => !a.startsWith('visibility:'))
+                  .map((label) => {
+                    const Icon = CheckCircle;
+                    return (
+                      <div key={label} className="flex items-center gap-2.5 text-sm text-gray-700">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                          <Icon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        {label}
                       </div>
-                      {label}
-                    </div>
-                  );
-                })}
-                {(cheapestUnit?.amenities ?? []).length === 0 && (
+                    );
+                  })}
+                {(cheapestUnit?.amenities ?? []).filter((a) => !a.startsWith('visibility:'))
+                  .length === 0 && (
                   <p className="text-sm text-gray-400">No amenities listed yet.</p>
                 )}
               </div>
@@ -497,18 +508,20 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                   <span>Base rent</span>
                   <span className="font-medium text-gray-800">{priceLabel}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Agency fee (5%)</span>
-                  <span className="font-medium text-gray-800">₦60,000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Legal fee</span>
-                  <span className="font-medium text-gray-800">₦30,000</span>
-                </div>
+                {serviceCharge > 0 && (
+                  <div className="flex justify-between">
+                    <span>Service charge</span>
+                    <span className="font-medium text-gray-800">
+                      ₦{serviceCharge.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-2 flex justify-between border-t border-gray-200 pt-2">
-                  <span className="font-semibold text-gray-700">Total</span>
+                  <span className="font-semibold text-gray-700">
+                    Total per {freq === 'MONTHLY' ? 'month' : 'year'}
+                  </span>
                   <span className="font-bold text-gray-900">
-                    ₦{(yearlyAmount + 90000).toLocaleString()}
+                    ₦{(yearlyAmount + serviceCharge).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -542,7 +555,14 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
               {/* Neighbourhood report */}
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <button
-                  onClick={() => setShowNeighModal(true)}
+                  onClick={() => {
+                    if (subscriptionsEnabled()) {
+                      setShowNeighModal(true);
+                    } else {
+                      const el = document.getElementById('neighbourhood');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="group flex w-full items-center justify-between rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 transition-colors hover:bg-violet-100"
                 >
                   <div className="flex items-center gap-2">
@@ -609,19 +629,21 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="bg-blue-700 px-6 py-14 text-center text-white">
-        <h2 className="mb-2 text-2xl font-bold">Ready to Transform Your Property Management?</h2>
-        <p className="mb-6 text-sm text-blue-200">
-          Join thousands of property managers already using Proplity.
-        </p>
-        <Link
-          href="/login"
-          className="rounded-xl bg-white px-7 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
-        >
-          Start Free Trial →
-        </Link>
-      </section>
+      {/* ── CTA ── (for visitors only; a signed-in user already has the Apply button) */}
+      {!user && (
+        <section className="bg-blue-700 px-6 py-14 text-center text-white">
+          <h2 className="mb-2 text-2xl font-bold">Like what you see?</h2>
+          <p className="mb-6 text-sm text-blue-200">
+            Create a free tenant account to book a viewing and apply for this property.
+          </p>
+          <Link
+            href="/register"
+            className="rounded-xl bg-white px-7 py-3 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
+          >
+            Create a Free Account →
+          </Link>
+        </section>
+      )}
 
       {/* ── Footer ── */}
       <footer className="bg-gray-900 px-6 py-12 text-gray-400">
@@ -635,7 +657,9 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
           {[
             {
               heading: 'Product',
-              links: ['Features', 'Pricing', 'Blog', 'Integrations'],
+              links: subscriptionsEnabled()
+                ? ['Features', 'Pricing', 'Blog', 'Integrations']
+                : ['Features', 'Blog', 'Integrations'],
             },
             { heading: 'Company', links: ['About Us', 'Careers', 'Contact'] },
             { heading: 'Legal', links: ['Privacy Policy', 'Terms of Service'] },

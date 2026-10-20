@@ -56,7 +56,14 @@ const ICON_STYLES: Record<BreakdownType, { bg: string; color: string }> = {
   renewals: { bg: 'bg-purple-50', color: 'text-purple-600' },
 };
 
-export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardBreakdownPageProps) {
+export function DashboardBreakdownPage({
+  breakdownType: rawType,
+  onNavigate,
+}: DashboardBreakdownPageProps) {
+  const breakdownType: BreakdownType =
+    (rawType as string) === 'revenue' || !ICONS[rawType as BreakdownType]
+      ? 'rent'
+      : (rawType as BreakdownType);
   const [tenantTab, setTenantTab] = useState<'active' | 'terminated'>('active');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -357,7 +364,7 @@ export function DashboardBreakdownPage({ breakdownType, onNavigate }: DashboardB
                   </td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      className={`rounded-full px-3 py-2 text-xs font-medium sm:px-2.5 sm:py-1 ${
                         status === 'Fully Occupied'
                           ? 'bg-green-100 text-green-700'
                           : status === 'Partially Occupied'

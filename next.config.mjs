@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Do not advertise the framework in every response.
+  poweredByHeader: false,
   // Next 16 enforces a single `next dev` server per distDir (a lockfile at
   // <distDir>/lock) -- so the automated test suite's spawned server sets
   // NEXT_TEST_DIST_DIR to run out of a separate build directory, letting it
@@ -21,8 +23,25 @@ const nextConfig = {
   // file and panics on. `serverExternalPackages` above already keeps Prisma
   // unbundled and traced correctly.
   images: {
-    // Property images are loaded from external URLs (e.g. Unsplash) via <img>.
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    // Remote listing images are shown with plain <img>; the only next/image use is a
+    // local file. A wildcard here made /_next/image an open proxy to any https host.
+    remotePatterns: [],
+  },
+  async headers() {
+    const security = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+      // Not a full script policy (the app relies on inline scripts); these three stop
+      // framing, base-tag and form-target tricks and plugin content.
+      {
+        key: 'Content-Security-Policy',
+        value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'",
+      },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+    ];
+    return [{ source: '/:path*', headers: security }];
   },
 };
 

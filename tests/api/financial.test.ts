@@ -106,7 +106,10 @@ describe('invoices: create', () => {
     const tenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
     const otherVendor = await createUser(Role.VENDOR);
-    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    const request = await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      afterPhotoUrls: ['/api/v1/files/after-photo'],
+    });
     const vendorCookie = await authCookie(vendor.id, vendor.role);
 
     const wrongType = await apiFetch('/api/v1/invoices', {
@@ -394,6 +397,28 @@ describe('payments: initialize', () => {
   // would be a real network call from inside an automated test.
 });
 
+describe('payments: card availability (ISS-010)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('tells a signed-in person whether cards can be used, and nobody else', async () => {
+    const tenant = await createUser(Role.TENANT);
+    const anonymous = await apiFetch('/api/v1/payments/availability');
+    expect(anonymous.status).toBe(401);
+
+    const res = await apiFetch('/api/v1/payments/availability', {
+      cookie: await authCookie(tenant.id, tenant.role),
+    });
+    expect(res.status).toBe(200);
+    expect(typeof res.body.data.card).toBe('boolean');
+    // The same answer the payment start-up gives: with a key or the mock gateway it is on.
+    const keyed = Boolean(process.env.PAYSTACK_SECRET_KEY);
+    const mock = process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED === 'true';
+    expect(res.body.data.card).toBe(keyed || mock);
+  });
+});
+
 describe('payments: webhook (HMAC-SHA512 verification)', () => {
   beforeAll(async () => {
     await resetDb();
@@ -483,7 +508,11 @@ describe('vendor invoices: who pays, one per job (ISS-051)', () => {
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     const vendor = await createUser(Role.VENDOR);
-    const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
+    const request = await createMaintenanceRequest(unit.id, tenant.id, {
+      vendorId: vendor.id,
+      // A vendor's invoice closes the job, which needs photos of the finished work.
+      afterPhotoUrls: ['/api/v1/files/after-photo'],
+    });
     return { manager, landlord, tenant, vendor, request };
   }
 
@@ -542,17 +571,30 @@ describe('vendor invoices: who pays, one per job (ISS-051)', () => {
   it('does not create a second invoice when completing a job that already has one', async () => {
     const { vendor, request } = await setup();
     const cookie = await authCookie(vendor.id, vendor.role);
-    await testPrisma.systemSettings
-      .updateMany({ data: { autoCompleteMaintenanceOnInvoice: false } })
-      .catch(() => undefined);
-    expect((await post(cookie, request.id, 4000)).status).toBe(201);
-    const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
-      method: 'PATCH',
-      cookie,
-      body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+    // Auto-complete off, so the invoice alone does not close the job. (updateMany would do nothing
+    // when the settings row does not exist yet, which left auto-complete on.)
+    await testPrisma.systemSettings.upsert({
+      where: { id: 'global' },
+      update: { autoCompleteMaintenanceOnInvoice: false },
+      create: { id: 'global', autoCompleteMaintenanceOnInvoice: false },
     });
-    expect(done.status).toBe(200);
-    expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(1);
+    try {
+      expect((await post(cookie, request.id, 4000)).status).toBe(201);
+      const done = await apiFetch(`/api/v1/maintenance/requests/${request.id}`, {
+        method: 'PATCH',
+        cookie,
+        body: { status: 'COMPLETED', completionProofUrl: '/proof.jpg', finalCost: 4000 },
+      });
+      expect(done.status).toBe(200);
+      expect(await testPrisma.invoice.count({ where: { maintenanceRequestId: request.id } })).toBe(
+        1,
+      );
+    } finally {
+      await testPrisma.systemSettings.update({
+        where: { id: 'global' },
+        data: { autoCompleteMaintenanceOnInvoice: true },
+      });
+    }
   });
 });
 

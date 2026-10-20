@@ -102,6 +102,12 @@ export function ProplityGuideClient() {
         {/* ROLE JUMP PILLS */}
         <nav className="hidden items-center gap-1 overflow-x-auto text-xs font-medium lg:flex">
           <a
+            href="#all-features"
+            className="rounded-md px-2.5 py-1 font-semibold text-blue-400 transition hover:bg-slate-800 hover:text-blue-300"
+          >
+            📋 All Features
+          </a>
+          <a
             href="#setup"
             className="rounded-md px-2.5 py-1 text-slate-300 transition hover:bg-slate-800 hover:text-white"
           >
@@ -154,13 +160,14 @@ export function ProplityGuideClient() {
         {/* RIGHT ACTIONS */}
         <div className="flex items-center gap-2">
           <a
-            href="/docs/proplity-step-by-step-role-guide.pdf"
-            download="proplity-step-by-step-role-guide.pdf"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-600/30 px-3 py-1.5 text-xs font-semibold text-indigo-300 shadow-sm transition hover:bg-indigo-600/50"
-            title="Download complete high-res 88-page PDF guide"
+            href="/userflow-video.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-600/30 px-3 py-1.5 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/50"
+            title="Watch complete master userflow video walkthrough (one continuous journey, 40m 37s)"
           >
-            <span>📥</span>
-            <span>Download PDF</span>
+            <span>🎥</span>
+            <span>Watch Video</span>
           </a>
 
           <Link
