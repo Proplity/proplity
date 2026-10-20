@@ -68,6 +68,7 @@ are configured for this environment before treating it as a defect.
       that page (not the generic dashboard); then idle 15+ minutes, reload a
       dashboard page, and confirm you're returned to it
 - [ ] Log in / log out
+- [ ] Sign out of a dashboard and, straight away, go to the home page and open a listing: you stay on the public pages (no sudden jump to the sign-in screen)
 - [ ] Forgot password — request a reset link, set a new password
 - [ ] First-time setup (one-time only, your IT/deployer does this once) —
       create the very first admin account when the app is brand new
@@ -274,13 +275,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 566 tests across 48 files under
-  `tests/` (481 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 85 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 570 tests across 49 files under
+  `tests/` (481 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 89 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (85 tests across 15 files, executes in ~2.8s without DB drops).
+  (89 tests across 16 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).

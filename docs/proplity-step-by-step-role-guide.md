@@ -256,7 +256,9 @@ Every action — from paying rent to submitting a repair request to approving a 
 143. **Standalone Mobile Display Mode**: Launches as an independent app without mobile browser URL bars or browser controls.
 144. **Floating Mobile Bottom Tab Bar**: Shows the top 3 role-specific tabs plus an expandable "More" sheet containing every remaining feature (ISS-026).
 145. **Mobile Admin Slide-Over Drawer**: Collapsible slide-over drawer navigation tailored for admin management on compact touchscreens.
-146. **Touch-Target Optimization**: Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.
+146. **Touch-Target Optimization**: Buttons, filter pills and switches are at least 36px high on a phone (a switch keeps its look but has a larger touch area), with touch scrolling momentum and mobile form inputs (ISS-130).
+147. **Layout Regression Guard**: Fails any page that scrolls sideways, cuts its content off, or scrolls sideways inside the dashboard main area at 320, 390 and 768px (`layout.spec.ts`, ISS-125 to ISS-130).
+148. **Sign-In Redirect Stays on the Page That Asked**: When a request fails because the session has ended, only the page that made it is sent to the sign-in screen; a slow request left behind by a page you have just signed out of can no longer pull you off the public home page (`lib/apiClient.ts`, ISS-132).
 
 ---
 
@@ -2169,6 +2171,12 @@ On a phone the sidebar becomes a bottom tab bar. Items that do not fit move into
 - Tab bar and the Quick Actions grid are sized for thumbs.
 - The More sheet holds the remaining pages for the role.
 - Long pages such as a property stack into one column.
+- Tables become one card per row, with the column name beside each value, so nothing has to scroll sideways.
+- Rows of badges, buttons and filter pills wrap onto the next line instead of running off the screen. The tab rows in Reports and Account Settings scroll inside themselves.
+- A tenant record stacks its header on a phone: the email wraps and the Rent Paid and risk badges stay visible.
+- The repair board shows one column on a phone, two from tablet width (768 px) and three on a wide laptop screen (1280 px).
+- Buttons, filter pills and switches are at least 36 px high on a phone. A switch looks the same but has a larger area to touch.
+- This guide fits a phone too: wide tables scroll inside themselves and long addresses wrap.
 
 **Screenshots:**
 
