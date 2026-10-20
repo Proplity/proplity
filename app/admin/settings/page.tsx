@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ClipboardCheck, Loader2, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import {
+  ClipboardCheck,
+  Loader2,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Wrench,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { Switch } from '@/app/components/ui/switch';
@@ -11,6 +17,8 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [autoComplete, setAutoComplete] = useState(true);
   const [confirmRepairs, setConfirmRepairs] = useState(true);
+  const [secondPersonTenant, setSecondPersonTenant] = useState(true);
+  const [secondPersonVendor, setSecondPersonVendor] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,6 +28,8 @@ export default function AdminSettingsPage() {
         if (cancelled) return;
         setAutoComplete(res.data.data.autoCompleteMaintenanceOnInvoice);
         setConfirmRepairs(res.data.data.requireTenantRepairConfirmation);
+        setSecondPersonTenant(res.data.data.requireSecondPersonForTenantPayments);
+        setSecondPersonVendor(res.data.data.requireSecondPersonForVendorPayments);
       })
       .catch(() => {
         if (!cancelled) toast.error('Failed to load platform settings.');
@@ -41,6 +51,25 @@ export default function AdminSettingsPage() {
       toast.success('Platform settings updated.');
     } catch {
       setAutoComplete(previous);
+      toast.error('Failed to update setting. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSecondPersonToggle = async (
+    key: 'requireSecondPersonForTenantPayments' | 'requireSecondPersonForVendorPayments',
+    set: (value: boolean) => void,
+    previous: boolean,
+    checked: boolean,
+  ) => {
+    set(checked);
+    setSaving(true);
+    try {
+      await api.admin.settings.update({ [key]: checked });
+      toast.success('Platform settings updated.');
+    } catch {
+      set(previous);
       toast.error('Failed to update setting. Please try again.');
     } finally {
       setSaving(false);
@@ -129,6 +158,77 @@ export default function AdminSettingsPage() {
             disabled={saving}
             onCheckedChange={handleConfirmToggle}
             aria-label="Ask tenants to confirm finished repairs"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+              <ShieldCheck className="h-4.5 w-4.5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">
+                Second person confirms what a tenant is recorded as paying
+              </p>
+              <p className="mt-1 max-w-xl text-sm text-gray-600">
+                When on (default), cash or a transfer that the property team records on a
+                tenant&apos;s record does not count until someone other than the person who entered
+                it confirms it on Bank Transfers. Only then is the invoice paid and a receipt
+                issued. Turn this off for a small property with one person on the team: their entry
+                counts at once (still logged, with the receipt). A tenant recording their own
+                transfer is always confirmed by the team.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={secondPersonTenant}
+            disabled={saving}
+            onCheckedChange={(checked) =>
+              handleSecondPersonToggle(
+                'requireSecondPersonForTenantPayments',
+                setSecondPersonTenant,
+                secondPersonTenant,
+                checked,
+              )
+            }
+            aria-label="Second person confirms what a tenant is recorded as paying"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+              <ShieldCheck className="h-4.5 w-4.5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">
+                Second person confirms what is paid to a vendor
+              </p>
+              <p className="mt-1 max-w-xl text-sm text-gray-600">
+                When on (default), a payment to a vendor that the property team records by hand (a
+                transfer or cash, from the repair&apos;s Cost Tracking card) does not count until
+                someone other than the person who entered it confirms it. Turn this off and the
+                recorder&apos;s own entry counts at once (still logged, with the receipt and the
+                vendor told). Paying a vendor by card is not affected.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={secondPersonVendor}
+            disabled={saving}
+            onCheckedChange={(checked) =>
+              handleSecondPersonToggle(
+                'requireSecondPersonForVendorPayments',
+                setSecondPersonVendor,
+                secondPersonVendor,
+                checked,
+              )
+            }
+            aria-label="Second person confirms what is paid to a vendor"
           />
         </div>
       </div>

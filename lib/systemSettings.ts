@@ -10,5 +10,7 @@ export async function getSystemSettings() {
     setupComplete: settings?.setupComplete ?? false,
     autoCompleteMaintenanceOnInvoice: settings?.autoCompleteMaintenanceOnInvoice ?? true,
     requireTenantRepairConfirmation: settings?.requireTenantRepairConfirmation ?? true,
+    requireSecondPersonForTenantPayments: settings?.requireSecondPersonForTenantPayments ?? true,
+    requireSecondPersonForVendorPayments: settings?.requireSecondPersonForVendorPayments ?? true,
   };
 }
