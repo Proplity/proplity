@@ -159,7 +159,7 @@ body {
 /* SCREENSHOTS - ENLARGED DISPLAY */
 .screenshot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
   gap: 24px;
   margin: 24px 0 32px 0;
 }
@@ -382,7 +382,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px) { .main { min-width: 0; overflow-wrap: anywhere; } .main table { display: block; max-width: 100%; overflow-x: auto; } .main pre { max-width: 100%; overflow-x: auto; }
   .sidebar { display: none; }
   .main { padding: 24px 20px; }
   .resp-grid { grid-template-columns: 1fr; }
@@ -667,7 +667,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">15 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Dynamic Homepage Hero & Quick Stats</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Showcases real platform rental metrics, quick call-to-action cards, and role onboarding buttons.</div>
@@ -754,7 +754,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">20 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Role Self-Registration Flow</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Role-gated account creation for Tenants, Landlords, Property Managers, and Service Providers.</div>
@@ -866,7 +866,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">18 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Tenant Dashboard Command Center</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Personalized home screen showing active lease terms, current unit, pending bills, and quick actions.</div>
@@ -968,7 +968,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">15 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Landlord Executive Financial Dashboard</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">KPI summary: Total Properties, Occupancy Rate, Total Rent Roll, Revenue Collected, and Overdue Balances.</div>
@@ -1055,7 +1055,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">18 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Manager Operations Command Center</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">The <b>Needs your attention</b> list at the top of the dashboard: applications and viewing requests, repairs with no vendor, vendor invoices to pay, overdue rent, leases to sign or ending, listings needing changes and unread messages, each linking to where it is handled. Every role has the same list.</div>
@@ -1167,7 +1167,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">12 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Trade-Specific Vendor Registration</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Collects business name, CAC business number, primary trade categories, and coverage zones.</div>
@@ -1244,7 +1244,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">14 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Super Admin Overview Command Center</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Platform-wide overview (/admin) featuring global counts for properties, units, users, revenue, and active leases.</div>
@@ -1326,7 +1326,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">14 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Paystack Online Checkout Initialization</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Initializes secure Paystack payments, returning authorization URLs and tracking payment session states.</div>
@@ -1408,7 +1408,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">12 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Multi-Provider Storage Driver Abstraction</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Pluggable StorageDriver supporting Cloudinary, AWS S3-compatible, Vercel Blob, ImageKit, and Local Disk.</div>
@@ -1480,7 +1480,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">8 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Installable Progressive Web App (PWA)</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Next.js metadata manifest (app/manifest.ts) with theme colors, names, and 192px/512px app icons.</div>
@@ -1532,7 +1532,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">10 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Role-to-Role In-App Messaging Portal</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Real-time conversation portal (/dashboard/messages) between tenants, landlords, managers, and vendors.</div>
@@ -1594,7 +1594,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </h4>
       <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);">10 Features</span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 12px;">
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">10 Idempotent Scheduled Background Workers</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Rent Invoicer, Overdue Flagger, Autopay Charger, Maintenance Dispatcher, Access Code Janitor, Payment Scorer, Property Scorer, Retention, Storage Janitor, and Cron Fanout.</div>

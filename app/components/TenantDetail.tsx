@@ -517,31 +517,33 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-500 text-3xl font-semibold text-white">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-500 text-2xl font-semibold text-white sm:h-20 sm:w-20 sm:text-3xl">
               {tenant.name.charAt(0)}
             </div>
-            <div>
-              <h1 className="mb-2 text-2xl font-semibold">{tenant.name}</h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  {tenant.email}
+            <div className="min-w-0">
+              <h1 className="mb-2 text-2xl font-semibold break-words">{tenant.name}</h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="break-all">{tenant.email}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Phone className="h-4 w-4" />
+                  <Phone className="h-4 w-4 shrink-0" />
                   {tenant.phoneNumber ?? 'N/A'}
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-sm text-gray-600">
-                <MapPin className="h-4 w-4" />
-                {property ? `${property.name} · Unit ${lease.unit?.unitNumber}` : 'N/A'}
+              <div className="mt-2 flex items-start gap-1 text-sm text-gray-600">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {property ? `${property.name} · Unit ${lease.unit?.unitNumber}` : 'N/A'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span
               className={`rounded-full px-3 py-1 text-sm font-medium ${
                 rentPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
