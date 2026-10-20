@@ -6,8 +6,17 @@ async function loginAndExpireAccessToken(page: import('@playwright/test').Page) 
   await page.goto('/login');
   await page.getByPlaceholder('Enter your email').fill('tenant@proplity.com');
   await page.getByPlaceholder('Enter your password').fill('Password123!');
+  const dashboardLoaded = page.waitForResponse((r) => r.url().includes('/api/v1/dashboard/mine'));
   await page.getByRole('button', { name: 'Sign In' }).click();
   await page.waitForURL(/\/dashboard/);
+  await dashboardLoaded;
+  // Let the dashboard finish loading first (the URL changes before its requests start, so
+  // network idle alone is not enough). Clearing the cookie while its first requests are
+  // still in flight made one of them fail with a 401 and start its own refresh, which the next
+  // navigation then aborted: the rotated token never reached the browser, the follow-up refresh
+  // looked like token reuse and the session was revoked (ISS-131, ISS-134). A visitor who has
+  // been idle is not mid-request.
+  await page.waitForLoadState('networkidle');
   // Simulates the access token's 15-minute expiry without waiting 15
   // minutes: the refresh_token cookie (7 days, path-scoped to /api/v1/auth/
   // refresh) is left in place, matching a real idle-then-reload visitor.
