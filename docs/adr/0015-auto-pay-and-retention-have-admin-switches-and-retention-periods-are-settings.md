@@ -1,8 +1,8 @@
 # 0015 — Auto-pay charging and ID-document retention have admin switches, and the retention periods are settings
 
-Status: Proposed
-Decided by: the owner (roji-tech) answered the questions below on 2026-10-20; awaiting formal acceptance
-Recorded: 2026-10-20 (drafted by an agent)
+Status: Accepted
+Decided by: the owner (roji-tech), who chose the switches and periods on 2026-10-20 and confirmed the two-gate design as recommended · Date: 2026-10-20
+Recorded: 2026-10-20 (drafted by an agent), accepted 2026-10-20
 Amends: 0012 (the periods and the switch), and the way ADR-0012 and ISS-011 describe `AUTOPAY_WORKER_ENABLED` and `RETENTION_ENABLED`
 
 ## Context
