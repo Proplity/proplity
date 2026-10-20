@@ -1586,6 +1586,153 @@ async function main() {
     await pause(2800);
     await click(page.getByRole('link', { name: '← Back' }), { settle: 1200 });
     await page.waitForURL('**/dashboard', { timeout: 40000 });
+
+    // The same rule on the property team's side (ISS-117): rent or a bill entered on the tenant's
+    // record is not paid until a second person confirms it.
+    chapter('🧾', 'Cash taken on the tenant’s record needs a second person too', '#f59e0b');
+    await signOut();
+    await signIn('manager@proplity.com');
+    await click(page.getByRole('link', { name: 'Tenants' }).first(), { settle: 1200 });
+    await page.waitForURL('**/dashboard/tenants');
+    await click(page.getByRole('row', { name: /Chioma Eze/ }), { settle: 1500 });
+    await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
+    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await scroll(400);
+    await hud('📨 The manager bills the tenant for a utility from the tenancy record', '#3b82f6');
+    await click(page.getByRole('button', { name: 'Send Invoice' }).first(), { settle: 800 });
+    const billForm = page.getByRole('heading', { name: 'Send Invoice' }).locator('xpath=..');
+    await billForm.waitFor({ timeout: 20000 });
+    await type(billForm.locator('input[type="number"]'), '15000');
+    await billForm
+      .locator('input[type="date"]')
+      .fill(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+    await type(billForm.locator('input[type="text"]'), 'Water bill');
+    await pause(1500);
+    await submit(billForm.getByRole('button', { name: 'Send Invoice' }));
+    await pause(1800);
+    await hud('💵 The tenant hands over the cash, so the manager records it', '#3b82f6');
+    await click(page.getByRole('button', { name: 'Record cash or transfer payment' }), {
+      settle: 800,
+    });
+    const cashForm = page.getByRole('dialog', { name: 'Paid another way' });
+    await cashForm.waitFor({ timeout: 20000 });
+    await cashForm.locator('input[value="Chioma Eze"]').waitFor({ timeout: 10000 });
+    await hud('🏦 The same form: the tenant’s name is filled in, not the manager’s', '#3b82f6');
+    await pause(2200);
+    await type(cashForm.getByPlaceholder('e.g. GTBank'), 'Cash');
+    await type(cashForm.getByPlaceholder('The transfer or session reference'), 'CASH-JOURNEY-0042');
+    await pause(1500);
+    await submit(cashForm.getByRole('button', { name: 'Record payment' }));
+    await hud(
+      '⏳ Recorded, not paid: the invoice stays unpaid until someone else confirms it',
+      '#f59e0b',
+    );
+    await pause(3200);
+    await click(page.getByRole('link', { name: 'Bank Transfers' }).first(), { settle: 1500 });
+    await page.waitForURL('**/dashboard/reconciliation', { timeout: 40000 });
+    await page.getByText('CASH-JOURNEY-0042').waitFor({ timeout: 40000 });
+    await page
+      .getByText('You recorded this, so someone else has to confirm it.')
+      .first()
+      .waitFor({ timeout: 30000 });
+    await hud(
+      '🔒 The manager cannot confirm their own entry, and the server enforces it',
+      '#f59e0b',
+    );
+    await pause(3600);
+
+    await signOut();
+    await signIn('admin@proplity.com');
+    await click(page.getByRole('link', { name: /Bank transfers to confirm/ }), { settle: 1500 });
+    await page.waitForURL('**/admin/payments', { timeout: 40000 });
+    await page.getByText('CASH-JOURNEY-0042').waitFor({ timeout: 40000 });
+    await hud('🛡 The admin sees the entry and confirms it', '#a78bfa');
+    await pause(2800);
+    await submit(
+      page
+        .locator('li', { hasText: 'CASH-JOURNEY-0042' })
+        .getByRole('button', { name: 'Confirm payment' }),
+    );
+    await page.getByRole('tab', { name: 'Confirmed' }).click();
+    await page.getByText('CASH-JOURNEY-0042').first().waitFor({ timeout: 30000 });
+    await hud(
+      '✅ Confirmed by a second person: now the bill is paid and a receipt exists',
+      '#10b981',
+    );
+    await pause(3200);
+
+    // The check is an admin switch: a property with one person on the team can turn it off, and
+    // that person's own entry then counts at once (still logged, with a receipt).
+    const tenantRule = 'Second person confirms what a tenant is recorded as paying';
+    const ruleIs = (name, on) =>
+      page.waitForFunction(
+        ([label, expected]) =>
+          document
+            .querySelector(`[role="switch"][aria-label="${label}"]`)
+            ?.getAttribute('aria-checked') === expected,
+        [name, String(on)],
+      );
+    await click(page.getByRole('link', { name: 'Platform Settings' }).first(), { settle: 1200 });
+    await page.waitForURL('**/admin/settings**');
+    await page.getByRole('switch', { name: tenantRule }).scrollIntoViewIfNeeded();
+    await hud(
+      '⚙️ Platform Settings has a switch for this check, for tenant payments and for vendor payments',
+      '#a78bfa',
+    );
+    await pause(3200);
+    await submit(page.getByRole('switch', { name: tenantRule }));
+    await ruleIs(tenantRule, false);
+    await hud(
+      '⚙️ Off for tenant payments: for a property with one person, their own entry counts at once',
+      '#f59e0b',
+    );
+    await pause(3200);
+
+    await signOut();
+    await signIn('manager@proplity.com');
+    await click(page.getByRole('link', { name: 'Tenants' }).first(), { settle: 1200 });
+    await page.waitForURL('**/dashboard/tenants');
+    await click(page.getByRole('row', { name: /Chioma Eze/ }), { settle: 1500 });
+    await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
+    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await scroll(400);
+    await click(page.getByRole('button', { name: 'Send Invoice' }).first(), { settle: 800 });
+    const levyForm = page.getByRole('heading', { name: 'Send Invoice' }).locator('xpath=..');
+    await levyForm.waitFor({ timeout: 20000 });
+    await type(levyForm.locator('input[type="number"]'), '8000');
+    await levyForm
+      .locator('input[type="date"]')
+      .fill(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+    await type(levyForm.locator('input[type="text"]'), 'Gate repair levy');
+    await submit(levyForm.getByRole('button', { name: 'Send Invoice' }));
+    await pause(1500);
+    await click(page.getByRole('button', { name: 'Record cash or transfer payment' }), {
+      settle: 800,
+    });
+    const levyCash = page.getByRole('dialog', { name: 'Paid another way' });
+    await levyCash.waitFor({ timeout: 20000 });
+    await levyCash.getByText(/It counts straight away/).waitFor({ timeout: 20000 });
+    await hud('🏦 The form now says it counts straight away, with no second person', '#f59e0b');
+    await pause(2600);
+    await type(levyCash.getByPlaceholder('e.g. GTBank'), 'Cash');
+    await type(levyCash.getByPlaceholder('The transfer or session reference'), 'CASH-JOURNEY-0043');
+    await submit(levyCash.getByRole('button', { name: 'Record payment' }));
+    await page.getByText('Recorded and counted').first().waitFor({ timeout: 30000 });
+    await hud(
+      '✅ Recorded and counted at once: the bill is paid and the receipt exists',
+      '#10b981',
+    );
+    await pause(3400);
+
+    await signOut();
+    await signIn('admin@proplity.com');
+    await click(page.getByRole('link', { name: 'Platform Settings' }).first(), { settle: 1200 });
+    await page.waitForURL('**/admin/settings**');
+    await page.getByRole('switch', { name: tenantRule }).scrollIntoViewIfNeeded();
+    await submit(page.getByRole('switch', { name: tenantRule }));
+    await ruleIs(tenantRule, true);
+    await hud('⚙️ Switched back on: a second person confirms again', '#10b981');
+    await pause(2800);
   });
 
   // ---------------------------------------------------------------------------------------------
@@ -1968,7 +2115,7 @@ async function main() {
     });
     await confirmSwitch.scrollIntoViewIfNeeded();
     await hud(
-      '⚙️ Two switches: a vendor invoice closes the job, and tenants are asked to confirm repairs',
+      '⚙️ Four switches: a vendor invoice closes the job, tenants confirm repairs, and a second person confirms what the team records',
       '#a78bfa',
     );
     await pause(2800);

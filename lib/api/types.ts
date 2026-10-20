@@ -339,7 +339,15 @@ export type PlatformSettings = {
   setupComplete: boolean;
   autoCompleteMaintenanceOnInvoice: boolean;
   requireTenantRepairConfirmation: boolean;
+  requireSecondPersonForTenantPayments: boolean;
+  requireSecondPersonForVendorPayments: boolean;
 };
+
+/** What a signed-in person needs to know about the payment rules (GET /settings/payment-rules). */
+export type PaymentRules = Pick<
+  PlatformSettings,
+  'requireSecondPersonForTenantPayments' | 'requireSecondPersonForVendorPayments'
+>;
 
 export type Vendor = {
   id: string;
