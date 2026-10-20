@@ -69,6 +69,7 @@ import type {
   RepairAnswerInput,
   RepairReviewInput,
   PlatformSettings,
+  AdminPlatformSettings,
   PaymentRules,
   Vendor,
   Violation,
@@ -90,6 +91,29 @@ export const apiClient = axios.create({
 });
 
 let refreshPromise: Promise<boolean> | null = null;
+
+// A 401 that comes back after the person has left the page that asked used to send the whole tab
+// to /login: a slow request left behind by the page they had just signed out of threw a visitor
+// off the public home page. Only the page that made the request may be sent to the sign-in screen.
+const currentPath = () => (typeof window === 'undefined' ? '' : window.location.pathname);
+
+function sendToLogin(startedOn: string) {
+  if (typeof window === 'undefined' || window.location.pathname !== startedOn) return;
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
+  window.location.href = '/login';
+}
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** The page the request was made from (see `sendToLogin`). */
+    startedOn?: string;
+  }
+}
+
+apiClient.interceptors.request.use((config) => {
+  config.startedOn ??= currentPath();
+  return config;
+});
 
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
@@ -119,9 +143,8 @@ apiClient.interceptors.response.use(
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         return apiClient(originalRequest);
-      } else if (typeof window !== 'undefined') {
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
-        window.location.href = '/login';
+      } else {
+        sendToLogin(originalRequest.startedOn ?? currentPath());
       }
     }
 
@@ -133,15 +156,15 @@ apiClient.interceptors.response.use(
  * Backward-compatible fetch wrapper using single refresh deduplication logic
  */
 export async function apiFetch(url: string, options: RequestInit = {}) {
+  const startedOn = currentPath();
   const response = await fetch(url, options);
 
   if (response.status === 401 && !url.includes('/api/v1/auth/refresh')) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return fetch(url, options);
-    } else if (typeof window !== 'undefined') {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
-      window.location.href = '/login';
+    } else {
+      sendToLogin(startedOn);
     }
   }
 
@@ -197,6 +220,11 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    viewingAvailability: (propertyId: string, date: string) =>
+      apiClient.get<{ data: { date: string; taken: string[] } }>(
+        `/api/v1/properties/${propertyId}/viewings/availability`,
+        { params: { date } },
+      ),
     listViewings: (propertyId: string) =>
       apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
     updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
@@ -435,9 +463,9 @@ export const api = {
         >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
-      get: () => apiClient.get<{ data: PlatformSettings }>('/api/v1/admin/settings'),
+      get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
       update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
-        apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
+        apiClient.patch<{ data: AdminPlatformSettings }>('/api/v1/admin/settings', data),
     },
   },
   settings: {
@@ -457,6 +485,7 @@ export const api = {
       apiClient.delete<{ data: { id: string } }>(`/api/v1/notifications/${id}`),
   },
   payments: {
+    availability: () => apiClient.get<{ data: { card: boolean } }>('/api/v1/payments/availability'),
     initialize: (invoiceId: string) =>
       apiClient.post<{ data: { authorizationUrl: string; reference: string } }>(
         '/api/v1/payments/initialize',

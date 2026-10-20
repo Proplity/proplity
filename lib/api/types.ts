@@ -341,6 +341,15 @@ export type PlatformSettings = {
   requireTenantRepairConfirmation: boolean;
   requireSecondPersonForTenantPayments: boolean;
   requireSecondPersonForVendorPayments: boolean;
+  autopayChargingEnabled: boolean;
+  retentionEnabled: boolean;
+  retentionAfterTenancyDays: number;
+  retentionAfterRejectionDays: number;
+};
+
+/** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
+export type AdminPlatformSettings = PlatformSettings & {
+  deploymentAllows: { autopay: boolean; retention: boolean };
 };
 
 /** What a signed-in person needs to know about the payment rules (GET /settings/payment-rules). */

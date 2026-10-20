@@ -6,7 +6,13 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
-import { formatViewingTime, viewingTimeProblem } from '@/lib/viewingSlots';
+import {
+  VIEWING_HOLDING_STATUSES,
+  formatViewingTime,
+  viewingDateKey,
+  viewingDayBounds,
+  viewingTimeProblem,
+} from '@/lib/viewingSlots';
 
 // Lists are capped so one busy record cannot return an unbounded response (ISS-073).
 const LIST_LIMIT = 500;
@@ -86,31 +92,58 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       );
     }
 
-    const dayStart = new Date(scheduledAt);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+    // One live booking per property and start time (ISS-104), and one per person per day. Bookings
+    // for the same property and day queue on a lock, so two people choosing the same time at once
+    // cannot both get it.
+    const day = viewingDayBounds(viewingDateKey(scheduledAt));
+    const outcome = await prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`viewing:${id}:${day.start.toISOString()}`}))`;
 
-    const duplicate = await prisma.propertyViewing.findFirst({
-      where: {
-        propertyId: id,
-        requestedById: session.sub,
-        scheduledAt: { gte: dayStart, lt: dayEnd },
+        const duplicate = await tx.propertyViewing.findFirst({
+          where: {
+            propertyId: id,
+            requestedById: session.sub,
+            status: { in: [...VIEWING_HOLDING_STATUSES] },
+            scheduledAt: { gte: day.start, lt: day.end },
+          },
+          select: { id: true },
+        });
+        if (duplicate) return { problem: 'DUPLICATE_BOOKING' as const };
+
+        const taken = await tx.propertyViewing.findFirst({
+          where: { propertyId: id, scheduledAt, status: { in: [...VIEWING_HOLDING_STATUSES] } },
+          select: { id: true },
+        });
+        if (taken) return { problem: 'SLOT_TAKEN' as const };
+
+        const created = await tx.propertyViewing.create({
+          data: { propertyId: id, unitId, requestedById: session.sub, scheduledAt, notes },
+        });
+        return { viewing: created };
       },
-    });
-    if (duplicate) {
-      return NextResponse.json(
-        {
-          error: 'A viewing is already booked for this property on this day',
-          code: 'DUPLICATE_BOOKING',
-        },
-        { status: 409 },
-      );
-    }
+      { timeout: 20_000, maxWait: 20_000 },
+    );
 
-    const viewing = await prisma.propertyViewing.create({
-      data: { propertyId: id, unitId, requestedById: session.sub, scheduledAt, notes },
-    });
+    if ('problem' in outcome) {
+      return outcome.problem === 'SLOT_TAKEN'
+        ? NextResponse.json(
+            {
+              error:
+                'That time is already booked for this property. Please choose another time or day.',
+              code: 'SLOT_TAKEN',
+            },
+            { status: 409 },
+          )
+        : NextResponse.json(
+            {
+              error: 'A viewing is already booked for this property on this day',
+              code: 'DUPLICATE_BOOKING',
+            },
+            { status: 409 },
+          );
+    }
+    const viewing = outcome.viewing;
 
     // A viewing is a request until the property team confirms it (ISS-047).
     // The requester is told it was received; the manager and landlord are

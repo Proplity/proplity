@@ -735,7 +735,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Platform Inquiries & Contact Form</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Validated general support and sales inquiry submission form with toast confirmations.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Support and sales inquiry form that emails the Proplity team. It confirms only when the email has gone out; otherwise an error appears and what you typed is kept.</div>
         <code>/contact</code> &bull; <code>ContactPage.tsx</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -819,6 +819,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Device-Wide Logout Token Revocation</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Decodes access token signatures on logout (even if expired) to revoke active refresh sessions on the server.</div>
         <code>POST /api/v1/auth/logout</code> &bull; <code>getExpiredSession</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Sign-In Redirect Stays on the Page That Asked</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">When a request fails because the session has ended, only the page that made it is sent to the sign-in screen. A slow request left behind by a page you have just signed out of can no longer pull you off the public home page.</div>
+        <code>lib/apiClient.ts</code> &bull; <code>ISS-132</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Instant Account Suspension Enforcement</div>
@@ -1518,8 +1523,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Touch-Target Optimization</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.</div>
-        <code>mobile-nav.spec.ts</code> &bull; <code>Responsive Design</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Buttons, filter pills and switches are at least 36px high on a phone (a switch keeps its look but has a larger touch area), with touch scrolling momentum and mobile form inputs.</div>
+        <code>mobile-nav.spec.ts</code> &bull; <code>ISS-130</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Layout Regression Guard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Fails any page that scrolls sideways, cuts its content off, or scrolls sideways inside the dashboard main area at 320, 390 and 768px, so a new screen cannot ship with a broken phone layout.</div>
+        <code>layout.spec.ts</code> &bull; <code>ISS-125 to ISS-130</code>
       </div>
     </div>
   </div>
@@ -1948,7 +1958,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
   <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
     <li style="margin-bottom:6px;">Pricing: the plans overview (the menu link only appears when subscriptions are switched on).</li>
     <li style="margin-bottom:6px;">For Landlords, For Tenants and For Service Providers: what each role gets, with a call to action to register.</li>
-    <li style="margin-bottom:6px;">About and Contact: who builds Proplity and a contact form that sends a message to the team.</li>
+    <li style="margin-bottom:6px;">About and Contact: who builds Proplity and a contact form that emails a message to the team (you are told it was sent only once the email has gone out; if not, an error appears and what you typed is kept).</li>
   </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
@@ -2005,7 +2015,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <div class="step-card">
   <h3><span class="step-num">2.3</span>Pay Rent (Paystack Payment Flow)</h3>
-  <p>Rent is paid directly through Proplity using Paystack (Nigeria's leading payment gateway). Monthly invoices are generated automatically — just click to pay. Supports card, bank transfer, and USSD.</p>
+  <p>Rent is paid directly through Proplity using Paystack (Nigeria's leading payment gateway). Monthly invoices are generated automatically — just click to pay. Supports card, bank transfer, and USSD. Until card payments are set up for this site, the button reads <strong>Card Payment Not Available Yet</strong> and points you to <strong>Paid another way</strong> (a bank transfer or cash recorded under Payment History); it switches on by itself once they are ready.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_payment_01_initiate.png" alt="Payment checkout initiate" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Payment checkout initiation <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2037,7 +2047,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <div class="step-card">
   <h3><span class="step-num">2.5</span>Schedule a Viewing (Book Inspection)</h3>
-  <p>Before applying, you can request a physical visit to see the property in person. The manager receives the request and confirms a time. A confirmation email is sent once confirmed.</p>
+  <p>Before applying, you can request a physical visit to see the property in person. The manager receives the request and confirms a time. A confirmation email is sent once confirmed. Only one person can hold a start time at a property: times someone else has already booked are marked on the form and cannot be chosen, and a declined or cancelled request gives its time back.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_04_schedule_viewing_desktop.png" alt="Schedule viewing desktop" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Schedule Viewing modal (date picker) <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2571,7 +2581,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">6.2</span>Properties Moderation, Reports, Audit Logs & Settings</h3>
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
-  <p>Platform Settings has four switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered. The other two, <strong>Second person confirms what a tenant is recorded as paying</strong> and <strong>Second person confirms what is paid to a vendor</strong>, are on by default: a cash or transfer payment the property team records does not count until someone other than the person who entered it confirms it. Turn one off for a property with one person on the team and their entry counts at once (still logged, with a receipt).</p>
+  <p>Platform Settings has four switches and two further cards: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered. The other two, <strong>Second person confirms what a tenant is recorded as paying</strong> and <strong>Second person confirms what is paid to a vendor</strong>, are on by default: a cash or transfer payment the property team records does not count until someone other than the person who entered it confirms it. Turn one off for a property with one person on the team and their entry counts at once (still logged, with a receipt). Two more cards are off by default: <strong>Charge auto-pay tenants automatically</strong>, and <strong>Delete identity documents when kept long enough</strong> with its two periods in days (at least 30 and 7). Each asks once more before turning on, and the deployment must allow it too.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2710,6 +2720,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <li style="margin-bottom:6px;">Tab bar and the Quick Actions grid are sized for thumbs.</li>
     <li style="margin-bottom:6px;">The More sheet holds the remaining pages for the role.</li>
     <li style="margin-bottom:6px;">Long pages such as a property stack into one column.</li>
+    <li style="margin-bottom:6px;">Tables become one card per row, with the column name beside each value, so nothing has to scroll sideways.</li>
+    <li style="margin-bottom:6px;">Rows of badges, buttons and filter pills wrap onto the next line instead of running off the screen. The tab rows in Reports and Account Settings scroll inside themselves.</li>
+    <li style="margin-bottom:6px;">A tenant record stacks its header on a phone: the email wraps and the Rent Paid and risk badges stay visible.</li>
+    <li style="margin-bottom:6px;">The repair board shows one column on a phone, two from tablet width (768 px) and three on a wide laptop screen (1280 px).</li>
+    <li style="margin-bottom:6px;">Buttons, filter pills and switches are at least 36 px high on a phone. A switch looks the same but has a larger area to touch.</li>
+    <li style="margin-bottom:6px;">This guide fits a phone too: wide tables scroll inside themselves and long addresses wrap.</li>
   </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
@@ -2723,7 +2739,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <hr>
 <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0;">
-  Proplity Complete Guide · Version 3.1 · Updated 2026-10-19 · 160+ Screenshots · All roles covered
+  Proplity Complete Guide · Version 3.2 · Updated 2026-10-20 · 160+ Screenshots · All roles covered
 </p>
 
 </main>
