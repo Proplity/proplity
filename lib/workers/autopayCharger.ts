@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { paymentsMockEnabled } from '@/lib/payments/mockGateway';
 import { notifyUser } from '@/lib/notifications';
+import { autopayChargingOn, getSystemSettings } from '@/lib/systemSettings';
 
 export type AutopayChargeDetail = {
   invoiceId: string;
@@ -35,8 +36,9 @@ export type AutopayChargerResult = {
  *
  * SAFETY FIRST:
  * Charging real bank/card tokens is financial action. By default, this worker
- * runs in DRY-RUN / DISABLED mode unless explicitly enabled via environment variable:
- *   AUTOPAY_WORKER_ENABLED=true
+ * runs in DRY-RUN / DISABLED mode. Two gates must both be open (ADR-0015): the deployment
+ * allows it (environment variable AUTOPAY_WORKER_ENABLED=true) and an admin has switched it
+ * on in Platform Settings (SystemSettings.autopayChargingEnabled, off by default).
  *
  * When disabled (the default), it audits and reports all eligible invoices and mandates
  * without making any external payment calls or writing payment rows.
@@ -55,7 +57,7 @@ function chargesAreMocked(): boolean {
 }
 
 export async function runAutopayCharger(): Promise<AutopayChargerResult> {
-  const enabled = process.env.AUTOPAY_WORKER_ENABLED === 'true';
+  const enabled = autopayChargingOn(await getSystemSettings());
   const useMock = chargesAreMocked();
   const now = new Date();
 
@@ -329,7 +331,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
     enabled,
     message: enabled
       ? `Auto-pay charger processed ${processedCount} due invoice(s).`
-      : 'Auto-pay charger is disabled (set AUTOPAY_WORKER_ENABLED=true to enable). Eligible invoices audited only.',
+      : 'Auto-pay charger is off (it needs AUTOPAY_WORKER_ENABLED=true on the deployment and the switch in Platform Settings). Eligible invoices audited only.',
     eligibleCount: openInvoices.length,
     processedCount,
     successfulCount,

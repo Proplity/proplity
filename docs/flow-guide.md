@@ -438,7 +438,10 @@ is paid to a vendor, must be confirmed by someone other than the person who
 entered it (both on by default; off, the recorder's own entry counts at once,
 still logged and with a receipt). Flip one and it takes effect immediately
 platform-wide; repairs already waiting for a tenant's answer stay answerable
-if the second is turned off.
+if the second is turned off. Two more cards, both off by default: charging
+auto-pay tenants automatically, and deleting identity documents once kept long
+enough (with the two periods, in days). Each asks once more before turning on
+and says when the deployment does not allow it yet.
 
 **5d. Bank Transfers** — the same list the property team uses
 (`/admin/payments`): payments recorded as paid another way, waiting,
