@@ -219,7 +219,43 @@ export type CreateMaintenanceRequestInput = {
   categoryId?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'EMERGENCY';
   mediaUrls?: string[];
+  /** Work orders only: hand it to a verified vendor straight away. */
+  vendorId?: string;
 };
+
+export type ScheduleFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL';
+
+/** A recurring repair the property team has set up for a unit. */
+export type MaintenanceSchedule = {
+  id: string;
+  unitId: string;
+  unit?: Unit & { property?: { id: string; name: string } };
+  equipmentId: string | null;
+  equipment?: Equipment | null;
+  categoryId: string;
+  category?: MaintenanceCategory;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  lastGeneratedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type CreateScheduleInput = {
+  unitId: string;
+  categoryId: string;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  equipmentId?: string;
+};
+
+export type UpdateScheduleInput = Partial<{
+  categoryId: string;
+  frequency: ScheduleFrequency;
+  nextDueDate: string;
+  equipmentId: string | null;
+  isActive: boolean;
+}>;
 
 export type RepairConfirmationStatus =
   'NOT_REQUESTED' | 'AWAITING_TENANT' | 'CONFIRMED' | 'DISPUTED';
@@ -228,8 +264,11 @@ export type MaintenanceRequest = {
   id: string;
   unitId: string;
   unit?: Unit & { property?: Property };
-  tenantId: string;
-  tenant?: { id: string; name: string; email: string; phoneNumber: string | null };
+  /** Null on a work order: a repair the property team raised itself, with no tenant. */
+  tenantId: string | null;
+  tenant?: { id: string; name: string; email: string; phoneNumber: string | null } | null;
+  /** Who raised a work order (null when a tenant reported it). */
+  createdBy?: { id: string; name: string } | null;
   vendorId: string | null;
   vendor?: { id: string; name: string; phoneNumber?: string | null } | null;
   title: string;
@@ -300,7 +339,15 @@ export type PlatformSettings = {
   setupComplete: boolean;
   autoCompleteMaintenanceOnInvoice: boolean;
   requireTenantRepairConfirmation: boolean;
+  requireSecondPersonForTenantPayments: boolean;
+  requireSecondPersonForVendorPayments: boolean;
 };
+
+/** What a signed-in person needs to know about the payment rules (GET /settings/payment-rules). */
+export type PaymentRules = Pick<
+  PlatformSettings,
+  'requireSecondPersonForTenantPayments' | 'requireSecondPersonForVendorPayments'
+>;
 
 export type Vendor = {
   id: string;

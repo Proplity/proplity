@@ -226,7 +226,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 123. **Bank Transfer Submission Workflow**: API endpoint (\`/api/v1/bank-transfers\`) for submitting receipt proofs into private reconciliation storage (ISS-012).
 124. **Bank Transfer Statement Reconciliation**: Reconciliation approval endpoint creating Payment record, updating invoice to PAID, and notifying tenant (ISS-012).
 125. **Multi-Stage Vendor Payout Disbursement**: Full lifecycle: Initiate -> Landlord Approval -> Paystack Transfer Disbursement, with invoice cap limits (ISS-012).
-126. **Manual Cash & Transfer Payment Recording**: Allows managers/landlords to record manual payments with payment method audit logs (CASH, TRANSFER, ISS-053).
+126. **Manual Cash & Transfer Payment Recording**: Managers and landlords record a cash or transfer payment on a tenant record; it is paid only once someone else confirms it (ISS-053, ISS-117).
 
 ---
 
@@ -1500,7 +1500,7 @@ Full list of all current and past tenants. Where daily tenant management happens
 
 - View profiles, payment history, lease details
 - Send invoices manually
-- Record payments: **Record payment** marks rent paid straight away (reference only; the action is audit-logged)
+- Record payments: **Record cash or transfer payment** opens the same **Paid another way** form the tenant uses (the tenant's name is filled in). It does not mark rent paid: it waits on the **Bank Transfers** tab until someone other than you confirms it, and then the tenant gets a receipt. (An admin can switch this check off in Platform Settings; the form then says the entry counts straight away)
 - Issue lease renewal or termination notices
 
 **Screenshots:**
@@ -1572,6 +1572,18 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 4. Vendor receives a notification, and the request becomes a scheduled job (it moves to the In Progress column)
 5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
 6. The tenant can then rate the vendor from My Maintenance Requests, and the manager opens **View invoice** under Cost Tracking (the vendor's itemised lines, VAT, total and notes) and pays it
+
+**Raising a repair yourself (work orders)**
+
+Press **Raise a repair** at the top of the board. Choose the property and the unit (an empty unit is fine), say what needs doing, and optionally pick a category, a priority and a vendor.
+
+- It is a **work order**: it has no tenant, so nobody is asked to confirm it and no one rates the vendor. The repair page says **Raised By** you.
+- If you chose a vendor the job is scheduled and they are told; if not, assign one from the repair page. The rest of the property team is told. If someone lives in the unit, they are told in the app that work is planned there.
+- When the vendor has finished it, check their photos and press **Approve work**. You pay the vendor as for any repair.
+
+**Recurring maintenance**
+
+The **Schedules** tab (Recurring maintenance) lists what is serviced on a rhythm: the unit, what is serviced, how often, when it is next due and when it last ran. **New schedule** adds one; **Pause** and **Resume** stop and restart it; **Edit** changes its date or cycle; **Remove** deletes it (repairs it already raised stay). Each time one falls due the daily job raises a repair and asks you to find a vendor. An empty unit gets a work order with no tenant. A schedule that starts on the 31st lands on the last day of a short month and returns to the 31st.
 
 **Finished repairs: the Sign-off card**
 
@@ -1998,10 +2010,12 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has two switches:
+It has four switches:
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
+- **Second person confirms what a tenant is recorded as paying** — on by default. When the property team records cash or a transfer on a tenant's record, it does not count until someone other than the person who entered it confirms it on Bank Transfers. Turn it off for a property with one person on the team: their entry counts at once (still logged, with a receipt). A tenant recording their own transfer is always confirmed by the team.
+- **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 

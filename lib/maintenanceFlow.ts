@@ -57,9 +57,12 @@ export const EVIDENCE_REQUIRED = {
  * What to write when a vendor finishes (or finishes again) a job: the completion time, whether the
  * tenant is asked to confirm (the admin switch), and a clean slate for any earlier answer.
  * `disputeReason` is cleared here, not when the job is sent back, so the vendor can read it while
- * they redo the work.
+ * they redo the work. A repair with no tenant (a work order the property team raised) has nobody to
+ * ask, so it is never left waiting for an answer.
  */
-export async function completionData(): Promise<
+export async function completionData(request: {
+  tenantId: string | null;
+}): Promise<
   Pick<
     Prisma.MaintenanceRequestUncheckedUpdateInput,
     | 'status'
@@ -76,7 +79,8 @@ export async function completionData(): Promise<
   return {
     status: 'COMPLETED',
     completedAt: new Date(),
-    confirmationStatus: requireTenantRepairConfirmation ? 'AWAITING_TENANT' : 'NOT_REQUESTED',
+    confirmationStatus:
+      requireTenantRepairConfirmation && request.tenantId ? 'AWAITING_TENANT' : 'NOT_REQUESTED',
     confirmationRespondedAt: null,
     disputeReason: null,
     disputePhotoUrls: [],
@@ -90,12 +94,13 @@ export function tenantRepairLink(requestId: string): string {
   return `/dashboard/tenant-maintenance?request=${requestId}`;
 }
 
-/** Tell the tenant their repair is done, asking for an answer when one is wanted. */
+/** Tell the tenant their repair is done, asking for an answer when one is wanted. Nobody to tell on a work order. */
 export async function tellTenantRepairDone(
-  request: { id: string; tenantId: string; title: string },
+  request: { id: string; tenantId: string | null; title: string },
   awaitingTenant: boolean,
   req?: NotifyRequest,
 ) {
+  if (!request.tenantId) return;
   if (awaitingTenant) {
     await notifyAndEmail(
       request.tenantId,

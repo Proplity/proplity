@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { InvoiceStatus, InvoiceType, Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
@@ -371,6 +371,35 @@ describe('receipts', () => {
     }
   });
 
+  it('shows a note a person typed on a receipt, never the automatic one (ISS-118)', async () => {
+    const receiptNotes = async (cookie: string, paymentId: string) =>
+      (await apiFetch(`/api/v1/payments/${paymentId}/receipt`, { cookie })).body.data.notes;
+
+    // Confirmed with no note typed: the stored note is automatic and the receipt shows none.
+    const { w, payment } = await paidVendorInvoice();
+    const stored = await testPrisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    expect(stored.notes).toMatch(/^Confirmed from bank transfer reference /);
+    expect(stored.notes).not.toContain('Reconciled by');
+    expect(await receiptNotes(w.cookies.vendor, payment.id)).toBeNull();
+
+    // A payment confirmed before the wording changed still shows nothing.
+    await testPrisma.payment.update({
+      where: { id: payment.id },
+      data: { notes: 'Reconciled by MANAGER from bank transfer ref ABC123' },
+    });
+    expect(await receiptNotes(w.cookies.vendor, payment.id)).toBeNull();
+
+    // A note the confirming person wrote is shown as written.
+    const created = await submit(w.cookies.manager, transfer(w.rentInvoice.id, { amount: 1000 }));
+    const ok = await reconcile(w.cookies.landlord, created.body.data.id, {
+      action: 'APPROVE',
+      notes: 'Part payment, balance promised on Friday',
+    });
+    expect(await receiptNotes(w.cookies.tenant, ok.body.data.payment.id)).toBe(
+      'Part payment, balance promised on Friday',
+    );
+  });
+
   it('shows a rent receipt to the tenant who paid and not to the vendor', async () => {
     const w = await world();
     const created = await submit(
@@ -505,18 +534,215 @@ describe('payments: what the API never returns, and who is told', () => {
     ).toBe(200);
   });
 
-  it('tells the vendor, with the receipt, when the team records a payment by hand', async () => {
+  it('will not let one person mark a tenant or vendor invoice paid by hand (ISS-117)', async () => {
     const w = await world({ amount: 40_000 });
-    const res = await apiFetch(`/api/v1/invoices/${w.vendorInvoice.id}/payments`, {
-      method: 'POST',
-      cookie: w.cookies.manager,
-      body: { amount: 40_000, method: 'CASH', reference: `cash-${w.vendorInvoice.id}` },
+    for (const [invoice, owed] of [
+      [w.vendorInvoice, 40_000],
+      [w.rentInvoice, 200_000],
+    ] as const) {
+      for (const who of [w.cookies.manager, w.cookies.landlord]) {
+        const res = await apiFetch(`/api/v1/invoices/${invoice.id}/payments`, {
+          method: 'POST',
+          cookie: who,
+          body: { amount: owed, method: 'CASH', reference: `cash-${invoice.id}` },
+        });
+        expect(res.status).toBe(409);
+        expect(res.body.error).toContain('paid another way');
+      }
+      expect(await testPrisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(0);
+      expect(
+        (await testPrisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).status,
+      ).toBe('UNPAID');
+    }
+  });
+
+  it("a tenant's rent entered by the team is only paid once someone else confirms it (ISS-117)", async () => {
+    const w = await world();
+    const created = await submit(
+      w.cookies.manager,
+      transfer(w.rentInvoice.id, { amount: 200_000, senderAccountName: 'Tunde Tenant' }),
+    );
+    expect(created.status).toBe(201);
+    const id = created.body.data.id;
+
+    // Recorded, not paid: the invoice has not moved and the recorder cannot confirm it.
+    expect(
+      (await testPrisma.invoice.findUniqueOrThrow({ where: { id: w.rentInvoice.id } })).status,
+    ).toBe('UNPAID');
+    expect((await reconcile(w.cookies.manager, id, { action: 'APPROVE' })).status).toBe(403);
+
+    const ok = await reconcile(w.cookies.landlord, id, { action: 'APPROVE' });
+    expect(ok.status).toBe(200);
+    expect(
+      (await testPrisma.invoice.findUniqueOrThrow({ where: { id: w.rentInvoice.id } })).status,
+    ).toBe('PAID');
+    const told = await testPrisma.notification.findFirst({
+      where: { recipientId: w.tenant.id, title: 'Payment recorded' },
     });
-    expect(res.status).toBe(201);
-    expect(res.body.data.paymentId).toBeTruthy();
+    expect(told?.link).toBe(`/receipts/${ok.body.data.payment.id}`);
+  });
+});
+
+async function setRules(data: {
+  requireSecondPersonForTenantPayments?: boolean;
+  requireSecondPersonForVendorPayments?: boolean;
+}) {
+  await testPrisma.systemSettings.upsert({
+    where: { id: 'global' },
+    update: data,
+    create: { id: 'global', ...data },
+  });
+}
+
+describe('the two-person rule is an admin switch (tenant payments and vendor payments)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+  afterEach(async () => {
+    await setRules({
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: true,
+    });
+  });
+
+  it('shows the rules to the team and an admin only, on by default, and an admin changes each one alone', async () => {
+    const w = await world();
+    const admin = await createUser(Role.ADMIN);
+    const adminCookie = await cookieOf(admin);
+    const rules = (cookie: string) => apiFetch('/api/v1/settings/payment-rules', { cookie });
+
+    for (const cookie of [w.cookies.manager, w.cookies.landlord, adminCookie]) {
+      const res = await rules(cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({
+        requireSecondPersonForTenantPayments: true,
+        requireSecondPersonForVendorPayments: true,
+      });
+    }
+    expect((await rules(w.cookies.tenant)).status).toBe(403);
+    expect((await rules(w.cookies.vendor)).status).toBe(403);
+    expect((await apiFetch('/api/v1/settings/payment-rules')).status).toBe(401);
+
+    const patch = (cookie: string, body: object) =>
+      apiFetch('/api/v1/admin/settings', { method: 'PATCH', cookie, body });
+    expect(
+      (await patch(w.cookies.manager, { requireSecondPersonForTenantPayments: false })).status,
+    ).toBe(403);
+    expect((await patch(adminCookie, { requireSecondPersonForVendorPayments: false })).status).toBe(
+      200,
+    );
+    expect((await rules(w.cookies.manager)).body.data).toEqual({
+      requireSecondPersonForTenantPayments: true,
+      requireSecondPersonForVendorPayments: false,
+    });
+  });
+
+  it("with the tenant switch off, the team's own entry on a tenant's invoice counts at once and leaves a trail", async () => {
+    const w = await world();
+    await setRules({ requireSecondPersonForTenantPayments: false });
+
+    const created = await submit(
+      w.cookies.manager,
+      transfer(w.rentInvoice.id, { amount: 200_000, senderAccountName: 'Tunde Tenant' }),
+    );
+    expect(created.status).toBe(201);
+    expect(created.body.data.status).toBe('APPROVED');
+    expect(created.body.data.paymentId).toBeTruthy();
+
+    expect(
+      (await testPrisma.invoice.findUniqueOrThrow({ where: { id: w.rentInvoice.id } })).status,
+    ).toBe('PAID');
+    const payment = await testPrisma.payment.findUniqueOrThrow({
+      where: { id: created.body.data.paymentId },
+    });
+    expect(payment.receiptNumber).toMatch(/^RCT-/);
+    expect(
+      (await apiFetch(`/api/v1/payments/${payment.id}/receipt`, { cookie: w.cookies.tenant }))
+        .status,
+    ).toBe(200);
+
+    // The audit row says the recorder confirmed it themselves, so the trail is not hidden.
+    const audit = await testPrisma.auditLog.findFirstOrThrow({
+      where: { action: 'BANK_TRANSFER_RECONCILED', entityId: created.body.data.id },
+    });
+    expect(audit.actorId).toBe(w.manager.id);
+    expect(audit.metadata).toMatchObject({ confirmedByRecorder: true });
+
+    // Nobody is asked to confirm it, the recorder is not told about their own entry, the tenant is.
+    expect(
+      await testPrisma.notification.count({
+        where: { title: 'Bank transfer to confirm', recipientId: { in: [w.landlord.id] } },
+      }),
+    ).toBe(0);
+    expect(
+      await testPrisma.notification.count({
+        where: { recipientId: w.manager.id, title: 'Bank transfer payment confirmed' },
+      }),
+    ).toBe(0);
+    const told = await testPrisma.notification.findFirst({
+      where: { recipientId: w.tenant.id, title: 'Payment recorded' },
+    });
+    expect(told?.link).toBe(`/receipts/${payment.id}`);
+  });
+
+  it("a tenant's own transfer still waits for the team, whatever the switches say", async () => {
+    const w = await world();
+    await setRules({
+      requireSecondPersonForTenantPayments: false,
+      requireSecondPersonForVendorPayments: false,
+    });
+    const created = await submit(
+      w.cookies.tenant,
+      transfer(w.rentInvoice.id, { amount: 200_000, senderAccountName: 'Tunde Tenant' }),
+    );
+    expect(created.status).toBe(201);
+    expect(created.body.data.status).toBe('PENDING');
+    expect(
+      (await testPrisma.invoice.findUniqueOrThrow({ where: { id: w.rentInvoice.id } })).status,
+    ).toBe('UNPAID');
+  });
+
+  it('the two switches are independent: tenant off leaves vendor payments waiting for a second person', async () => {
+    const w = await world();
+    await setRules({ requireSecondPersonForTenantPayments: false });
+    const created = await submit(w.cookies.manager, transfer(w.vendorInvoice.id));
+    expect(created.status).toBe(201);
+    expect(created.body.data.status).toBe('PENDING');
+    expect(
+      (await reconcile(w.cookies.manager, created.body.data.id, { action: 'APPROVE' })).status,
+    ).toBe(403);
+  });
+
+  it("with the vendor switch off, the team's own entry on a vendor's bill counts at once and the vendor is told", async () => {
+    const w = await world({ amount: 40_000 });
+    await setRules({ requireSecondPersonForVendorPayments: false });
+    const created = await submit(
+      w.cookies.manager,
+      transfer(w.vendorInvoice.id, { amount: 40_000 }),
+    );
+    expect(created.status).toBe(201);
+    expect(created.body.data.status).toBe('APPROVED');
+    expect(
+      (await testPrisma.invoice.findUniqueOrThrow({ where: { id: w.vendorInvoice.id } })).status,
+    ).toBe('PAID');
     const note = await testPrisma.notification.findFirst({
       where: { recipientId: w.vendor.id, title: { startsWith: 'Payment received:' } },
     });
-    expect(note?.link).toBe(`/receipts/${res.body.data.paymentId}`);
+    expect(note?.link).toBe(`/receipts/${created.body.data.paymentId}`);
+  });
+
+  it('switching it off later lets the recorder confirm an entry that was already waiting', async () => {
+    const w = await world();
+    const created = await submit(w.cookies.manager, transfer(w.vendorInvoice.id));
+    const id = created.body.data.id;
+    expect(created.body.data.status).toBe('PENDING');
+    expect((await reconcile(w.cookies.manager, id, { action: 'APPROVE' })).status).toBe(403);
+
+    await setRules({ requireSecondPersonForVendorPayments: false });
+    const ok = await reconcile(w.cookies.manager, id, { action: 'APPROVE' });
+    expect(ok.status).toBe(200);
+    expect(
+      (await testPrisma.bankTransferSubmission.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('APPROVED');
   });
 });

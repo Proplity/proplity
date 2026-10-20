@@ -67,12 +67,14 @@ export const POST = withAuth(
             { status: 409 },
           );
         }
-        await notifyUser(request.tenantId, {
-          type: 'MAINTENANCE_STATUS',
-          title: `Repair approved: ${request.title}`,
-          body: `Your property team signed off on "${request.title}".`,
-          link: `/dashboard/maintenance/${id}`,
-        });
+        if (request.tenantId) {
+          await notifyUser(request.tenantId, {
+            type: 'MAINTENANCE_STATUS',
+            title: `Repair approved: ${request.title}`,
+            body: `Your property team signed off on "${request.title}".`,
+            link: `/dashboard/maintenance/${id}`,
+          });
+        }
         if (request.vendorId) {
           await notifyUser(request.vendorId, {
             type: 'MAINTENANCE_STATUS',
@@ -130,12 +132,14 @@ export const POST = withAuth(
           },
           { req },
         );
-        await notifyUser(request.tenantId, {
-          type: 'MAINTENANCE_STATUS',
-          title: `Repair sent back: ${request.title}`,
-          body: `Your property team sent "${request.title}" back to the vendor to be fixed.`,
-          link: `/dashboard/maintenance/${id}`,
-        });
+        if (request.tenantId) {
+          await notifyUser(request.tenantId, {
+            type: 'MAINTENANCE_STATUS',
+            title: `Repair sent back: ${request.title}`,
+            body: `Your property team sent "${request.title}" back to the vendor to be fixed.`,
+            link: `/dashboard/maintenance/${id}`,
+          });
+        }
         return NextResponse.json({
           data: await prisma.maintenanceRequest.findUnique({ where: { id } }),
         });
@@ -226,12 +230,14 @@ export const POST = withAuth(
         body: `"${request.title}" was given to another vendor.`,
         link: '/dashboard',
       });
-      await notifyUser(request.tenantId, {
-        type: 'MAINTENANCE_STATUS',
-        title: `New vendor for: ${request.title}`,
-        body: `Your property team gave "${request.title}" to another vendor to put right.`,
-        link: `/dashboard/maintenance/${id}`,
-      });
+      if (request.tenantId) {
+        await notifyUser(request.tenantId, {
+          type: 'MAINTENANCE_STATUS',
+          title: `New vendor for: ${request.title}`,
+          body: `Your property team gave "${request.title}" to another vendor to put right.`,
+          link: `/dashboard/maintenance/${id}`,
+        });
+      }
       return NextResponse.json({
         data: await prisma.maintenanceRequest.findUnique({ where: { id } }),
       });

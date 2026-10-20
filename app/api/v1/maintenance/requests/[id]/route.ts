@@ -48,6 +48,7 @@ function loadRequest(id: string) {
       category: true,
       vendor: { select: PERSON },
       tenant: { select: PERSON },
+      createdBy: { select: { id: true, name: true } },
       approvedBy: { select: { id: true, name: true } },
       conversation: true,
       vendorRating: true,
@@ -63,11 +64,12 @@ function loadRequest(id: string) {
 // Skips notifying when the tenant is the one who made the change (e.g. a
 // self-cancel) -- nobody needs to be told about an action they just took.
 function notifyTenantOfStatus(
-  request: { id: string; tenantId: string; title: string },
+  request: { id: string; tenantId: string | null; title: string },
   actorId: string,
   body: string,
 ) {
-  if (actorId === request.tenantId) return Promise.resolve();
+  // A work order has no tenant to tell.
+  if (!request.tenantId || actorId === request.tenantId) return Promise.resolve();
   return notifyUser(request.tenantId, {
     type: 'MAINTENANCE_STATUS',
     title: `Maintenance update: ${request.title}`,
@@ -296,7 +298,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
         }
 
         const data = {
-          ...(await completionData()),
+          ...(await completionData(request)),
           ...evidenceData,
           // Older screens read the single proof link, so keep it filled from the first photo.
           completionProofUrl: proof ?? after[0],

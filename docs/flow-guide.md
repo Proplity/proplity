@@ -306,7 +306,11 @@ vendor browsing the same page won't see it — it's manager/landlord-only).
   (grace period, late fee) as before.
 
 **4. Manage maintenance requests** — open _Maintenance_ to see every
-request across your portfolio. Open one to:
+request across your portfolio. Press **Raise a repair** to log work you want
+done yourself on any unit you look after, even an empty one: choose the
+property and unit, say what is needed and, if you like, a vendor. It has no
+tenant, so nobody is asked to confirm it; you approve it when the vendor is
+done and pay the vendor as usual. Open a request to:
 
 - Click **Message about this request** to reach the shared thread with
   the tenant (and vendor, once assigned).
@@ -316,8 +320,9 @@ request across your portfolio. Open one to:
   checkout; if you paid the vendor another way, press **Paid another way**
   and record the transfer or cash payment with the receipt file. It waits on
   the **Bank Transfers** tab until someone other than you confirms it.
-  (Rent paid in cash or by transfer is recorded straight away with **Record
-  payment** on the tenant's page.)
+  (Rent paid in cash or by transfer is recorded with **Record cash or
+  transfer payment** on the tenant's page, the same form; it is paid only once
+  someone other than you confirms it.)
 - Once a vendor's invoice is submitted with a photo of the finished work,
   the request completes automatically by default (configurable in Admin →
   Platform Settings). There is no Mark as Completed button: only the vendor
@@ -333,6 +338,14 @@ the navigation). Transfers recorded by tenants or by your team wait under
 and the vendor are told) or **Reject** with a reason. You cannot confirm one
 you recorded yourself; you can only withdraw it. If nobody else on the
 property can confirm it, an admin is told.
+
+**4c. Recurring maintenance** — open _Schedules_ to see what is
+serviced on a rhythm. **New schedule**: pick the unit, what is serviced, how
+often and the first due date. **Pause** and **Resume**, **Edit** the date or
+cycle, or **Remove** it. The daily job raises a repair when each one falls due
+and asks you to find a vendor; for an empty unit it is a work order with no
+tenant. A monthly schedule that starts on the 31st lands on the last day of a
+short month and then returns to the 31st.
 
 **5. Messages** — your inbox lists every conversation across tenants,
 vendors, and landlords you're connected to.
@@ -412,11 +425,15 @@ action, entity, date/time) with filtering by action, actor, entity, and date ran
 plus expandable JSON metadata for deep inspection. Tracks user suspensions, role changes,
 private file access, vendor verifications, retention erasures, and property merge/unmerge.
 
-**5c. Platform Settings** — two live toggles: whether a vendor's invoice
-automatically completes its maintenance job, and whether tenants are asked
-to confirm finished repairs (on by default). Flip one and it takes effect
-immediately for every request platform-wide; repairs already waiting for a
-tenant's answer stay answerable if the second is turned off.
+**5c. Platform Settings** — four live toggles: whether a vendor's invoice
+automatically completes its maintenance job, whether tenants are asked
+to confirm finished repairs (on by default), and two for payments the property
+team records by hand: whether what a tenant is recorded as paying, and what
+is paid to a vendor, must be confirmed by someone other than the person who
+entered it (both on by default; off, the recorder's own entry counts at once,
+still logged and with a receipt). Flip one and it takes effect immediately
+platform-wide; repairs already waiting for a tenant's answer stay answerable
+if the second is turned off.
 
 **5d. Bank Transfers** — the same list the property team uses
 (`/admin/payments`): payments recorded as paid another way, waiting,

@@ -162,10 +162,23 @@ Same as landlord, plus the day-to-day operational tools:
       the only one who could, an admin is told. On a repair's vendor
       invoice (Cost Tracking), **Paid another way** records a transfer or cash
       payment to the vendor, with the receipt file, and it waits for someone else
-      to confirm. Rent recorded with **Record payment** on a tenant's record
-      takes effect straight away
+      to confirm. Rent recorded with **Record cash or transfer payment** on a
+      tenant's record opens the same form and waits for someone else too; the
+      server refuses (409) to mark a tenant's or a vendor's invoice paid by
+      hand. A receipt shows a note only if a person typed one
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
+- [ ] **Raise a repair** (Maintenance board): pick a property and a unit
+      (including a vacant one), say what needs doing, optionally choose a
+      vendor. It opens as a work order with "no tenant": nobody is asked to
+      confirm it, the repair page says **Raised By** you, and the vendor (if
+      chosen) is told. Someone living in the unit is told work is planned
+- [ ] **Schedules** tab (Recurring maintenance): add a schedule (unit, what is serviced, how
+      often, first due date), **Pause** and **Resume** it, **Edit** its date or
+      cycle and **Remove** it (with a confirmation). A schedule on a vacant unit
+      says its repairs will be work orders with no tenant. A schedule that starts
+      on the 31st falls on the last day of a short month and comes back to the
+      31st
 - [ ] On a finished repair the **Sign-off** card shows the tenant's answer;
       **Approve work** records the sign-off (the invoice is unaffected). If the
       tenant disputed it: **Send back to vendor**, **Give to another vendor**
@@ -227,7 +240,10 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] Platform Settings — toggle platform-wide behavior: whether a vendor
       invoice auto-completes its maintenance job, and whether tenants are
       asked to confirm finished repairs (turning it off leaves repairs already
-      waiting for an answer answerable)
+      waiting for an answer answerable); the two second-person switches for
+      payments the team records (tenant payments, vendor payments): off, the
+      manager's entry on a tenant's record or a vendor's bill counts at once
+      with a receipt and an audit row; on, it waits on Bank Transfers
 - [ ] Open the admin-specific notifications view (bell + full page) —
       property creations and landlord edits trigger email/system notifications to admins
 - [ ] Change password from inside the admin panel (Settings)
@@ -258,13 +274,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 535 tests across 45 files under
-  `tests/` (459 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 76 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 566 tests across 48 files under
+  `tests/` (481 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 85 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (76 tests across 13 files, executes in ~2.8s without DB drops).
+  (85 tests across 15 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
@@ -272,9 +288,9 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 56 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 63 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
-  the dev email widget, and the mobile tab bar. Needs a seeded database
+  the dev email widget, the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
   `E2E (Playwright)` job against a production build.
 - **Running the API suite on a shared machine:** the suite's server uses port

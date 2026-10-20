@@ -24,13 +24,15 @@ import {
   useCreateNotice,
   useSignLease,
 } from '@/hooks/useLeases';
-import { useCreateInvoice, useRecordPayment } from '@/hooks/useInvoices';
+import { useCreateInvoice } from '@/hooks/useInvoices';
+import { usePaymentRules } from '@/hooks/usePaymentRules';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useViolations, useCreateViolation, useUpdateViolation } from '@/hooks/useViolations';
 import { useOpenConversation } from '@/hooks/useOpenConversation';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PaidAnotherWayForm } from './PaidAnotherWayForm';
 import { toast } from 'sonner';
 import type { Lease, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
 
@@ -328,12 +330,8 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     submitting: savingInvoice,
     error: invoiceError,
   } = useCreateInvoice();
-  const {
-    submit: submitPayment,
-    submitting: recordingPayment,
-    error: paymentError,
-  } = useRecordPayment();
   const { open: openConversation } = useOpenConversation();
+  const paymentRules = usePaymentRules();
   const [newNote, setNewNote] = useState('');
   const [editingTerms, setEditingTerms] = useState(false);
   const [termsDraft, setTermsDraft] = useState({
@@ -356,12 +354,6 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     content: '',
   });
   const [recordingOpen, setRecordingOpen] = useState(false);
-  const [paymentDraft, setPaymentDraft] = useState<{
-    invoiceId: string;
-    amount: string;
-    method: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
-    reference: string;
-  }>({ invoiceId: '', amount: '', method: 'CASH', reference: '' });
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState<{
     type: CreateInvoiceInput['type'];
@@ -496,22 +488,6 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
   const owing = (inv: { amount: number; payments: { amount: number }[] }) =>
     Math.max(0, inv.amount - inv.payments.reduce((sum, p) => sum + p.amount, 0));
 
-  const handleRecordPayment = async () => {
-    try {
-      await submitPayment({
-        invoiceId: paymentDraft.invoiceId,
-        amount: parseFloat(paymentDraft.amount) || 0,
-        method: paymentDraft.method,
-        reference: paymentDraft.reference.trim() || undefined,
-      });
-      setPaymentDraft({ invoiceId: '', amount: '', method: 'CASH', reference: '' });
-      setRecordingOpen(false);
-      refetchLease();
-    } catch {
-      // error surfaced below via paymentError
-    }
-  };
-
   const handleSendInvoice = async () => {
     try {
       await submitInvoice({
@@ -541,31 +517,33 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
 
       {/* Header */}
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-500 text-3xl font-semibold text-white">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-500 text-2xl font-semibold text-white sm:h-20 sm:w-20 sm:text-3xl">
               {tenant.name.charAt(0)}
             </div>
-            <div>
-              <h1 className="mb-2 text-2xl font-semibold">{tenant.name}</h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  {tenant.email}
+            <div className="min-w-0">
+              <h1 className="mb-2 text-2xl font-semibold break-words">{tenant.name}</h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="break-all">{tenant.email}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Phone className="h-4 w-4" />
+                  <Phone className="h-4 w-4 shrink-0" />
                   {tenant.phoneNumber ?? 'N/A'}
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1 text-sm text-gray-600">
-                <MapPin className="h-4 w-4" />
-                {property ? `${property.name} · Unit ${lease.unit?.unitNumber}` : 'N/A'}
+              <div className="mt-2 flex items-start gap-1 text-sm text-gray-600">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {property ? `${property.name} · Unit ${lease.unit?.unitNumber}` : 'N/A'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span
               className={`rounded-full px-3 py-1 text-sm font-medium ${
                 rentPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -1125,90 +1103,21 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             </div>
 
             {recordingOpen && (
-              <div className="mt-4 space-y-3 border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-semibold text-gray-800">Record a payment</h3>
-                <p className="text-xs text-gray-500">
-                  Use this when the tenant paid you directly. The invoice is marked paid from the
-                  payments recorded, and the entry is logged.
-                </p>
-                <div>
-                  <label className="mb-1 block text-sm text-gray-600">Invoice</label>
-                  <select
-                    value={paymentDraft.invoiceId}
-                    onChange={(e) => {
-                      const inv = unpaidInvoices.find((i) => i.id === e.target.value);
-                      setPaymentDraft((s) => ({
-                        ...s,
-                        invoiceId: e.target.value,
-                        amount: inv ? String(owing(inv)) : '',
-                      }));
-                    }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="">Choose an invoice…</option>
-                    {unpaidInvoices.map((inv) => (
-                      <option key={inv.id} value={inv.id}>
-                        {inv.type} · due {new Date(inv.dueDate).toLocaleDateString()} · ₦
-                        {owing(inv).toLocaleString()} left
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-gray-600">Amount received (₦)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={paymentDraft.amount}
-                    onChange={(e) => setPaymentDraft((s) => ({ ...s, amount: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-gray-600">How was it paid?</label>
-                  <select
-                    value={paymentDraft.method}
-                    onChange={(e) =>
-                      setPaymentDraft((s) => ({
-                        ...s,
-                        method: e.target.value as 'CASH' | 'BANK_TRANSFER' | 'CHECK',
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="CASH">Cash</option>
-                    <option value="BANK_TRANSFER">Bank transfer</option>
-                    <option value="CHECK">Cheque</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-gray-600">
-                    Reference (optional, e.g. transfer ID)
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentDraft.reference}
-                    onChange={(e) => setPaymentDraft((s) => ({ ...s, reference: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                {paymentError && <p className="text-sm text-red-600">{paymentError}</p>}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleRecordPayment}
-                    disabled={recordingPayment || !paymentDraft.invoiceId || !paymentDraft.amount}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {recordingPayment ? 'Saving…' : 'Record payment'}
-                  </button>
-                  <button
-                    onClick={() => setRecordingOpen(false)}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+              <PaidAnotherWayForm
+                invoices={unpaidInvoices.map((inv) => ({
+                  id: inv.id,
+                  invoiceNumber: inv.invoiceNumber,
+                  owing: owing(inv),
+                  label: `${inv.type}, due ${new Date(inv.dueDate).toLocaleDateString()}`,
+                }))}
+                payerName={tenant.name}
+                needsSecondPerson={paymentRules.requireSecondPersonForTenantPayments}
+                onClose={() => setRecordingOpen(false)}
+                onDone={() => {
+                  setRecordingOpen(false);
+                  refetchLease();
+                }}
+              />
             )}
 
             {sendingInvoice && (
