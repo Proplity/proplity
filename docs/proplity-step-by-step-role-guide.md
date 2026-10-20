@@ -1573,6 +1573,18 @@ The manager's maintenance control centre — a Kanban-style board (like Trello) 
 5. The vendor presses Mark In Progress, then bills the job; the invoice completes it and records its amount as the final cost
 6. The tenant can then rate the vendor from My Maintenance Requests, and the manager opens **View invoice** under Cost Tracking (the vendor's itemised lines, VAT, total and notes) and pays it
 
+**Raising a repair yourself (work orders)**
+
+Press **Raise a repair** at the top of the board. Choose the property and the unit (an empty unit is fine), say what needs doing, and optionally pick a category, a priority and a vendor.
+
+- It is a **work order**: it has no tenant, so nobody is asked to confirm it and no one rates the vendor. The repair page says **Raised By** you.
+- If you chose a vendor the job is scheduled and they are told; if not, assign one from the repair page. The rest of the property team is told. If someone lives in the unit, they are told in the app that work is planned there.
+- When the vendor has finished it, check their photos and press **Approve work**. You pay the vendor as for any repair.
+
+**Recurring maintenance**
+
+The **Schedules** tab (Recurring maintenance) lists what is serviced on a rhythm: the unit, what is serviced, how often, when it is next due and when it last ran. **New schedule** adds one; **Pause** and **Resume** stop and restart it; **Edit** changes its date or cycle; **Remove** deletes it (repairs it already raised stay). Each time one falls due the daily job raises a repair and asks you to find a vendor. An empty unit gets a work order with no tenant. A schedule that starts on the 31st lands on the last day of a short month and returns to the 31st.
+
 **Finished repairs: the Sign-off card**
 
 Only the vendor can finish a job (the old "Mark as Completed" button is gone). Once they have, the repair page shows their before and after photos and a **Sign-off** card:

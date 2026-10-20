@@ -166,6 +166,17 @@ Same as landlord, plus the day-to-day operational tools:
       takes effect straight away
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
+- [ ] **Raise a repair** (Maintenance board): pick a property and a unit
+      (including a vacant one), say what needs doing, optionally choose a
+      vendor. It opens as a work order with "no tenant": nobody is asked to
+      confirm it, the repair page says **Raised By** you, and the vendor (if
+      chosen) is told. Someone living in the unit is told work is planned
+- [ ] **Schedules** tab (Recurring maintenance): add a schedule (unit, what is serviced, how
+      often, first due date), **Pause** and **Resume** it, **Edit** its date or
+      cycle and **Remove** it (with a confirmation). A schedule on a vacant unit
+      says its repairs will be work orders with no tenant. A schedule that starts
+      on the 31st falls on the last day of a short month and comes back to the
+      31st
 - [ ] On a finished repair the **Sign-off** card shows the tenant's answer;
       **Approve work** records the sign-off (the invoice is unaffected). If the
       tenant disputed it: **Send back to vendor**, **Give to another vendor**
@@ -258,13 +269,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 535 tests across 45 files under
-  `tests/` (459 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 76 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 556 tests across 47 files under
+  `tests/` (473 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 83 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (76 tests across 13 files, executes in ~2.8s without DB drops).
+  (83 tests across 14 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
