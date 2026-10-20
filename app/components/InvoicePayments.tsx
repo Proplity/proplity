@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useBankTransfers } from '@/hooks/useBankTransfers';
+import { usePaymentRules } from '@/hooks/usePaymentRules';
 import type { Payment } from '@/lib/api/types';
 import { PaidAnotherWayForm } from './PaidAnotherWayForm';
 
@@ -37,6 +38,7 @@ export function InvoicePayments({
 }) {
   const { user } = useAuth();
   const [recording, setRecording] = useState(false);
+  const rules = usePaymentRules();
   const waiting = useBankTransfers(
     { invoiceId: invoice.id, status: 'PENDING' },
     { enabled: canRecord },
@@ -89,6 +91,7 @@ export function InvoicePayments({
       {recording && (
         <PaidAnotherWayForm
           invoices={[{ id: invoice.id, invoiceNumber: invoice.invoiceNumber, owing }]}
+          needsSecondPerson={rules.requireSecondPersonForVendorPayments}
           onClose={() => setRecording(false)}
           onDone={() => {
             setRecording(false);

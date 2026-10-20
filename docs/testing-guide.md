@@ -162,8 +162,10 @@ Same as landlord, plus the day-to-day operational tools:
       the only one who could, an admin is told. On a repair's vendor
       invoice (Cost Tracking), **Paid another way** records a transfer or cash
       payment to the vendor, with the receipt file, and it waits for someone else
-      to confirm. Rent recorded with **Record payment** on a tenant's record
-      takes effect straight away
+      to confirm. Rent recorded with **Record cash or transfer payment** on a
+      tenant's record opens the same form and waits for someone else too; the
+      server refuses (409) to mark a tenant's or a vendor's invoice paid by
+      hand. A receipt shows a note only if a person typed one
 - [ ] Manage maintenance requests — see everything coming in, assign a
       vendor, track progress to completion
 - [ ] **Raise a repair** (Maintenance board): pick a property and a unit
@@ -238,7 +240,10 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] Platform Settings — toggle platform-wide behavior: whether a vendor
       invoice auto-completes its maintenance job, and whether tenants are
       asked to confirm finished repairs (turning it off leaves repairs already
-      waiting for an answer answerable)
+      waiting for an answer answerable); the two second-person switches for
+      payments the team records (tenant payments, vendor payments): off, the
+      manager's entry on a tenant's record or a vendor's bill counts at once
+      with a receipt and an audit row; on, it waits on Bank Transfers
 - [ ] Open the admin-specific notifications view (bell + full page) —
       property creations and landlord edits trigger email/system notifications to admins
 - [ ] Change password from inside the admin panel (Settings)
@@ -269,13 +274,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 556 tests across 47 files under
-  `tests/` (473 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 83 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 566 tests across 48 files under
+  `tests/` (481 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 85 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (83 tests across 14 files, executes in ~2.8s without DB drops).
+  (85 tests across 15 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
