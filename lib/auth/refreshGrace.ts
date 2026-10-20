@@ -3,4 +3,4 @@
 // abort the refresh request after the server rotated the token but before the browser stored the
 // new cookie; the browser then retries with the old value. Short on purpose: a replay inside the
 // window is accepted once, a replay after it revokes the whole family.
-export const REFRESH_GRACE_MS = 10_000;
+export const REFRESH_GRACE_MS = 5_000;
