@@ -6,7 +6,10 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { appUrl } from '@/lib/appUrl';
 import { canManageProperty } from '@/lib/api/propertyAccess';
-import { paymentsMockEnabled } from '@/lib/payments/mockGateway';
+import {
+  CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  cardPaymentsAvailable,
+} from '@/lib/payments/availability';
 
 // `amount` (naira) is optional: omitted means "the whole outstanding balance",
 // which is what the tenant dashboard sends. A smaller amount is a part payment.
@@ -75,12 +78,14 @@ export const POST = withAuth(async (req, { session }) => {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
     // No real key: either hand back our own fake checkout page (opt-in,
-    // see lib/payments/mockGateway.ts) or the same clean 503 as always --
-    // before touching anything else, same as the original short-circuit.
-    // Never both -- a real key always wins even if the mock flag was left
-    // on by mistake.
-    if (!secretKey && !paymentsMockEnabled()) {
-      return NextResponse.json({ error: 'Payment provider not configured' }, { status: 503 });
+    // see lib/payments/mockGateway.ts) or a clean 503 -- before touching
+    // anything else. Never both -- a real key always wins even if the mock
+    // flag was left on by mistake. Adding the key switches this on, no rebuild.
+    if (!cardPaymentsAvailable()) {
+      return NextResponse.json(
+        { error: CARD_PAYMENTS_UNAVAILABLE_MESSAGE, code: 'CARD_PAYMENTS_UNAVAILABLE' },
+        { status: 503 },
+      );
     }
 
     const user = await prisma.user.findUnique({ where: { id: session.sub } });

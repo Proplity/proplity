@@ -30,7 +30,9 @@ failing.
   profile ID, property photos/video) — real file storage requires a
   storage provider key. Without it you can still select a file, but you'll
   see a note that it won't be saved.
-- **Rent payment** (Paystack) — requires a Paystack key. Test environments
+- **Rent payment** (Paystack) — requires a Paystack key; until one is set,
+  the screens say "Card payments are not available yet" and you can still
+  record a bank transfer or cash payment. Test environments
   can instead switch on the **mock payment gateway**, which shows a
   Paystack-style checkout page; "paying" there runs the real payment
   recording logic.
@@ -105,7 +107,8 @@ Viewing**.
 
 1.  Pick a date with the date field (tomorrow up to 60 days ahead, Monday to
     Saturday) and a start time from the dropdown (every 30 minutes, 9:00 AM to
-    5:00 PM, Lagos time), then click **Continue**.
+    5:00 PM, Lagos time), then click **Continue**. A time someone else has
+    already booked at that property is marked "(booked)" and cannot be chosen.
 2.  Fill in your name, email, and phone number.
 3.  Click **Confirm Viewing**. A "Viewing Scheduled!" confirmation appears
     and a confirmation email is sent.
@@ -134,8 +137,10 @@ Click one to open that property's page.
 
 **10. Pay rent** — open _Payment History_ (or use the payment panel on your
 dashboard). If you owe a balance, **Pay Rent Online** takes you to the
-payment page (Paystack, or the mock gateway in test environments); once
-paid, the invoice flips to paid and your manager is notified. Past
+payment page (Paystack, or the mock gateway in test environments); if card
+payments are not available yet the button says so, and **Paid another way**
+(below) still works. Once paid, the invoice flips to paid and your manager is
+notified. Past
 payments are listed under Recent Payments.
 
 **10b. Paid another way, and receipts** — if you paid by bank transfer or
@@ -433,7 +438,10 @@ is paid to a vendor, must be confirmed by someone other than the person who
 entered it (both on by default; off, the recorder's own entry counts at once,
 still logged and with a receipt). Flip one and it takes effect immediately
 platform-wide; repairs already waiting for a tenant's answer stay answerable
-if the second is turned off.
+if the second is turned off. Two more cards, both off by default: charging
+auto-pay tenants automatically, and deleting identity documents once kept long
+enough (with the two periods, in days). Each asks once more before turning on
+and says when the deployment does not allow it yet.
 
 **5d. Bank Transfers** — the same list the property team uses
 (`/admin/payments`): payments recorded as paid another way, waiting,

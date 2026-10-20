@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { isAxiosError } from 'axios';
 import { ArrowLeft, Calendar, Clock, MapPin, User, CheckCircle, AlertCircle } from 'lucide-react';
 import {
   VIEWING_TIMES,
@@ -8,7 +9,7 @@ import {
   viewingDateRange,
   viewingInstant,
 } from '@/lib/viewingSlots';
-import { useCreateViewing } from '@/hooks/useProperties';
+import { useCreateViewing, useViewingAvailability } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 
 interface ScheduleViewingProps {
@@ -38,6 +39,10 @@ export function ScheduleViewing({
     agreeToTerms: false,
   });
   const [formError, setFormError] = useState<string | null>(null);
+  // Times other people have already booked on the chosen day are greyed out (ISS-104).
+  const { taken, refetch: refreshTaken } = useViewingAvailability(propertyId, formData.date);
+  // The server's message is hidden once the form has taken the person back to pick another time.
+  const [serverErrorVisible, setServerErrorVisible] = useState(true);
 
   const [range] = useState(() => viewingDateRange());
   const timeLabel = VIEWING_TIMES.find((t) => t.value === formData.timeSlot)?.label ?? '';
@@ -48,6 +53,7 @@ export function ScheduleViewing({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setServerErrorVisible(true);
     if (!formData.agreeToTerms) {
       setFormError('Please agree to the terms and conditions');
       return;
@@ -69,8 +75,16 @@ export function ScheduleViewing({
             .join(' ') || undefined,
       });
       setStep(3);
-    } catch {
-      // error state is already surfaced via the hook's `error`
+    } catch (err) {
+      // The server's message is already shown via the hook's `error`. When someone else booked
+      // the time while this form was open, go back to the time step with a fresh list instead.
+      if (isAxiosError(err) && err.response?.data?.code === 'SLOT_TAKEN') {
+        await refreshTaken();
+        setServerErrorVisible(false);
+        setFormError('That time was just booked by someone else. Please choose another time.');
+        setFormData((f) => ({ ...f, timeSlot: '' }));
+        setStep(1);
+      }
     }
   };
 
@@ -217,8 +231,8 @@ export function ScheduleViewing({
                 >
                   <option value="">Choose a time</option>
                   {VIEWING_TIMES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                    <option key={t.value} value={t.value} disabled={taken.includes(t.value)}>
+                      {taken.includes(t.value) ? `${t.label} (booked)` : t.label}
                     </option>
                   ))}
                 </select>
@@ -226,6 +240,15 @@ export function ScheduleViewing({
                   9:00 AM to 5:00 PM, Lagos time. The property team confirms or suggests another
                   time.
                 </p>
+                {taken.length > 0 && (
+                  <p className="mt-2 text-sm text-amber-700" data-testid="booked-times">
+                    Already booked on this day:{' '}
+                    {taken
+                      .map((value) => VIEWING_TIMES.find((t) => t.value === value)?.label ?? value)
+                      .join(', ')}
+                    . Pick another time.
+                  </p>
+                )}
               </div>
 
               {/* Important Information */}
@@ -353,7 +376,7 @@ export function ScheduleViewing({
             </div>
           )}
 
-          {(formError || error) && (
+          {(formError || (serverErrorVisible && error)) && (
             <div className="mt-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {formError || error}
@@ -387,6 +410,11 @@ export function ScheduleViewing({
                   }
                   if (formData.date < range.min || formData.date > range.max) {
                     setFormError('Choose a date from tomorrow up to 60 days ahead.');
+                    return;
+                  }
+                  if (taken.includes(formData.timeSlot)) {
+                    setFormError('That time is already booked. Please choose another time.');
+                    setFormData({ ...formData, timeSlot: '' });
                     return;
                   }
                   setFormError(null);

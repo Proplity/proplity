@@ -24,5 +24,15 @@ model SystemSettings {
   // waits for the team, whatever these say.
   requireSecondPersonForTenantPayments Boolean @default(true)
   requireSecondPersonForVendorPayments Boolean @default(true)
+  // Automatic card charging (the auto-pay charger) and identity-document retention are both off
+  // until an admin switches them on here AND the deployment allows them (AUTOPAY_WORKER_ENABLED /
+  // RETENTION_ENABLED): the deploy flag is the lock, this is the day-to-day switch (ADR-0015).
+  autopayChargingEnabled           Boolean  @default(false)
+  retentionEnabled                 Boolean  @default(false)
+  // How long identity documents are kept: after a tenancy ended with nothing pending or active,
+  // and after the last rejected application. Defaults are ADR-0012's proposal (12 months, 90
+  // days); the API refuses values below 30 and 7 days so a typo cannot delete everything.
+  retentionAfterTenancyDays        Int      @default(365)
+  retentionAfterRejectionDays      Int      @default(90)
   updatedAt                        DateTime @updatedAt
 }

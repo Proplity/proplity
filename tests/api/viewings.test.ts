@@ -8,8 +8,11 @@ import {
   VIEWING_TIMES,
   isSunday,
   toLocalDateKey,
+  viewingDateKey,
   viewingDateRange,
+  viewingDayBounds,
   viewingInstant,
+  viewingTimeKey,
   viewingTimeProblem,
 } from '../../lib/viewingSlots';
 
@@ -44,6 +47,24 @@ describe('viewing times (ISS-042)', () => {
     );
     expect(viewingTimeProblem(viewingInstant('2026-10-20', '03:00'))).not.toBeNull();
     expect(viewingTimeProblem(viewingInstant('2026-10-25', '10:00'))).toMatch(/Sundays/);
+  });
+
+  it('only accepts the half-hour starts the form offers (ISS-104)', () => {
+    expect(viewingTimeProblem(viewingInstant('2026-10-20', '10:30'))).toBeNull();
+    expect(viewingTimeProblem(viewingInstant('2026-10-20', '10:15'))).toMatch(/half hour/);
+    expect(viewingTimeProblem(new Date('2026-10-20T09:00:30.000Z'))).toMatch(/half hour/);
+    expect(viewingTimeProblem(new Date('2026-10-20T09:00:00.500Z'))).toMatch(/half hour/);
+  });
+
+  it('reads the Lagos day and start time of an instant, and where a day begins and ends', () => {
+    // 23:30 UTC on the 20th is 00:30 on the 21st in Lagos.
+    const late = new Date('2026-10-20T23:30:00.000Z');
+    expect(viewingDateKey(late)).toBe('2026-10-21');
+    expect(viewingTimeKey(late)).toBe('00:30');
+    expect(viewingTimeKey(viewingInstant('2026-10-20', '14:30'))).toBe('14:30');
+    const day = viewingDayBounds('2026-10-20');
+    expect(day.start.toISOString()).toBe('2026-10-19T23:00:00.000Z');
+    expect(day.end.toISOString()).toBe('2026-10-20T23:00:00.000Z');
   });
 });
 
@@ -137,6 +158,170 @@ describe('viewings: who is coming', () => {
     // The requester sees their own bookings, with no visitor block.
     const own = await apiFetch(`/api/v1/properties/${property.id}/viewings`, { cookie: tCookie });
     expect(own.body.data[0].requestedBy).toBeUndefined();
+  });
+});
+
+describe('viewings: one booking per property and start time (ISS-104)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  async function setup() {
+    const manager = await createUser(Role.MANAGER);
+    const [first, second] = await Promise.all([createUser(Role.TENANT), createUser(Role.TENANT)]);
+    const property = await createProperty({ managerId: manager.id });
+    return {
+      manager,
+      property,
+      mCookie: await authCookie(manager.id, manager.role),
+      aCookie: await authCookie(first.id, first.role),
+      bCookie: await authCookie(second.id, second.role),
+    };
+  }
+
+  const book = (propertyId: string, cookie: string, scheduledAt: string) =>
+    apiFetch(`/api/v1/properties/${propertyId}/viewings`, {
+      method: 'POST',
+      cookie,
+      body: { scheduledAt },
+    });
+
+  const available = (propertyId: string, cookie: string, date: string) =>
+    apiFetch(`/api/v1/properties/${propertyId}/viewings/availability?date=${date}`, { cookie });
+
+  it('refuses a second person the same property and time, with a clear message', async () => {
+    const { property, aCookie, bCookie } = await setup();
+    const when = bookableViewingTime();
+    expect((await book(property.id, aCookie, when)).status).toBe(201);
+
+    const second = await book(property.id, bCookie, when);
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe('SLOT_TAKEN');
+    expect(second.body.error).toMatch(/already booked.*another time/i);
+
+    const { testPrisma } = await import('../helpers/db');
+    expect(await testPrisma.propertyViewing.count({ where: { propertyId: property.id } })).toBe(1);
+  });
+
+  it('still allows another time at the same property and the same time at another property', async () => {
+    const { property, aCookie, bCookie } = await setup();
+    const other = await createProperty();
+    const when = bookableViewingTime();
+    const later = viewingInstant(viewingDateKey(new Date(when)), '11:00').toISOString();
+
+    expect((await book(property.id, aCookie, when)).status).toBe(201);
+    expect((await book(property.id, bCookie, later)).status).toBe(201);
+    expect((await book(other.id, bCookie, when)).status).toBe(201);
+  });
+
+  it('lets only one of two people who choose the same time at once have it', async () => {
+    const { property, aCookie, bCookie } = await setup();
+    const when = bookableViewingTime(5);
+    const results = await Promise.all([
+      book(property.id, aCookie, when),
+      book(property.id, bCookie, when),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(results.find((r) => r.status === 409)?.body.code).toBe('SLOT_TAKEN');
+  });
+
+  it('cannot be dodged with a time that is a few seconds off the start', async () => {
+    const { property, aCookie, bCookie } = await setup();
+    const when = bookableViewingTime(6);
+    expect((await book(property.id, aCookie, when)).status).toBe(201);
+    const sneaky = await book(
+      property.id,
+      bCookie,
+      new Date(Date.parse(when) + 30_000).toISOString(),
+    );
+    expect(sneaky.status).toBe(400);
+    expect(sneaky.body.error).toMatch(/half hour/);
+  });
+
+  it('keeps one booking per person per property per day', async () => {
+    const { property, aCookie } = await setup();
+    const when = bookableViewingTime(7);
+    const later = viewingInstant(viewingDateKey(new Date(when)), '15:00').toISOString();
+    expect((await book(property.id, aCookie, when)).status).toBe(201);
+    const again = await book(property.id, aCookie, later);
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe('DUPLICATE_BOOKING');
+  });
+
+  it('lists the booked times of a day, and nothing about who booked them', async () => {
+    const { property, mCookie, aCookie, bCookie } = await setup();
+    const when = bookableViewingTime(8);
+    const date = viewingDateKey(new Date(when));
+    const afternoon = viewingInstant(date, '14:30').toISOString();
+
+    const empty = await available(property.id, bCookie, date);
+    expect(empty.status).toBe(200);
+    expect(empty.body.data).toEqual({ date, taken: [] });
+
+    const first = await book(property.id, aCookie, when);
+    await book(property.id, bCookie, afternoon);
+    // A confirmed booking holds its time too.
+    await apiFetch(`/api/v1/properties/${property.id}/viewings/${first.body.data.id}`, {
+      method: 'PATCH',
+      cookie: mCookie,
+      body: { status: 'CONFIRMED' },
+    });
+
+    const res = await available(property.id, bCookie, date);
+    expect(res.body.data).toEqual({ date, taken: ['10:00', '14:30'] });
+    expect(JSON.stringify(res.body)).not.toMatch(/requestedBy|email|name/i);
+
+    const nextDay = viewingDateKey(new Date(Date.parse(when) + 24 * 60 * 60 * 1000));
+    expect((await available(property.id, bCookie, nextDay)).body.data.taken).toEqual([]);
+  });
+
+  it('needs a signed-in person, a real date and a real property', async () => {
+    const { property, aCookie } = await setup();
+    const date = viewingDateKey(new Date(bookableViewingTime()));
+    expect(
+      (await apiFetch(`/api/v1/properties/${property.id}/viewings/availability?date=${date}`))
+        .status,
+    ).toBe(401);
+    expect((await available(property.id, aCookie, 'tomorrow')).status).toBe(400);
+    expect((await available(property.id, aCookie, '2026-13-45')).status).toBe(400);
+    expect((await available('missing-property', aCookie, date)).status).toBe(404);
+  });
+
+  it('gives the time back when the team declines it or the person cancels', async () => {
+    const { property, mCookie, aCookie, bCookie } = await setup();
+    const when = bookableViewingTime(9);
+    const date = viewingDateKey(new Date(when));
+
+    const declined = await book(property.id, aCookie, when);
+    await apiFetch(`/api/v1/properties/${property.id}/viewings/${declined.body.data.id}`, {
+      method: 'PATCH',
+      cookie: mCookie,
+      body: { status: 'CANCELLED' },
+    });
+    expect((await available(property.id, bCookie, date)).body.data.taken).toEqual([]);
+
+    const retaken = await book(property.id, bCookie, when);
+    expect(retaken.status).toBe(201);
+    await apiFetch(`/api/v1/properties/${property.id}/viewings/${retaken.body.data.id}`, {
+      method: 'PATCH',
+      cookie: bCookie,
+      body: { status: 'CANCELLED' },
+    });
+    expect((await available(property.id, aCookie, date)).body.data.taken).toEqual([]);
+    expect((await book(property.id, aCookie, when)).status).toBe(201);
+  });
+
+  it('lets someone whose booking was cancelled book another time the same day', async () => {
+    const { property, mCookie, aCookie } = await setup();
+    const when = bookableViewingTime(10);
+    const later = viewingInstant(viewingDateKey(new Date(when)), '16:00').toISOString();
+    const first = await book(property.id, aCookie, when);
+    await apiFetch(`/api/v1/properties/${property.id}/viewings/${first.body.data.id}`, {
+      method: 'PATCH',
+      cookie: mCookie,
+      body: { status: 'CANCELLED' },
+    });
+    expect((await book(property.id, aCookie, later)).status).toBe(201);
   });
 });
 
