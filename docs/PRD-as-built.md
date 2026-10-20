@@ -16,7 +16,7 @@ Proplity is a web platform for managing rental property across five roles. Landl
 
 ### 1.1 Delivery state in one paragraph
 
-All five role dashboards, every form, and the full REST API (100 routes) run on real data in PostgreSQL; there are no placeholder screens except three marketing feature pages and the AI assistant widget, which are illustrative. Real money flow works end to end against Paystack's webhook (and a mock gateway for testing), but the live Paystack charge call has not yet been run against a real account. Email, file upload and card payment each need a provider key to be live; without one the app says so rather than failing silently. Nothing is in production yet — the product is in staging/testing.
+All five role dashboards, every form, and the full REST API (101 routes) run on real data in PostgreSQL; there are no placeholder screens except three marketing feature pages and the AI assistant widget, which are illustrative. Real money flow works end to end against Paystack's webhook (and a mock gateway for testing), but the live Paystack charge call has not yet been run against a real account. Email, file upload and card payment each need a provider key to be live; without one the app says so rather than failing silently. Nothing is in production yet — the product is in staging/testing.
 
 ### 1.2 Roles
 
@@ -190,7 +190,7 @@ The PRD's "community associations & estate managers" segment has no dedicated ro
 | Mobile-responsive portals            |   ✅   | Tenant/vendor/manager dashboards work on phones (bottom tab bar). No offline mode.                                                          |
 | Performance (100k+ units, <2 s)      |   ❌   | Not measured or load-tested.                                                                                                                |
 | 99.5 % uptime / graceful degradation |   🟡   | Missing provider keys degrade features with clear messages; no SLA monitoring is in place.                                                  |
-| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 100 routes) behind one typed client.                                                                         |
+| API-first backend                    |   ✅   | Versioned REST API (`/api/v1`, 101 routes) behind one typed client.                                                                         |
 
 ## 10. Quality & operations
 

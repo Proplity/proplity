@@ -5,20 +5,20 @@ path says otherwise.
 
 ## Marketing site
 
-| File                             | Description                                                                                                                                                                   |
-| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/HomeLanding.tsx`            | The home route's wrapper: renders `LandingPage` and, once the silent session refresh finishes, sends a visitor bounced by `proxy.ts` (`?from=`) back to where they were going |
-| `LandingPage.tsx`                | The home page: hero, features, how it works, the demo popup, "Trusted by", featured properties (from `useProperties`), pricing and a closing call to action                   |
-| `MarketingNav.tsx`               | Shared header of every marketing page, with a mobile menu; pricing links appear only when subscriptions are on                                                                |
-| `FeaturedPropertyModal.tsx`      | The preview popup for a featured property card (cheapest unit's price, link to the full page); also exports `FEATURED_GRADIENTS` and `featuredFields`                         |
-| `WatchDemoModal.tsx`             | The "Watch demo" popup: an interactive tour of the platform with illustrative figures                                                                                         |
-| `AboutPage.tsx`                  | About page                                                                                                                                                                    |
-| `ContactPage.tsx`                | Contact page and form. **The form sends nothing**: submitting only shows "Message sent!" (ISS-133)                                                                            |
-| `PricingPage.tsx`                | Plan cards (`PLANS`, also read by checkout). The route redirects home unless subscriptions are on                                                                             |
-| `Checkout.tsx`                   | Subscription checkout: account, payment and billing details, order summary, a confirmation for a downgrade, and the success screen                                            |
-| `TenantFeaturePage.tsx`          | `/for-tenants` landing page (illustrative content from `app/store/mockData.ts`)                                                                                               |
-| `LandlordFeaturePage.tsx`        | `/for-landlords` landing page (same)                                                                                                                                          |
-| `ServiceProviderFeaturePage.tsx` | `/for-vendors` landing page (same)                                                                                                                                            |
+| File                             | Description                                                                                                                                                                                                                             |
+| :------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/HomeLanding.tsx`            | The home route's wrapper: renders `LandingPage` and, once the silent session refresh finishes, sends a visitor bounced by `proxy.ts` (`?from=`) back to where they were going                                                           |
+| `LandingPage.tsx`                | The home page: hero, features, how it works, the demo popup, "Trusted by", featured properties (from `useProperties`), pricing and a closing call to action                                                                             |
+| `MarketingNav.tsx`               | Shared header of every marketing page, with a mobile menu; pricing links appear only when subscriptions are on                                                                                                                          |
+| `FeaturedPropertyModal.tsx`      | The preview popup for a featured property card (cheapest unit's price, link to the full page); also exports `FEATURED_GRADIENTS` and `featuredFields`                                                                                   |
+| `WatchDemoModal.tsx`             | The "Watch demo" popup: an interactive tour of the platform with illustrative figures                                                                                                                                                   |
+| `AboutPage.tsx`                  | About page                                                                                                                                                                                                                              |
+| `ContactPage.tsx`                | Contact page and form. Posts to `POST /api/v1/contact` and shows "Message sent!" only when the server accepted the message; otherwise an error under the form, with what was typed kept. Has a hidden honeypot field for bots (ISS-133) |
+| `PricingPage.tsx`                | Plan cards (`PLANS`, also read by checkout). The route redirects home unless subscriptions are on                                                                                                                                       |
+| `Checkout.tsx`                   | Subscription checkout: account, payment and billing details, order summary, a confirmation for a downgrade, and the success screen                                                                                                      |
+| `TenantFeaturePage.tsx`          | `/for-tenants` landing page (illustrative content from `app/store/mockData.ts`)                                                                                                                                                         |
+| `LandlordFeaturePage.tsx`        | `/for-landlords` landing page (same)                                                                                                                                                                                                    |
+| `ServiceProviderFeaturePage.tsx` | `/for-vendors` landing page (same)                                                                                                                                                                                                      |
 
 ## Sign-in and registration
 
