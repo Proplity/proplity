@@ -74,6 +74,9 @@ export default async function globalSetup() {
     // Lets the auto-pay worker tests charge (against the mock gateway under test).
     AUTOPAY_WORKER_ENABLED: 'true',
     LOCAL_STORAGE_PATH: TEST_STORAGE_PATH,
+    // The contact form needs somewhere to send, and the dev inbox lets a test read what it sent.
+    CONTACT_EMAIL: 'contact-inbox@proplity.test',
+    NEXT_PUBLIC_EMAIL_INBOX_ENABLED: 'true',
   };
   const server: ChildProcess = spawn('pnpm', ['exec', 'next', 'dev'], {
     cwd: process.cwd(),

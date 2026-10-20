@@ -1,8 +1,8 @@
 # 0014 — A repair can be raised by the property team and need not have a tenant
 
-Status: Proposed
-Decided by: (pending: drafted by an agent, to be accepted or changed by the owner) · Date: 2026-10-19
-Recorded: 2026-10-19
+Status: Accepted
+Decided by: the owner (roji-tech), who accepted the defaults as drafted · Date: 2026-10-20
+Recorded: 2026-10-19 (drafted by an agent), accepted 2026-10-20
 
 ## Context
 
@@ -31,6 +31,7 @@ Only a tenant with an active lease could raise a repair (`POST /maintenance/requ
 - Everything that reads a repair's tenant must cope with `null` (about a dozen places were changed). New code must not assume `request.tenant`.
 - A work order never gets a vendor rating (only the tenant rates). If vendors should be rated on these jobs, the team would need a way to do so.
 - A tenant who is moved out and back in does not see work orders raised while the unit was empty.
+- **Accepted without change on 2026-10-20.** No spending limit and no tenant confirmation of work in an occupied unit were asked for.
 - **Revisit if:** the owner wants approval before work starts or a spending limit on work orders, wants tenants of an occupied unit to confirm work done in their unit, or wants a different payer.
 
 ## Enforced by

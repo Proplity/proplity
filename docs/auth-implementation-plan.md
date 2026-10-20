@@ -539,6 +539,8 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 }
 ```
 
+**Update 2026-10-20 (ISS-132):** the `window.location.href = '/login'` shown in the sketches above is now guarded: each request records the page it was made from and only that page is sent to `/login` when the refresh fails (`sendToLogin` in `lib/apiClient.ts`), so a slow request left behind by a page the person has just left cannot pull them off a public page.
+
 **Resolved:** navigation bouncing is handled with a proactive silent-refresh timer, kept _alongside_ `apiFetch` (not instead of it) — background-tab timer throttling means the reactive interceptor is still needed as a backstop for whatever the timer misses.
 
 ### `hooks/useAuthRefresh.ts` — proactive timer, multi-tab safe

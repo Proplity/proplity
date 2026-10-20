@@ -735,7 +735,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Platform Inquiries & Contact Form</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Validated general support and sales inquiry submission form with toast confirmations.</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Support and sales inquiry form that emails the Proplity team. It confirms only when the email has gone out; otherwise an error appears and what you typed is kept.</div>
         <code>/contact</code> &bull; <code>ContactPage.tsx</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
@@ -819,6 +819,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Device-Wide Logout Token Revocation</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Decodes access token signatures on logout (even if expired) to revoke active refresh sessions on the server.</div>
         <code>POST /api/v1/auth/logout</code> &bull; <code>getExpiredSession</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Sign-In Redirect Stays on the Page That Asked</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">When a request fails because the session has ended, only the page that made it is sent to the sign-in screen. A slow request left behind by a page you have just signed out of can no longer pull you off the public home page.</div>
+        <code>lib/apiClient.ts</code> &bull; <code>ISS-132</code>
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Instant Account Suspension Enforcement</div>
@@ -1518,8 +1523,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
       </div>
       <div class="what-box" style="margin: 0; padding: 14px 16px;">
         <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Touch-Target Optimization</div>
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Enforces 44px+ minimum tap target sizes, touch scrolling momentum, and mobile form inputs.</div>
-        <code>mobile-nav.spec.ts</code> &bull; <code>Responsive Design</code>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Buttons, filter pills and switches are at least 36px high on a phone (a switch keeps its look but has a larger touch area), with touch scrolling momentum and mobile form inputs.</div>
+        <code>mobile-nav.spec.ts</code> &bull; <code>ISS-130</code>
+      </div>
+      <div class="what-box" style="margin: 0; padding: 14px 16px;">
+        <div style="font-weight: 700; color: #fff; font-size: 14px; margin-bottom: 4px;">Layout Regression Guard</div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Fails any page that scrolls sideways, cuts its content off, or scrolls sideways inside the dashboard main area at 320, 390 and 768px, so a new screen cannot ship with a broken phone layout.</div>
+        <code>layout.spec.ts</code> &bull; <code>ISS-125 to ISS-130</code>
       </div>
     </div>
   </div>
@@ -1948,7 +1958,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
   <ul style="margin:8px 0 12px 20px;color:var(--text-muted);list-style:disc;">
     <li style="margin-bottom:6px;">Pricing: the plans overview (the menu link only appears when subscriptions are switched on).</li>
     <li style="margin-bottom:6px;">For Landlords, For Tenants and For Service Providers: what each role gets, with a call to action to register.</li>
-    <li style="margin-bottom:6px;">About and Contact: who builds Proplity and a contact form that sends a message to the team.</li>
+    <li style="margin-bottom:6px;">About and Contact: who builds Proplity and a contact form that emails a message to the team (you are told it was sent only once the email has gone out; if not, an error appears and what you typed is kept).</li>
   </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
@@ -2710,6 +2720,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <li style="margin-bottom:6px;">Tab bar and the Quick Actions grid are sized for thumbs.</li>
     <li style="margin-bottom:6px;">The More sheet holds the remaining pages for the role.</li>
     <li style="margin-bottom:6px;">Long pages such as a property stack into one column.</li>
+    <li style="margin-bottom:6px;">Tables become one card per row, with the column name beside each value, so nothing has to scroll sideways.</li>
+    <li style="margin-bottom:6px;">Rows of badges, buttons and filter pills wrap onto the next line instead of running off the screen. The tab rows in Reports and Account Settings scroll inside themselves.</li>
+    <li style="margin-bottom:6px;">A tenant record stacks its header on a phone: the email wraps and the Rent Paid and risk badges stay visible.</li>
+    <li style="margin-bottom:6px;">The repair board shows one column on a phone, two from tablet width (768 px) and three on a wide laptop screen (1280 px).</li>
+    <li style="margin-bottom:6px;">Buttons, filter pills and switches are at least 36 px high on a phone. A switch looks the same but has a larger area to touch.</li>
+    <li style="margin-bottom:6px;">This guide fits a phone too: wide tables scroll inside themselves and long addresses wrap.</li>
   </ul>
   <div class="screenshot-grid">
     <div class="screenshot-item">
@@ -2723,7 +2739,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <hr>
 <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0;">
-  Proplity Complete Guide · Version 3.1 · Updated 2026-10-19 · 160+ Screenshots · All roles covered
+  Proplity Complete Guide · Version 3.2 · Updated 2026-10-20 · 160+ Screenshots · All roles covered
 </p>
 
 </main>

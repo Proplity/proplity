@@ -48,6 +48,13 @@ are configured for this environment before treating it as a defect.
 
 - [ ] Browse the marketing site — homepage, "For Landlords," "For Tenants,"
       "For Vendors," About, Contact, Pricing pages
+- [ ] Contact form — fill in the contact page and send it: "Message sent!"
+      appears only when the email went out (in a test environment, open the
+      Sent Emails widget to see it, addressed to the team's contact mailbox
+      with your address as the reply-to). On an environment with no email
+      service set up, an error appears under the form instead and your text
+      stays in the fields. Sending more than 5 in an hour from one address is
+      refused with a "try again later" message
 - [ ] Look at a property listing — click into a property and see photos,
       details, price
 - [ ] Featured Properties on the homepage — click a card (a popup opens, the
@@ -68,6 +75,7 @@ are configured for this environment before treating it as a defect.
       that page (not the generic dashboard); then idle 15+ minutes, reload a
       dashboard page, and confirm you're returned to it
 - [ ] Log in / log out
+- [ ] Sign out of a dashboard and, straight away, go to the home page and open a listing: you stay on the public pages (no sudden jump to the sign-in screen)
 - [ ] Forgot password — request a reset link, set a new password
 - [ ] First-time setup (one-time only, your IT/deployer does this once) —
       create the very first admin account when the app is brand new
@@ -274,13 +282,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 566 tests across 48 files under
-  `tests/` (481 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 85 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 589 tests across 51 files under
+  `tests/` (488 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 101 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (85 tests across 15 files, executes in ~2.8s without DB drops).
+  (101 tests across 17 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
@@ -288,9 +296,9 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 63 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 65 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
-  the dev email widget, the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
+  the dev email widget, the contact form (its two outcomes, with the route mocked), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
   `E2E (Playwright)` job against a production build.
 - **Running the API suite on a shared machine:** the suite's server uses port
