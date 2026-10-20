@@ -79,7 +79,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
 13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
-14. **Platform Inquiries & Contact Form**: Validated platform contact and support submission form (\`/contact\`, \`ContactPage.tsx\`).
+14. **Platform Inquiries & Contact Form**: Contact and support form (\`/contact\`, \`ContactPage.tsx\`) that emails the Proplity team; the visitor sees "Message sent!" only when the email went out, otherwise an error with their text kept.
 15. **Interactive Platform Guide**: Visual role-by-role guide with 100+ interactive fullscreen screenshots (\`/proplity-guide\`).
 
 ---
@@ -655,7 +655,7 @@ Besides the homepage, the public site has a page for each audience plus company 
 
 - Pricing: the plans overview (the menu link only appears when subscriptions are switched on).
 - For Landlords, For Tenants and For Service Providers: what each role gets, with a call to action to register.
-- About and Contact: who builds Proplity and a contact form that sends a message to the team.
+- About and Contact: who builds Proplity and a contact form that emails a message to the team. You see "Message sent!" only once the email has gone out; if it could not be sent, an error appears under the form and what you typed is kept so you can try again.
 
 **Screenshots:**
 
