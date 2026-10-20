@@ -148,7 +148,7 @@ async function announceInvoice(
         },
         { exceptId: ctx.actorId, req: ctx.req },
       );
-    } else {
+    } else if (request.tenantId) {
       await notifyAndEmail(request.tenantId, toPay, { req: ctx.req });
     }
     if (ctx.autoCompleted) await tellTenantRepairDone(request, ctx.awaitingTenant, ctx.req);
@@ -278,7 +278,12 @@ export const POST = withAuth(
         maintenanceRequestId && rest.type === 'MAINTENANCE'
           ? await prisma.maintenanceRequest.findUnique({
               where: { id: maintenanceRequestId },
-              select: { status: true, afterPhotoUrls: true, completionProofUrl: true },
+              select: {
+                status: true,
+                tenantId: true,
+                afterPhotoUrls: true,
+                completionProofUrl: true,
+              },
             })
           : null;
       if (maintenanceRequestId && rest.type === 'MAINTENANCE') {
@@ -311,7 +316,7 @@ export const POST = withAuth(
       if (closesJob && session.role === 'VENDOR' && lacksEvidence(job)) {
         return NextResponse.json(EVIDENCE_REQUIRED, { status: 409 });
       }
-      const completion = closesJob ? await completionData() : null;
+      const completion = closesJob && job ? await completionData(job) : null;
 
       const createInvoice = () =>
         shouldAutoComplete

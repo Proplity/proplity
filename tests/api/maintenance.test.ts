@@ -66,9 +66,11 @@ describe('maintenance: requests, create', () => {
     await resetDb();
   });
 
-  it('rejects a non-tenant caller', async () => {
-    const manager = await createUser(Role.MANAGER);
-    const cookie = await authCookie(manager.id, manager.role);
+  it('rejects a caller who is neither a tenant nor part of the property team', async () => {
+    // Managers, landlords and admins may raise a work order (see work-orders-and-schedules.test.ts);
+    // a vendor may not raise a repair at all.
+    const vendor = await createUser(Role.VENDOR);
+    const cookie = await authCookie(vendor.id, vendor.role);
     const res = await apiFetch('/api/v1/maintenance/requests', {
       method: 'POST',
       cookie,
