@@ -66,7 +66,13 @@ test.describe('public pages', () => {
   for (const viewport of [SMALL_PHONE, PHONE]) {
     test(`fit a ${viewport.width}px screen`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      for (const path of ['/for-tenants', '/for-landlords', '/for-vendors', '/proplity-guide']) {
+      for (const path of [
+        '/for-tenants',
+        '/for-landlords',
+        '/for-vendors',
+        '/proplity-guide',
+        '/contact',
+      ]) {
         await page.goto(path);
         await expectFits(page, `${path} at ${viewport.width}px`, { checkCut: false });
       }
