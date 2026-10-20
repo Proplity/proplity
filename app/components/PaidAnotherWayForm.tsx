@@ -25,14 +25,21 @@ const field =
  * "I paid this another way": a bank transfer (or cash handed over) recorded with its reference and,
  * ideally, a receipt. It does not mark anything paid by itself: someone other than the person who
  * records it confirms it on the transfers list, and only then does the invoice change and a receipt
- * exist.
+ * exist. The one exception is the property team recording a payment when an admin has switched the
+ * two-person rule off for that kind of money (`needsSecondPerson={false}`): then it counts at once.
  */
 export function PaidAnotherWayForm({
   invoices,
+  payerName,
+  needsSecondPerson = true,
   onClose,
   onDone,
 }: {
   invoices: PayableInvoice[];
+  /** Who paid, when it is not the person filling this in (the team recording a tenant's payment). */
+  payerName?: string;
+  /** False only for the team's own entry when the admin switched the two-person rule off. */
+  needsSecondPerson?: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -44,7 +51,7 @@ export function PaidAnotherWayForm({
   const invoice = invoices.find((i) => i.id === invoiceId) ?? invoices[0];
   const [amount, setAmount] = useState(String(invoices[0]?.owing ?? ''));
   const [bankName, setBankName] = useState('');
-  const [senderName, setSenderName] = useState(user?.name ?? '');
+  const [senderName, setSenderName] = useState(payerName ?? user?.name ?? '');
   const [senderNumber, setSenderNumber] = useState('');
   const [reference, setReference] = useState('');
   const [paidOn, setPaidOn] = useState(today());
@@ -91,7 +98,7 @@ export function PaidAnotherWayForm({
   const send = async () => {
     if (!valid || !invoice) return;
     try {
-      await submit({
+      const result = await submit({
         invoiceId: invoice.id,
         amount: value,
         bankName: bankName.trim(),
@@ -102,7 +109,11 @@ export function PaidAnotherWayForm({
         ...(proof ? { proofFileUrl: proof.url } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
-      toast.success('Recorded. Someone else has to confirm it before the invoice changes.');
+      toast.success(
+        result.status === 'APPROVED'
+          ? 'Recorded and counted. The invoice is updated and a receipt exists.'
+          : 'Recorded. Someone else has to confirm it before the invoice changes.',
+      );
       onDone();
     } catch {
       // surfaced through `error`
@@ -125,7 +136,9 @@ export function PaidAnotherWayForm({
           <div>
             <h2 className="text-lg font-semibold">Paid another way</h2>
             <p className="mt-0.5 text-sm text-gray-500">
-              Record a bank transfer or cash payment. It counts once someone else confirms it.
+              {needsSecondPerson
+                ? 'Record a bank transfer or cash payment. It counts once someone else confirms it.'
+                : 'Record a bank transfer or cash payment. It counts straight away, and the entry is logged.'}
             </p>
           </div>
           <button
