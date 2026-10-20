@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { notifyAdmins, notifyAndEmail, notifyPropertyTeam, notifyUser } from '@/lib/notifications';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { confirmedNote } from './transferNote';
 
 export type SubmitBankTransferInput = {
   invoiceId: string;
@@ -25,6 +27,27 @@ export class BankTransferError extends Error {
     this.name = 'BankTransferError';
   }
 }
+
+/**
+ * Does a payment the property team records on this invoice need someone other than the recorder to
+ * confirm it? Two admin switches decide (Platform Settings): one for what a tenant owes, one for
+ * what the team owes a vendor. Both are on by default. A tenant recording their own transfer is
+ * never covered: the team always confirms that.
+ */
+export async function teamEntryNeedsSecondPerson(invoice: {
+  leaseId: string | null;
+  maintenanceRequestId: string | null;
+}): Promise<boolean> {
+  const settings = await getSystemSettings();
+  if (invoice.maintenanceRequestId) return settings.requireSecondPersonForVendorPayments;
+  if (invoice.leaseId) return settings.requireSecondPersonForTenantPayments;
+  return true;
+}
+
+const SUBMISSION_INCLUDE = {
+  invoice: { select: { id: true, invoiceNumber: true, amount: true } },
+  submittedBy: { select: { id: true, name: true, email: true } },
+} as const;
 
 /**
  * Tenant or authorized user submits a bank transfer payment proof for an open invoice.
@@ -137,23 +160,25 @@ export async function submitBankTransferProof(
       notes: notes?.trim() || null,
       status: 'PENDING',
     },
-    include: {
-      invoice: {
-        select: {
-          id: true,
-          invoiceNumber: true,
-          amount: true,
-        },
-      },
-      submittedBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
+    include: SUBMISSION_INCLUDE,
   });
+
+  // The property team recording a payment (not the tenant recording their own): when the admin has
+  // switched the two-person rule off for this kind of money, the entry counts at once. It still
+  // creates the receipt and the audit row, which says the recorder confirmed it themselves.
+  const teamEntry = !isTenantOfLease && !isDirectUser;
+  if (teamEntry && !(await teamEntryNeedsSecondPerson(invoice))) {
+    try {
+      await reconcileBankTransfer(actor, submission.id, 'APPROVE');
+      return prisma.bankTransferSubmission.findUniqueOrThrow({
+        where: { id: submission.id },
+        include: SUBMISSION_INCLUDE,
+      });
+    } catch (err) {
+      // Stays pending (for example the invoice changed under it): someone can still confirm it.
+      console.error('Auto-confirm of a team-recorded transfer failed', err);
+    }
+  }
 
   // Tell whoever can confirm it (the property's manager and landlord, except the person who
   // submitted it: nobody confirms their own entry). When there is no one else on the property
@@ -242,7 +267,11 @@ export async function reconcileBankTransfer(
 
   // Whoever recorded a payment cannot be the one who confirms it. They can still withdraw their own
   // entry (reject it with a reason).
-  if (action === 'APPROVE' && submission.submittedById === actor.sub) {
+  if (
+    action === 'APPROVE' &&
+    submission.submittedById === actor.sub &&
+    (await teamEntryNeedsSecondPerson(submission.invoice))
+  ) {
     throw new BankTransferError(
       'Someone else must confirm a transfer you submitted. Ask another member of the property team or an admin.',
       403,
@@ -352,9 +381,7 @@ export async function reconcileBankTransfer(
         provider: 'BANK_TRANSFER',
         transactionRef: submission.referenceNumber,
         paidAt: submission.paymentDate,
-        notes:
-          options?.notes?.trim() ||
-          `Reconciled by ${actor.role} from bank transfer ref ${submission.referenceNumber}`,
+        notes: options?.notes?.trim() || confirmedNote(submission.referenceNumber),
       },
     });
 
@@ -385,6 +412,9 @@ export async function reconcileBankTransfer(
           amount: submission.amount,
           newStatus,
           newPaidTotal,
+          // The recorder confirmed their own entry: only possible when an admin has switched the
+          // two-person rule off for this kind of money.
+          ...(submission.submittedById === actor.sub ? { confirmedByRecorder: true } : {}),
         },
       },
     });
@@ -396,12 +426,14 @@ export async function reconcileBankTransfer(
   // were paid or are the payer).
   const receipt = `/receipts/${result.payment.id}`;
   const money = `₦${submission.amount.toLocaleString()}`;
-  await notifyUser(submission.submittedById, {
-    type: 'SYSTEM',
-    title: 'Bank transfer payment confirmed',
-    body: `Your bank transfer of ${money} for invoice ${submission.invoice.invoiceNumber} has been verified and applied. Receipt ${result.payment.receiptNumber} is ready.`,
-    link: receipt,
-  });
+  if (submission.submittedById !== actor.sub) {
+    await notifyUser(submission.submittedById, {
+      type: 'SYSTEM',
+      title: 'Bank transfer payment confirmed',
+      body: `Your bank transfer of ${money} for invoice ${submission.invoice.invoiceNumber} has been verified and applied. Receipt ${result.payment.receiptNumber} is ready.`,
+      link: receipt,
+    });
+  }
   const leaseTenantId = submission.invoice.lease?.tenantId;
   if (leaseTenantId && leaseTenantId !== submission.submittedById) {
     await notifyUser(leaseTenantId, {

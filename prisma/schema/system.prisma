@@ -16,5 +16,13 @@ model SystemSettings {
   // When true (default), a job the vendor finishes asks the tenant to confirm it is fixed (or
   // report a problem). Turning it off stops new requests; ones already waiting stay answerable.
   requireTenantRepairConfirmation  Boolean  @default(true)
+  // When true (default), a payment the property team records by hand (cash or a transfer, on the
+  // tenant's record or a vendor's bill) is not counted until someone other than the person who
+  // recorded it confirms it. Switched off, the recorder's own entry counts at once (still
+  // audit-logged, with the receipt). Two switches because the two kinds of money differ: what a
+  // tenant owes, and what the team owes a vendor. A tenant recording their own transfer always
+  // waits for the team, whatever these say.
+  requireSecondPersonForTenantPayments Boolean @default(true)
+  requireSecondPersonForVendorPayments Boolean @default(true)
   updatedAt                        DateTime @updatedAt
 }

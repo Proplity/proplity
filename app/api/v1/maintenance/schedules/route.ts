@@ -7,6 +7,7 @@ import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { anchorDay } from '@/lib/maintenanceSchedule';
 
 export const GET = withAuth(
   async (req, { session }) => {
@@ -26,7 +27,11 @@ export const GET = withAuth(
           where,
           skip,
           take,
-          include: { unit: true, category: true, equipment: true },
+          include: {
+            unit: { include: { property: { select: { id: true, name: true } } } },
+            category: true,
+            equipment: true,
+          },
           orderBy: { nextDueDate: 'asc' },
         }),
         prisma.maintenanceSchedule.count({ where }),
@@ -63,7 +68,28 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const schedule = await prisma.maintenanceSchedule.create({ data: validated.data });
+      const { equipmentId, categoryId, frequency, nextDueDate } = validated.data;
+      const category = await prisma.maintenanceCategory.findUnique({ where: { id: categoryId } });
+      if (!category) return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+      if (equipmentId) {
+        // The equipment has to be in this unit, or one of the building's shared items.
+        const equipment = await prisma.equipment.findFirst({
+          where: {
+            id: equipmentId,
+            OR: [{ unitId: unit.id }, { propertyId: unit.propertyId }],
+          },
+        });
+        if (!equipment) {
+          return NextResponse.json(
+            { error: 'That equipment does not belong to this unit or its building' },
+            { status: 400 },
+          );
+        }
+      }
+
+      const schedule = await prisma.maintenanceSchedule.create({
+        data: { ...validated.data, dayOfMonth: anchorDay(nextDueDate, frequency) },
+      });
       return NextResponse.json({ data: schedule }, { status: 201 });
     } catch (err) {
       return handleApiError(err);

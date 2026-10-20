@@ -29,6 +29,8 @@ const updateSchema = z
   .object({
     autoCompleteMaintenanceOnInvoice: z.boolean().optional(),
     requireTenantRepairConfirmation: z.boolean().optional(),
+    requireSecondPersonForTenantPayments: z.boolean().optional(),
+    requireSecondPersonForVendorPayments: z.boolean().optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), {
     message: 'Send at least one setting to change',

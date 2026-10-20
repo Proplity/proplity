@@ -2,6 +2,7 @@ import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import type { Receipt } from '@/lib/receiptTypes';
+import { isAutomaticNote } from '@/lib/payments/transferNote';
 
 // A receipt for one payment, for the people the payment concerns. Built from the payment, its
 // invoice and (for a bank transfer) the submission that was confirmed, so it never shows anything the
@@ -111,7 +112,7 @@ export async function buildReceipt(
     currency: 'NGN',
     method: METHOD_LABEL[payment.paymentMethod] ?? payment.paymentMethod,
     reference: payment.transactionRef,
-    notes: payment.notes,
+    notes: isAutomaticNote(payment.notes) ? null : payment.notes,
     payer: { name: payer },
     payee: { name: payee },
     invoice: {

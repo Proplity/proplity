@@ -302,7 +302,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    className={`rounded-full px-3 py-2 text-xs font-medium sm:px-2.5 sm:py-1 ${
                       u.role === 'MANAGER'
                         ? 'bg-blue-100 text-blue-700'
                         : u.role === 'LANDLORD'
@@ -323,7 +323,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : u.status === 'SUSPENDED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}
+                    className={`rounded-full px-3 py-2 text-xs font-medium sm:px-2.5 sm:py-1 ${u.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : u.status === 'SUSPENDED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}
                   >
                     {u.status}
                   </span>
@@ -370,7 +370,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    className={`rounded-full px-3 py-2 text-xs font-medium sm:px-2.5 sm:py-1 ${
                       p.moderationStatus === 'APPROVED'
                         ? 'bg-green-100 text-green-700'
                         : p.moderationStatus === 'PENDING_REVIEW'

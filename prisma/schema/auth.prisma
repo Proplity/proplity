@@ -60,6 +60,7 @@ model User {
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
   approvedRepairs              MaintenanceRequest[]      @relation("RepairApprovals")
+  workOrdersRaised             MaintenanceRequest[]      @relation("WorkOrdersRaised")
   bankAccounts                 BankAccount[]
   issuedAccessCodes            AccessCode[]
   announcements                Announcement[]            @relation("AnnouncementAuthor")

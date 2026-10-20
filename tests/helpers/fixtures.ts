@@ -198,8 +198,10 @@ export async function createMaintenanceCategory(
 
 export async function createMaintenanceRequest(
   unitId: string,
-  tenantId: string,
+  // Null for a work order: a repair the property team raised itself.
+  tenantId: string | null,
   overrides: Partial<{
+    createdById: string | null;
     title: string;
     description: string;
     categoryId: string | null;
@@ -220,6 +222,7 @@ export async function createMaintenanceRequest(
     data: {
       unitId,
       tenantId,
+      createdById: overrides.createdById ?? null,
       title: overrides.title ?? 'Leaky faucet',
       description: overrides.description ?? 'The kitchen faucet is leaking.',
       categoryId: overrides.categoryId ?? null,

@@ -3,7 +3,7 @@ import { loginAs } from '../helpers/auth';
 
 // Needs a reachable, seeded database.
 
-// The page has two switches, so each test asks for its own by name.
+// The page has several switches, so each test asks for its own by name.
 async function flipAndRestore(page: import('@playwright/test').Page, name: string) {
   await page.goto('/admin/settings');
 
