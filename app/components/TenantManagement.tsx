@@ -233,21 +233,21 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                             toast.error('No phone number on file for this tenant.');
                           }
                         }}
-                        className="rounded p-1 hover:bg-gray-100"
+                        className="rounded p-2 hover:bg-gray-100 sm:p-1"
                         title="Call tenant"
                       >
                         <Phone className="h-4 w-4 text-gray-600" />
                       </a>
                       <a
                         href={lease.tenant?.email ? `mailto:${lease.tenant.email}` : undefined}
-                        className="rounded p-1 hover:bg-gray-100"
+                        className="rounded p-2 hover:bg-gray-100 sm:p-1"
                         title="Email tenant"
                       >
                         <Mail className="h-4 w-4 text-gray-600" />
                       </a>
                       <button
                         onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
-                        className="rounded p-1 hover:bg-gray-100"
+                        className="rounded p-2 hover:bg-gray-100 sm:p-1"
                         title="View details"
                       >
                         <FileText className="h-4 w-4 text-gray-600" />

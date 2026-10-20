@@ -82,7 +82,7 @@ export default function MyPropertiesPage() {
                   key={status}
                   type="button"
                   onClick={() => setStatusFilter(status)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`rounded-full px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors sm:px-2.5 sm:py-1 ${
                     statusFilter === status
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'

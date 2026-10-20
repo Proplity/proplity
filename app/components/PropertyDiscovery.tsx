@@ -266,9 +266,9 @@ export function PropertyDiscovery({ onNavigate }: PropertyDiscoveryProps) {
 
               <div className="p-5">
                 {/* Trust Score */}
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-50">
                       <span className="text-sm font-semibold text-green-600">
                         {property.trustScore ?? '—'}
                       </span>
