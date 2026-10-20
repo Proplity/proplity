@@ -27,7 +27,9 @@ Worth knowing before you test:
   clear notice that it won't be saved.
 - **Rent payment** (Paystack) — requires a Paystack key, and the live
   charge call has not yet been run end-to-end against a real test-mode
-  account. In test environments, set `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED` to
+  account. Without a key (and no mock gateway) the screens say "Card payments
+  are not available yet" and point to **Paid another way**; they switch on by
+  themselves when the key is set, with no rebuild. In test environments, set `NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED` to
   get a fake Paystack-style checkout page whose "Pay" button fires a signed
   webhook at the real handler — it exercises the actual payment-recording,
   notification and auto-pay-authorization logic. Never enable it where real
@@ -84,6 +86,7 @@ are configured for this environment before treating it as a defect.
 
 - [ ] Browse available properties and view details on one
 - [ ] Schedule a viewing for a property before renting it: pick a date from tomorrow (a Sunday is refused) and a start time between 9:00 AM and 5:00 PM (Lagos time)
+- [ ] One person at a time: with a viewing booked at a property for 10:00 AM (by another account, still requested or confirmed), open the same property's form on the same date. 10:00 AM is marked "(booked)", listed under the time field and cannot be chosen; another property, or another time, is free. After the manager declines the request (or its owner cancels it), 10:00 AM can be booked again. If someone books your time while you are on step 2, confirming sends you back to choose another time
 - [ ] The dashboard's **Needs your attention** list shows a lease to sign, payments due or overdue, finished repairs to rate and an unfinished profile; each row opens the right screen
 - [ ] Notifications arrive (bell, and an email in the dev inbox) for a lease to sign, a new invoice, a completed repair and an overdue payment
 - [ ] Complete your profile (first **Apply Now** redirects to _Complete Your
@@ -103,6 +106,11 @@ are configured for this environment before treating it as a defect.
       shown; **Confirm fixed** records it, **Still a problem** needs a reason
       (photos optional) and tells the property team
 - [ ] View payment history — see past rent payments
+- [ ] With no Paystack key and no mock gateway, the dashboard's rent button
+      reads "Card Payment Not Available Yet" and is disabled, with a note
+      pointing to Paid another way; the auto-pay setup says it cannot be set
+      up; a manager's vendor-invoice Pay button is replaced by the same
+      message. Setting the key (or the mock gateway) brings the buttons back
 - [ ] Pay rent (via Paystack, or the mock gateway in test environments) —
       the invoice becomes paid, a payment appears in history, and the
       manager/landlord get a notification
@@ -245,6 +253,7 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] View reports
 - [ ] Drill into breakdowns — same kind of detail view as managers get, but
       platform-wide
+- [ ] Platform Settings, charging and deletion — both cards are off; turning one on asks "Turn on …?" first, Cancel leaves it off; with the deployment flag unset the card says so; a retention period of 3 days is refused ("at least 30 days") and 365 / 90 are the defaults; every change is in the audit log as SETTINGS_CHANGED
 - [ ] Platform Settings — toggle platform-wide behavior: whether a vendor
       invoice auto-completes its maintenance job, and whether tenants are
       asked to confirm finished repairs (turning it off leaves repairs already
@@ -282,13 +291,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 589 tests across 51 files under
-  `tests/` (488 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 101 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 614 tests across 52 files under
+  `tests/` (508 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 106 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (101 tests across 17 files, executes in ~2.8s without DB drops).
+  (106 tests across 18 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
@@ -296,9 +305,9 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 65 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 71 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
-  the dev email widget, the contact form (its two outcomes, with the route mocked), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
+  the dev email widget, the contact form (its two outcomes, with the route mocked), booked viewing times (marked on the form, and a time lost to someone else sends the person back), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the
   `E2E (Playwright)` job against a production build.
 - **Running the API suite on a shared machine:** the suite's server uses port

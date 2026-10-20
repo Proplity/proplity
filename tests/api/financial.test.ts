@@ -397,6 +397,28 @@ describe('payments: initialize', () => {
   // would be a real network call from inside an automated test.
 });
 
+describe('payments: card availability (ISS-010)', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  it('tells a signed-in person whether cards can be used, and nobody else', async () => {
+    const tenant = await createUser(Role.TENANT);
+    const anonymous = await apiFetch('/api/v1/payments/availability');
+    expect(anonymous.status).toBe(401);
+
+    const res = await apiFetch('/api/v1/payments/availability', {
+      cookie: await authCookie(tenant.id, tenant.role),
+    });
+    expect(res.status).toBe(200);
+    expect(typeof res.body.data.card).toBe('boolean');
+    // The same answer the payment start-up gives: with a key or the mock gateway it is on.
+    const keyed = Boolean(process.env.PAYSTACK_SECRET_KEY);
+    const mock = process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED === 'true';
+    expect(res.body.data.card).toBe(keyed || mock);
+  });
+});
+
 describe('payments: webhook (HMAC-SHA512 verification)', () => {
   beforeAll(async () => {
     await resetDb();

@@ -15,13 +15,13 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 101 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 31 migrations")]
+    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 32 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (589 tests) + Playwright (65 tests)"]
+    Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -71,16 +71,16 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 101 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 103 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
-│   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings,
+│   │   ├── 📁 properties/                   # +[id], export, moderation, units (+import, +[unitId], condition-reports, violations), reviews, viewings (+availability),
 │   │   │                                    #   neighbourhood-report, ads, announcements, equipment
 │   │   ├── 📁 applications/, manager-codes/ # Rental applications; landlord→manager invite codes (+check, +redeem)
 │   │   ├── 📁 maintenance/                  # categories, requests (+[id], +rating), schedules
 │   │   ├── 📁 leases/                       # +[id], notes, notices, sign
-│   │   ├── 📁 invoices/, payments/          # payments: initialize, webhook, autopay, authorization
+│   │   ├── 📁 invoices/, payments/          # payments: initialize, availability, webhook, autopay, authorization
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
 │   │   ├── 📁 conversations/, notifications/ # +[id]/messages; +[id], mark-all-read
@@ -125,7 +125,7 @@ proplity/
 │   ├── 📄 contact.ts                        # Contact form: schema, CONTACT_EMAIL recipient, the email, messageWentOut()
 │   ├── 📁 api/                              # withAuth, validate, errors, pagination, propertyAccess, types
 │   ├── 📁 auth/                             # cookies, csrf, jwt, rateLimit (reserveAttempt/releaseAttempt), session
-│   ├── 📁 payments/mockGateway.ts           # Paystack-shaped fake used by the mock checkout
+│   ├── 📁 payments/                         # mockGateway.ts (Paystack-shaped fake for the mock checkout), availability.ts (can cards be used yet)
 │   └── 📁 workers/                          # rentInvoicer, overdueFlagger, maintenanceScheduleDispatcher, accessCodeExpiryJanitor, paymentReliabilityScorer, auth
 │
 ├── 📄 proxy.ts                              # Next 16's middleware replacement — edge guard for /dashboard, /admin
@@ -134,9 +134,9 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 17 Vitest files — 101 tests, mocked Prisma, no server (pnpm test:unit)
-│   ├── 📁 api/                              # 34 Vitest files — 488 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 65 tests in 17 files (pnpm test:e2e)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 106 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 api/                              # 34 Vitest files — 508 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 71 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget
@@ -145,7 +145,7 @@ proplity/
 │
 ├── 📁 prisma/
 │   ├── 📁 schema/                           # 11 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 31 migrations, latest: 20261020120000_payment_second_person_switches
+│   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below

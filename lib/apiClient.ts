@@ -69,6 +69,7 @@ import type {
   RepairAnswerInput,
   RepairReviewInput,
   PlatformSettings,
+  AdminPlatformSettings,
   PaymentRules,
   Vendor,
   Violation,
@@ -219,6 +220,11 @@ export const api = {
     },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
+    viewingAvailability: (propertyId: string, date: string) =>
+      apiClient.get<{ data: { date: string; taken: string[] } }>(
+        `/api/v1/properties/${propertyId}/viewings/availability`,
+        { params: { date } },
+      ),
     listViewings: (propertyId: string) =>
       apiClient.get<{ data: PropertyViewing[] }>(`/api/v1/properties/${propertyId}/viewings`),
     updateViewing: (propertyId: string, viewingId: string, status: 'CONFIRMED' | 'CANCELLED') =>
@@ -457,9 +463,9 @@ export const api = {
         >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
-      get: () => apiClient.get<{ data: PlatformSettings }>('/api/v1/admin/settings'),
+      get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
       update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
-        apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
+        apiClient.patch<{ data: AdminPlatformSettings }>('/api/v1/admin/settings', data),
     },
   },
   settings: {
@@ -479,6 +485,7 @@ export const api = {
       apiClient.delete<{ data: { id: string } }>(`/api/v1/notifications/${id}`),
   },
   payments: {
+    availability: () => apiClient.get<{ data: { card: boolean } }>('/api/v1/payments/availability'),
     initialize: (invoiceId: string) =>
       apiClient.post<{ data: { authorizationUrl: string; reference: string } }>(
         '/api/v1/payments/initialize',

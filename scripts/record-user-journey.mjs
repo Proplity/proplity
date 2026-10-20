@@ -796,6 +796,28 @@ async function main() {
     await page.getByRole('heading', { name: 'Viewing Requested!' }).waitFor({ timeout: 15000 });
     await hud('✅ Viewing requested: the manager gets a notification', '#10b981');
     await pause(2500);
+
+    // One person at a time (ISS-104): a second tenant opens the same property on the same day and
+    // the time just requested is shown as booked and cannot be chosen.
+    await hud('👥 A second tenant looks at the same property on the same day', '#f59e0b');
+    await pause(1500);
+    await signOut();
+    await signIn('tenant@proplity.com');
+    await click(page.getByRole('link', { name: 'Browse Properties' }), { settle: 1200 });
+    await page.waitForURL('**/dashboard/discover**');
+    await card.scrollIntoViewIfNeeded();
+    await click(card.getByRole('button', { name: 'Schedule Tour' }), { settle: 1200 });
+    await page.getByRole('heading', { name: 'Select a Date' }).waitFor();
+    await page.getByLabel('Viewing date').fill(viewingKey);
+    await page.getByTestId('booked-times').waitFor({ timeout: 20000 });
+    await hud('⛔ 10:00 AM is already booked: it is listed and cannot be chosen', '#f59e0b');
+    await pause(3000);
+    if (!(await page.locator('#viewing-time option[value="10:00"]').isDisabled())) {
+      throw new Error('A time another tenant already booked could still be chosen');
+    }
+    await page.getByLabel('Start time').selectOption('11:00');
+    await hud('✅ Any other time at the same property is still free', '#10b981');
+    await pause(2500);
   });
 
   // ---------------------------------------------------------------------------------------------

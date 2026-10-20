@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, CreditCard, Lock, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { LogoIcon } from './Logo';
 import { useCheckoutSubscription } from '@/hooks/useSubscription';
-import { usePayInvoice } from '@/hooks/useInvoices';
+import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { useMySubscription } from '@/hooks/useSubscription';
 
 interface CheckoutProps {
@@ -115,6 +115,8 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     error: checkoutError,
   } = useCheckoutSubscription();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
+  const { available: cardsAvailable } = useCardPayments();
+  const paidPlan = (parseInt(plan.price.replace(/[^0-9]/g, '')) || 0) > 0;
   const { data: currentPlan } = useMySubscription();
 
   const executeCheckout = async (confirmedDowngrade = false) => {
@@ -400,6 +402,13 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
                 </span>
               </label>
 
+              {paidPlan && cardsAvailable === false && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  Card payments are not available yet, so a paid plan cannot be bought right now.
+                </div>
+              )}
+
               {(checkoutError || payError) && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -410,7 +419,12 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={!formData.agreeToTerms || checkingOut || paying}
+                disabled={
+                  !formData.agreeToTerms ||
+                  checkingOut ||
+                  paying ||
+                  (paidPlan && cardsAvailable === false)
+                }
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Lock className="h-5 w-5" />

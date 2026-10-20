@@ -2015,7 +2015,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <div class="step-card">
   <h3><span class="step-num">2.3</span>Pay Rent (Paystack Payment Flow)</h3>
-  <p>Rent is paid directly through Proplity using Paystack (Nigeria's leading payment gateway). Monthly invoices are generated automatically — just click to pay. Supports card, bank transfer, and USSD.</p>
+  <p>Rent is paid directly through Proplity using Paystack (Nigeria's leading payment gateway). Monthly invoices are generated automatically — just click to pay. Supports card, bank transfer, and USSD. Until card payments are set up for this site, the button reads <strong>Card Payment Not Available Yet</strong> and points you to <strong>Paid another way</strong> (a bank transfer or cash recorded under Payment History); it switches on by itself once they are ready.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_payment_01_initiate.png" alt="Payment checkout initiate" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Payment checkout initiation <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2047,7 +2047,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 <div class="step-card">
   <h3><span class="step-num">2.5</span>Schedule a Viewing (Book Inspection)</h3>
-  <p>Before applying, you can request a physical visit to see the property in person. The manager receives the request and confirms a time. A confirmation email is sent once confirmed.</p>
+  <p>Before applying, you can request a physical visit to see the property in person. The manager receives the request and confirms a time. A confirmation email is sent once confirmed. Only one person can hold a start time at a property: times someone else has already booked are marked on the form and cannot be chosen, and a declined or cancelled request gives its time back.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/tenant_04_schedule_viewing_desktop.png" alt="Schedule viewing desktop" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Schedule Viewing modal (date picker) <span class="badge badge-desktop">Desktop</span></div></div>
@@ -2581,7 +2581,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="step-card">
   <h3><span class="step-num">6.2</span>Properties Moderation, Reports, Audit Logs & Settings</h3>
   <p>Every property listing is reviewed before going live. Platform-wide reports, security audit logs (every action logged), and system configuration settings.</p>
-  <p>Platform Settings has four switches: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered. The other two, <strong>Second person confirms what a tenant is recorded as paying</strong> and <strong>Second person confirms what is paid to a vendor</strong>, are on by default: a cash or transfer payment the property team records does not count until someone other than the person who entered it confirms it. Turn one off for a property with one person on the team and their entry counts at once (still logged, with a receipt).</p>
+  <p>Platform Settings has four switches and two further cards: <strong>Auto-complete maintenance jobs on invoice</strong>, and <strong>Ask tenants to confirm finished repairs</strong> (on by default). Turning the second off stops new questions; repairs already waiting for an answer can still be answered. The other two, <strong>Second person confirms what a tenant is recorded as paying</strong> and <strong>Second person confirms what is paid to a vendor</strong>, are on by default: a cash or transfer payment the property team records does not count until someone other than the person who entered it confirms it. Turn one off for a property with one person on the team and their entry counts at once (still logged, with a receipt). Two more cards are off by default: <strong>Charge auto-pay tenants automatically</strong>, and <strong>Delete identity documents when kept long enough</strong> with its two periods in days (at least 30 and 7). Each asks once more before turning on, and the deployment must allow it too.</p>
   <div class="screenshot-grid">
     <div class="screenshot-item">
     <div class="zoom-badge">🔍 Click to expand</div><img src="screenshots/admin_06_properties.png" alt="Properties moderation" onerror="this.style.background='#1a2235';this.style.height='180px'"><div class="screenshot-label">Properties moderation queue (approve/reject listings) <span class="badge badge-desktop">Desktop</span></div></div>

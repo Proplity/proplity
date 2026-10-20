@@ -36,16 +36,16 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ## Before You Begin: Important Notes
 
-| Feature                  | Works?           | Notes                                   |
-| :----------------------- | :--------------- | :-------------------------------------- |
-| Browsing properties      | ✅ Yes           | No setup needed                         |
-| Login / Registration     | ✅ Yes           | Works immediately                       |
-| Maintenance requests     | ✅ Yes           | All workflows work                      |
-| Messaging                | ✅ Yes           | Real-time messages                      |
-| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app |
-| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                   |
-| Rent payments (Paystack) | ⚙️ Config needed | Use mock gateway for testing            |
-| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI          |
+| Feature                  | Works?           | Notes                                        |
+| :----------------------- | :--------------- | :------------------------------------------- |
+| Browsing properties      | ✅ Yes           | No setup needed                              |
+| Login / Registration     | ✅ Yes           | Works immediately                            |
+| Maintenance requests     | ✅ Yes           | All workflows work                           |
+| Messaging                | ✅ Yes           | Real-time messages                           |
+| Email delivery           | ⚙️ Config needed | Without a key, emails are logged in-app      |
+| File/Photo uploads       | ⚙️ Config needed | Cloudinary key needed                        |
+| Rent payments (Paystack) | ⚙️ Config needed | Shows "not available yet" until a key is set |
+| Subscription billing     | 🔒 Coming soon   | Marked "Coming Soon" in the UI               |
 
 ---
 
@@ -755,6 +755,8 @@ Rent is paid directly through Proplity using Paystack. Monthly invoices are gene
 
 **How to pay:**
 
+> **Not available yet?** Until a Paystack key is set up for this site, the button reads **Card Payment Not Available Yet** and a note points you to **Paid another way** (below). It switches on by itself once card payments are ready.
+
 1. On your dashboard, look for the outstanding invoice in the Payment Panel
 2. Click **Pay Now** → a modal shows the exact amount due
 3. Click **Proceed to Payment** → redirected to Paystack checkout
@@ -860,6 +862,8 @@ Before applying, you can request to physically visit a property. The manager con
 4. Click **Confirm Viewing**
 5. The manager sees who is coming (contact, whether an ID is on file, how long they have had an account) and confirms or declines
 6. A confirmation email is sent to you
+
+**Good to know:** only one person can hold a start time at a property. Times someone else has already booked on the day you pick are marked "(booked)", listed under the time field, and cannot be chosen. If someone books your time while you are filling in your details, you are taken back to pick another and told why. A request the manager declines, or one you cancel, gives its time back.
 
 **Screenshots:**
 
@@ -2012,12 +2016,14 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has four switches:
+It has six settings (four switches, then two for charging and deletion):
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
 - **Second person confirms what a tenant is recorded as paying** — on by default. When the property team records cash or a transfer on a tenant's record, it does not count until someone other than the person who entered it confirms it on Bank Transfers. Turn it off for a property with one person on the team: their entry counts at once (still logged, with a receipt). A tenant recording their own transfer is always confirmed by the team.
 - **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
+- **Charge auto-pay tenants automatically** — off by default. It charges real cards on the daily run, so it asks once more before turning on, and the deployment must also allow it (the screen says when it does not).
+- **Delete identity documents when kept long enough** — off by default, and permanent. Two periods sit beside it: days after a tenancy ends (365 unless changed) and days after a rejected application (90); the shortest accepted are 30 and 7 days. Also asks once more, and needs the deployment to allow it.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
