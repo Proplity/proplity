@@ -18,10 +18,10 @@ graph TD
     NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 31 migrations")]
+    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 32 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
-    Tests["🧪 Vitest (604 tests) + Playwright (69 tests)"]
+    Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
 
     Client --> Store
     Client --> Proxy
@@ -134,9 +134,9 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 104 tests, mocked Prisma, no server (pnpm test:unit)
-│   ├── 📁 api/                              # 34 Vitest files — 500 tests, real HTTP against the spawned server (pnpm test)
-│   └── 📁 e2e/                              # Playwright, 69 tests in 18 files (pnpm test:e2e)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 106 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 api/                              # 34 Vitest files — 508 tests, real HTTP against the spawned server (pnpm test)
+│   └── 📁 e2e/                              # Playwright, 71 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
 │       ├── 📁 flows/                        # admin, landlord, tenant, vendor, login, session-restore, public-property-auth,
 │       │                                    #   featured-properties, mock-payment, email-inbox-widget
@@ -145,7 +145,7 @@ proplity/
 │
 ├── 📁 prisma/
 │   ├── 📁 schema/                           # 11 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 31 migrations, latest: 20261020120000_payment_second_person_switches
+│   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below

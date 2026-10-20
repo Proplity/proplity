@@ -122,7 +122,7 @@ Ten workers exist in `lib/workers/`, dispatched by
 `POST|GET /api/v1/cron/[job]`:
 
 - `rent-invoicer` (tells the tenant about each new rent invoice)
-- `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true`)
+- `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true` **and** an admin switches it on in Platform Settings, ADR-0015)
 - `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
 - `reminders` (rent due in 3 days; lease ending within 60 days; one reminder each)
 - `maintenance-schedule-dispatcher` (tells the property team and the tenant)
@@ -130,7 +130,7 @@ Ten workers exist in `lib/workers/`, dispatched by
 - `payment-reliability-scorer`
 - `property-trust-scorer`
 - `storage-janitor`
-- `retention` (disabled until `RETENTION_ENABLED=true`)
+- `retention` (disabled until `RETENTION_ENABLED=true` **and** an admin switches it on in Platform Settings, where the two periods are also set, ADR-0015)
 - `all` — runs every job above in dependency order
 
 **The Hobby plan allows 2 cron jobs at once-a-day granularity**, which is fewer

@@ -26,6 +26,10 @@ vi.mock('@/lib/db', () => {
     auditLog: {
       create: vi.fn(),
     },
+    // The charger reads the platform settings (the admin switch) first; tests set what they need.
+    systemSettings: {
+      findUnique: vi.fn(),
+    },
     $transaction: vi.fn(async (callback: (tx: typeof mockDb) => Promise<unknown>) =>
       callback(mockDb),
     ),
@@ -258,6 +262,10 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       const originalMock = process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED;
       process.env.AUTOPAY_WORKER_ENABLED = 'true';
       process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED = 'true';
+      // Both gates open: the deployment allows it and an admin switched it on (ADR-0015).
+      vi.mocked(prisma.systemSettings.findUnique).mockResolvedValueOnce({
+        autopayChargingEnabled: true,
+      } as Awaited<ReturnType<typeof prisma.systemSettings.findUnique>>);
 
       const dueInvoice = {
         id: 'inv-due-2',
@@ -295,6 +303,51 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
 
       process.env.AUTOPAY_WORKER_ENABLED = originalEnv;
       process.env.NEXT_PUBLIC_PAYMENTS_MOCK_ENABLED = originalMock;
+    });
+
+    // Charging needs BOTH gates open (ADR-0015): the environment allows it and an admin has
+    // switched it on. Either one closed, and the job only reports.
+    it.each([
+      { name: 'the admin switch is off', env: 'true', switchedOn: false },
+      { name: 'the deployment does not allow it', env: undefined, switchedOn: true },
+    ])('does not charge when $name', async ({ env, switchedOn }) => {
+      const originalEnv = process.env.AUTOPAY_WORKER_ENABLED;
+      if (env === undefined) delete process.env.AUTOPAY_WORKER_ENABLED;
+      else process.env.AUTOPAY_WORKER_ENABLED = env;
+      vi.mocked(prisma.systemSettings.findUnique).mockResolvedValueOnce({
+        autopayChargingEnabled: switchedOn,
+      } as Awaited<ReturnType<typeof prisma.systemSettings.findUnique>>);
+      vi.mocked(prisma.invoice.update).mockClear();
+      vi.mocked(prisma.payment.create).mockClear();
+
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        {
+          id: 'inv-gate',
+          amount: 100_000,
+          leaseId: 'lease-gate',
+          status: 'UNPAID',
+          dueDate: new Date(Date.now() - MS_PER_DAY),
+          payments: [],
+          lease: {
+            id: 'lease-gate',
+            status: 'ACTIVE',
+            tenantId: 'tenant-gate',
+            tenant: { id: 'tenant-gate', email: 'gate@example.com', name: 'Gate' },
+            autoPayMandates: [{ id: 'm-gate', status: 'ACTIVE', paymentMethodToken: 'AUTH_x' }],
+          },
+        },
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runAutopayCharger();
+
+      expect(result.enabled).toBe(false);
+      expect(result.processedCount).toBe(0);
+      expect(result.message).toMatch(/Platform Settings/);
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+
+      if (originalEnv === undefined) delete process.env.AUTOPAY_WORKER_ENABLED;
+      else process.env.AUTOPAY_WORKER_ENABLED = originalEnv;
     });
   });
 });

@@ -2016,12 +2016,14 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has four switches:
+It has six settings (four switches, then two for charging and deletion):
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
 - **Second person confirms what a tenant is recorded as paying** — on by default. When the property team records cash or a transfer on a tenant's record, it does not count until someone other than the person who entered it confirms it on Bank Transfers. Turn it off for a property with one person on the team: their entry counts at once (still logged, with a receipt). A tenant recording their own transfer is always confirmed by the team.
 - **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
+- **Charge auto-pay tenants automatically** — off by default. It charges real cards on the daily run, so it asks once more before turning on, and the deployment must also allow it (the screen says when it does not).
+- **Delete identity documents when kept long enough** — off by default, and permanent. Two periods sit beside it: days after a tenancy ends (365 unless changed) and days after a rejected application (90); the shortest accepted are 30 and 7 days. Also asks once more, and needs the deployment to allow it.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 

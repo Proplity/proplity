@@ -253,6 +253,7 @@ Same as landlord, plus the day-to-day operational tools:
 - [ ] View reports
 - [ ] Drill into breakdowns — same kind of detail view as managers get, but
       platform-wide
+- [ ] Platform Settings, charging and deletion — both cards are off; turning one on asks "Turn on …?" first, Cancel leaves it off; with the deployment flag unset the card says so; a retention period of 3 days is refused ("at least 30 days") and 365 / 90 are the defaults; every change is in the audit log as SETTINGS_CHANGED
 - [ ] Platform Settings — toggle platform-wide behavior: whether a vendor
       invoice auto-completes its maintenance job, and whether tenants are
       asked to confirm finished repairs (turning it off leaves repairs already
@@ -290,13 +291,13 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 604 tests across 52 files under
-  `tests/` (500 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 104 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 614 tests across 52 files under
+  `tests/` (508 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 106 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.
 - **Fast Unit, Fuzz, Security & Anomaly suites (Vitest)** — `pnpm test:unit`
-  (104 tests across 18 files, executes in ~2.8s without DB drops).
+  (106 tests across 18 files, executes in ~2.8s without DB drops).
   - `pnpm test:fuzz` — runs adversarial input fuzzing against URL and body parsers (`tests/fuzz/`).
   - `pnpm test:security` — runs RBAC matrix and injection/smuggling checks (`tests/security/`).
   - `pnpm test:anomaly` — runs workflow state machine and financial edge invariant tests (`tests/anomaly/`).
@@ -304,7 +305,7 @@ Same as landlord, plus the day-to-day operational tools:
 - **Load & Stress Testing (Autocannon)** — `pnpm test:load`. Simulates concurrent user traffic across health, public property browsing, search filters, and auth rate limiting.
 - **100k Units Scaling Benchmark** — `pnpm benchmark:100k`. Evaluates PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` query plans to confirm sub-millisecond index seek execution on 100,000+ unit scales.
 - **UI suite (Playwright)** — `pnpm test:e2e` (also `:smoke`, `:flows`,
-  `:ui`). 69 tests: marketing/auth smoke, per-role flows, session restore
+  `:ui`). 71 tests: marketing/auth smoke, per-role flows, session restore
   after idle, public-property sign-in redirects, the mock payment round trip,
   the dev email widget, the contact form (its two outcomes, with the route mocked), booked viewing times (marked on the form, and a time lost to someone else sends the person back), the mobile tab bar, and a layout check (`responsive/layout.spec.ts`: key pages at 320, 390 and 768 px must not scroll sideways, cut content off or scroll sideways inside the dashboard's main area). Needs a seeded database
   (`pnpm db:seed2`) and a running app (`E2E_BASE_URL`). Run in CI as the

@@ -10,6 +10,7 @@ import {
   createInvoice,
   createMaintenanceRequest,
   createBankAccount,
+  setSystemSettings,
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
@@ -245,6 +246,8 @@ describe('bank transfer proofs: safety (ISS-066)', () => {
 describe('auto-pay charger: safety (ISS-065)', () => {
   beforeAll(async () => {
     await resetDb();
+    // The test server allows charging (AUTOPAY_WORKER_ENABLED); the admin switch is the second gate.
+    await setSystemSettings({ autopayChargingEnabled: true });
   });
 
   function runWorker() {

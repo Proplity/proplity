@@ -69,6 +69,7 @@ import type {
   RepairAnswerInput,
   RepairReviewInput,
   PlatformSettings,
+  AdminPlatformSettings,
   PaymentRules,
   Vendor,
   Violation,
@@ -462,9 +463,9 @@ export const api = {
         >('/api/v1/admin/audit-logs', { params }),
     },
     settings: {
-      get: () => apiClient.get<{ data: PlatformSettings }>('/api/v1/admin/settings'),
+      get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
       update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
-        apiClient.patch<{ data: PlatformSettings }>('/api/v1/admin/settings', data),
+        apiClient.patch<{ data: AdminPlatformSettings }>('/api/v1/admin/settings', data),
     },
   },
   settings: {

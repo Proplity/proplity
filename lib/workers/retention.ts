@@ -1,23 +1,29 @@
 import { prisma } from '@/lib/db';
 import { deleteFileByUrl } from '@/lib/storage/service';
 import { fileUrl } from '@/lib/fileRef';
+import { getSystemSettings, retentionOn } from '@/lib/systemSettings';
 
 // Retention for identity documents (ADR-0012, ISS-039). Identity documents
 // are personal data (NDPR), so they are removed once there is no reason to
 // hold them:
 //   - tenancy ended: the user has leases, none pending or active, and the
-//     latest one ended more than 12 months ago;
+//     latest one ended more than the tenancy period ago (365 days unless an admin set another);
 //   - never became a tenant: the user has applications, all rejected, and
-//     the latest decision is more than 90 days old.
+//     the latest decision is more than the rejection period old (90 days unless set).
 // Users with no lease and no application are left alone (no trigger yet).
 //
-// Deleting is irreversible, so it only happens when RETENTION_ENABLED=true.
-// Otherwise the job reports what it would remove and changes nothing.
-const TENANCY_ENDED_MS = 365 * 24 * 60 * 60 * 1000;
-const REJECTED_MS = 90 * 24 * 60 * 60 * 1000;
+// Deleting is irreversible, so it only happens when both gates are open (ADR-0015): the
+// deployment allows it (RETENTION_ENABLED=true) and an admin has switched it on in Platform
+// Settings, where the two periods are also set. Otherwise the job reports what it would remove
+// and changes nothing.
+const DAY_MS = 24 * 60 * 60 * 1000;
 const DOC_FOLDERS = ['profile', 'applications'];
 
-async function eligibleOwnerIds(now: number): Promise<Set<string>> {
+async function eligibleOwnerIds(
+  now: number,
+  tenancyEndedMs: number,
+  rejectedMs: number,
+): Promise<Set<string>> {
   const owners = await prisma.storedFile.findMany({
     where: { status: 'READY', folder: { in: DOC_FOLDERS } },
     select: { ownerId: true },
@@ -33,7 +39,7 @@ async function eligibleOwnerIds(now: number): Promise<Set<string>> {
     if (leases.length > 0) {
       const stillNeeded = leases.some((l) => l.status === 'PENDING' || l.status === 'ACTIVE');
       const latestEnd = Math.max(...leases.map((l) => l.endDate.getTime()));
-      if (!stillNeeded && now - latestEnd > TENANCY_ENDED_MS) eligible.add(ownerId);
+      if (!stillNeeded && now - latestEnd > tenancyEndedMs) eligible.add(ownerId);
       continue;
     }
 
@@ -45,7 +51,7 @@ async function eligibleOwnerIds(now: number): Promise<Set<string>> {
     const allRejected = applications.every((a) => a.status === 'REJECTED' && a.reviewedAt);
     if (!allRejected) continue;
     const latestDecision = Math.max(...applications.map((a) => a.reviewedAt!.getTime()));
-    if (now - latestDecision > REJECTED_MS) eligible.add(ownerId);
+    if (now - latestDecision > rejectedMs) eligible.add(ownerId);
   }
   return eligible;
 }
@@ -56,8 +62,13 @@ export async function runRetention(): Promise<{
   files: number;
   deleted: number;
 }> {
-  const enabled = process.env.RETENTION_ENABLED === 'true';
-  const owners = await eligibleOwnerIds(Date.now());
+  const settings = await getSystemSettings();
+  const enabled = retentionOn(settings);
+  const owners = await eligibleOwnerIds(
+    Date.now(),
+    settings.retentionAfterTenancyDays * DAY_MS,
+    settings.retentionAfterRejectionDays * DAY_MS,
+  );
   if (owners.size === 0) return { enabled, owners: 0, files: 0, deleted: 0 };
 
   const files = await prisma.storedFile.findMany({
