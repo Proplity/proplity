@@ -19,7 +19,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0011](0011-managers-sign-up-without-a-landlord-and-link-to-many.md)                   | Managers can sign up without a landlord and link to several                               | Accepted           | 2026-10-13 | roji-tech  |
 | [0012](0012-identity-documents-are-deleted-after-a-retention-period.md)                | Identity documents are deleted after a retention period                                   | Accepted           | 2026-10-13 | roji-tech  |
 | [0013](0013-staged-property-and-unit-edits-are-stored-in-metadata-json.md)             | Staged Property and Unit Edits Are Stored in Property Metadata JSON                       | Accepted           | 2026-10-18 | roji-tech  |
-| [0014](0014-a-repair-can-be-raised-by-the-property-team-and-need-not-have-a-tenant.md) | A repair can be raised by the property team and need not have a tenant                    | Proposed           | 2026-10-19 |
+| [0014](0014-a-repair-can-be-raised-by-the-property-team-and-need-not-have-a-tenant.md) | A repair can be raised by the property team and need not have a tenant                    | Accepted           | 2026-10-20 |
 
 ---
 

@@ -63,10 +63,8 @@ typed `api.*` client; they do not call `fetch` themselves.
 
 ## `app/store/` — illustrative data
 
-Mock data from before the pages were wired to the API. Almost nothing reads it now: `mockData.ts` is
-used only by the three marketing feature pages (`TenantFeaturePage`, `LandlordFeaturePage`,
-`ServiceProviderFeaturePage`) and `aiAssistantData.ts` only by the demo `AIAssistant`. The other
-files (`adminBreakdownData`, `adminDashboardData`, `dashboardBreakdownData`, `maintenanceData`,
-`messagingData`, `propertyDetailData`, `tenantDashboardData`, `tenantDetailData`,
-`vendorJobDetailData`) are not imported by anything and can be deleted. Do not add new reads: real
-screens use the hooks above.
+Two files of mock data from before the pages were wired to the API, both read only by things that have
+no backend: `mockData.ts` by the three marketing feature pages (`TenantFeaturePage`,
+`LandlordFeaturePage`, `ServiceProviderFeaturePage`) and `aiAssistantData.ts` by the demo `AIAssistant`.
+Nine other files in this folder were imported by nothing and were deleted on 2026-10-20. Do not add new
+reads: real screens use the hooks above.
