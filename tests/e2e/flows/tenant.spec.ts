@@ -41,8 +41,12 @@ test('tenant can book a viewing on a future date (ISS-042)', async ({ page, requ
   day.setDate(day.getDate() + 3);
   if (day.getDay() === 0) day.setDate(day.getDate() + 1);
   const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+  // Times other people have booked are disabled (ISS-104): wait for that list, then take a free one.
+  const availability = page.waitForResponse(/viewings\/availability/);
   await date.fill(key);
-  await page.getByLabel('Start time').selectOption('10:00');
+  await availability;
+  const free = page.locator('#viewing-time option:not([disabled])[value]:not([value=""])').first();
+  await page.getByLabel('Start time').selectOption(await free.getAttribute('value'));
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.locator('input[type="text"]').first().fill('Jordan Hayes');
