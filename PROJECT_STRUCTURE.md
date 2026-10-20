@@ -162,25 +162,25 @@ proplity/
 
 ## 📚 Docs Map
 
-| File                                                           | What it is                                                                                                            |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md`                                                    | Authoritative reference: state, commands, auth architecture, conventions, known gaps                                  |
-| `CURRENT_STATE.md`                                             | Status per subsystem, REST inventory, changelog                                                                       |
-| `DEPLOYMENT.md`                                                | Three-tier branches, env vars, cron, migration workflows                                                              |
-| `docs/setup-guide.md`                                          | Installing and first-run setup for a new deployment                                                                   |
-| `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                                             |
-| `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                                                 |
-| `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`)                                          |
-| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                                            |
-| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                                                |
-| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                                              |
-| `docs/pages/`, `docs/components/`, `docs/functions/`           | Catalogs: every page route, component and hook/lib/worker file with a one-line description (start at each `index.md`) |
-| `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                                                |
-| `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                                          |
-| `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                                            |
-| `docs/auth-implementation-plan.md`, `docs/auth-walkthrough.md` | Original auth design — **superseded**; see `CLAUDE.md` "Auth architecture"                                            |
-| `docs/development-history/phases/*.md`                         | One write-up per completed phase/feature (domain API 0–10, notifications, wizard, gap audit…)                         |
-| `docs/development-history/*.md`                                | Roadmaps, audits, and the plans that spawned the phases                                                               |
+| File                                                           | What it is                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `CLAUDE.md`                                                    | Authoritative reference: state, commands, auth architecture, conventions, known gaps                                     |
+| `CURRENT_STATE.md`                                             | Status per subsystem, REST inventory, changelog                                                                          |
+| `DEPLOYMENT.md`                                                | Three-tier branches, env vars, cron, migration workflows                                                                 |
+| `docs/setup-guide.md`                                          | Installing and first-run setup for a new deployment                                                                      |
+| `docs/flow-guide.md`                                           | How every role uses the app, step by step                                                                                |
+| `docs/testing-guide.md`                                        | Manual QA checklist + how to run the automated suites                                                                    |
+| `docs/proplity-step-by-step-role-guide.md`                     | Illustrated role guide (generated from `out/scripts/generate_guide_pdf.mjs`; the generated PDF is no longer kept in git) |
+| `docs/adr/`                                                    | Architecture Decision Records (one decision per file; index in its README)                                               |
+| `docs/tasks/`                                                  | Work-session task files + `current-tasks.md` dashboard                                                                   |
+| `docs/issues/`                                                 | Issue register (`issues.md`), rubric, per-issue template                                                                 |
+| `docs/pages/`, `docs/components/`, `docs/functions/`           | Catalogs: every page route, component and hook/lib/worker file with a one-line description (start at each `index.md`)    |
+| `docs/PRD.md`                                                  | Product vision and requirements (incl. the AI roadmap)                                                                   |
+| `docs/PRD-as-built.md`                                         | Same structure, but what is actually implemented today, with ✅/🟡/❌ status                                             |
+| `docs/auth-review-2026-09-30.md`                               | Code-level auth review whose findings were fixed in PR #21                                                               |
+| `docs/auth-implementation-plan.md`, `docs/auth-walkthrough.md` | Original auth design — **superseded**; see `CLAUDE.md` "Auth architecture"                                               |
+| `docs/development-history/phases/*.md`                         | One write-up per completed phase/feature (domain API 0–10, notifications, wizard, gap audit…)                            |
+| `docs/development-history/*.md`                                | Roadmaps, audits, and the plans that spawned the phases                                                                  |
 
 ---
 
