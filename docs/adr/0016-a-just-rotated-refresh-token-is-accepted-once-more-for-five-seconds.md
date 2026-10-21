@@ -3,6 +3,7 @@
 Status: Proposed
 Decided by: pending (the owner accepts) · Date: pending
 Recorded: 2026-10-20
+Shipped: the code is already live on `prod` (PRs #138 and #139 into `dev`, #140 into `main`, #137 into `prod`, 2026-10-21) while this record is still Proposed; accepting it, or changing the window, is the owner's call.
 
 ## Context
 
