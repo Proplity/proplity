@@ -285,6 +285,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, { guestName: 'A Guest' });
     const cookie = await authCookie(manager.id, manager.role);
 
@@ -307,6 +308,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, { status: 'REVOKED' });
     const cookie = await authCookie(manager.id, manager.role);
 
@@ -324,6 +326,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, {
       validFrom: new Date(Date.now() - 2 * 86400000),
       validUntil: new Date(Date.now() - 86400000),
@@ -344,6 +347,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, {
       validFrom: new Date(Date.now() + 86400000),
     });
@@ -363,6 +367,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, { singleUse: true });
     const cookie = await authCookie(manager.id, manager.role);
 
@@ -391,6 +396,7 @@ describe('access-codes: verify (gate-side, ADMIN/MANAGER only)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
+    await createLease(unit.id, tenant.id);
     const code = await createAccessCode(unit.id, tenant.id, { singleUse: false });
     const cookie = await authCookie(manager.id, manager.role);
 

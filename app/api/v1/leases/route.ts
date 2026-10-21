@@ -60,6 +60,8 @@ export const GET = withAuth(
   { roles: ['ADMIN', 'MANAGER', 'LANDLORD', 'TENANT'] },
 );
 
+class ApplicationAlreadyUsedError extends Error {}
+
 const createLeaseSchema = z
   .object({
     unitId: z.string(),
@@ -205,10 +207,14 @@ export const POST = withAuth(
       const result = await prisma.$transaction(async (tx) => {
         const lease = await tx.lease.create({ data: { unitId, tenantId: tenantId!, ...rest } });
         if (applicationId) {
-          await tx.application.update({
-            where: { id: applicationId },
+          // Claim the application in the same write that checks it is still free: two requests for
+          // one application at once (a double-click) otherwise each make a lease and an invoice
+          // (ISS-140). The loser changes nothing: throwing rolls its lease back.
+          const claimed = await tx.application.updateMany({
+            where: { id: applicationId, status: 'APPROVED', leaseId: null },
             data: { leaseId: lease.id },
           });
+          if (claimed.count === 0) throw new ApplicationAlreadyUsedError();
         }
         const invoice = await tx.invoice.create({
           data: {
@@ -285,6 +291,12 @@ export const POST = withAuth(
         { status: 201 },
       );
     } catch (err) {
+      if (err instanceof ApplicationAlreadyUsedError) {
+        return NextResponse.json(
+          { error: 'Only an approved application without a lease can start a tenancy' },
+          { status: 409 },
+        );
+      }
       return handleApiError(err);
     }
   },
