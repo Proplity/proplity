@@ -54,6 +54,9 @@ model ConversationParticipant {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastReadAt     DateTime?
   joinedAt       DateTime     @default(now())
+  // Set when the person's link to the thread ends (a tenant's lease ends): they keep reading
+  // what was said up to this moment, cannot post, and see nothing newer (ISS-142).
+  leftAt         DateTime?
 
   @@unique([conversationId, userId])
 }

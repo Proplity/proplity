@@ -602,12 +602,15 @@ export type Message = {
   channel: 'IN_APP' | 'WHATSAPP' | 'EMAIL' | 'SMS';
   body: string;
   attachmentUrls: string[];
+  /** Who wrote it, kept even after they left the thread. */
+  sender?: { id: string; name: string } | null;
   createdAt: string;
 };
 
 export type ConversationParticipant = {
   userId: string;
   lastReadAt: string | null;
+  leftAt: string | null;
   user: { id: string; name: string; avatarUrl: string | null; role: string };
 };
 
@@ -624,6 +627,8 @@ export type Conversation = {
   participants: ConversationParticipant[];
   lastMessage: Message | null;
   lastReadAt: string | null;
+  /** Set when the caller's tenancy ended: the thread is read-only up to this moment. */
+  leftAt: string | null;
   unreadCount: number;
   createdAt: string;
   updatedAt: string;

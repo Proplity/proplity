@@ -10,13 +10,13 @@ Scope: the "Areas still to search" list in `docs/issues/issues.md` plus a route-
 | ISS-139 | P2  | Eight activations of leases on one unit at once: four succeeded, leaving four active leases on a unit                 |
 | ISS-140 | P2  | Three requests to start a tenancy from one approved application at once made three leases, each with its own invoices |
 
-## Found, not fixed (rows in the register)
+## Found, then decided and fixed the same day (rows in the register)
 
-| ID      | Pri | What                                                                                                                               | Why not fixed                                         |
-| ------- | --- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| ISS-141 | P3  | A rent invoice with no grace period is flagged overdue, and a late fee charged, on its due date itself (the job runs at 02:00 UTC) | Needs a decision on what "due" means in Lagos time    |
-| ISS-142 | P3  | People stay in message threads after they lose their link (a tenant after the lease ends, a manager after a transfer)              | Needs a decision on whether they keep reading history |
-| ISS-143 | P3  | Applications and viewing requests do not check the listing is public (needs a known random id)                                     | Changing it touches many test fixtures; low exposure  |
+| ID      | Pri | What                                                                                                                               | Decision (owner, 2026-10-21)                                                                                                 |
+| ------- | --- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| ISS-141 | P3  | A rent invoice with no grace period is flagged overdue, and a late fee charged, on its due date itself (the job runs at 02:00 UTC) | Overdue only once the Lagos day it falls due on (plus grace) has ended                                                       |
+| ISS-142 | P3  | People stay in message threads after they lose their link (a tenant after the lease ends, a manager after a transfer)              | A tenant keeps read-only history; a manager or landlord who loses the property leaves its threads                            |
+| ISS-143 | P3  | Applications and viewing requests do not check the listing is public (needs a known random id)                                     | Require a published, approved, non-private listing, unless the caller runs the property or lives in it; answer 404 otherwise |
 
 ## Checked and found sound
 

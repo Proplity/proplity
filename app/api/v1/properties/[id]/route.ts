@@ -12,6 +12,7 @@ import { listingHash } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
 import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
 import { appUrl } from '@/lib/appUrl';
+import { moveStaffInPropertyThreads } from '@/lib/conversationAccess';
 import {
   STAGED_PROPERTY_FIELDS,
   pickStaged,
@@ -506,6 +507,21 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
                 : {}),
             },
           },
+        });
+      }
+      // The people who lost the property leave its message threads and the new ones join (ISS-142).
+      if (managerMoved || landlordMoved) {
+        await moveStaffInPropertyThreads(tx, {
+          propertyId: id,
+          removed: [
+            ...(managerMoved ? [property.managerId] : []),
+            ...(landlordMoved ? [property.landlordId] : []),
+          ].filter((v): v is string => !!v),
+          added: [
+            ...(managerMoved ? [managerId] : []),
+            ...(landlordMoved ? [landlordId] : []),
+          ].filter((v): v is string => !!v),
+          current: [row.managerId, row.landlordId],
         });
       }
       return row;

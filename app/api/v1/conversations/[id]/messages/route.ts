@@ -12,24 +12,29 @@ import { notifyAndEmail } from '@/lib/notifications';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-async function isParticipant(conversationId: string, userId: string) {
-  const row = await prisma.conversationParticipant.findUnique({
+/** The caller's place in a thread, or null when they are not in it. */
+async function participantOf(conversationId: string, userId: string) {
+  return prisma.conversationParticipant.findUnique({
     where: { conversationId_userId: { conversationId, userId } },
+    select: { leftAt: true },
   });
-  return !!row;
 }
 
 export const GET = withAuth(async (req, { session }, ctx: RouteCtx) => {
   const { id } = await ctx.params;
 
   try {
-    if (!(await isParticipant(id, session.sub))) {
+    const me = await participantOf(id, session.sub);
+    if (!me) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { take, cursor } = parseCursorPagination(req.nextUrl.searchParams);
     const rows = await prisma.message.findMany({
-      where: { conversationId: id },
+      // A tenancy that ended freezes the thread at that moment (ISS-142).
+      where: { conversationId: id, ...(me.leftAt ? { createdAt: { lte: me.leftAt } } : {}) },
+      // Messages are shown with their sender's name, which can be someone who has since left.
+      include: { sender: { select: { id: true, name: true } } },
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: 'desc' },
@@ -66,8 +71,15 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
   const { id } = await ctx.params;
 
   try {
-    if (!(await isParticipant(id, session.sub))) {
+    const me = await participantOf(id, session.sub);
+    if (!me) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (me.leftAt) {
+      return NextResponse.json(
+        { error: 'Your tenancy has ended, so this conversation is read-only' },
+        { status: 403 },
+      );
     }
 
     const validated = await validateBody(req, createMessageSchema);
@@ -87,7 +99,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     // The other people in the thread are told, once: while they still have an unread notice
     // for this conversation, further messages do not add another.
     const others = await prisma.conversationParticipant.findMany({
-      where: { conversationId: id, userId: { not: session.sub } },
+      where: { conversationId: id, userId: { not: session.sub }, leftAt: null },
       select: { userId: true },
     });
     const sender = await prisma.user.findUnique({

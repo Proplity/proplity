@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApplicationStatus, Prisma } from '@prisma/client';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
+import { listingOpenTo } from '@/lib/api/listingAccess';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -71,8 +72,14 @@ export const POST = withAuth(
       if (!validated.success) return validated.response;
       const { unitId, details } = validated.data;
 
-      const unit = await prisma.unit.findUnique({ where: { id: unitId } });
-      if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        include: { property: true },
+      });
+      // Only a unit someone can see in the listings can be applied for (ISS-143).
+      if (!unit || !(await listingOpenTo(session, unit.property, unit))) {
+        return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+      }
 
       // One pending application per applicant per unit at a time -- same
       // app-level duplicate-prevention shape as access-codes/route.ts's

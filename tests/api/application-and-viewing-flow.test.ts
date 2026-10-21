@@ -22,7 +22,7 @@ describe('application review: notifications and tenancy (ISS-046)', () => {
   async function setup() {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
-    const property = await createProperty({ managerId: manager.id });
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
     const unit = await createUnit(property.id);
     return {
       manager,
@@ -125,7 +125,7 @@ describe('viewing requests: confirm / decline / cancel (ISS-047)', () => {
   async function booked() {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
-    const property = await createProperty({ managerId: manager.id });
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
     const mCookie = await authCookie(manager.id, manager.role);
     const tCookie = await authCookie(tenant.id, tenant.role);
     const when = bookableViewingTime();

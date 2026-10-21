@@ -307,16 +307,19 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     const url = fileUrl(file.id);
     const message = await prisma.message.findFirst({
       where: { attachmentUrls: { has: url } },
-      select: { conversationId: true },
+      select: { conversationId: true, createdAt: true },
     });
     if (!message) return false;
     const participant = await prisma.conversationParticipant.findUnique({
       where: {
         conversationId_userId: { conversationId: message.conversationId, userId: actor.sub },
       },
-      select: { id: true },
+      select: { leftAt: true },
     });
-    return Boolean(participant);
+    // Someone whose tenancy ended keeps what was shared before they left, not what came after.
+    return (
+      Boolean(participant) && (!participant!.leftAt || message.createdAt <= participant!.leftAt)
+    );
   }
 
   if (file.folder === 'reconciliation') {
