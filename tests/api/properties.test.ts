@@ -315,6 +315,59 @@ describe('properties: canManageProperty gating (PATCH /properties/[id])', () => 
     expect(unchanged?.managerId).toBe(manager.id);
   });
 
+  it('audit-logs a transfer to another manager or landlord, but not a no-op or a refused one (ISS-135)', async () => {
+    const manager = await createUser(Role.MANAGER);
+    const newManager = await createUser(Role.MANAGER);
+    const landlord = await createUser(Role.LANDLORD);
+    const newLandlord = await createUser(Role.LANDLORD);
+    const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
+    const admin = await createUser(Role.ADMIN);
+    const adminCookie = await authCookie(admin.id, admin.role);
+    const transfers = () =>
+      testPrisma.auditLog.findMany({
+        where: { action: 'PROPERTY_TRANSFERRED', entityId: property.id },
+        orderBy: { createdAt: 'asc' },
+      });
+    const patch = (cookie: string, body: Record<string, unknown>) =>
+      apiFetch(`/api/v1/properties/${property.id}`, { method: 'PATCH', cookie, body });
+
+    // Naming the current manager again is not a transfer.
+    expect((await patch(adminCookie, { managerId: manager.id })).status).toBe(200);
+    expect(await transfers()).toHaveLength(0);
+
+    // The owning manager is refused, and nothing is logged.
+    const ownerCookie = await authCookie(manager.id, manager.role);
+    expect((await patch(ownerCookie, { managerId: newManager.id })).status).toBe(403);
+    expect(await transfers()).toHaveLength(0);
+
+    // A real transfer: who, from whom, to whom.
+    expect((await patch(adminCookie, { managerId: newManager.id })).status).toBe(200);
+    const [first] = await transfers();
+    expect(first.actorId).toBe(admin.id);
+    expect(first.entityType).toBe('Property');
+    expect(first.metadata).toMatchObject({
+      propertyName: property.name,
+      manager: {
+        from: manager.id,
+        fromName: manager.name,
+        to: newManager.id,
+        toName: newManager.name,
+      },
+    });
+    expect(first.metadata).not.toHaveProperty('landlord');
+
+    // Both at once land in one row.
+    expect(
+      (await patch(adminCookie, { managerId: manager.id, landlordId: newLandlord.id })).status,
+    ).toBe(200);
+    const rows = await transfers();
+    expect(rows).toHaveLength(2);
+    expect(rows[1].metadata).toMatchObject({
+      manager: { from: newManager.id, to: manager.id },
+      landlord: { from: landlord.id, to: newLandlord.id, toName: newLandlord.name },
+    });
+  });
+
   it('lets ADMIN reassign managerId, but only to a real MANAGER user', async () => {
     const manager = await createUser(Role.MANAGER);
     const newManager = await createUser(Role.MANAGER);
