@@ -435,22 +435,80 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const addressChanged =
       !stageForReview && (cleanData.address !== undefined || cleanData.city !== undefined);
-    const updated = await prisma.property.update({
-      where: { id },
-      data: {
-        ...liveData,
-        ...(managerId ? { managerId } : {}),
-        ...(landlordId ? { landlordId } : {}),
-        ...reviewData,
-        ...(addressChanged
-          ? {
-              listingHash: listingHash(
-                cleanData.address ?? property.address,
-                cleanData.city ?? property.city,
-              ),
-            }
-          : {}),
-      },
+
+    // Moving a property to another manager or landlord changes who can see its tenants and
+    // money, so it is audit-logged (ISS-135): who did it, and from whom to whom. Naming the same
+    // person again is not a transfer.
+    const managerMoved = !!managerId && managerId !== property.managerId;
+    const landlordMoved = !!landlordId && landlordId !== property.landlordId;
+    const people =
+      managerMoved || landlordMoved
+        ? await prisma.user.findMany({
+            where: {
+              id: {
+                in: [property.managerId, managerId, property.landlordId, landlordId].filter(
+                  (v): v is string => !!v,
+                ),
+              },
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const nameOf = (userId: string | null | undefined) =>
+      userId ? (people.find((p) => p.id === userId)?.name ?? null) : null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.property.update({
+        where: { id },
+        data: {
+          ...liveData,
+          ...(managerId ? { managerId } : {}),
+          ...(landlordId ? { landlordId } : {}),
+          ...reviewData,
+          ...(addressChanged
+            ? {
+                listingHash: listingHash(
+                  cleanData.address ?? property.address,
+                  cleanData.city ?? property.city,
+                ),
+              }
+            : {}),
+        },
+      });
+      if (managerMoved || landlordMoved) {
+        await tx.auditLog.create({
+          data: {
+            actorId: session.sub,
+            action: 'PROPERTY_TRANSFERRED',
+            entityType: 'Property',
+            entityId: id,
+            metadata: {
+              propertyName: property.name,
+              ...(managerMoved
+                ? {
+                    manager: {
+                      from: property.managerId,
+                      fromName: nameOf(property.managerId),
+                      to: managerId,
+                      toName: nameOf(managerId),
+                    },
+                  }
+                : {}),
+              ...(landlordMoved
+                ? {
+                    landlord: {
+                      from: property.landlordId,
+                      fromName: nameOf(property.landlordId),
+                      to: landlordId,
+                      toName: nameOf(landlordId),
+                    },
+                  }
+                : {}),
+            },
+          },
+        });
+      }
+      return row;
     });
 
     if (stageForReview || resubmit) {
