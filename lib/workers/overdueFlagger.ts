@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
+import { viewingDateKey, viewingDayBounds } from '@/lib/viewingSlots';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -68,7 +69,11 @@ export async function runOverdueFlagger(): Promise<{
     // overdue right at its due date, same as before this fix.
     const gracePeriodDays = invoice.lease?.gracePeriodDays ?? 0;
     const graceDeadline = new Date(invoice.dueDate.getTime() + gracePeriodDays * MS_PER_DAY);
-    if (graceDeadline > now) continue; // still within grace period -- not overdue yet
+    // "Due on the 1st" means pay by the end of the 1st in Lagos, so the invoice is only overdue
+    // once that Lagos day is over (ISS-141). Without this a no-grace lease was flagged, and the
+    // late fee charged, at 03:00 Lagos time on the due date itself.
+    const overdueFrom = viewingDayBounds(viewingDateKey(graceDeadline)).end;
+    if (overdueFrom > now) continue; // still within grace period -- not overdue yet
 
     if (invoice.status === 'UNPAID') {
       await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'OVERDUE' } });

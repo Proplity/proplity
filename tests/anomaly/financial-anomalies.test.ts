@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { runOverdueFlagger } from '@/lib/workers/overdueFlagger';
 import { runAutopayCharger } from '@/lib/workers/autopayCharger';
 import { prisma } from '@/lib/db';
@@ -152,6 +152,91 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
         type: 'LATE_FEE',
         amount: 15_000,
       }),
+    });
+  });
+
+  describe('a no-grace invoice is overdue only after its Lagos due day ends (ISS-141)', () => {
+    const noGraceInvoice = () => ({
+      id: 'inv-lagos-day',
+      invoiceNumber: 'INV-1010',
+      type: 'RENT',
+      status: 'UNPAID',
+      // Stored as midnight UTC, which is 01:00 on the 10th in Lagos.
+      dueDate: new Date('2026-03-10T00:00:00Z'),
+      amount: 100_000,
+      leaseId: 'lease-lagos',
+      lease: {
+        gracePeriodDays: 0,
+        lateFeeType: 'FIXED',
+        lateFeeFlatAmount: 5000,
+      },
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('does not flag it, or charge a late fee, at the 02:00 UTC run on the due date', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-10T02:00:00Z')); // 03:00 in Lagos, still the 10th
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runOverdueFlagger();
+
+      expect(result).toEqual({ flagged: 0, remindersSent: 0, lateFeesCreated: 0 });
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(prisma.invoice.create).not.toHaveBeenCalled();
+    });
+
+    it('still holds it one minute before the Lagos day ends', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-10T22:59:00Z')); // 23:59 in Lagos
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runOverdueFlagger();
+
+      expect(result.flagged).toBe(0);
+    });
+
+    it('flags it and charges the late fee at the next 02:00 UTC run', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-11T02:00:00Z')); // 03:00 on the 11th in Lagos
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
+      vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
+
+      const result = await runOverdueFlagger();
+
+      expect(result.flagged).toBe(1);
+      expect(result.lateFeesCreated).toBe(1);
+    });
+
+    it('counts the grace days from the Lagos due day, not from midnight UTC', async () => {
+      vi.useFakeTimers();
+      const invoice = {
+        ...noGraceInvoice(),
+        lease: { ...noGraceInvoice().lease, gracePeriodDays: 7 },
+      };
+      // Grace ends on the 17th, so the 17th itself is still on time.
+      vi.setSystemTime(new Date('2026-03-17T12:00:00Z'));
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        invoice,
+      ] as unknown as InvoicesFindMany);
+      expect((await runOverdueFlagger()).flagged).toBe(0);
+
+      vi.setSystemTime(new Date('2026-03-18T02:00:00Z'));
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        invoice,
+      ] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
+      vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
+      expect((await runOverdueFlagger()).flagged).toBe(1);
     });
   });
 
