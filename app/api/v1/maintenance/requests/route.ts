@@ -17,7 +17,7 @@ import {
 } from '@/lib/notifications';
 import { safeUrlList } from '@/lib/api/urlField';
 import { appUrl } from '@/lib/appUrl';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 import { vendorProblem } from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (req, { session }) => {
@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, { session }) => {
         skip,
         take,
         include: {
-          unit: { include: { property: true } },
+          unit: { include: { property: PUBLIC_PROPERTY } },
           category: true,
           vendor: { select: { id: true, name: true } },
           tenant: { select: { id: true, name: true } },
@@ -113,7 +113,7 @@ export const POST = withAuth(
             ...(vendorId ? { vendorId, status: 'SCHEDULED' as const } : {}),
             ...rest,
           },
-          include: { unit: { include: { property: true } } },
+          include: { unit: { include: { property: PUBLIC_PROPERTY } } },
         });
 
         // The rest of the property team, the vendor (if one was chosen) and whoever lives in the
@@ -171,7 +171,7 @@ export const POST = withAuth(
 
       const request = await prisma.maintenanceRequest.create({
         data: { unitId, tenantId: session.sub, ...rest },
-        include: { unit: { include: { property: true } } },
+        include: { unit: { include: { property: PUBLIC_PROPERTY } } },
       });
 
       const recipients = [

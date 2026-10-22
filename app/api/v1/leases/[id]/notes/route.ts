@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 
 // Lists are capped so one busy record cannot return an unbounded response (ISS-073).
 const LIST_LIMIT = 500;
@@ -13,12 +14,19 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // MANAGER/ADMIN only, exactly as scoped in the plan -- unlike lease access
 // elsewhere, LANDLORD is deliberately not included here.
 export const GET = withAuth(
-  async (_req, _session, ctx: RouteCtx) => {
+  async (_req, { session }, ctx: RouteCtx) => {
     const { id } = await ctx.params;
 
     try {
-      const lease = await prisma.lease.findUnique({ where: { id } });
+      const lease = await prisma.lease.findUnique({
+        where: { id },
+        include: { unit: { select: { property: true } } },
+      });
       if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+      // Only the property's own team reads the notes on its tenants (ISS-144).
+      if (!canManageProperty(session, lease.unit.property)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       const notes = await prisma.note.findMany({
         take: LIST_LIMIT,
@@ -40,8 +48,14 @@ export const POST = withAuth(
     const { id } = await ctx.params;
 
     try {
-      const lease = await prisma.lease.findUnique({ where: { id } });
+      const lease = await prisma.lease.findUnique({
+        where: { id },
+        include: { unit: { select: { property: true } } },
+      });
       if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+      if (!canManageProperty(session, lease.unit.property)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       const validated = await validateBody(req, createNoteSchema);
       if (!validated.success) return validated.response;

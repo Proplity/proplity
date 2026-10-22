@@ -25,6 +25,7 @@ import {
   Star,
   ChevronDown,
 } from 'lucide-react';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 interface RegisterProps {
   onSwitchToLogin?: () => void;
@@ -43,12 +44,14 @@ function PasswordField({
   label,
   show,
   onToggle,
+  hint,
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
   show: boolean;
   onToggle: () => void;
+  hint?: string;
 }) {
   return (
     <div>
@@ -60,6 +63,7 @@ function PasswordField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required
+          minLength={MIN_PASSWORD_LENGTH}
           className="w-full rounded-lg border border-gray-300 py-2.5 pr-10 pl-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
         <button
@@ -70,6 +74,7 @@ function PasswordField({
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </div>
+      {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   );
 }
@@ -518,6 +523,10 @@ export function Register({
             ? tenantForm.agreeToTerms
             : vendorForm.agreeToTerms;
 
+    if (pwd.length < MIN_PASSWORD_LENGTH) {
+      toast.error(`${PASSWORD_TOO_SHORT}.`);
+      return;
+    }
     if (pwd !== cpwd) {
       toast.error('Passwords do not match.');
       return;
@@ -1026,6 +1035,7 @@ export function Register({
 
               <PasswordField
                 label="Password"
+                hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={managerForm.password}
                 onChange={(v) => setManagerForm({ ...managerForm, password: v })}
                 show={showPassword}
@@ -1192,6 +1202,7 @@ export function Register({
 
               <PasswordField
                 label="Password"
+                hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={landlordForm.password}
                 onChange={(v) => setLandlordForm({ ...landlordForm, password: v })}
                 show={showPassword}
@@ -1333,6 +1344,7 @@ export function Register({
 
               <PasswordField
                 label="Password"
+                hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={tenantForm.password}
                 onChange={(v) => setTenantForm({ ...tenantForm, password: v })}
                 show={showPassword}
@@ -1444,6 +1456,7 @@ export function Register({
 
               <PasswordField
                 label="Password"
+                hint={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={vendorForm.password}
                 onChange={(v) => setVendorForm({ ...vendorForm, password: v })}
                 show={showPassword}

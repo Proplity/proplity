@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileX2,
   Loader2,
+  MailPlus,
   Settings as SettingsIcon,
   ShieldCheck,
   Wrench,
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { Switch } from '@/app/components/ui/switch';
 import { RETENTION_LIMITS } from '@/lib/retentionLimits';
+import { INVITE_LIMITS } from '@/lib/inviteLimits';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,7 @@ export default function AdminSettingsPage() {
   const [retentionOn, setRetentionOn] = useState(false);
   const [tenancyDays, setTenancyDays] = useState('365');
   const [rejectionDays, setRejectionDays] = useState('90');
+  const [invitesPerDay, setInvitesPerDay] = useState(String(INVITE_LIMITS.perDay.default));
   const [deploymentAllows, setDeploymentAllows] = useState({ autopay: false, retention: false });
   // Turning on a charge or a deletion asks once more before it saves.
   const [confirming, setConfirming] = useState<'autopay' | 'retention' | null>(null);
@@ -44,6 +47,7 @@ export default function AdminSettingsPage() {
         setRetentionOn(res.data.data.retentionEnabled);
         setTenancyDays(String(res.data.data.retentionAfterTenancyDays));
         setRejectionDays(String(res.data.data.retentionAfterRejectionDays));
+        setInvitesPerDay(String(res.data.data.tenantInvitesPerDay));
         setDeploymentAllows(res.data.data.deploymentAllows);
       })
       .catch(() => {
@@ -124,6 +128,20 @@ export default function AdminSettingsPage() {
     } catch (err) {
       const message = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
       toast.error(message ?? 'Failed to save the periods. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveInviteCap = async () => {
+    setSaving(true);
+    try {
+      const res = await api.admin.settings.update({ tenantInvitesPerDay: Number(invitesPerDay) });
+      setInvitesPerDay(String(res.data.data.tenantInvitesPerDay));
+      toast.success('Invitation limit saved.');
+    } catch (err) {
+      const message = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+      toast.error(message ?? 'Failed to save the limit. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -433,6 +451,44 @@ export default function AdminSettingsPage() {
             }
             aria-label="Delete identity documents when kept long enough"
           />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="flex gap-3">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+            <MailPlus className="h-4.5 w-4.5 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">Tenant invitations by email</p>
+            <p className="mt-1 max-w-xl text-sm text-gray-600">
+              When a manager or landlord starts a lease for an email address with no account,
+              Proplity emails that person an invitation. This is how many new people one manager or
+              landlord can invite in a day. They can only do it on a listing an admin has approved.
+              Admins are not limited. Set 0 to stop invitations.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-4">
+              <label className="text-sm text-gray-700">
+                Invitations per person per day
+                <input
+                  type="number"
+                  min={INVITE_LIMITS.perDay.min}
+                  max={INVITE_LIMITS.perDay.max}
+                  value={invitesPerDay}
+                  onChange={(e) => setInvitesPerDay(e.target.value)}
+                  aria-label="New people one manager or landlord may invite by email each day"
+                  className="mt-1 block w-36 rounded-lg border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <button
+                onClick={saveInviteCap}
+                disabled={saving}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Save limit
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

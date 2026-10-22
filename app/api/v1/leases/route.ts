@@ -10,9 +10,10 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 import { sendEmail } from '@/lib/email';
 import { notifyAndEmail } from '@/lib/notifications';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 // VENDOR has no legitimate reason to list leases -- everyone else's access
 // is scoped below, not gated by role.
@@ -42,7 +43,7 @@ export const GET = withAuth(
           skip,
           take,
           include: {
-            unit: { include: { property: true } },
+            unit: { include: { property: PUBLIC_PROPERTY } },
             tenant: {
               select: { id: true, name: true, email: true, phoneNumber: true, avatarUrl: true },
             },
@@ -61,6 +62,11 @@ export const GET = withAuth(
 );
 
 class ApplicationAlreadyUsedError extends Error {}
+class InviteLimitError extends Error {
+  constructor(readonly limit: number) {
+    super('Daily invitation limit reached');
+  }
+}
 
 const createLeaseSchema = z
   .object({
@@ -166,27 +172,67 @@ export const POST = withAuth(
           }
           tenantId = existing.id;
         } else {
+          // Emailing a stranger in Proplity's name is only for a listing an admin has approved,
+          // and only up to the daily limit an admin sets (ISS-154). Admins are not limited.
+          if (
+            session.role !== 'ADMIN' &&
+            (unit.property.moderationStatus !== 'APPROVED' || unit.property.mergedIntoId)
+          ) {
+            return NextResponse.json(
+              {
+                error:
+                  'You can invite a new tenant by email once an admin has approved this listing',
+                code: 'LISTING_NOT_APPROVED',
+              },
+              { status: 403 },
+            );
+          }
+          const dailyLimit = (await getSystemSettings()).tenantInvitesPerDay;
+
           const randomPassword = crypto.randomBytes(24).toString('hex');
           const passwordHash = await bcrypt.hash(randomPassword, 12);
-          const newTenant = await prisma.user.create({
-            data: {
-              email: tenantEmail!,
-              name: tenantName!,
-              phoneNumber: tenantPhone,
-              passwordHash,
-              role: 'TENANT',
-              status: 'PENDING_VERIFICATION',
-            },
-          });
-
           const rawToken = crypto.randomBytes(32).toString('hex');
           const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-          await prisma.verificationToken.create({
-            data: {
-              userId: newTenant.id,
-              tokenHash,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
+          const newTenant = await prisma.$transaction(async (tx) => {
+            if (session.role !== 'ADMIN') {
+              // One sender's invitations queue on a lock, so a burst cannot all pass the count.
+              await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tenant-invite:${session.sub}`}))`;
+              const sent = await tx.auditLog.count({
+                where: {
+                  actorId: session.sub,
+                  action: 'TENANT_INVITED',
+                  createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+                },
+              });
+              if (sent >= dailyLimit) throw new InviteLimitError(dailyLimit);
+            }
+            const created = await tx.user.create({
+              data: {
+                email: tenantEmail!,
+                name: tenantName!,
+                phoneNumber: tenantPhone,
+                passwordHash,
+                role: 'TENANT',
+                status: 'PENDING_VERIFICATION',
+              },
+            });
+            await tx.verificationToken.create({
+              data: {
+                userId: created.id,
+                tokenHash,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              },
+            });
+            await tx.auditLog.create({
+              data: {
+                actorId: session.sub,
+                action: 'TENANT_INVITED',
+                entityType: 'User',
+                entityId: created.id,
+                metadata: { email: created.email, unitId },
+              },
+            });
+            return created;
           });
 
           await sendEmail({
@@ -291,6 +337,15 @@ export const POST = withAuth(
         { status: 201 },
       );
     } catch (err) {
+      if (err instanceof InviteLimitError) {
+        return NextResponse.json(
+          {
+            error: `You have reached today's limit of ${err.limit} new people invited by email. Try again tomorrow, or ask an admin to raise the limit.`,
+            code: 'INVITE_LIMIT',
+          },
+          { status: 429 },
+        );
+      }
       if (err instanceof ApplicationAlreadyUsedError) {
         return NextResponse.json(
           { error: 'Only an approved application without a lease can start a tenancy' },

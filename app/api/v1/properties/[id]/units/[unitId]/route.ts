@@ -5,7 +5,13 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import {
+  PENDING_UNIT_FLAG,
+  canManageProperty,
+  isPublicUnit,
+  serializeUnit,
+} from '@/lib/api/propertyAccess';
+import { listingViewer, sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrlList } from '@/lib/api/urlField';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
@@ -25,6 +31,10 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     const { id, unitId } = await params;
     const found = await loadUnitWithProperty(id, unitId);
     if (!found) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+    const viewer = await listingViewer(await sessionOrNull(), found.property);
+    if (!viewer.visible || (!viewer.seesAll && !isPublicUnit(found.unit))) {
+      return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+    }
     return NextResponse.json({ data: serializeUnit(found.unit) });
   } catch (err) {
     return handleApiError(err);
@@ -224,6 +234,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     }
 
     const { sqft, action: _act, saveAsDraft, ...data } = validated.data;
+    // The "awaiting approval" marker belongs to the server: only an admin's approval clears it, and
+    // a manager or landlord cannot add it back or drop it by sending their own amenities (ISS-153).
+    if (data.amenities && session.role !== 'ADMIN') {
+      const others = data.amenities.filter((a) => a !== PENDING_UNIT_FLAG);
+      data.amenities = found.unit.amenities.includes(PENDING_UNIT_FLAG)
+        ? [...others, PENDING_UNIT_FLAG]
+        : others;
+    }
     const isLandlordOrManager = session.role === 'LANDLORD' || session.role === 'MANAGER';
     const isEditingCritical =
       data.rentAmount !== undefined ||

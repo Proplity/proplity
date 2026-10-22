@@ -646,7 +646,9 @@ describe('properties: units', () => {
     });
     expect(res.status).toBe(409);
 
-    const stillThere = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}`);
+    const stillThere = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}`, {
+      cookie,
+    });
     expect(stillThere.status).toBe(200);
   });
 
@@ -703,7 +705,8 @@ describe('neighbourhood report: save and keep history (ISS-016)', () => {
     const cookie = await authCookie(manager.id, manager.role);
     const url = `/api/v1/properties/${property.id}/neighbourhood-report`;
 
-    expect((await apiFetch(url)).status).toBe(404);
+    // The listing is not public yet, so the manager reads it signed in (ISS-146).
+    expect((await apiFetch(url, { cookie })).status).toBe(404);
 
     const first = await apiFetch(url, {
       method: 'PUT',
@@ -722,7 +725,7 @@ describe('neighbourhood report: save and keep history (ISS-016)', () => {
     });
     expect(second.status).toBe(201);
 
-    const latest = await apiFetch(url);
+    const latest = await apiFetch(url, { cookie });
     expect(latest.body.data.security).toEqual({ rating: 5, status: 'Excellent' });
     // Carried over from the earlier version.
     expect(latest.body.data.electricity).toEqual({ hoursPerDay: 18 });
