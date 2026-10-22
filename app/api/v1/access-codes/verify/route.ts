@@ -45,6 +45,7 @@ export const POST = withAuth(
       const accessCode = await prisma.accessCode.findFirst({
         where: { unitId, code },
         orderBy: { createdAt: 'desc' },
+        include: { createdBy: { select: { role: true } } },
       });
 
       // AccessLog.accessCodeId is a required FK -- an attempt against a code
@@ -60,7 +61,17 @@ export const POST = withAuth(
       let action: AccessLogAction;
       let granted = false;
 
-      if (accessCode.status === 'REVOKED') {
+      // A tenant's code belongs to their tenancy (ISS-138). Ending a lease revokes the codes, but a
+      // lease that ended some other way must not leave a working door behind, so the gate asks too.
+      const tenancyEnded =
+        accessCode.status === 'ACTIVE' &&
+        accessCode.createdBy.role === 'TENANT' &&
+        !(await prisma.lease.findFirst({
+          where: { unitId, tenantId: accessCode.createdById, status: 'ACTIVE' },
+          select: { id: true },
+        }));
+
+      if (accessCode.status === 'REVOKED' || tenancyEnded) {
         action = 'REVOKED';
       } else if (
         accessCode.status === 'EXPIRED' ||
@@ -98,6 +109,14 @@ export const POST = withAuth(
         }),
         ...(consumesCode
           ? [prisma.accessCode.update({ where: { id: accessCode.id }, data: { status: 'USED' } })]
+          : []),
+        ...(tenancyEnded
+          ? [
+              prisma.accessCode.update({
+                where: { id: accessCode.id },
+                data: { status: 'REVOKED', revokedAt: now },
+              }),
+            ]
           : []),
       ]);
 

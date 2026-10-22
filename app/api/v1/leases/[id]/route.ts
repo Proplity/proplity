@@ -7,6 +7,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { notifyAndEmail } from '@/lib/notifications';
+import { revokeCodesWhenTenancyEnds } from '@/lib/accessCodes';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
@@ -134,6 +135,9 @@ export const PATCH = withAuth(
       // set it explicitly anyway rather than assuming it was already right.
       if (renew) {
         const newLease = await prisma.$transaction(async (tx) => {
+          // Two requests for the same unit must take turns: without the lock both could pass the
+          // check below and the unit would end up with two active leases (ISS-139).
+          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${lease.unitId} FOR UPDATE`;
           // Same guard, minus the lease being renewed FROM -- that one is set
           // to EXPIRED a few lines down, so it is not a real conflict. Any
           // OTHER active lease on the unit is.
@@ -185,6 +189,9 @@ export const PATCH = withAuth(
 
       if (status || Object.keys(termsUpdate).length > 0) {
         const updated = await prisma.$transaction(async (tx) => {
+          // Serialise changes to one unit's leases: the occupancy check below reads the other
+          // leases, so two activations at once must not both pass it (ISS-139).
+          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${lease.unitId} FOR UPDATE`;
           const result = await tx.lease.update({
             where: { id },
             data: { ...(status ? { status } : {}), ...termsUpdate },
@@ -218,6 +225,12 @@ export const PATCH = withAuth(
             if (!stillActive) {
               await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'VACANT' } });
             }
+            // The tenant's gate codes end with the tenancy (ISS-138).
+            await revokeCodesWhenTenancyEnds(tx, {
+              id: lease.id,
+              unitId: lease.unitId,
+              tenantId: lease.tenantId,
+            });
           }
 
           return result;

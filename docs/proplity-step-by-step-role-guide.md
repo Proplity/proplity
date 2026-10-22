@@ -1093,7 +1093,7 @@ A tenant can let Proplity pay each rent invoice automatically. Auto-pay reuses t
 ## Step 2.14 — Access Codes and the Full Dashboard
 
 **What this is:**
-The Access Codes card lists the codes issued for the tenant unit, such as a guest or delivery code. Each shows the guest name, the code and when it expires.
+The Access Codes card lists the codes issued for the tenant unit, such as a guest or delivery code. Each shows the guest name, the code and when it expires. A code stops working when your tenancy ends (the lease is terminated or expires).
 
 **Key points:**
 
