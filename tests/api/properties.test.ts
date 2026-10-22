@@ -596,6 +596,14 @@ describe('properties: verified reviews (leaseId provenance)', () => {
     await createLease(unit.id, tenant.id);
 
     const stranger = await createUser(Role.TENANT);
+    await testPrisma.propertyViewing.create({
+      data: {
+        propertyId: property.id,
+        requestedById: stranger.id,
+        scheduledAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        status: 'CONFIRMED',
+      },
+    });
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
     const strangerCookie = await authCookie(stranger.id, stranger.role);
@@ -607,6 +615,7 @@ describe('properties: verified reviews (leaseId provenance)', () => {
     });
     expect(verifiedReview.status).toBe(201);
     expect(verifiedReview.body.data.verified).toBe(true);
+    expect(verifiedReview.body.data.kind).toBe('TENANT');
 
     const unverifiedReview = await apiFetch(`/api/v1/properties/${property.id}/reviews`, {
       method: 'POST',
@@ -615,6 +624,7 @@ describe('properties: verified reviews (leaseId provenance)', () => {
     });
     expect(unverifiedReview.status).toBe(201);
     expect(unverifiedReview.body.data.verified).toBe(false);
+    expect(unverifiedReview.body.data.kind).toBe('VISITOR');
   });
 
   it('supports filtering the reviews list to verified only', async () => {

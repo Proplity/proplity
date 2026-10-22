@@ -13,6 +13,7 @@ import { sendEmail } from '@/lib/email';
 import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
 import { appUrl } from '@/lib/appUrl';
 import { moveStaffInPropertyThreads } from '@/lib/conversationAccess';
+import { reviewerKind } from '@/lib/reviewEligibility';
 import {
   STAGED_PROPERTY_FIELDS,
   pickStaged,
@@ -100,7 +101,11 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
       data: {
         ...rest,
         units: units.map(serializeUnit),
-        reviews: reviews.map((r) => ({ ...r, verified: r.leaseId !== null })),
+        reviews: reviews.map((r) => ({
+          ...r,
+          verified: r.leaseId !== null,
+          kind: reviewerKind(r),
+        })),
         reviewStats: { count: reviews.length, averageRating },
       },
     });

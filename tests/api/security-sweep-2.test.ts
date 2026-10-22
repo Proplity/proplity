@@ -276,6 +276,14 @@ describe('a review is one person’s opinion of a property they do not run (ISS-
       landlordId: landlord.id,
       isPublished: true,
     });
+    await testPrisma.propertyViewing.create({
+      data: {
+        propertyId: property.id,
+        requestedById: guest.id,
+        scheduledAt: new Date(Date.now() - 60 * 60 * 1000),
+        status: 'COMPLETED',
+      },
+    });
     const post = (userId: string, role: Role, rating: number) =>
       authCookie(userId, role).then((cookie) =>
         apiFetch(`/api/v1/properties/${property.id}/reviews`, {
@@ -295,6 +303,14 @@ describe('a review is one person’s opinion of a property they do not run (ISS-
   it('keeps two reviews at once from the same person to one', async () => {
     const guest = await createUser(Role.TENANT);
     const property = await createProperty({ isPublished: true });
+    await testPrisma.propertyViewing.create({
+      data: {
+        propertyId: property.id,
+        requestedById: guest.id,
+        scheduledAt: new Date(Date.now() - 60 * 60 * 1000),
+        status: 'CONFIRMED',
+      },
+    });
     const cookie = await authCookie(guest.id, guest.role);
     const results = await Promise.all(
       [1, 2, 3, 4].map(() =>

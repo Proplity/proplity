@@ -112,6 +112,7 @@ export type PropertyReview = {
   rating: number;
   comment: string | null;
   verified: boolean;
+  kind: 'TENANT' | 'VISITOR';
   createdAt: string;
 };
 
