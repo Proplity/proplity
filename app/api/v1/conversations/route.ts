@@ -35,20 +35,28 @@ export const GET = withAuth(async (_req, { session }) => {
 
     const data = await Promise.all(
       participantRows.map(async (p) => {
+        // Someone whose tenancy ended sees the thread as it stood when they left (ISS-142).
+        const visible = p.leftAt ? { lte: p.leftAt } : undefined;
         const [lastMessage, unreadCount] = await Promise.all([
           prisma.message.findFirst({
-            where: { conversationId: p.conversationId },
+            where: { conversationId: p.conversationId, createdAt: visible },
             orderBy: { createdAt: 'desc' },
           }),
           prisma.message.count({
             where: {
               conversationId: p.conversationId,
-              createdAt: { gt: p.lastReadAt ?? new Date(0) },
+              createdAt: { gt: p.lastReadAt ?? new Date(0), ...visible },
               senderId: { not: session.sub },
             },
           }),
         ]);
-        return { ...p.conversation, lastMessage, lastReadAt: p.lastReadAt, unreadCount };
+        return {
+          ...p.conversation,
+          lastMessage,
+          lastReadAt: p.lastReadAt,
+          leftAt: p.leftAt,
+          unreadCount,
+        };
       }),
     );
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
+import { listingOpenTo } from '@/lib/api/listingAccess';
 import { VIEWING_HOLDING_STATUSES, viewingDayBounds, viewingTimeKey } from '@/lib/viewingSlots';
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -11,7 +12,7 @@ const querySchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
 
 // The start times already booked on a day, so the booking form can grey them out (ISS-104).
 // Only the times are returned, never who booked them. `date` is a Lagos calendar day.
-export const GET = withAuth(async (req, _auth, ctx: RouteCtx) => {
+export const GET = withAuth(async (req, { session }, ctx: RouteCtx) => {
   const { id } = await ctx.params;
   const parsed = querySchema.safeParse({ date: new URL(req.url).searchParams.get('date') });
   if (!parsed.success) {
@@ -23,8 +24,11 @@ export const GET = withAuth(async (req, _auth, ctx: RouteCtx) => {
   }
 
   try {
-    const property = await prisma.property.findUnique({ where: { id }, select: { id: true } });
-    if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    const property = await prisma.property.findUnique({ where: { id } });
+    // The same "not found" for a property that is not listed, so this does not confirm an id (ISS-143).
+    if (!property || !(await listingOpenTo(session, property))) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
 
     const { start, end } = viewingDayBounds(date);
     const booked = await prisma.propertyViewing.findMany({

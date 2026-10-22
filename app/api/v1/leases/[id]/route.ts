@@ -8,6 +8,10 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { notifyAndEmail } from '@/lib/notifications';
 import { revokeCodesWhenTenancyEnds } from '@/lib/accessCodes';
+import {
+  closeThreadsWhenTenancyEnds,
+  reopenThreadsWhenTenancyResumes,
+} from '@/lib/conversationAccess';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
@@ -218,6 +222,11 @@ export const PATCH = withAuth(
               throw new UnitAlreadyOccupiedError(conflicting.id);
             }
             await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'OCCUPIED' } });
+            await reopenThreadsWhenTenancyResumes(tx, {
+              id: lease.id,
+              tenantId: lease.tenantId,
+              propertyId: lease.unit.propertyId,
+            });
           } else if (status === 'TERMINATED' || status === 'EXPIRED') {
             const stillActive = await tx.lease.findFirst({
               where: { unitId: lease.unitId, status: 'ACTIVE', id: { not: lease.id } },
@@ -230,6 +239,13 @@ export const PATCH = withAuth(
               id: lease.id,
               unitId: lease.unitId,
               tenantId: lease.tenantId,
+            });
+            // ...and so does their say in the lease and community threads (ISS-142).
+            await closeThreadsWhenTenancyEnds(tx, {
+              id: lease.id,
+              unitId: lease.unitId,
+              tenantId: lease.tenantId,
+              propertyId: lease.unit.propertyId,
             });
           }
 

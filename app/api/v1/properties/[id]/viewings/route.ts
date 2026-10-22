@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { listingOpenTo } from '@/lib/api/listingAccess';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 import {
   VIEWING_HOLDING_STATUSES,
@@ -76,6 +77,15 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const validated = await validateBody(req, createViewingSchema);
     if (!validated.success) return validated.response;
     const { scheduledAt, unitId, notes } = validated.data;
+
+    // Only a listed property (and a listed unit of it) can be viewed (ISS-143).
+    const target = await prisma.property.findUnique({ where: { id } });
+    const unit = unitId
+      ? await prisma.unit.findFirst({ where: { id: unitId, propertyId: id } })
+      : null;
+    if (!target || (unitId && !unit) || !(await listingOpenTo(session, target, unit))) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
 
     if (scheduledAt.getTime() <= Date.now()) {
       return NextResponse.json(

@@ -994,6 +994,7 @@ A built-in messaging system connecting you directly with your property manager (
 3. Type your message at the bottom
 4. Press **Enter** or click ➤ to send
 5. Manager sees your message in real time
+6. When your tenancy ends, the lease and building conversations stay in your list so you can read what was said up to then; the message box is replaced by a note that they are read-only
 
 **Screenshots:**
 

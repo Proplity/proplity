@@ -49,7 +49,8 @@ async function unreadMessageCount(userId: string): Promise<number> {
     JOIN "ConversationParticipant" cp
       ON cp."conversationId" = m."conversationId" AND cp."userId" = ${userId}
     WHERE m."senderId" IS DISTINCT FROM ${userId}
-      AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")`);
+      AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+      AND (cp."leftAt" IS NULL OR m."createdAt" <= cp."leftAt")`);
   return Number(rows[0]?.n ?? 0);
 }
 

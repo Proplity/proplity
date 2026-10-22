@@ -134,7 +134,7 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 106 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 110 tests, mocked Prisma, no server (pnpm test:unit)
 │   ├── 📁 api/                              # 34 Vitest files — 508 tests, real HTTP against the spawned server (pnpm test)
 │   └── 📁 e2e/                              # Playwright, 71 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
