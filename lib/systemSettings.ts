@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { RETENTION_LIMITS } from '@/lib/retentionLimits';
+import { INVITE_LIMITS } from '@/lib/inviteLimits';
 
 export { RETENTION_LIMITS };
 
@@ -21,6 +22,7 @@ export async function getSystemSettings() {
       settings?.retentionAfterTenancyDays ?? RETENTION_LIMITS.tenancyDays.default,
     retentionAfterRejectionDays:
       settings?.retentionAfterRejectionDays ?? RETENTION_LIMITS.rejectionDays.default,
+    tenantInvitesPerDay: settings?.tenantInvitesPerDay ?? INVITE_LIMITS.perDay.default,
   };
 }
 

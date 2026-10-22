@@ -81,10 +81,17 @@ export const GET = withAuth(
         createdAt.lt = new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000);
 
       const where: Prisma.AuditLogWhereInput = {
-        ...(action ? { action } : {}),
+        // Both filters apply together; a search word must not replace the chosen action.
+        ...(action || q
+          ? {
+              AND: [
+                ...(action ? [{ action }] : []),
+                ...(q ? [{ action: { contains: q, mode: 'insensitive' as const } }] : []),
+              ],
+            }
+          : {}),
         ...(entityType ? { entityType } : {}),
         ...(entityId ? { entityId } : {}),
-        ...(q ? { action: { contains: q, mode: 'insensitive' } } : {}),
         ...(actor
           ? {
               actor: {

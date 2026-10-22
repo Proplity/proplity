@@ -3,7 +3,7 @@ import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -18,12 +18,12 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
           include: {
             lease: {
               include: {
-                unit: { include: { property: true } },
+                unit: { include: { property: PUBLIC_PROPERTY } },
               },
             },
             maintenanceRequest: {
               include: {
-                unit: { include: { property: true } },
+                unit: { include: { property: PUBLIC_PROPERTY } },
               },
             },
             payments: {

@@ -1,4 +1,4 @@
-# Security sweep, 2026-10-21 (ISS-136, first pass)
+# Security sweep, 2026-10-21 (ISS-136, first and second pass)
 
 Scope: the "Areas still to search" list in `docs/issues/issues.md` plus a route-by-route look at authorisation on the code written since the 2026-09-30 auth review. Method: read the code, then reproduce each suspected problem with a test before changing anything. One pass, by one reviewer; it is not a penetration test and it did not cover every route line by line.
 
@@ -37,9 +37,32 @@ Scope: the "Areas still to search" list in `docs/issues/issues.md` plus a route-
 - A line-by-line read of every route handler, the Paystack live call (never run, ISS-010), and the production environment configuration.
 - Dependencies: Dependabot alerts were cleared on 2026-10-20; nothing newer was checked.
 
-## Before relying on the fixes in production
+## Second pass: every route handler, read once (2026-10-21)
 
-Run these on the production database; each should return no rows. If one does, someone is already affected:
+The route handlers under `app/api/v1/` were read after the first pass: the 19 without `withAuth` and the webhook had been read in the first pass and the auth routes in the 2026-09-30 review, and every other handler was read here, with the question "does this route check that the caller is connected to this record, and does it leak more than the screen needs?". `lib/api/withAuth.ts` was also checked: it applies the cross-origin check to every write, re-reads the account on each call (so a suspension or role change applies at once) and enforces the role list. Twelve findings, all fixed with tests: eight reproduced by a failing test first, ISS-152 is hardening that could not be reproduced, and the three the owner decided on 2026-10-21 (ISS-153 to ISS-155) have tests in `tests/api/security-sweep-2.test.ts` and `tests/api/invites-and-passwords.test.ts`.
+
+| ID      | Pri | What                                                                                                              | State          |
+| ------- | --- | ----------------------------------------------------------------------------------------------------------------- | -------------- |
+| ISS-144 | P2  | Any manager could read and write the private notes on any lease                                                   | Fixed          |
+| ISS-145 | P2  | A tenant could read and answer the property team's draft notices; a notice could point at another lease's invoice | Fixed          |
+| ISS-146 | P3  | Unit lists, unit pages and the neighbourhood report ignored the listing rule (private units, unlisted properties) | Fixed          |
+| ISS-147 | P3  | `POST /properties` accepted any manager and landlord id                                                           | Fixed          |
+| ISS-148 | P3  | Moderator notes and staged edits were sent to tenants, vendors and applicants                                     | Fixed          |
+| ISS-149 | P3  | Unlimited reviews per person, including by the property's own team                                                | Fixed          |
+| ISS-150 | P3  | Two reviewers could both decide one application                                                                   | Fixed          |
+| ISS-151 | P4  | The audit log's search word replaced the action filter                                                            | Fixed          |
+| ISS-152 | P3  | An invoice edit did not take the row lock that payments take (not reproduced; hardening)                          | Fixed          |
+| ISS-153 | P3  | Units "awaiting approval" are public at once and the manager can clear the marker                                 | Decided, fixed |
+| ISS-154 | P3  | Any manager or landlord can have Proplity email any address through a lease invitation, without limit             | Decided, fixed |
+| ISS-155 | P4  | Passwords need only 6 characters                                                                                  | Decided, fixed |
+
+**Checked in the second pass and found sound:** every admin route is `ADMIN`-only and the account routes cannot change an admin or oneself; applications, bank accounts, bank transfers, vendor payouts, receipts, access codes, announcements, equipment, ads, schedules, condition reports, violations, merge and unmerge, subscriptions and manager invite codes each check the caller's connection to the record; notifications are scoped to the recipient; the repair routes use conditional updates; no response contains a password hash, token hash or provider payload.
+
+**Still not covered:** the live Paystack call (never run, ISS-010), the production environment variables and DNS (SPF/DKIM), and a reading of the screens' own client-side checks (the server is the authority in every case above).
+
+## Before relying on the fixes with real data
+
+There is no production database yet (2026-10-22), so there is nothing to check today: a database built from the migrations starts clean. If data from development or another system is ever imported, run these on it first; each should return no rows, and if one does, someone is already affected:
 
 ```sql
 -- ISS-139: a unit with more than one active lease

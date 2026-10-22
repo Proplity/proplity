@@ -34,5 +34,8 @@ model SystemSettings {
   // days); the API refuses values below 30 and 7 days so a typo cannot delete everything.
   retentionAfterTenancyDays        Int      @default(365)
   retentionAfterRejectionDays      Int      @default(90)
+  // How many new people one manager or landlord may start a tenancy for by email address in a day
+  // (each sends an invitation email from Proplity). 0 stops them; admins are not limited (ISS-154).
+  tenantInvitesPerDay              Int      @default(10)
   updatedAt                        DateTime @updatedAt
 }

@@ -6,6 +6,7 @@ import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/systemSettings';
+import { INVITE_LIMITS } from '@/lib/inviteLimits';
 
 // Admin-only platform toggles, backed by the same SystemSettings singleton
 // row the /setup wizard uses. GET never writes (findUnique + defaults, via
@@ -56,6 +57,12 @@ const updateSchema = z
         `Keep ID documents at least ${rejectionDays.min} days after an application is rejected`,
       )
       .max(rejectionDays.max, `At most ${rejectionDays.max} days`)
+      .optional(),
+    tenantInvitesPerDay: z
+      .number()
+      .int('Enter a whole number')
+      .min(INVITE_LIMITS.perDay.min, `At least ${INVITE_LIMITS.perDay.min}`)
+      .max(INVITE_LIMITS.perDay.max, `At most ${INVITE_LIMITS.perDay.max} a day`)
       .optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), {

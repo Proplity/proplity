@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, isPrivateUnit, serializeUnit } from '@/lib/api/propertyAccess';
+import { canManageProperty, isPublicUnit, serializeUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
@@ -84,9 +84,7 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     // A unit marked private is for the owner's side and the people living in the
     // building only; everyone else gets the public units (ISS-084).
     const seesPrivate = manages || occupancy !== null;
-    const visibleUnits = seesPrivate
-      ? property.units
-      : property.units.filter((u) => !isPrivateUnit(u));
+    const visibleUnits = seesPrivate ? property.units : property.units.filter(isPublicUnit);
     if (!seesPrivate && property.units.length > 0 && visibleUnits.length === 0) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }

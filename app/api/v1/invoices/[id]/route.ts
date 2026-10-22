@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -15,8 +15,8 @@ function loadInvoice(id: string) {
     where: { id },
     include: {
       payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
-      lease: { include: { unit: { include: { property: true } } } },
-      maintenanceRequest: { include: { unit: { include: { property: true } } } },
+      lease: { include: { unit: { include: { property: PUBLIC_PROPERTY } } } },
+      maintenanceRequest: { include: { unit: { include: { property: PUBLIC_PROPERTY } } } },
       user: { select: { id: true, name: true, email: true } },
     },
   });
@@ -104,6 +104,20 @@ export const PATCH = withAuth(
       }
 
       const updated = await prisma.$transaction(async (tx) => {
+        // Payments lock the invoice row too, so a payment that lands while this edit is being
+        // made cannot be followed by a cancellation or a new amount that ignores it.
+        await tx.$queryRaw`SELECT "id" FROM "Invoice" WHERE "id" = ${id} FOR UPDATE`;
+        const current = await tx.invoice.findUniqueOrThrow({
+          where: { id },
+          select: { status: true, amount: true, _count: { select: { payments: true } } },
+        });
+        if (
+          current._count.payments > 0 ||
+          current.status === 'CANCELLED' ||
+          current.status === 'PAID'
+        ) {
+          return null;
+        }
         const row = await tx.invoice.update({ where: { id }, data: validated.data });
         await tx.auditLog.create({
           data: {
@@ -112,13 +126,19 @@ export const PATCH = withAuth(
             entityType: 'Invoice',
             entityId: id,
             metadata: {
-              from: { status: invoice.status, amount: invoice.amount },
+              from: { status: current.status, amount: current.amount },
               to: { status: row.status, amount: row.amount },
             },
           },
         });
         return row;
       });
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'This invoice was just paid or closed, so it can no longer be edited' },
+          { status: 409 },
+        );
+      }
       return NextResponse.json({ data: updated });
     } catch (err) {
       return handleApiError(err);

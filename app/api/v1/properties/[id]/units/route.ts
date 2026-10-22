@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import { canManageProperty, isPublicUnit, serializeUnit } from '@/lib/api/propertyAccess';
+import { listingViewer, sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrlList } from '@/lib/api/urlField';
 
 import { sendEmail } from '@/lib/email';
@@ -21,13 +22,22 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
     const { id } = await params;
     const status = req.nextUrl.searchParams.get('status');
 
+    // Units follow the listing rule: an unlisted property, and the units marked private, are not
+    // public (ISS-146).
+    const property = await prisma.property.findUnique({ where: { id } });
+    const viewer = property && (await listingViewer(await sessionOrNull(), property));
+    if (!property || !viewer?.visible) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
+
     const units = await prisma.unit.findMany({
       take: LIST_LIMIT,
       where: { propertyId: id, ...(status ? { status: status as UnitStatus } : {}) },
       orderBy: { unitNumber: 'asc' },
     });
+    const shown = viewer.seesAll ? units : units.filter(isPublicUnit);
 
-    return NextResponse.json({ data: units.map(serializeUnit) });
+    return NextResponse.json({ data: shown.map(serializeUnit) });
   } catch (err) {
     return handleApiError(err);
   }

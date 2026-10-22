@@ -24,6 +24,7 @@ import {
   useDeleteBankAccount,
 } from '@/hooks/useBankAccounts';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 export type SettingsTab = 'general' | 'completion' | 'banking';
 
@@ -354,8 +355,8 @@ function ChangePasswordCard() {
       setError('New passwords do not match');
       return;
     }
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters');
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`New ${PASSWORD_TOO_SHORT.toLowerCase()}`);
       return;
     }
 
@@ -399,7 +400,7 @@ function ChangePasswordCard() {
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="New password (min. 6 characters)"
+          placeholder={`New password (min. ${MIN_PASSWORD_LENGTH} characters)`}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
         <input

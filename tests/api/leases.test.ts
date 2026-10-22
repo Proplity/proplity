@@ -174,7 +174,8 @@ describe('leases: create (POST /leases)', () => {
 
   it('the tenantEmail path invites a brand-new tenant: PENDING_VERIFICATION user + VerificationToken issued', async () => {
     const manager = await createUser(Role.MANAGER);
-    const property = await createProperty({ managerId: manager.id });
+    // Inviting someone new by email needs an approved listing (ISS-154).
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
     const unit = await createUnit(property.id);
     const cookie = await authCookie(manager.id, manager.role);
 

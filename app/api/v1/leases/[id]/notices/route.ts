@@ -36,7 +36,8 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
 
     const notices = await prisma.notice.findMany({
       take: LIST_LIMIT,
-      where: { leaseId: id },
+      // A draft is the property team's work in progress; the tenant sees a notice once it is sent (ISS-145).
+      where: { leaseId: id, ...(isOwnerTenant ? { status: { not: 'DRAFT' } } : {}) },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json({ data: notices });
@@ -60,6 +61,15 @@ const bodySchema = z.object({
 });
 
 // A notice only matters once it is sent: the tenant is told in the app and by email.
+/** A notice may point at an invoice, but only one on its own lease (ISS-145). */
+async function invoiceBelongsToLease(invoiceId: string, leaseId: string) {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, leaseId },
+    select: { id: true },
+  });
+  return !!invoice;
+}
+
 async function tellTenantOfNotice(
   lease: { tenantId: string; unit: { unitNumber: string; property: { name: string } } },
   type: string,
@@ -104,6 +114,10 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       if (!notice || notice.leaseId !== leaseId) {
         return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
       }
+      // A draft is not the tenant's to answer (ISS-145).
+      if (isOwnerTenant && !canManage && notice.status === 'DRAFT') {
+        return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
+      }
 
       if (isOwnerTenant && !canManage) {
         if (!status || !TENANT_SETTABLE_STATUSES.includes(status)) {
@@ -137,6 +151,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       }
 
       if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (invoiceId && !(await invoiceBelongsToLease(invoiceId, leaseId))) {
+        return NextResponse.json({ error: 'That invoice is not on this lease' }, { status: 400 });
+      }
 
       const updated = await prisma.notice.update({
         where: { id },
@@ -160,6 +177,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     if (!type)
       return NextResponse.json({ error: 'type is required to create a notice' }, { status: 400 });
+    if (invoiceId && !(await invoiceBelongsToLease(invoiceId, leaseId))) {
+      return NextResponse.json({ error: 'That invoice is not on this lease' }, { status: 400 });
+    }
 
     const created = await prisma.notice.create({
       data: {

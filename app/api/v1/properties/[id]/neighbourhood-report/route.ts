@@ -6,12 +6,17 @@ import { handleApiError } from '@/lib/api/errors';
 import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty } from '@/lib/api/propertyAccess';
+import { listingViewer, sessionOrNull } from '@/lib/api/listingAccess';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: RouteCtx) {
   try {
     const { id } = await params;
+    const property = await prisma.property.findUnique({ where: { id } });
+    if (!property || !(await listingViewer(await sessionOrNull(), property)).visible) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
     const report = await prisma.neighbourhoodReport.findFirst({
       where: { propertyId: id },
       orderBy: { generatedAt: 'desc' },

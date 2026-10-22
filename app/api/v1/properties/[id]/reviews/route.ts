@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -41,6 +42,16 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     const validated = await validateBody(req, createReviewSchema);
     if (!validated.success) return validated.response;
 
+    const property = await prisma.property.findUnique({
+      where: { id },
+      select: { managerId: true, landlordId: true },
+    });
+    if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    // The people who run a property do not rate it, and one person rates it once (ISS-149).
+    if (canManageProperty(session, property)) {
+      return NextResponse.json({ error: 'You cannot review a property you run' }, { status: 403 });
+    }
+
     // Verified badge is resolved once, here, at creation time -- never
     // re-checked at read time (a review shouldn't lose its badge if the
     // underlying lease later expires).
@@ -49,15 +60,30 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    const review = await prisma.propertyReview.create({
-      data: {
-        propertyId: id,
-        reviewerId: session.sub,
-        leaseId: qualifyingLease?.id ?? null,
-        rating: validated.data.rating,
-        comment: validated.data.comment,
-      },
+    // Reviews are counted into the rating, so two at once from one person must not both land.
+    const review = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`review:${id}:${session.sub}`}))`;
+      const already = await tx.propertyReview.findFirst({
+        where: { propertyId: id, reviewerId: session.sub },
+        select: { id: true },
+      });
+      if (already) return null;
+      return tx.propertyReview.create({
+        data: {
+          propertyId: id,
+          reviewerId: session.sub,
+          leaseId: qualifyingLease?.id ?? null,
+          rating: validated.data.rating,
+          comment: validated.data.comment,
+        },
+      });
     });
+    if (!review) {
+      return NextResponse.json(
+        { error: 'You have already reviewed this property', code: 'ALREADY_REVIEWED' },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json(
       { data: { ...review, verified: review.leaseId !== null } },

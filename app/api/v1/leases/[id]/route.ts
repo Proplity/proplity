@@ -12,7 +12,7 @@ import {
   closeThreadsWhenTenancyEnds,
   reopenThreadsWhenTenancyResumes,
 } from '@/lib/conversationAccess';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 
@@ -47,7 +47,7 @@ function loadLease(id: string) {
   return prisma.lease.findUnique({
     where: { id },
     include: {
-      unit: { include: { property: true } },
+      unit: { include: { property: PUBLIC_PROPERTY } },
       tenant: { select: tenantSelect },
       notices: { orderBy: { createdAt: 'desc' } },
       invoices: {
@@ -74,6 +74,11 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
     const isOwnerTenant = session.role === 'TENANT' && lease.tenantId === session.sub;
     if (!isOwnerTenant && !canManageProperty(session, lease.unit.property)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Drafts are the property team's work in progress (ISS-145).
+    if (isOwnerTenant) {
+      lease.notices = lease.notices.filter((n) => n.status !== 'DRAFT');
     }
 
     return NextResponse.json({ data: lease });

@@ -6,12 +6,13 @@ import { getServerSession } from '@/lib/auth/session';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { validateBody } from '@/lib/api/validate';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  // Matches register's own policy (z.string().min(6)) -- this route had no
+  // Matches register's own policy (lib/passwordPolicy.ts) -- this route had no
   // minimum at all before, letting a logged-in user set a 1-character password.
-  newPassword: z.string().min(6),
+  newPassword: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT),
 });
 
 export async function POST(req: NextRequest) {

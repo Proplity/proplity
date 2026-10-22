@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 import {
   approveVendorPayout,
   processVendorPayout,
@@ -33,12 +33,12 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
         invoice: {
           include: {
             maintenanceRequest: {
-              include: { unit: { include: { property: true } } },
+              include: { unit: { include: { property: PUBLIC_PROPERTY } } },
             },
           },
         },
         maintenanceRequest: {
-          include: { unit: { include: { property: true } } },
+          include: { unit: { include: { property: PUBLIC_PROPERTY } } },
         },
         initiatedBy: {
           select: {

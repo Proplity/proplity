@@ -345,6 +345,7 @@ export type PlatformSettings = {
   retentionEnabled: boolean;
   retentionAfterTenancyDays: number;
   retentionAfterRejectionDays: number;
+  tenantInvitesPerDay: number;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */

@@ -2017,7 +2017,7 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has six settings (four switches, then two for charging and deletion):
+It has seven settings (four switches, two for charging and deletion, then a daily limit on invitations):
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
@@ -2025,6 +2025,7 @@ It has six settings (four switches, then two for charging and deletion):
 - **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
 - **Charge auto-pay tenants automatically** — off by default. It charges real cards on the daily run, so it asks once more before turning on, and the deployment must also allow it (the screen says when it does not).
 - **Delete identity documents when kept long enough** — off by default, and permanent. Two periods sit beside it: days after a tenancy ends (365 unless changed) and days after a rejected application (90); the shortest accepted are 30 and 7 days. Also asks once more, and needs the deployment to allow it.
+- **Tenant invitations per day** — how many people with no account one manager or landlord may invite by starting a lease for their email address (10 unless changed; 0 stops them; 200 at most). It also needs an admin-approved listing. Admins are not limited. Someone who already has an account is not counted.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
@@ -2042,6 +2043,7 @@ Properties and Moderation is where every listing is reviewed before it goes publ
 - Filter chips: All, Pending Review, Approved, Rejected, Flagged and Merged, plus search by name, address or owner.
 - Switch between Cards and Table. Each listing carries badges for status, visibility and Possible duplicate.
 - Review opens a side drawer with owner and manager contacts, units, a moderation notes box and the approve, reject, flag or unpublish actions.
+- Units a manager or landlord adds wait for you: the public cannot see, apply for or book a viewing of a unit until you approve it (approve the listing, or approve the unit in the drawer). They cannot clear the waiting marker themselves.
 - Staged edits from managers appear under Pending Review too, marked as edited. Open the drawer to see the proposed changes and press Approve Edits to apply them to the live listing.
 
 **Screenshots:**
