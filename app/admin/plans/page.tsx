@@ -9,6 +9,7 @@ import {
   DOWNGRADE_GRACE_DAYS,
   DOWNGRADE_RULES,
   OVERAGE_MODES,
+  TEAM_MEMBER_ACCESS,
   UNIT_BILLING_OWNERS,
 } from '@/lib/billingOptions';
 import type { AdminPlatformSettings, PaidService, Plan } from '@/lib/api/types';
@@ -181,6 +182,13 @@ function RulesSection() {
           options={OVERAGE_MODES}
           disabled={saving}
           onChange={(v) => save({ overageMode: v })}
+        />
+        <ChoiceGroup
+          legend="What a member of a company's team sees of its properties"
+          value={settings.teamMemberAccess}
+          options={TEAM_MEMBER_ACCESS}
+          disabled={saving}
+          onChange={(v) => save({ teamMemberAccess: v })}
         />
         <ChoiceGroup
           legend="When someone moves to a plan that includes fewer units than they have"

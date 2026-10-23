@@ -2,11 +2,17 @@ import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 import { canManageProperty, isPublicUnit } from '@/lib/api/propertyAccess';
 import { getServerSession } from '@/lib/auth/session';
+import { managedIdsOf } from '@/lib/team';
 
 /** The signed-in caller of a public route, or null for a visitor. */
-export async function sessionOrNull(): Promise<{ sub: string; role: Role } | null> {
+export async function sessionOrNull(): Promise<{
+  sub: string;
+  role: Role;
+  scope: string[];
+} | null> {
   const jwt = await getServerSession();
-  return jwt ? { sub: jwt.sub, role: jwt.role as Role } : null;
+  // `scope` lets a company's partner see their members' listings (see lib/team.ts).
+  return jwt ? { sub: jwt.sub, role: jwt.role as Role, scope: await managedIdsOf(jwt.sub) } : null;
 }
 
 type ListedProperty = {

@@ -60,13 +60,18 @@ export function PlanUsageCard() {
         <div>
           <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">Your plan</p>
           <p className="text-lg font-semibold text-gray-900">{plan.name}</p>
+          {data.company && !data.company.isPartner && (
+            <p className="mt-0.5 text-xs text-gray-500">
+              Your company&apos;s plan. Your managing partner can change it.
+            </p>
+          )}
           {data.lapsed && (
             <p className="mt-0.5 text-xs text-amber-700">
               Your paid period ended, so you are back on {plan.name}.
             </p>
           )}
         </div>
-        {data.subscriptionsEnabled && (
+        {data.subscriptionsEnabled && data.canChangePlan && (
           <Link
             href="/pricing"
             className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"

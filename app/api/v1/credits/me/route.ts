@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { creditBalance } from '@/lib/credits';
+import { billingAccountOf } from '@/lib/team';
 
 // The account's credit balance and its latest movements.
 export const GET = withAuth(
@@ -10,7 +11,7 @@ export const GET = withAuth(
     try {
       const balance = await creditBalance(session.sub);
       const entries = await prisma.creditEntry.findMany({
-        where: { userId: session.sub },
+        where: { userId: await billingAccountOf(session.sub) },
         orderBy: { createdAt: 'desc' },
         take: 50,
         select: {

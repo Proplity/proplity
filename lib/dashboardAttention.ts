@@ -1,5 +1,7 @@
 import { Prisma, type Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { managedIdsOf } from '@/lib/team';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 
 // "Needs your attention": one list of everything waiting on this person, so a dashboard does not
 // have to be walked module by module. Each row is a kind of task with how many are waiting, the
@@ -55,7 +57,7 @@ async function unreadMessageCount(userId: string): Promise<number> {
 }
 
 async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]> {
-  const property = { OR: [{ managerId: userId }, { landlordId: userId }] };
+  const property = propertyScopeWhere(await managedIdsOf(userId));
   const inProperty = { unit: { property } };
 
   const [

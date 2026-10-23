@@ -1,5 +1,6 @@
 import { Prisma, type Plan, type Subscription } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { accountMemberIds, billingAccountOf } from '@/lib/team';
 import type { getSystemSettings } from '@/lib/systemSettings';
 import { DEFAULT_PLANS, DEFAULT_SERVICES } from '@/lib/planDefaults';
 
@@ -44,24 +45,33 @@ export async function getDefaultPlan(db: Db = prisma): Promise<Plan> {
 
 export type AccountPlan = {
   plan: Plan;
+  /** The account that pays: the person, or the managing partner when they work in a company. */
+  billingAccountId: string;
   subscription: Subscription | null;
   /** A paid plan whose period ended (or was cancelled): the account is back on the default plan. */
   lapsed: boolean;
 };
 
-/** The plan an account is on right now. */
+/**
+ * The plan someone is on right now. A member of a company is on their managing partner's plan.
+ */
 export async function getAccountPlan(userId: string, db: Db = prisma): Promise<AccountPlan> {
+  const billingAccountId = await billingAccountOf(userId, db);
   const subscription = await db.subscription.findUnique({
-    where: { userId },
+    where: { userId: billingAccountId },
     include: { plan: true },
   });
   const fallback = await getDefaultPlan(db);
-  if (!subscription || !subscription.plan) return { plan: fallback, subscription, lapsed: false };
+  if (!subscription || !subscription.plan) {
+    return { plan: fallback, billingAccountId, subscription, lapsed: false };
+  }
   const ended =
     subscription.status === 'CANCELLED' ||
     (subscription.currentPeriodEnd !== null && subscription.currentPeriodEnd <= new Date());
-  if (ended && !subscription.plan.isDefault) return { plan: fallback, subscription, lapsed: true };
-  return { plan: subscription.plan, subscription, lapsed: false };
+  if (ended && !subscription.plan.isDefault) {
+    return { plan: fallback, billingAccountId, subscription, lapsed: true };
+  }
+  return { plan: subscription.plan, billingAccountId, subscription, lapsed: false };
 }
 
 type OwnerFields = {
@@ -84,32 +94,45 @@ export function billedAccounts(rule: Settings['unitBillingOwner'], p: OwnerField
 
 function propertiesBilledTo(
   rule: Settings['unitBillingOwner'],
-  userId: string,
+  ids: string[],
 ): Prisma.PropertyWhereInput {
   const managerElseLandlord: Prisma.PropertyWhereInput = {
-    OR: [{ managerId: userId }, { managerId: null, landlordId: userId }],
+    OR: [{ managerId: { in: ids } }, { managerId: null, landlordId: { in: ids } }],
   };
-  if (rule === 'BOTH') return { OR: [{ managerId: userId }, { landlordId: userId }] };
+  if (rule === 'BOTH') return { OR: [{ managerId: { in: ids } }, { landlordId: { in: ids } }] };
   if (rule === 'CREATOR') {
-    return { OR: [{ createdById: userId }, { createdById: null, ...managerElseLandlord }] };
+    return { OR: [{ createdById: { in: ids } }, { createdById: null, ...managerElseLandlord }] };
   }
   return managerElseLandlord;
 }
 
-/** Units that count against this account's plan. A listing merged into another does not count. */
+/**
+ * Units that count against a billing account's plan: those of the person, or of everyone in their
+ * company. A listing merged into another does not count.
+ */
 export async function countUnitsFor(
   rule: Settings['unitBillingOwner'],
-  userId: string,
+  billingAccountId: string,
   db: Db = prisma,
 ): Promise<number> {
+  const ids = await accountMemberIds(billingAccountId, db);
   return db.unit.count({
-    where: { property: { AND: [propertiesBilledTo(rule, userId), { mergedIntoId: null }] } },
+    where: { property: { AND: [propertiesBilledTo(rule, ids), { mergedIntoId: null }] } },
   });
 }
 
-// Team members arrive with company accounts; until then every account is one user.
-export async function countUsersFor(_userId: string): Promise<number> {
-  return 1;
+/** The billing accounts behind some user ids: a company member's is the managing partner. */
+export async function resolveBillingAccounts(ids: string[], db: Db = prisma): Promise<string[]> {
+  const users = await db.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, organisation: { select: { ownerId: true } } },
+  });
+  return [...new Set(users.map((u) => u.organisation?.ownerId ?? u.id))];
+}
+
+/** People on the account: everyone in the company (the partner included), or just the one person. */
+export async function countUsersFor(billingAccountId: string, db: Db = prisma): Promise<number> {
+  return (await accountMemberIds(billingAccountId, db)).length;
 }
 
 export type PlanUsage = {
@@ -123,10 +146,10 @@ export type PlanUsage = {
 };
 
 export async function getUsage(userId: string, settings: Settings): Promise<PlanUsage> {
-  const { plan } = await getAccountPlan(userId);
+  const { plan, billingAccountId } = await getAccountPlan(userId);
   const [units, users] = await Promise.all([
-    countUnitsFor(settings.unitBillingOwner, userId),
-    countUsersFor(userId),
+    countUnitsFor(settings.unitBillingOwner, billingAccountId),
+    countUsersFor(billingAccountId),
   ]);
   const extraUnits = Math.max(0, units - plan.unitsIncluded);
   return {
@@ -170,7 +193,10 @@ export async function assertUnitCapacity(
   const { settings, property, adding, actor } = opts;
   if (!settings.enforcePlanLimits || adding <= 0 || actor.role === 'ADMIN') return;
 
-  const accounts = billedAccounts(settings.unitBillingOwner, property).sort();
+  const accounts = (
+    await resolveBillingAccounts(billedAccounts(settings.unitBillingOwner, property), tx)
+  ).sort();
+  const actorAccount = await billingAccountOf(actor.id, tx);
   for (const id of accounts) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`plan-units:${id}`}))`;
   }
@@ -185,7 +211,12 @@ export async function assertUnitCapacity(
     const after = used + adding;
     if (after <= plan.unitsIncluded) continue;
 
-    const whose = id === actor.id ? 'Your' : `${account.name ?? 'The property owner'}'s`;
+    const whose =
+      id === actor.id
+        ? 'Your'
+        : id === actorAccount
+          ? "Your company's"
+          : `${account.name ?? 'The property owner'}'s`;
     if (plan.overagePerUnit === null || settings.overageMode === 'HARD_STOP') {
       throw new PlanLimitError(
         403,

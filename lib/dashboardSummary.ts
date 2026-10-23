@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { managedIdsOf } from '@/lib/team';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 
 // Server-side dashboard totals (ISS-049). The dashboards used to add up the
 // first page of invoices, rents and properties in the browser, which is
@@ -23,17 +25,19 @@ function monthRange(now: Date) {
 const num = (v: unknown) => Number(v ?? 0);
 
 /** Invoices on properties this user manages or owns (rent or maintenance link). */
-function ownerInvoiceWhere(userId: string): Prisma.InvoiceWhereInput {
-  const property = { OR: [{ managerId: userId }, { landlordId: userId }] };
+function ownerInvoiceWhere(ids: string[]): Prisma.InvoiceWhereInput {
+  const property = propertyScopeWhere(ids);
   return {
     OR: [{ rent: { unit: { property } } }, { maintenanceRequest: { unit: { property } } }],
   };
 }
 
 export async function ownerDashboardSummary(userId: string, now = new Date()) {
-  const propertyScope = { OR: [{ managerId: userId }, { landlordId: userId }] };
+  // A company's partner sees every member's properties, so scope by the whole set of users.
+  const ids = await managedIdsOf(userId);
+  const propertyScope = propertyScopeWhere(ids);
   const { start, end } = monthRange(now);
-  const invoiceWhere = ownerInvoiceWhere(userId);
+  const invoiceWhere = ownerInvoiceWhere(ids);
 
   const [
     propertyCount,
@@ -74,12 +78,12 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
             SELECT l."id" FROM "Rent" l
             JOIN "Unit" u ON u."id" = l."unitId"
             JOIN "Property" pr ON pr."id" = u."propertyId"
-            WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId})
+            WHERE pr."managerId" = ANY(${ids}::text[]) OR pr."landlordId" = ANY(${ids}::text[]))
           OR i."maintenanceRequestId" IN (
             SELECT m."id" FROM "MaintenanceRequest" m
             JOIN "Unit" u ON u."id" = m."unitId"
             JOIN "Property" pr ON pr."id" = u."propertyId"
-            WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId})
+            WHERE pr."managerId" = ANY(${ids}::text[]) OR pr."landlordId" = ANY(${ids}::text[]))
         )`),
     // Per property, rent invoices only (what the portfolio table and the CSV show).
     prisma.$queryRaw<{ propertyId: string; collected: number; pending: number }[]>(Prisma.sql`
@@ -93,7 +97,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
       JOIN "Invoice" i ON i."rentId" = l."id"
       LEFT JOIN (SELECT "invoiceId", SUM("amount") AS paid FROM "Payment" GROUP BY "invoiceId") p
         ON p."invoiceId" = i."id"
-      WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId}
+      WHERE pr."managerId" = ANY(${ids}::text[]) OR pr."landlordId" = ANY(${ids}::text[])
       GROUP BY pr."id"`),
     prisma.maintenanceRequest.aggregate({
       _sum: { finalCost: true },

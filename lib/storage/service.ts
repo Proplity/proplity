@@ -2,6 +2,8 @@ import 'server-only';
 import crypto from 'node:crypto';
 import type { Prisma, Role, StoredFile } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { managedIdsOf } from '@/lib/team';
+import { canManageProperty } from '@/lib/api/propertyAccess';
 import { fileUrl, parseFileUrl, accessForFolder, type UploadFolder } from '@/lib/fileRef';
 import { allowedTypes, FOLDER_ROLES, maxBytes } from '@/lib/uploadPolicy';
 import { getStorage, getStorageByName } from './index';
@@ -220,12 +222,16 @@ export async function completeProxyUpload(actor: Actor, fileId: string, file: Fi
 export async function canReadFile(actor: Actor, file: StoredFile): Promise<boolean> {
   if (file.ownerId === actor.sub || actor.role === 'ADMIN') return true;
 
+  // A company's partner reads what their members' tenants uploaded too (see lib/team.ts).
+  const ids = await managedIdsOf(actor.sub);
   const scope =
     actor.role === 'MANAGER'
-      ? { managerId: actor.sub }
+      ? { managerId: { in: ids } }
       : actor.role === 'LANDLORD'
-        ? { landlordId: actor.sub }
+        ? { landlordId: { in: ids } }
         : null;
+  const manages = (p: { managerId: string | null; landlordId: string | null }) =>
+    canManageProperty({ sub: actor.sub, role: actor.role, scope: ids }, p);
 
   if (file.folder === 'profile' || file.folder === 'applications') {
     if (!scope) return false;
@@ -283,10 +289,7 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (!notice) return false;
     if (notice.rent.tenantId === actor.sub) return true;
     if (!scope) return false;
-    return (
-      notice.rent.unit.property.managerId === actor.sub ||
-      notice.rent.unit.property.landlordId === actor.sub
-    );
+    return manages(notice.rent.unit.property);
   }
 
   if (file.folder === 'rents') {
@@ -298,9 +301,7 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     if (!rent) return false;
     if (rent.tenantId === actor.sub) return true;
     if (!scope) return false;
-    return (
-      rent.unit.property.managerId === actor.sub || rent.unit.property.landlordId === actor.sub
-    );
+    return manages(rent.unit.property);
   }
 
   if (file.folder === 'communications') {
@@ -348,7 +349,7 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
       submission.invoice.rent?.unit.property ??
       submission.invoice.maintenanceRequest?.unit.property;
     if (!property) return false;
-    return property.managerId === actor.sub || property.landlordId === actor.sub;
+    return manages(property);
   }
 
   return false;

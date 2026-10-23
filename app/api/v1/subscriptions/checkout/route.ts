@@ -32,6 +32,14 @@ export const POST = withAuth(
       return NextResponse.json({ error: 'Subscriptions are not available yet' }, { status: 503 });
     }
 
+    // The company's plan is the managing partner's to change; a team member's work is on it.
+    if (session.org && !session.org.isOwner) {
+      return NextResponse.json(
+        { error: "Only your company's managing partner can change the plan", code: 'NOT_PARTNER' },
+        { status: 403 },
+      );
+    }
+
     try {
       const validated = await validateBody(req, checkoutSchema);
       if (!validated.success) return validated.response;

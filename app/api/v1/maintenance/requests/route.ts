@@ -17,7 +17,7 @@ import {
 } from '@/lib/notifications';
 import { safeUrlList } from '@/lib/api/urlField';
 import { appUrl } from '@/lib/appUrl';
-import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY, propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { vendorProblem } from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (req, { session }) => {
@@ -40,7 +40,7 @@ export const GET = withAuth(async (req, { session }) => {
       // property access, and a landlord with zero visibility into
       // maintenance on their own property would be a gap, not a feature.
       where.unit = {
-        property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] },
+        property: { ...propertyScopeWhere(session.scope) },
       };
     }
     // ADMIN: no extra scoping, sees everything.

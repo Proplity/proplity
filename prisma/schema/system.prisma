@@ -10,6 +10,11 @@ enum OverageMode {
   CONFIRM_EACH_TIME
 }
 
+enum TeamMemberAccess {
+  ASSIGNED_ONLY
+  ALL_COMPANY
+}
+
 enum DowngradeRule {
   BLOCK
   GRACE_PERIOD
@@ -64,6 +69,9 @@ model SystemSettings {
   overageMode                          OverageMode      @default(ALLOW_AND_BILL)
   // What happens when someone moves to a plan that includes fewer units than they have.
   downgradeRule                        DowngradeRule    @default(BLOCK)
+  // What a team member sees of the company's properties: only the ones they manage, or all of them.
+  // The managing partner always sees every member's properties.
+  teamMemberAccess                     TeamMemberAccess @default(ASSIGNED_ONLY)
   downgradeGraceDays                   Int              @default(30)
   updatedAt                            DateTime         @updatedAt
 }

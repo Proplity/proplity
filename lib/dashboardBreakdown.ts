@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { managedIdsOf } from '@/lib/team';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 
 // Server-side numbers for the pages opened from a dashboard card (ISS-049).
 // The long tables on those pages are paged lists; everything that is a total,
@@ -9,8 +11,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const num = (v: unknown) => Number(v ?? 0);
 
 export async function ownerBreakdownSummary(userId: string, now = new Date()) {
-  const scope = { OR: [{ managerId: userId }, { landlordId: userId }] };
-  const propertySql = Prisma.sql`(pr."managerId" = ${userId} OR pr."landlordId" = ${userId})`;
+  const ids = await managedIdsOf(userId);
+  const scope = propertyScopeWhere(ids);
+  const propertySql = Prisma.sql`(pr."managerId" = ANY(${ids}::text[]) OR pr."landlordId" = ANY(${ids}::text[]))`;
   const invoiceWhere: Prisma.InvoiceWhereInput = {
     OR: [
       { rent: { unit: { property: scope } } },
