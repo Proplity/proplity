@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
-  createLease,
+  createRent,
   createMaintenanceCategory,
   createMaintenanceRequest,
   createMaintenanceSchedule,
@@ -53,7 +53,7 @@ async function world() {
   const vacantUnit = await createUnit(property.id);
   const letUnit = await createUnit(property.id);
   const tenant = await createUser(Role.TENANT);
-  await createLease(letUnit.id, tenant.id);
+  await createRent(letUnit.id, tenant.id);
   const vendor = await createUser(Role.VENDOR);
   const admin = await createUser(Role.ADMIN);
   const outsider = await createUser(Role.MANAGER);
@@ -170,7 +170,7 @@ describe('work orders: repairs the property team raises itself', () => {
     expect((await send(w.cookies.landlord)).status).toBe(201);
     expect((await send(w.cookies.outsider)).status).toBe(403);
     expect((await send(w.cookies.vendor)).status).toBe(403);
-    // A tenant still needs an active lease on the unit they report.
+    // A tenant still needs an active rent on the unit they report.
     expect((await send(w.cookies.tenant)).status).toBe(403);
     expect((await send(w.cookies.manager, 'no-such-unit')).status).toBe(404);
     expect(

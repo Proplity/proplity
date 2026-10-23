@@ -323,7 +323,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           });
           if (!alreadyInvoiced && cost > 0) {
             // maintenanceRequestId satisfies Invoice's "at least one of
-            // leaseId/maintenanceRequestId/userId" rule.
+            // rentId/maintenanceRequestId/userId" rule.
             await tx.invoice.create({
               data: {
                 maintenanceRequestId: id,

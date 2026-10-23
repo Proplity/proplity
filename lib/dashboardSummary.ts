@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
 // Server-side dashboard totals (ISS-049). The dashboards used to add up the
-// first page of invoices, leases and properties in the browser, which is
+// first page of invoices, rents and properties in the browser, which is
 // silently wrong past 20 rows. These sum in the database instead, so the
 // numbers stay right at any size.
 //
@@ -22,11 +22,11 @@ function monthRange(now: Date) {
 
 const num = (v: unknown) => Number(v ?? 0);
 
-/** Invoices on properties this user manages or owns (lease or maintenance link). */
+/** Invoices on properties this user manages or owns (rent or maintenance link). */
 function ownerInvoiceWhere(userId: string): Prisma.InvoiceWhereInput {
   const property = { OR: [{ managerId: userId }, { landlordId: userId }] };
   return {
-    OR: [{ lease: { unit: { property } } }, { maintenanceRequest: { unit: { property } } }],
+    OR: [{ rent: { unit: { property } } }, { maintenanceRequest: { unit: { property } } }],
   };
 }
 
@@ -38,7 +38,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
   const [
     propertyCount,
     units,
-    activeLeaseCount,
+    activeRentCount,
     collectedAll,
     collectedMonth,
     pendingRows,
@@ -48,7 +48,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
     renewalWhere,
     recentPayments,
     recentCompletedMaintenance,
-    recentLeases,
+    recentRents,
   ] = await Promise.all([
     prisma.property.count({ where: propertyScope }),
     prisma.unit.groupBy({
@@ -57,7 +57,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
       _count: { _all: true },
       _sum: { rentAmount: true },
     }),
-    prisma.lease.count({ where: { status: 'ACTIVE', unit: { property: propertyScope } } }),
+    prisma.rent.count({ where: { status: 'ACTIVE', unit: { property: propertyScope } } }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { invoice: invoiceWhere } }),
     prisma.payment.aggregate({
       _sum: { amount: true },
@@ -70,8 +70,8 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
         ON p."invoiceId" = i."id"
       WHERE i."status" NOT IN ('PAID', 'CANCELLED')
         AND (
-          i."leaseId" IN (
-            SELECT l."id" FROM "Lease" l
+          i."rentId" IN (
+            SELECT l."id" FROM "Rent" l
             JOIN "Unit" u ON u."id" = l."unitId"
             JOIN "Property" pr ON pr."id" = u."propertyId"
             WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId})
@@ -81,7 +81,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
             JOIN "Property" pr ON pr."id" = u."propertyId"
             WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId})
         )`),
-    // Per property, lease invoices only (what the portfolio table and the CSV show).
+    // Per property, rent invoices only (what the portfolio table and the CSV show).
     prisma.$queryRaw<{ propertyId: string; collected: number; pending: number }[]>(Prisma.sql`
       SELECT pr."id" AS "propertyId",
         COALESCE(SUM(COALESCE(p.paid, 0)), 0) AS collected,
@@ -89,8 +89,8 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
                           THEN GREATEST(0, i."amount" - COALESCE(p.paid, 0)) ELSE 0 END), 0) AS pending
       FROM "Property" pr
       JOIN "Unit" u ON u."propertyId" = pr."id"
-      JOIN "Lease" l ON l."unitId" = u."id"
-      JOIN "Invoice" i ON i."leaseId" = l."id"
+      JOIN "Rent" l ON l."unitId" = u."id"
+      JOIN "Invoice" i ON i."rentId" = l."id"
       LEFT JOIN (SELECT "invoiceId", SUM("amount") AS paid FROM "Payment" GROUP BY "invoiceId") p
         ON p."invoiceId" = i."id"
       WHERE pr."managerId" = ${userId} OR pr."landlordId" = ${userId}
@@ -116,8 +116,8 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
           select: {
             invoiceNumber: true,
             type: true,
-            leaseId: true,
-            lease: {
+            rentId: true,
+            rent: {
               select: {
                 tenant: { select: { name: true } },
                 unit: { select: { property: { select: { name: true } } } },
@@ -142,7 +142,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
         unit: { select: { property: { select: { name: true } } } },
       },
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: { status: 'ACTIVE', unit: { property: propertyScope } },
       orderBy: { startDate: 'desc' },
       take: 5,
@@ -155,7 +155,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
     }),
   ]);
 
-  const upcomingRenewals = await prisma.lease.findMany({
+  const upcomingRenewals = await prisma.rent.findMany({
     where: renewalWhere,
     orderBy: { endDate: 'asc' },
     take: 5,
@@ -166,7 +166,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
       unit: { select: { unitNumber: true, property: { select: { name: true } } } },
     },
   });
-  const upcomingRenewalCount = await prisma.lease.count({ where: renewalWhere });
+  const upcomingRenewalCount = await prisma.rent.count({ where: renewalWhere });
 
   const totalUnits = units.reduce((s, g) => s + g._count._all, 0);
   const occupiedUnits = units.find((g) => g.status === 'OCCUPIED')?._count._all ?? 0;
@@ -216,7 +216,7 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
       totalListedRent,
     },
     managers,
-    leases: { active: activeLeaseCount, upcomingRenewalCount },
+    rents: { active: activeRentCount, upcomingRenewalCount },
     money: {
       collected: num(collectedAll._sum.amount),
       collectedThisMonth: num(collectedMonth._sum.amount),
@@ -231,12 +231,12 @@ export async function ownerDashboardSummary(userId: string, now = new Date()) {
       paidAt: p.paidAt,
       invoiceNumber: p.invoice.invoiceNumber,
       type: p.invoice.type,
-      leaseId: p.invoice.leaseId,
-      tenant: p.invoice.lease?.tenant.name ?? null,
-      property: p.invoice.lease?.unit.property.name ?? null,
+      rentId: p.invoice.rentId,
+      tenant: p.invoice.rent?.tenant.name ?? null,
+      property: p.invoice.rent?.unit.property.name ?? null,
     })),
     recentCompletedMaintenance,
-    recentLeases,
+    recentRents,
   };
 }
 
@@ -395,7 +395,7 @@ export async function adminReportsSummary(start: Date, end: Date) {
         invoice: {
           select: {
             type: true,
-            lease: {
+            rent: {
               select: {
                 tenant: { select: { name: true } },
                 unit: { select: { property: { select: { name: true } } } },
@@ -499,8 +499,8 @@ export async function adminReportsSummary(start: Date, end: Date) {
       amount: p.amount,
       paidAt: p.paidAt,
       type: p.invoice.type,
-      tenant: p.invoice.lease?.tenant.name ?? null,
-      property: p.invoice.lease?.unit.property.name ?? null,
+      tenant: p.invoice.rent?.tenant.name ?? null,
+      property: p.invoice.rent?.unit.property.name ?? null,
     })),
     users: { total: usersTotal, byRole: usersByRole, statusByRole },
     maintenance: {

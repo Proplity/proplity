@@ -375,7 +375,7 @@ export type Vendor = {
 
 export type Notice = {
   id: string;
-  leaseId: string;
+  rentId: string;
   invoiceId: string | null;
   type:
     | 'RENEWAL_OFFER'
@@ -401,13 +401,13 @@ export type CreateNoticeInput = {
 
 export type Note = {
   id: string;
-  leaseId: string | null;
+  rentId: string | null;
   authorId: string;
   body: string;
   createdAt: string;
 };
 
-export type Lease = {
+export type Rent = {
   id: string;
   unitId: string;
   unit?: Unit & { property?: Property };
@@ -437,13 +437,13 @@ export type Lease = {
   paymentReliability?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | null;
   signedAgreementUrl?: string | null;
   agreementSignedAt?: string | null;
-  signatures?: LeaseSignature[];
+  signatures?: RentSignature[];
   notices?: Notice[];
   invoices?: Invoice[];
   tenantInvited?: boolean;
 };
 
-export type CreateLeaseInput = {
+export type CreateRentInput = {
   unitId: string;
   tenantId?: string;
   tenantEmail?: string;
@@ -462,14 +462,14 @@ export type CreateLeaseInput = {
   lateFeeFlatAmount?: number;
 };
 
-export type UpdateLeaseTermsInput = {
+export type UpdateRentTermsInput = {
   gracePeriodDays?: number;
   lateFeeType?: 'PERCENTAGE' | 'FIXED';
   lateFeePercentage?: number;
   lateFeeFlatAmount?: number;
 };
 
-export type RenewLeaseInput = {
+export type RenewRentInput = {
   startDate: string;
   endDate: string;
   rentAmount: number;
@@ -492,7 +492,7 @@ export type Payment = {
 
 export type AutoPayMandate = {
   id: string;
-  leaseId: string;
+  rentId: string;
   provider: 'PAYSTACK' | 'FLUTTERWAVE' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
   paymentMethodToken: string;
   status: 'ACTIVE' | 'PAUSED' | 'CANCELLED';
@@ -502,7 +502,7 @@ export type AutoPayMandate = {
 };
 
 export type CreateAutoPayMandateInput = {
-  leaseId: string;
+  rentId: string;
   paymentMethodToken: string;
   provider?: string;
   nextChargeDate?: string;
@@ -518,8 +518,8 @@ export type PaymentAuthorization = {
 export type Invoice = {
   id: string;
   invoiceNumber: string;
-  leaseId: string | null;
-  lease?: {
+  rentId: string | null;
+  rent?: {
     id: string;
     tenant: { id: string; name: string };
     unit: { unitNumber: string; property: { id: string; name: string } };
@@ -544,7 +544,7 @@ export type Invoice = {
 
 export type CreateInvoiceInput = {
   maintenanceRequestId?: string;
-  leaseId?: string;
+  rentId?: string;
   userId?: string;
   type:
     | 'RENT'
@@ -618,13 +618,13 @@ export type ConversationParticipant = {
 
 export type Conversation = {
   id: string;
-  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'RENT_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
   title: string | null;
   maintenanceRequestId: string | null;
-  leaseId: string | null;
+  rentId: string | null;
   propertyId: string | null;
   property?: { id: string; name: string } | null;
-  lease?: { unit: { unitNumber: string; property: { id: string; name: string } } } | null;
+  rent?: { unit: { unitNumber: string; property: { id: string; name: string } } } | null;
   maintenanceRequest?: { title: string } | null;
   participants: ConversationParticipant[];
   lastMessage: Message | null;
@@ -637,11 +637,11 @@ export type Conversation = {
 };
 
 export type CreateConversationInput = {
-  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'RENT_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
   title?: string;
   participantIds?: string[];
   maintenanceRequestId?: string;
-  leaseId?: string;
+  rentId?: string;
   propertyId?: string;
 };
 
@@ -702,7 +702,7 @@ export type Application = {
   reviewedById: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
-  leaseId?: string | null;
+  rentId?: string | null;
   createdAt: string;
   applicant?: { id: string; name: string; email: string; phoneNumber: string | null };
   unit?: { id: string; unitNumber: string; property: { id: string; name: string } };
@@ -842,9 +842,9 @@ export type CreateBankAccountInput = {
   isDefault?: boolean;
 };
 
-export type LeaseSignature = {
+export type RentSignature = {
   id: string;
-  leaseId: string;
+  rentId: string;
   signerId: string;
   signer?: { id: string; name: string; role: string };
   signerRole: string;
@@ -870,7 +870,7 @@ export type OwnerDashboardSummary = {
   };
   managers: { id: string; name: string }[];
   units: { total: number; occupied: number; occupancyRate: number; totalListedRent: number };
-  leases: { active: number; upcomingRenewalCount: number };
+  rents: { active: number; upcomingRenewalCount: number };
   money: {
     collected: number;
     collectedThisMonth: number;
@@ -890,7 +890,7 @@ export type OwnerDashboardSummary = {
     paidAt: string;
     invoiceNumber: string;
     type: string;
-    leaseId: string | null;
+    rentId: string | null;
     tenant: string | null;
     property: string | null;
   }[];
@@ -900,7 +900,7 @@ export type OwnerDashboardSummary = {
     finalCost: number | null;
     unit: { property: { name: string } } | null;
   }[];
-  recentLeases: {
+  recentRents: {
     id: string;
     startDate: string;
     tenant: { name: string } | null;
@@ -981,13 +981,13 @@ export type AdminReportsSummary = {
 // opened from a dashboard card.
 export type OwnerBreakdownSummary = {
   properties: { count: number; fully: number; partial: number; vacant: number };
-  leases: {
+  rents: {
     active: number;
     terminated: number;
     paid: number;
     due: number;
     overdue: number;
-    rentStatusByLease: Record<string, 'due' | 'overdue'>;
+    rentStatusByRent: Record<string, 'due' | 'overdue'>;
   };
   money: {
     collected: number;

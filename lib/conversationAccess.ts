@@ -12,20 +12,20 @@ type Tx = Prisma.TransactionClient;
  */
 
 /**
- * The lease's tenancy has ended. Their lease thread, and the property's community boards when it
+ * The rent's tenancy has ended. Their rent thread, and the property's community boards when it
  * was their last tenancy there, become read-only. Does nothing while they still hold another
- * active lease on the unit (a renewal starts the new lease before the old one ends).
+ * active rent on the unit (a renewal starts the new rent before the old one ends).
  */
 export async function closeThreadsWhenTenancyEnds(
   tx: Tx,
-  lease: { id: string; unitId: string; tenantId: string; propertyId: string },
+  rent: { id: string; unitId: string; tenantId: string; propertyId: string },
 ): Promise<void> {
-  const stillOnUnit = await tx.lease.findFirst({
+  const stillOnUnit = await tx.rent.findFirst({
     where: {
-      unitId: lease.unitId,
-      tenantId: lease.tenantId,
+      unitId: rent.unitId,
+      tenantId: rent.tenantId,
       status: 'ACTIVE',
-      id: { not: lease.id },
+      id: { not: rent.id },
     },
     select: { id: true },
   });
@@ -33,41 +33,41 @@ export async function closeThreadsWhenTenancyEnds(
 
   const now = new Date();
   await tx.conversationParticipant.updateMany({
-    where: { userId: lease.tenantId, leftAt: null, conversation: { leaseId: lease.id } },
+    where: { userId: rent.tenantId, leftAt: null, conversation: { rentId: rent.id } },
     data: { leftAt: now },
   });
 
-  const stillOnProperty = await tx.lease.findFirst({
+  const stillOnProperty = await tx.rent.findFirst({
     where: {
-      tenantId: lease.tenantId,
+      tenantId: rent.tenantId,
       status: 'ACTIVE',
-      id: { not: lease.id },
-      unit: { propertyId: lease.propertyId },
+      id: { not: rent.id },
+      unit: { propertyId: rent.propertyId },
     },
     select: { id: true },
   });
   if (stillOnProperty) return;
   await tx.conversationParticipant.updateMany({
     where: {
-      userId: lease.tenantId,
+      userId: rent.tenantId,
       leftAt: null,
-      conversation: { type: 'COMMUNITY_DISCUSSION', propertyId: lease.propertyId },
+      conversation: { type: 'COMMUNITY_DISCUSSION', propertyId: rent.propertyId },
     },
     data: { leftAt: now },
   });
 }
 
-/** A lease that had ended was set active again: the tenant can post in its threads once more. */
+/** A rent that had ended was set active again: the tenant can post in its threads once more. */
 export async function reopenThreadsWhenTenancyResumes(
   tx: Tx,
-  lease: { id: string; tenantId: string; propertyId: string },
+  rent: { id: string; tenantId: string; propertyId: string },
 ): Promise<void> {
   await tx.conversationParticipant.updateMany({
     where: {
-      userId: lease.tenantId,
+      userId: rent.tenantId,
       leftAt: { not: null },
       conversation: {
-        OR: [{ leaseId: lease.id }, { type: 'COMMUNITY_DISCUSSION', propertyId: lease.propertyId }],
+        OR: [{ rentId: rent.id }, { type: 'COMMUNITY_DISCUSSION', propertyId: rent.propertyId }],
       },
     },
     data: { leftAt: null },
@@ -76,9 +76,9 @@ export async function reopenThreadsWhenTenancyResumes(
 
 /**
  * A property moved to another manager or landlord. The people who lost it leave every thread of
- * the property (its community boards, lease threads and repair threads) and the people who took it
+ * the property (its community boards, rent threads and repair threads) and the people who took it
  * over join them. Someone who is still part of a thread for another reason (the tenant or the
- * vendor of that lease or repair) or who still runs the property is left alone.
+ * vendor of that rent or repair) or who still runs the property is left alone.
  */
 export async function moveStaffInPropertyThreads(
   tx: Tx,
@@ -99,13 +99,13 @@ export async function moveStaffInPropertyThreads(
     where: {
       OR: [
         { propertyId: move.propertyId },
-        { lease: { unit: { propertyId: move.propertyId } } },
+        { rent: { unit: { propertyId: move.propertyId } } },
         { maintenanceRequest: { unit: { propertyId: move.propertyId } } },
       ],
     },
     select: {
       id: true,
-      lease: { select: { tenantId: true } },
+      rent: { select: { tenantId: true } },
       maintenanceRequest: { select: { tenantId: true, vendorId: true } },
     },
   });
@@ -113,7 +113,7 @@ export async function moveStaffInPropertyThreads(
   for (const thread of threads) {
     const otherRoles = new Set(
       [
-        thread.lease?.tenantId,
+        thread.rent?.tenantId,
         thread.maintenanceRequest?.tenantId,
         thread.maintenanceRequest?.vendorId,
       ].filter((v): v is string => !!v),

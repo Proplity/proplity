@@ -21,10 +21,10 @@ export type AttentionItem = {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// A lease is still being signed while it is PENDING, or when it was activated after one side
-// signed (the signature card stays until both have). An ACTIVE lease nobody has signed is a
+// A rent is still being signed while it is PENDING, or when it was activated after one side
+// signed (the signature card stays until both have). An ACTIVE rent nobody has signed is a
 // record from before e-signature, not a task.
-const awaitingSignatures: Prisma.LeaseWhereInput = {
+const awaitingSignatures: Prisma.RentWhereInput = {
   status: { in: ['PENDING', 'ACTIVE'] },
   OR: [{ status: 'PENDING' }, { signatures: { some: {} } }],
 };
@@ -66,8 +66,8 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
     disputedRepairs,
     transfers,
     overdue,
-    pendingLeases,
-    endingLeases,
+    pendingRents,
+    endingRents,
     needChanges,
     unpublished,
     unread,
@@ -115,22 +115,22 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
       where: {
         status: 'PENDING',
         submittedById: { not: userId },
-        invoice: { OR: [{ lease: inProperty }, { maintenanceRequest: inProperty }] },
+        invoice: { OR: [{ rent: inProperty }, { maintenanceRequest: inProperty }] },
       },
       orderBy: { createdAt: 'asc' },
       select: { amount: true, invoice: { select: { invoiceNumber: true } } },
     }),
     prisma.invoice.findMany({
-      where: { status: 'OVERDUE', lease: inProperty },
+      where: { status: 'OVERDUE', rent: inProperty },
       orderBy: { dueDate: 'asc' },
       select: { invoiceNumber: true, amount: true },
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: { ...awaitingSignatures, agreementSignedAt: null, ...inProperty },
       orderBy: { createdAt: 'asc' },
       select: { id: true, unit: { select: { unitNumber: true } } },
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: {
         status: 'ACTIVE',
         endDate: { gt: now, lte: new Date(now.getTime() + 60 * MS_PER_DAY) },
@@ -235,14 +235,12 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
       unassigned[0]?.title,
     ),
     ...row(
-      'leases-unsigned',
-      'Leases waiting for signatures',
-      pendingLeases.length,
+      'rents-unsigned',
+      'Rents waiting for signatures',
+      pendingRents.length,
       'medium',
-      pendingLeases.length === 1
-        ? `/dashboard/tenants/${pendingLeases[0].id}`
-        : '/dashboard/tenants',
-      pendingLeases[0] ? `Unit ${pendingLeases[0].unit.unitNumber}` : null,
+      pendingRents.length === 1 ? `/dashboard/tenants/${pendingRents[0].id}` : '/dashboard/tenants',
+      pendingRents[0] ? `Unit ${pendingRents[0].unit.unitNumber}` : null,
     ),
     ...row(
       'unread-messages',
@@ -252,12 +250,12 @@ async function teamAttention(userId: string, now: Date): Promise<AttentionItem[]
       '/dashboard/messages',
     ),
     ...row(
-      'leases-ending',
-      'Leases ending within 60 days',
-      endingLeases.length,
+      'rents-ending',
+      'Rents ending within 60 days',
+      endingRents.length,
       'low',
-      endingLeases.length === 1 ? `/dashboard/tenants/${endingLeases[0].id}` : '/dashboard/tenants',
-      endingLeases[0] ? `Unit ${endingLeases[0].unit.unitNumber}` : null,
+      endingRents.length === 1 ? `/dashboard/tenants/${endingRents[0].id}` : '/dashboard/tenants',
+      endingRents[0] ? `Unit ${endingRents[0].unit.unitNumber}` : null,
     ),
     ...row(
       'listings-unpublished',
@@ -288,7 +286,7 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
         true
       >,
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: {
         tenantId: userId,
         ...awaitingSignatures,
@@ -298,7 +296,7 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
     }),
     prisma.invoice.findMany({
       where: {
-        OR: [{ lease: { tenantId: userId } }, { userId }],
+        OR: [{ rent: { tenantId: userId } }, { userId }],
         status: { in: ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'] },
         dueDate: { lte: new Date(now.getTime() + 7 * MS_PER_DAY) },
       },
@@ -333,8 +331,8 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
 
   return [
     ...row(
-      'lease-to-sign',
-      'Lease to sign',
+      'rent-to-sign',
+      'Rent to sign',
       unsigned.length,
       'high',
       '/dashboard',

@@ -7,15 +7,15 @@ export type ReusableAuthorization = {
   bank: string | null;
 };
 
-// The reusable card token Paystack handed back on a lease's most recent card
+// The reusable card token Paystack handed back on a rent's most recent card
 // payment (Payment.rawProviderPayload keeps the signed webhook body). Auto-pay
 // may only be set up with a token found here, so a made-up or someone else's
 // token can never become a mandate (ISS-056).
 export async function findReusableAuthorization(
-  leaseId: string,
+  rentId: string,
 ): Promise<ReusableAuthorization | null> {
   const payments = await prisma.payment.findMany({
-    where: { invoice: { leaseId }, provider: 'PAYSTACK', rawProviderPayload: { not: null } },
+    where: { invoice: { rentId }, provider: 'PAYSTACK', rawProviderPayload: { not: null } },
     orderBy: { paidAt: 'desc' },
     take: 10,
   });

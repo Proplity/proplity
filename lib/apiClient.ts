@@ -23,9 +23,9 @@ import type {
   CreateConversationInput,
   CreateEquipmentInput,
   CreateInvoiceInput,
-  CreateLeaseInput,
-  UpdateLeaseTermsInput,
-  RenewLeaseInput,
+  CreateRentInput,
+  UpdateRentTermsInput,
+  RenewRentInput,
   CreateMaintenanceRequestInput,
   CreateMessageInput,
   CreatePropertyInput,
@@ -46,8 +46,8 @@ import type {
   CreateViolationInput,
   Equipment,
   Invoice,
-  Lease,
-  LeaseSignature,
+  Rent,
+  RentSignature,
   CreateScheduleInput,
   MaintenanceCategory,
   MaintenanceRequest,
@@ -360,29 +360,29 @@ export const api = {
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
-  leases: {
+  rents: {
     list: (params?: { status?: string; page?: number; limit?: number }) =>
-      apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
-    get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
-    create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
-    updateTerms: (id: string, body: UpdateLeaseTermsInput) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, body),
+      apiClient.get<Paginated<Rent>>('/api/v1/rents', { params }),
+    get: (id: string) => apiClient.get<{ data: Rent }>(`/api/v1/rents/${id}`),
+    create: (body: CreateRentInput) => apiClient.post<{ data: Rent }>('/api/v1/rents', body),
+    updateTerms: (id: string, body: UpdateRentTermsInput) =>
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, body),
     updateStatus: (id: string, status: string) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { status }),
-    renew: (id: string, body: RenewLeaseInput) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { renew: body }),
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { status }),
+    renew: (id: string, body: RenewRentInput) =>
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { renew: body }),
     sign: (id: string, fullName: string) =>
-      apiClient.post<{ data: LeaseSignature }>(`/api/v1/leases/${id}/sign`, { fullName }),
+      apiClient.post<{ data: RentSignature }>(`/api/v1/rents/${id}/sign`, { fullName }),
     notes: {
-      list: (leaseId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/leases/${leaseId}/notes`),
-      create: (leaseId: string, body: string) =>
-        apiClient.post<{ data: Note }>(`/api/v1/leases/${leaseId}/notes`, { body }),
+      list: (rentId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/rents/${rentId}/notes`),
+      create: (rentId: string, body: string) =>
+        apiClient.post<{ data: Note }>(`/api/v1/rents/${rentId}/notes`, { body }),
     },
     notices: {
-      list: (leaseId: string) =>
-        apiClient.get<{ data: Notice[] }>(`/api/v1/leases/${leaseId}/notices`),
-      create: (leaseId: string, body: CreateNoticeInput) =>
-        apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
+      list: (rentId: string) =>
+        apiClient.get<{ data: Notice[] }>(`/api/v1/rents/${rentId}/notices`),
+      create: (rentId: string, body: CreateNoticeInput) =>
+        apiClient.post<{ data: Notice }>(`/api/v1/rents/${rentId}/notices`, body),
     },
   },
   dashboard: {
@@ -495,14 +495,14 @@ export const api = {
       ),
     receipt: (paymentId: string) =>
       apiClient.get<{ data: Receipt }>(`/api/v1/payments/${paymentId}/receipt`),
-    authorization: (leaseId: string) =>
+    authorization: (rentId: string) =>
       apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
-        params: { leaseId },
+        params: { rentId },
       }),
     autopay: {
-      list: (leaseId: string) =>
+      list: (rentId: string) =>
         apiClient.get<{ data: AutoPayMandate[] }>('/api/v1/payments/autopay', {
-          params: { leaseId },
+          params: { rentId },
         }),
       create: (body: CreateAutoPayMandateInput) =>
         apiClient.post<{ data: AutoPayMandate }>('/api/v1/payments/autopay', body),

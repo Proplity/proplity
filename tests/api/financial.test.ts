@@ -6,7 +6,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createInvoice,
 } from '../helpers/fixtures';
@@ -23,16 +23,16 @@ describe('invoices: list scoping', () => {
     await resetDb();
   });
 
-  it('scopes by role across lease/maintenanceRequest/userId, and admin sees all', async () => {
+  it('scopes by role across rent/maintenanceRequest/userId, and admin sees all', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const vendor = await createUser(Role.VENDOR);
     const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
 
-    await createInvoice({ leaseId: lease.id, description: 'rent invoice' });
+    await createInvoice({ rentId: rent.id, description: 'rent invoice' });
     await createInvoice({
       maintenanceRequestId: request.id,
       type: 'MAINTENANCE',
@@ -89,7 +89,7 @@ describe('invoices: create', () => {
     }
   });
 
-  it("requires at least one of leaseId/maintenanceRequestId/userId (Prisma can't express this)", async () => {
+  it("requires at least one of rentId/maintenanceRequestId/userId (Prisma can't express this)", async () => {
     const admin = await createUser(Role.ADMIN);
     const cookie = await authCookie(admin.id, admin.role);
     const res = await apiFetch('/api/v1/invoices', {
@@ -163,14 +163,14 @@ describe('invoices: create is scoped for managers (ISS-050)', () => {
     const tenant = await createUser(Role.TENANT);
     const mine = await createProperty({ managerId: manager.id });
     const theirs = await createProperty({ managerId: otherManager.id });
-    const myLease = await createLease((await createUnit(mine.id)).id, tenant.id);
-    const theirLease = await createLease((await createUnit(theirs.id)).id, tenant.id);
+    const myRent = await createRent((await createUnit(mine.id)).id, tenant.id);
+    const theirRent = await createRent((await createUnit(theirs.id)).id, tenant.id);
     const theirJob = await createMaintenanceRequest((await createUnit(theirs.id)).id, tenant.id);
     return {
       manager,
       tenant,
-      myLease,
-      theirLease,
+      myRent,
+      theirRent,
       theirJob,
       cookie: await authCookie(manager.id, manager.role),
     };
@@ -183,22 +183,22 @@ describe('invoices: create is scoped for managers (ISS-050)', () => {
     ...extra,
   });
 
-  it('lets a manager invoice a lease on a property they manage', async () => {
-    const { cookie, myLease } = await setup();
+  it('lets a manager invoice a rent on a property they manage', async () => {
+    const { cookie, myRent } = await setup();
     const res = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
-      body: body({ leaseId: myLease.id }),
+      body: body({ rentId: myRent.id }),
     });
     expect(res.status).toBe(201);
   });
 
-  it("refuses another manager's lease and maintenance request", async () => {
-    const { cookie, theirLease, theirJob } = await setup();
+  it("refuses another manager's rent and maintenance request", async () => {
+    const { cookie, theirRent, theirJob } = await setup();
     const a = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
-      body: body({ leaseId: theirLease.id }),
+      body: body({ rentId: theirRent.id }),
     });
     expect(a.status).toBe(403);
     const b = await apiFetch('/api/v1/invoices', {
@@ -210,7 +210,7 @@ describe('invoices: create is scoped for managers (ISS-050)', () => {
   });
 
   it('refuses billing an arbitrary user, subscription invoices and pre-paid invoices', async () => {
-    const { cookie, tenant, myLease } = await setup();
+    const { cookie, tenant, myRent } = await setup();
     const user = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
@@ -220,13 +220,13 @@ describe('invoices: create is scoped for managers (ISS-050)', () => {
     const sub = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
-      body: body({ leaseId: myLease.id, type: 'SUBSCRIPTION' }),
+      body: body({ rentId: myRent.id, type: 'SUBSCRIPTION' }),
     });
     expect(sub.status).toBe(403);
     const paid = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
-      body: body({ leaseId: myLease.id, status: 'PAID' }),
+      body: body({ rentId: myRent.id, status: 'PAID' }),
     });
     expect(paid.status).toBe(400);
   });
@@ -248,13 +248,13 @@ describe('invoices: [id] access and PATCH', () => {
     await resetDb();
   });
 
-  it('canAccessInvoice covers direct owner, lease tenant/manager, and maintenance tenant/vendor/manager; forbids a stranger', async () => {
+  it('canAccessInvoice covers direct owner, rent tenant/manager, and maintenance tenant/vendor/manager; forbids a stranger', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
-    const invoice = await createInvoice({ leaseId: lease.id });
+    const rent = await createRent(unit.id, tenant.id);
+    const invoice = await createInvoice({ rentId: rent.id });
     const stranger = await createUser(Role.TENANT);
 
     for (const user of [tenant, manager]) {
@@ -268,7 +268,7 @@ describe('invoices: [id] access and PATCH', () => {
     expect(forbidden.status).toBe(403);
   });
 
-  it('lets a direct userId-owner see their own invoice with no lease/maintenanceRequest involved', async () => {
+  it('lets a direct userId-owner see their own invoice with no rent/maintenanceRequest involved', async () => {
     const directOwner = await createUser(Role.TENANT);
     const invoice = await createInvoice({ userId: directOwner.id, type: 'ASSOCIATION_FEE' });
     const cookie = await authCookie(directOwner.id, directOwner.role);
@@ -304,8 +304,8 @@ describe('invoices: [id] access and PATCH', () => {
     const property = await createProperty({ managerId: realManager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
-    const invoice = await createInvoice({ leaseId: lease.id });
+    const rent = await createRent(unit.id, tenant.id);
+    const invoice = await createInvoice({ rentId: rent.id });
 
     const strangerCookie = await authCookie(strangerManager.id, strangerManager.role);
     const forbidden = await apiFetch(`/api/v1/invoices/${invoice.id}`, {
@@ -817,10 +817,10 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
   });
 });
 
-// A card payment on a lease whose signed webhook body carries a reusable
+// A card payment on a rent whose signed webhook body carries a reusable
 // Paystack authorization -- the only thing auto-pay may be set up with (ISS-056).
-async function seedCardAuthorization(leaseId: string, code = 'AUTH_test_123') {
-  const invoice = await createInvoice({ leaseId, amount: 10_000, status: 'PAID' });
+async function seedCardAuthorization(rentId: string, code = 'AUTH_test_123') {
+  const invoice = await createInvoice({ rentId, amount: 10_000, status: 'PAID' });
   await testPrisma.payment.create({
     data: {
       invoiceId: invoice.id,
@@ -849,18 +849,18 @@ describe('payments: autopay', () => {
     expect(res.status).toBe(403);
   });
 
-  it('rejects creating a mandate on a lease the caller does not own', async () => {
+  it('rejects creating a mandate on a rent the caller does not own', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const owner = await createUser(Role.TENANT);
     const intruder = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, owner.id);
+    const rent = await createRent(unit.id, owner.id);
 
     const cookie = await authCookie(intruder.id, intruder.role);
     const res = await apiFetch('/api/v1/payments/autopay', {
       method: 'POST',
       cookie,
-      body: { leaseId: lease.id, paymentMethodToken: 'tok_test_123' },
+      body: { rentId: rent.id, paymentMethodToken: 'tok_test_123' },
     });
     expect(res.status).toBe(403);
   });
@@ -869,16 +869,16 @@ describe('payments: autopay', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
 
-    const token = await seedCardAuthorization(lease.id);
+    const token = await seedCardAuthorization(rent.id);
     const created = await apiFetch<{ data: { id: string; status: string } }>(
       '/api/v1/payments/autopay',
       {
         method: 'POST',
         cookie,
-        body: { leaseId: lease.id, paymentMethodToken: token },
+        body: { rentId: rent.id, paymentMethodToken: token },
       },
     );
     expect(created.status).toBe(201);
@@ -908,54 +908,54 @@ describe('payments: autopay', () => {
     expect(listAfter.body.data.length).toBe(0);
   });
 
-  it('only accepts a card token Paystack gave us for this lease, and only on an active lease (ISS-056)', async () => {
+  it('only accepts a card token Paystack gave us for this rent, and only on an active rent (ISS-056)', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
-    const post = (token: string, leaseId = lease.id) =>
+    const post = (token: string, rentId = rent.id) =>
       apiFetch('/api/v1/payments/autopay', {
         method: 'POST',
         cookie,
-        body: { leaseId, paymentMethodToken: token },
+        body: { rentId, paymentMethodToken: token },
       });
 
     // No card payment yet: nothing to set up with.
     expect((await post('AUTH_made_up')).status).toBe(400);
 
-    const real = await seedCardAuthorization(lease.id, 'AUTH_real_card');
+    const real = await seedCardAuthorization(rent.id, 'AUTH_real_card');
     expect((await post('AUTH_made_up')).status).toBe(400);
     expect((await post(real)).status).toBe(201);
 
-    // Another tenant's lease token is not valid here either.
-    const other = await createLease((await createUnit(property.id)).id, tenant.id);
+    // Another tenant's rent token is not valid here either.
+    const other = await createRent((await createUnit(property.id)).id, tenant.id);
     const otherToken = await seedCardAuthorization(other.id, 'AUTH_other_card');
     expect((await post(otherToken)).status).toBe(400);
 
-    // An ended lease cannot take a mandate.
-    await testPrisma.lease.update({ where: { id: other.id }, data: { status: 'TERMINATED' } });
+    // An ended rent cannot take a mandate.
+    await testPrisma.rent.update({ where: { id: other.id }, data: { status: 'TERMINATED' } });
     expect((await post(otherToken, other.id)).status).toBe(409);
   });
 
-  it('keeps one active mandate per lease: a new one replaces the old', async () => {
+  it('keeps one active mandate per rent: a new one replaces the old', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
-    const token = await seedCardAuthorization(lease.id);
+    const token = await seedCardAuthorization(rent.id);
     const post = () =>
       apiFetch('/api/v1/payments/autopay', {
         method: 'POST',
         cookie,
-        body: { leaseId: lease.id, paymentMethodToken: token },
+        body: { rentId: rent.id, paymentMethodToken: token },
       });
 
     const first = await post();
     const second = await post();
     expect(second.status).toBe(201);
-    const rows = await testPrisma.autoPayMandate.findMany({ where: { leaseId: lease.id } });
+    const rows = await testPrisma.autoPayMandate.findMany({ where: { rentId: rent.id } });
     expect(rows.filter((r) => r.status === 'ACTIVE')).toHaveLength(1);
     expect(rows.find((r) => r.id === first.body.data.id)?.status).toBe('CANCELLED');
     expect(rows.find((r) => r.id === second.body.data.id)?.status).toBe('ACTIVE');
@@ -963,7 +963,7 @@ describe('payments: autopay', () => {
     // The database itself refuses a second active one.
     await expect(
       testPrisma.autoPayMandate.create({
-        data: { leaseId: lease.id, paymentMethodToken: token, status: 'ACTIVE' },
+        data: { rentId: rent.id, paymentMethodToken: token, status: 'ACTIVE' },
       }),
     ).rejects.toThrow();
   });

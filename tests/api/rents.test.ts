@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Role, LeaseStatus } from '@prisma/client';
+import { Role, RentStatus } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
-describe('leases: list (GET /leases)', () => {
+describe('rents: list (GET /rents)', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -13,7 +13,7 @@ describe('leases: list (GET /leases)', () => {
   it('rejects a VENDOR caller outright', async () => {
     const vendor = await createUser(Role.VENDOR);
     const cookie = await authCookie(vendor.id, vendor.role);
-    const res = await apiFetch('/api/v1/leases', { cookie });
+    const res = await apiFetch('/api/v1/rents', { cookie });
     expect(res.status).toBe(403);
   });
 
@@ -27,27 +27,27 @@ describe('leases: list (GET /leases)', () => {
     const tenant = await createUser(Role.TENANT);
     const otherTenant = await createUser(Role.TENANT);
 
-    await createLease(unit.id, tenant.id);
-    await createLease(otherUnit.id, otherTenant.id);
+    await createRent(unit.id, tenant.id);
+    await createRent(otherUnit.id, otherTenant.id);
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantRes = await apiFetch('/api/v1/leases', { cookie: tenantCookie });
+    const tenantRes = await apiFetch('/api/v1/rents', { cookie: tenantCookie });
     expect(tenantRes.body.data.length).toBe(1);
     expect(tenantRes.body.data[0].tenantId).toBe(tenant.id);
 
     const managerCookie = await authCookie(manager.id, manager.role);
-    const managerRes = await apiFetch('/api/v1/leases', { cookie: managerCookie });
+    const managerRes = await apiFetch('/api/v1/rents', { cookie: managerCookie });
     expect(managerRes.body.data.length).toBe(1);
     expect(managerRes.body.data[0].unit.propertyId).toBe(property.id);
 
     const admin = await createUser(Role.ADMIN);
     const adminCookie = await authCookie(admin.id, admin.role);
-    const adminRes = await apiFetch('/api/v1/leases', { cookie: adminCookie });
+    const adminRes = await apiFetch('/api/v1/rents', { cookie: adminCookie });
     expect(adminRes.body.data.length).toBe(2);
   });
 });
 
-describe('leases: create (POST /leases)', () => {
+describe('rents: create (POST /rents)', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -55,7 +55,7 @@ describe('leases: create (POST /leases)', () => {
   it('rejects TENANT/VENDOR callers', async () => {
     const tenant = await createUser(Role.TENANT);
     const cookie = await authCookie(tenant.id, tenant.role);
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -70,7 +70,7 @@ describe('leases: create (POST /leases)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('forbids creating a lease on a unit the caller does not manage', async () => {
+  it('forbids creating a rent on a unit the caller does not manage', async () => {
     const owner = await createUser(Role.MANAGER);
     const intruder = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: owner.id });
@@ -78,7 +78,7 @@ describe('leases: create (POST /leases)', () => {
     const tenant = await createUser(Role.TENANT);
     const cookie = await authCookie(intruder.id, intruder.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -93,14 +93,14 @@ describe('leases: create (POST /leases)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('creates a lease for an existing tenantId with an initial RENT invoice, rentAmount never multiplied', async () => {
+  it('creates a rent for an existing tenantId with an initial RENT invoice, rentAmount never multiplied', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -117,7 +117,7 @@ describe('leases: create (POST /leases)', () => {
     expect(res.body.data.rentAmount).toBe(1_200_000);
     expect(res.body.data.tenantInvited).toBe(false);
 
-    const invoice = await testPrisma.invoice.findFirst({ where: { leaseId: res.body.data.id } });
+    const invoice = await testPrisma.invoice.findFirst({ where: { rentId: res.body.data.id } });
     expect(invoice).not.toBeNull();
     expect(invoice?.type).toBe('RENT');
     // Rule 5: rentAmount is per payment cycle -- the initial invoice must
@@ -132,7 +132,7 @@ describe('leases: create (POST /leases)', () => {
     const notATenant = await createUser(Role.VENDOR);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -154,7 +154,7 @@ describe('leases: create (POST /leases)', () => {
     const existingTenant = await createUser(Role.TENANT, { email: 'existing-tenant@test.local' });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -179,7 +179,7 @@ describe('leases: create (POST /leases)', () => {
     const unit = await createUnit(property.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -215,7 +215,7 @@ describe('leases: create (POST /leases)', () => {
     await createUser(Role.VENDOR, { email: 'a-vendor@test.local' });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -232,7 +232,7 @@ describe('leases: create (POST /leases)', () => {
   });
 });
 
-describe('leases: [id] read access', () => {
+describe('rents: [id] read access', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -243,21 +243,21 @@ describe('leases: [id] read access', () => {
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     const stranger = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
 
     for (const user of [manager, tenant]) {
       const cookie = await authCookie(user.id, user.role);
-      const res = await apiFetch(`/api/v1/leases/${lease.id}`, { cookie });
+      const res = await apiFetch(`/api/v1/rents/${rent.id}`, { cookie });
       expect(res.status).toBe(200);
     }
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const forbidden = await apiFetch(`/api/v1/leases/${lease.id}`, { cookie: strangerCookie });
+    const forbidden = await apiFetch(`/api/v1/rents/${rent.id}`, { cookie: strangerCookie });
     expect(forbidden.status).toBe(403);
   });
 });
 
-describe('leases: [id] PATCH -- status and renewal', () => {
+describe('rents: [id] PATCH -- status and renewal', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -268,10 +268,10 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantAttempt = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const tenantAttempt = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie: tenantCookie,
       body: { status: 'TERMINATED' },
@@ -279,7 +279,7 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     expect(tenantAttempt.status).toBe(403);
 
     const intruderCookie = await authCookie(intruder.id, intruder.role);
-    const intruderAttempt = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const intruderAttempt = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie: intruderCookie,
       body: { status: 'TERMINATED' },
@@ -292,10 +292,10 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'TERMINATED' },
@@ -309,22 +309,22 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/leases/${lease.id}`, { method: 'PATCH', cookie, body: {} });
+    const res = await apiFetch(`/api/v1/rents/${rent.id}`, { method: 'PATCH', cookie, body: {} });
     expect(res.status).toBe(400);
   });
 
-  it('renewal (rule 6) creates a NEW lease linked via renewedFromId and expires the old one, instead of a LeaseStatus value', async () => {
+  it('renewal (rule 6) creates a NEW rent linked via renewedFromId and expires the old one, instead of a RentStatus value', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const oldLease = await createLease(unit.id, tenant.id, { rentAmount: 1_000_000 });
+    const oldRent = await createRent(unit.id, tenant.id, { rentAmount: 1_000_000 });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/leases/${oldLease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${oldRent.id}`, {
       method: 'PATCH',
       cookie,
       body: {
@@ -338,10 +338,10 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe('ACTIVE');
-    expect(res.body.data.renewedFromId).toBe(oldLease.id);
+    expect(res.body.data.renewedFromId).toBe(oldRent.id);
     expect(res.body.data.rentAmount).toBe(1_100_000);
 
-    const refetchedOld = await testPrisma.lease.findUnique({ where: { id: oldLease.id } });
+    const refetchedOld = await testPrisma.rent.findUnique({ where: { id: oldRent.id } });
     expect(refetchedOld?.status).toBe('EXPIRED');
   });
 
@@ -350,12 +350,12 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
     // Switch to a flat-amount late fee with a deliberately large,
     // unbounded value -- there is no platform-imposed cap.
-    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie,
       body: {
@@ -369,29 +369,29 @@ describe('leases: [id] PATCH -- status and renewal', () => {
     expect(res.body.data.lateFeeType).toBe('FIXED');
     expect(res.body.data.lateFeeFlatAmount).toBe(999_999);
 
-    const refetched = await testPrisma.lease.findUnique({ where: { id: lease.id } });
+    const refetched = await testPrisma.rent.findUnique({ where: { id: rent.id } });
     expect(refetched?.gracePeriodDays).toBe(45);
     expect(refetched?.lateFeeType).toBe('FIXED');
   });
 });
 
-describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', () => {
+describe('rents: [id] PATCH -- Unit.status kept in sync with rent lifecycle', () => {
   beforeAll(async () => {
     await resetDb();
   });
 
-  it('activating a PENDING lease (status -> ACTIVE) occupies its unit', async () => {
+  it('activating a PENDING rent (status -> ACTIVE) occupies its unit', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { status: 'PENDING' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'PENDING' });
     const cookie = await authCookie(manager.id, manager.role);
 
     const before = await testPrisma.unit.findUnique({ where: { id: unit.id } });
     expect(before?.status).toBe('VACANT');
 
-    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'ACTIVE' },
@@ -402,21 +402,21 @@ describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', 
     expect(after?.status).toBe('OCCUPIED');
   });
 
-  it('terminating the only ACTIVE lease on a unit frees it back to VACANT', async () => {
+  it('terminating the only ACTIVE rent on a unit frees it back to VACANT', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const cookie = await authCookie(manager.id, manager.role);
     // Occupy it first via the real activation path, then terminate.
-    await apiFetch(`/api/v1/leases/${lease.id}`, {
+    await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'ACTIVE' },
     });
 
-    const res = await apiFetch(`/api/v1/leases/${lease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${rent.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'TERMINATED' },
@@ -427,24 +427,24 @@ describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', 
     expect(after?.status).toBe('VACANT');
   });
 
-  it('does not vacate a unit that still has another ACTIVE lease when one lease terminates', async () => {
+  it('does not vacate a unit that still has another ACTIVE rent when one rent terminates', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenantA = await createUser(Role.TENANT);
     const tenantB = await createUser(Role.TENANT);
-    // Schema doesn't prevent two leases on one unit -- exercising exactly
+    // Schema doesn't prevent two rents on one unit -- exercising exactly
     // that edge case, which is why the route re-queries for a survivor
     // instead of unconditionally vacating.
-    const leaseA = await createLease(unit.id, tenantA.id, { status: 'ACTIVE' });
-    await createLease(unit.id, tenantB.id, { status: 'ACTIVE' });
+    const rentA = await createRent(unit.id, tenantA.id, { status: 'ACTIVE' });
+    await createRent(unit.id, tenantB.id, { status: 'ACTIVE' });
     // Fixtures write directly via Prisma, bypassing the route -- occupy the
     // unit explicitly first so the guard below has something real to
     // preserve, rather than trivially passing because it was VACANT anyway.
     await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/leases/${leaseA.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${rentA.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'TERMINATED' },
@@ -460,10 +460,10 @@ describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', 
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const oldLease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const oldRent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const res = await apiFetch(`/api/v1/leases/${oldLease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${oldRent.id}`, {
       method: 'PATCH',
       cookie,
       body: {
@@ -482,7 +482,7 @@ describe('leases: [id] PATCH -- Unit.status kept in sync with lease lifecycle', 
   });
 });
 
-describe('leases: notices', () => {
+describe('rents: notices', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -492,10 +492,10 @@ describe('leases: notices', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
-    const tenantCreate = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const tenantCreate = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: tenantCookie,
       body: { type: 'RENEWAL_OFFER' },
@@ -503,7 +503,7 @@ describe('leases: notices', () => {
     expect(tenantCreate.status).toBe(403);
 
     const managerCookie = await authCookie(manager.id, manager.role);
-    const created = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const created = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: managerCookie,
       body: { type: 'RENEWAL_OFFER', content: 'Would you like to renew?', status: 'SENT' },
@@ -518,10 +518,10 @@ describe('leases: notices', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const managerCookie = await authCookie(manager.id, manager.role);
 
-    const notice = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const notice = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: managerCookie,
       body: { type: 'RENEWAL_OFFER', status: 'SENT' },
@@ -529,14 +529,14 @@ describe('leases: notices', () => {
 
     const tenantCookie = await authCookie(tenant.id, tenant.role);
 
-    const disallowed = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const disallowed = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: tenantCookie,
       body: { id: notice.body.data.id, status: 'SENT' },
     });
     expect(disallowed.status).toBe(403);
 
-    const viewed = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const viewed = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: tenantCookie,
       body: { id: notice.body.data.id, status: 'VIEWED' },
@@ -544,7 +544,7 @@ describe('leases: notices', () => {
     expect(viewed.status).toBe(200);
     expect(viewed.body.data.viewedAt).not.toBeNull();
 
-    const accepted = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const accepted = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: tenantCookie,
       body: { id: notice.body.data.id, status: 'ACCEPTED' },
@@ -559,15 +559,15 @@ describe('leases: notices', () => {
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     const stranger = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const res = await apiFetch(`/api/v1/leases/${lease.id}/notices`, { cookie: strangerCookie });
+    const res = await apiFetch(`/api/v1/rents/${rent.id}/notices`, { cookie: strangerCookie });
     expect(res.status).toBe(403);
   });
 });
 
-describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD', () => {
+describe('rents: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -577,12 +577,12 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const landlord = await createUser(Role.LANDLORD);
 
     for (const user of [landlord, tenant]) {
       const cookie = await authCookie(user.id, user.role);
-      const res = await apiFetch(`/api/v1/leases/${lease.id}/notes`, { cookie });
+      const res = await apiFetch(`/api/v1/rents/${rent.id}/notes`, { cookie });
       expect(res.status).toBe(403);
     }
   });
@@ -592,11 +592,11 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
     const created = await apiFetch<{ data: { authorId: string } }>(
-      `/api/v1/leases/${lease.id}/notes`,
+      `/api/v1/rents/${rent.id}/notes`,
       {
         method: 'POST',
         cookie,
@@ -606,7 +606,7 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
     expect(created.status).toBe(201);
     expect(created.body.data.authorId).toBe(manager.id);
 
-    const list = await apiFetch<{ data: { body: string }[] }>(`/api/v1/leases/${lease.id}/notes`, {
+    const list = await apiFetch<{ data: { body: string }[] }>(`/api/v1/rents/${rent.id}/notes`, {
       cookie,
     });
     expect(list.status).toBe(200);
@@ -614,7 +614,7 @@ describe('leases: notes -- MANAGER/ADMIN only, deliberately excluding LANDLORD',
   });
 });
 
-describe('leases: a unit cannot be occupied by two tenants at once', () => {
+describe('rents: a unit cannot be occupied by two tenants at once', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -624,16 +624,16 @@ describe('leases: a unit cannot be occupied by two tenants at once', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const sitting = await createUser(Role.TENANT);
-    const activeLease = await createLease(unit.id, sitting.id, { status: LeaseStatus.ACTIVE });
-    return { manager, property, unit, sitting, activeLease };
+    const activeRent = await createRent(unit.id, sitting.id, { status: RentStatus.ACTIVE });
+    return { manager, property, unit, sitting, activeRent };
   }
 
-  it('409s when activating a second lease on a unit that already has an ACTIVE one', async () => {
-    const { manager, unit, activeLease } = await occupiedUnit();
+  it('409s when activating a second rent on a unit that already has an ACTIVE one', async () => {
+    const { manager, unit, activeRent } = await occupiedUnit();
     const newcomer = await createUser(Role.TENANT);
-    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+    const pending = await createRent(unit.id, newcomer.id, { status: RentStatus.PENDING });
 
-    const res = await apiFetch(`/api/v1/leases/${pending.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${pending.id}`, {
       method: 'PATCH',
       cookie: await authCookie(manager.id, manager.role),
       body: { status: 'ACTIVE' },
@@ -641,32 +641,32 @@ describe('leases: a unit cannot be occupied by two tenants at once', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('UNIT_OCCUPIED');
-    expect(res.body.conflictingLeaseId).toBe(activeLease.id);
+    expect(res.body.conflictingRentId).toBe(activeRent.id);
   });
 
-  it('rolls the whole activation back -- the rejected lease stays PENDING', async () => {
+  it('rolls the whole activation back -- the rejected rent stays PENDING', async () => {
     const { manager, unit } = await occupiedUnit();
     const newcomer = await createUser(Role.TENANT);
-    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+    const pending = await createRent(unit.id, newcomer.id, { status: RentStatus.PENDING });
 
-    await apiFetch(`/api/v1/leases/${pending.id}`, {
+    await apiFetch(`/api/v1/rents/${pending.id}`, {
       method: 'PATCH',
       cookie: await authCookie(manager.id, manager.role),
       body: { status: 'ACTIVE' },
     });
 
-    // The lease.update runs BEFORE the guard inside the transaction, so this
+    // The rent.update runs BEFORE the guard inside the transaction, so this
     // asserts the rollback actually happened rather than leaving a half-
     // applied activation behind.
-    const after = await testPrisma.lease.findUnique({ where: { id: pending.id } });
+    const after = await testPrisma.rent.findUnique({ where: { id: pending.id } });
     expect(after?.status).toBe('PENDING');
   });
 
-  it('still allows CREATING a second lease on an occupied unit (next year is signed early)', async () => {
+  it('still allows CREATING a second rent on an occupied unit (next year is signed early)', async () => {
     const { manager, unit } = await occupiedUnit();
     const newcomer = await createUser(Role.TENANT);
 
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: await authCookie(manager.id, manager.role),
       body: {
@@ -684,20 +684,20 @@ describe('leases: a unit cannot be occupied by two tenants at once', () => {
     expect(res.body.data.status).toBe('PENDING');
   });
 
-  it('allows activating the successor once the sitting lease is terminated', async () => {
-    const { manager, unit, activeLease } = await occupiedUnit();
+  it('allows activating the successor once the sitting rent is terminated', async () => {
+    const { manager, unit, activeRent } = await occupiedUnit();
     const newcomer = await createUser(Role.TENANT);
-    const pending = await createLease(unit.id, newcomer.id, { status: LeaseStatus.PENDING });
+    const pending = await createRent(unit.id, newcomer.id, { status: RentStatus.PENDING });
     const cookie = await authCookie(manager.id, manager.role);
 
-    const terminated = await apiFetch(`/api/v1/leases/${activeLease.id}`, {
+    const terminated = await apiFetch(`/api/v1/rents/${activeRent.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'TERMINATED' },
     });
     expect(terminated.status).toBe(200);
 
-    const res = await apiFetch(`/api/v1/leases/${pending.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${pending.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'ACTIVE' },
@@ -709,9 +709,9 @@ describe('leases: a unit cannot be occupied by two tenants at once', () => {
     expect(unitRow?.status).toBe('OCCUPIED');
   });
 
-  it("does not block activating a lease that is already the unit's only ACTIVE one (idempotent re-PATCH)", async () => {
-    const { manager, activeLease } = await occupiedUnit();
-    const res = await apiFetch(`/api/v1/leases/${activeLease.id}`, {
+  it("does not block activating a rent that is already the unit's only ACTIVE one (idempotent re-PATCH)", async () => {
+    const { manager, activeRent } = await occupiedUnit();
+    const res = await apiFetch(`/api/v1/rents/${activeRent.id}`, {
       method: 'PATCH',
       cookie: await authCookie(manager.id, manager.role),
       body: { status: 'ACTIVE' },

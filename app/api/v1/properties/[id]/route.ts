@@ -65,12 +65,12 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     const jwtSession = await getServerSession();
     const session = jwtSession ? { sub: jwtSession.sub, role: jwtSession.role as Role } : null;
     const manages = !!session && canManageProperty(session, property);
-    // Any lease at all, not just ACTIVE: a tenant mid-renewal or just past
+    // Any rent at all, not just ACTIVE: a tenant mid-renewal or just past
     // their end date still needs the property's announcements and their own
     // unit's history.
     const occupancy =
       session && !manages
-        ? await prisma.lease.findFirst({
+        ? await prisma.rent.findFirst({
             where: { tenantId: session.sub, unit: { propertyId: id } },
             select: { id: true },
           })
@@ -103,7 +103,7 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
         units: units.map(serializeUnit),
         reviews: reviews.map((r) => ({
           ...r,
-          verified: r.leaseId !== null,
+          verified: r.rentId !== null,
           kind: reviewerKind(r),
         })),
         reviewStats: { count: reviews.length, averageRating },

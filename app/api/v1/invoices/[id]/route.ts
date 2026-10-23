@@ -15,7 +15,7 @@ function loadInvoice(id: string) {
     where: { id },
     include: {
       payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
-      lease: { include: { unit: { include: { property: PUBLIC_PROPERTY } } } },
+      rent: { include: { unit: { include: { property: PUBLIC_PROPERTY } } } },
       maintenanceRequest: { include: { unit: { include: { property: PUBLIC_PROPERTY } } } },
       user: { select: { id: true, name: true, email: true } },
     },
@@ -28,9 +28,9 @@ function canAccessInvoice(session: { sub: string; role: Role }, invoice: Invoice
   if (session.role === 'ADMIN') return true;
   if (invoice.userId === session.sub) return true;
 
-  if (invoice.lease) {
-    if (invoice.lease.tenantId === session.sub) return true;
-    if (canManageProperty(session, invoice.lease.unit.property)) return true;
+  if (invoice.rent) {
+    if (invoice.rent.tenantId === session.sub) return true;
+    if (canManageProperty(session, invoice.rent.unit.property)) return true;
   }
   if (invoice.maintenanceRequest) {
     if (invoice.maintenanceRequest.tenantId === session.sub) return true;
@@ -75,7 +75,7 @@ export const PATCH = withAuth(
       // MANAGER may only mutate invoices tied to a property they actually
       // manage -- a userId-only invoice (e.g. SUBSCRIPTION) with no property
       // is ADMIN-only, same as an invoice on someone else's property.
-      const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
+      const property = invoice.rent?.unit.property ?? invoice.maintenanceRequest?.unit.property;
       const canManage =
         session.role === 'ADMIN' || (!!property && canManageProperty(session, property));
       if (!canManage) {

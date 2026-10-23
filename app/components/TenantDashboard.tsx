@@ -12,7 +12,7 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import { useActiveLease, useLeases, useLease } from '@/hooks/useLeases';
+import { useActiveRent, useRents, useRent } from '@/hooks/useRents';
 import { useTenantSummary } from '@/hooks/useDashboardSummary';
 import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
@@ -25,7 +25,7 @@ import {
   useCreateAutoPayMandate,
   useCancelAutoPayMandate,
 } from '@/hooks/useAutoPay';
-import { LeaseSignatureCard } from './TenantDetail';
+import { RentSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { AttentionCard } from './AttentionCard';
@@ -44,12 +44,12 @@ const maintenanceStatusColor: Record<string, string> = {
 
 export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { openFile } = useFileViewer();
-  const { data: lease, loading: leaseLoading } = useActiveLease();
+  const { data: rent, loading: rentLoading } = useActiveRent();
   // Balance, next due date and recent payments are summed on the server, so
   // they stay right past the first page of invoices (ISS-049).
   const { data: summary, loading: invoicesLoading } = useTenantSummary();
   const { data: maintenanceRequests } = useMaintenanceRequests();
-  const { data: accessCodes, refetch: refetchAccessCodes } = useAccessCodes(lease?.unitId ?? null);
+  const { data: accessCodes, refetch: refetchAccessCodes } = useAccessCodes(rent?.unitId ?? null);
   const {
     submit: createAccessCode,
     submitting: creatingCode,
@@ -68,10 +68,10 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   };
 
   const handleCreateCode = async () => {
-    if (!lease) return;
+    if (!rent) return;
     try {
       await createAccessCode({
-        unitId: lease.unitId,
+        unitId: rent.unitId,
         code: codeValue.trim(),
         guestName: guestName.trim() || undefined,
         validFrom: new Date().toISOString(),
@@ -90,8 +90,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { open: openConversation } = useOpenConversation();
 
   const messageManager = () => {
-    if (!lease) return;
-    openConversation({ type: 'LEASE_THREAD', leaseId: lease.id });
+    if (!rent) return;
+    openConversation({ type: 'RENT_THREAD', rentId: rent.id });
   };
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
   const { available: cardsAvailable } = useCardPayments();
@@ -100,9 +100,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     data: autoPayMandates,
     loading: autoPayLoading,
     refetch: refetchAutoPay,
-  } = useAutoPayMandates(lease?.id ?? null);
+  } = useAutoPayMandates(rent?.id ?? null);
   const activeMandate = autoPayMandates[0] ?? null;
-  const { data: authorization } = usePaymentAuthorization(lease?.id ?? null);
+  const { data: authorization } = usePaymentAuthorization(rent?.id ?? null);
   const [settingUpAutoPay, setSettingUpAutoPay] = useState(false);
   const {
     submit: createMandate,
@@ -112,10 +112,10 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { submit: cancelMandate, submitting: cancellingMandate } = useCancelAutoPayMandate();
 
   const handleSetupAutoPay = async () => {
-    if (!lease || !authorization) return;
+    if (!rent || !authorization) return;
     try {
       await createMandate({
-        leaseId: lease.id,
+        rentId: rent.id,
         paymentMethodToken: authorization.authorizationCode,
         provider: 'PAYSTACK',
       });
@@ -132,19 +132,19 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     refetchAutoPay();
   };
 
-  // A PENDING lease (awaiting signature, before a manager activates it)
-  // never shows up via useActiveLease -- fetched separately so the tenant
-  // still gets the signing prompt. A manager can also activate a lease after
-  // signing but before the tenant has, so any lease that already carries a
+  // A PENDING rent (awaiting signature, before a manager activates it)
+  // never shows up via useActiveRent -- fetched separately so the tenant
+  // still gets the signing prompt. A manager can also activate a rent after
+  // signing but before the tenant has, so any rent that already carries a
   // signature keeps the card (the prompt, then the Fully Executed proof);
   // otherwise the tenant could never sign it.
-  const { data: pendingLeases } = useLeases({ status: 'PENDING' });
-  const signLeaseId = pendingLeases[0]?.id ?? lease?.id ?? null;
-  const { data: signLease, refetch: refetchSignLease } = useLease(signLeaseId);
+  const { data: pendingRents } = useRents({ status: 'PENDING' });
+  const signRentId = pendingRents[0]?.id ?? rent?.id ?? null;
+  const { data: signRent, refetch: refetchSignRent } = useRent(signRentId);
   const showSignatureCard =
-    !!signLease && (signLease.status === 'PENDING' || (signLease.signatures ?? []).length > 0);
+    !!signRent && (signRent.status === 'PENDING' || (signRent.signatures ?? []).length > 0);
 
-  const property = lease?.unit?.property;
+  const property = rent?.unit?.property;
   const balance = summary?.money.balance ?? 0;
   const nextDue = summary?.nextDue ?? null;
   const payments = summary?.recentPayments ?? [];
@@ -159,7 +159,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
     }
   };
 
-  if (leaseLoading || invoicesLoading) {
+  if (rentLoading || invoicesLoading) {
     return <div className="p-6 text-gray-500">Loading your rental information…</div>;
   }
 
@@ -172,8 +172,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
 
       <AttentionCard />
 
-      {signLease && showSignatureCard && (
-        <LeaseSignatureCard lease={signLease} onSigned={refetchSignLease} />
+      {signRent && showSignatureCard && (
+        <RentSignatureCard rent={signRent} onSigned={refetchSignRent} />
       )}
 
       {/* Quick Actions */}
@@ -194,7 +194,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
           </button>
           <button
             onClick={messageManager}
-            disabled={!lease}
+            disabled={!rent}
             className="group flex items-center gap-3 rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 group-hover:bg-blue-100">
@@ -220,9 +220,9 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         </div>
       </div>
 
-      {!lease ? (
+      {!rent ? (
         <div className="rounded-lg border border-gray-200 bg-white p-6 text-center text-gray-500">
-          No active lease found on your account.
+          No active rent found on your account.
         </div>
       ) : (
         <>
@@ -234,13 +234,13 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                   <Home className="h-6 w-6 text-blue-600" />
                 </div>
                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-                  {lease.status}
+                  {rent.status}
                 </span>
               </div>
               <p className="mb-1 text-sm text-gray-600">Current Property</p>
               <p className="text-lg font-semibold">
                 {property?.name ?? 'Unknown property'}
-                {lease.unit ? `, Unit ${lease.unit.unitNumber}` : ''}
+                {rent.unit ? `, Unit ${rent.unit.unitNumber}` : ''}
               </p>
             </div>
 
@@ -256,16 +256,16 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                 </span>
               </div>
               <p className="mb-1 text-sm text-gray-600">
-                {lease.serviceCharge > 0 ? 'Rent + Service Charge' : 'Rent'}
+                {rent.serviceCharge > 0 ? 'Rent + Service Charge' : 'Rent'}
               </p>
               <p className="text-lg font-semibold">
-                ₦{(lease.rentAmount + lease.serviceCharge).toLocaleString()}/
-                {lease.paymentFrequency.toLowerCase()}
+                ₦{(rent.rentAmount + rent.serviceCharge).toLocaleString()}/
+                {rent.paymentFrequency.toLowerCase()}
               </p>
-              {lease.serviceCharge > 0 && (
+              {rent.serviceCharge > 0 && (
                 <p className="mt-0.5 text-xs text-gray-400">
-                  ₦{lease.rentAmount.toLocaleString()} rent + ₦
-                  {lease.serviceCharge.toLocaleString()} service charge
+                  ₦{rent.rentAmount.toLocaleString()} rent + ₦{rent.serviceCharge.toLocaleString()}{' '}
+                  service charge
                 </p>
               )}
             </div>
@@ -300,10 +300,10 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1 text-sm text-gray-600">Lease Period</p>
+                  <p className="mb-1 text-sm text-gray-600">Rent Period</p>
                   <p className="font-medium">
-                    {new Date(lease.startDate).toLocaleDateString()} -{' '}
-                    {new Date(lease.endDate).toLocaleDateString()}
+                    {new Date(rent.startDate).toLocaleDateString()} -{' '}
+                    {new Date(rent.endDate).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="md:col-span-2">
@@ -593,22 +593,22 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
               <h2 className="font-semibold">Documents</h2>
             </div>
             <div className="p-6">
-              {lease.signedAgreementUrl ? (
+              {rent.signedAgreementUrl ? (
                 <button
                   type="button"
                   onClick={() =>
                     openFile({
-                      url: lease.signedAgreementUrl!,
-                      name: 'Signed Lease Agreement.pdf',
+                      url: rent.signedAgreementUrl!,
+                      name: 'Signed Rent Agreement.pdf',
                       type: 'application/pdf',
                     })
                   }
                   className="flex w-full items-center justify-between rounded-lg border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
+                    <p className="text-sm font-medium text-gray-900">Signed Rent Agreement</p>
                     <p className="text-xs text-gray-500">
-                      Since {new Date(lease.startDate).toLocaleDateString()}
+                      Since {new Date(rent.startDate).toLocaleDateString()}
                     </p>
                   </div>
                   <FileText className="h-4 w-4 text-blue-600" />

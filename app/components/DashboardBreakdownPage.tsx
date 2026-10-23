@@ -77,27 +77,27 @@ export function DashboardBreakdownPage({
     truncated: propsCut,
   } = usePagedList((page, limit) => api.properties.mine({ page, limit }), 500, is('properties'));
   const {
-    data: activeLeases,
+    data: activeRents,
     loading: activeLoading,
     truncated: activeCut,
   } = usePagedList(
-    (page, limit) => api.leases.list({ status: 'ACTIVE', page, limit }),
+    (page, limit) => api.rents.list({ status: 'ACTIVE', page, limit }),
     500,
     is('tenants'),
   );
-  const { data: endedLeases, loading: endedLoading } = usePagedList(
-    (page, limit) => api.leases.list({ status: 'TERMINATED', page, limit }),
+  const { data: endedRents, loading: endedLoading } = usePagedList(
+    (page, limit) => api.rents.list({ status: 'TERMINATED', page, limit }),
     500,
     is('tenants'),
   );
-  const { data: expiredLeases, loading: expiredLoading } = usePagedList(
-    (page, limit) => api.leases.list({ status: 'EXPIRED', page, limit }),
+  const { data: expiredRents, loading: expiredLoading } = usePagedList(
+    (page, limit) => api.rents.list({ status: 'EXPIRED', page, limit }),
     500,
     is('tenants'),
   );
   const openMaintenanceList = useOpenMaintenance(is('maintenance'));
 
-  const terminatedLeases = [...endedLeases, ...expiredLeases];
+  const terminatedRents = [...endedRents, ...expiredRents];
   const openMaintenance = openMaintenanceList.data;
 
   const loading =
@@ -118,7 +118,7 @@ export function DashboardBreakdownPage({
   const collectionRate = money?.collectionRate ?? 0;
   const thisMonthCollected = money?.collectedThisMonth ?? 0;
   const renewalsUpcoming = (b?.renewals.rows ?? []).map((r) => ({
-    lease: {
+    rent: {
       id: r.id,
       endDate: r.endDate,
       rentAmount: r.rentAmount,
@@ -127,7 +127,7 @@ export function DashboardBreakdownPage({
     },
     daysLeft: r.daysLeft,
   }));
-  const rentStatusOf = (leaseId: string) => b?.leases.rentStatusByLease[leaseId] ?? 'paid';
+  const rentStatusOf = (rentId: string) => b?.rents.rentStatusByRent[rentId] ?? 'paid';
 
   const heroStat: Record<
     BreakdownType,
@@ -140,10 +140,10 @@ export function DashboardBreakdownPage({
       statLabel: 'Properties',
     },
     tenants: {
-      title: 'Active Leases',
+      title: 'Active Rents',
       subtitle: 'All current and past tenants across your portfolio',
-      stat: String(b?.leases.active ?? 0),
-      statLabel: 'Active Leases',
+      stat: String(b?.rents.active ?? 0),
+      statLabel: 'Active Rents',
     },
     rent: {
       title: 'Rent Collected — This Month',
@@ -158,8 +158,8 @@ export function DashboardBreakdownPage({
       statLabel: 'Open Requests',
     },
     renewals: {
-      title: 'Upcoming Lease Renewals',
-      subtitle: 'Leases expiring in the next 6 months',
+      title: 'Upcoming Rent Renewals',
+      subtitle: 'Rents expiring in the next 6 months',
       stat: String(b?.renewals.count ?? 0),
       statLabel: 'Renewals Due',
     },
@@ -199,9 +199,9 @@ export function DashboardBreakdownPage({
       );
     }
     if (breakdownType === 'tenants') {
-      const paid = b?.leases.paid ?? 0;
-      const due = b?.leases.due ?? 0;
-      const overdue = b?.leases.overdue ?? 0;
+      const paid = b?.rents.paid ?? 0;
+      const due = b?.rents.due ?? 0;
+      const overdue = b?.rents.overdue ?? 0;
       return (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
@@ -395,39 +395,31 @@ export function DashboardBreakdownPage({
 
     if (breakdownType === 'tenants') {
       if (tenantTab === 'active') {
-        const rows = activeLeases.filter((l) =>
+        const rows = activeRents.filter((l) =>
           (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
         );
         return (
           <table className="w-full text-sm">
-            {th([
-              'Tenant',
-              'Property',
-              'Unit',
-              'Lease Start',
-              'Lease End',
-              'Rent Status',
-              'Actions',
-            ])}
+            {th(['Tenant', 'Property', 'Unit', 'Rent Start', 'Rent End', 'Rent Status', 'Actions'])}
             <tbody className="divide-y divide-gray-100">
-              {rows.map((lease) => {
-                const status = rentStatusOf(lease.id);
+              {rows.map((rent) => {
+                const status = rentStatusOf(rent.id);
                 return (
-                  <tr key={lease.id} className="transition-colors hover:bg-gray-50">
+                  <tr key={rent.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                      {lease.tenant?.name ?? 'Unknown'}
+                      {rent.tenant?.name ?? 'Unknown'}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                      {lease.unit?.property?.name ?? '—'}
+                      {rent.unit?.property?.name ?? '—'}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                      {lease.unit?.unitNumber}
+                      {rent.unit?.unitNumber}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                      {new Date(lease.startDate).toLocaleDateString()}
+                      {new Date(rent.startDate).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                      {new Date(lease.endDate).toLocaleDateString()}
+                      {new Date(rent.endDate).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <span
@@ -444,7 +436,7 @@ export function DashboardBreakdownPage({
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <button
-                        onClick={() => onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })}
+                        onClick={() => onNavigate?.({ type: 'tenant-detail', rentId: rent.id })}
                         className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                       >
                         View
@@ -457,34 +449,34 @@ export function DashboardBreakdownPage({
           </table>
         );
       }
-      const rows = terminatedLeases.filter((l) =>
+      const rows = terminatedRents.filter((l) =>
         (l.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
       );
       return (
         <table className="w-full text-sm">
-          {th(['Tenant', 'Property', 'Unit', 'Lease End', 'Status'])}
+          {th(['Tenant', 'Property', 'Unit', 'Rent End', 'Status'])}
           <tbody className="divide-y divide-gray-100">
-            {rows.map((lease) => (
-              <tr key={lease.id} className="transition-colors hover:bg-red-50/40">
+            {rows.map((rent) => (
+              <tr key={rent.id} className="transition-colors hover:bg-red-50/40">
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.tenant?.name ?? 'Unknown'}
+                  {rent.tenant?.name ?? 'Unknown'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.unit?.property?.name ?? '—'}
+                  {rent.unit?.property?.name ?? '—'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.unit?.unitNumber}
+                  {rent.unit?.unitNumber}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {new Date(lease.endDate).toLocaleDateString()}
+                  {new Date(rent.endDate).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{lease.status}</td>
+                <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">{rent.status}</td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No terminated or expired leases.
+                  No terminated or expired rents.
                 </td>
               </tr>
             )}
@@ -579,28 +571,28 @@ export function DashboardBreakdownPage({
 
     if (breakdownType === 'renewals') {
       const rows = renewalsUpcoming.filter((r) =>
-        (r.lease.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+        (r.rent.tenant?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
       );
       return (
         <table className="w-full text-sm">
-          {th(['Tenant', 'Property', 'Unit', 'Current Rent', 'Lease End', 'Days Left', 'Actions'])}
+          {th(['Tenant', 'Property', 'Unit', 'Current Rent', 'Rent End', 'Days Left', 'Actions'])}
           <tbody className="divide-y divide-gray-100">
-            {rows.map(({ lease, daysLeft }) => (
-              <tr key={lease.id} className="transition-colors hover:bg-gray-50">
+            {rows.map(({ rent, daysLeft }) => (
+              <tr key={rent.id} className="transition-colors hover:bg-gray-50">
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.tenant?.name ?? 'Unknown'}
+                  {rent.tenant?.name ?? 'Unknown'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.unit?.property?.name ?? '—'}
+                  {rent.unit?.property?.name ?? '—'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {lease.unit?.unitNumber}
+                  {rent.unit?.unitNumber}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  ₦{lease.rentAmount.toLocaleString()}
+                  ₦{rent.rentAmount.toLocaleString()}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-700">
-                  {new Date(lease.endDate).toLocaleDateString()}
+                  {new Date(rent.endDate).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <span
@@ -611,7 +603,7 @@ export function DashboardBreakdownPage({
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap">
                   <button
-                    onClick={() => onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })}
+                    onClick={() => onNavigate?.({ type: 'tenant-detail', rentId: rent.id })}
                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                   >
                     View
@@ -906,7 +898,7 @@ export function DashboardBreakdownPage({
                 <Users className="h-3.5 w-3.5" />
                 Active
                 <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
-                  {b?.leases.active ?? 0}
+                  {b?.rents.active ?? 0}
                 </span>
               </button>
               <button
@@ -920,7 +912,7 @@ export function DashboardBreakdownPage({
                 <UserX className="h-3.5 w-3.5" />
                 Terminated / Expired
                 <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                  {b?.leases.terminated ?? 0}
+                  {b?.rents.terminated ?? 0}
                 </span>
               </button>
             </div>

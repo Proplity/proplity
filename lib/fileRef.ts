@@ -7,7 +7,7 @@ export type UploadFolder =
   | 'profile'
   | 'properties'
   | 'notices'
-  | 'leases'
+  | 'rents'
   | 'communications'
   | 'reconciliation';
 export type StorageAccess = 'private' | 'public';
@@ -23,7 +23,7 @@ export const FOLDER_ACCESS: Record<UploadFolder, StorageAccess> = {
   profile: 'private',
   properties: 'public',
   notices: 'private',
-  leases: 'private',
+  rents: 'private',
   communications: 'private',
   reconciliation: 'private',
 };

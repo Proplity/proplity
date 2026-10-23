@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 import { fileUrl } from '../../lib/fileRef';
@@ -221,7 +221,7 @@ describe('files gateway: GET /api/v1/files/[id]', () => {
     otherLandlord = await authCookie(ol.id, ol.role);
     const property = await createProperty({ landlordId: l.id });
     const unit = await createUnit(property.id);
-    await createLease(unit.id, o.id);
+    await createRent(unit.id, o.id);
     const up = await upload(owner, 'profile', 'id.pdf');
     idUrl = up.url;
     idFileId = up.id;
@@ -233,7 +233,7 @@ describe('files gateway: GET /api/v1/files/[id]', () => {
     expect((await read(idUrl, otherLandlord)).status).toBe(404);
   });
 
-  it('serves the owner, an admin and the landlord of a property they lease, with safe headers', async () => {
+  it('serves the owner, an admin and the landlord of a property they rent, with safe headers', async () => {
     for (const cookie of [owner, admin, landlord]) {
       const res = await read(idUrl, cookie);
       expect(res.status).toBe(200);
@@ -315,7 +315,7 @@ describe('maintenance photos are private and tied to their request', () => {
     const property = await createProperty({ managerId: m.id });
     const unit = await createUnit(property.id);
     unitId = unit.id;
-    await createLease(unit.id, t.id);
+    await createRent(unit.id, t.id);
     (globalThis as { __vendorId?: string }).__vendorId = v.id;
   });
 

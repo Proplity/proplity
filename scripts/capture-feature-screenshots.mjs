@@ -132,15 +132,15 @@ if (firstRun) {
 }
 
 // An unpaid rent invoice, so the tenant has something to pay and a card to reuse for auto-pay.
-const leaseRows = (await (await mp.request.get('/api/v1/leases')).json()).data ?? [];
-const tenantLease = leaseRows.find(
+const rentRows = (await (await mp.request.get('/api/v1/rents')).json()).data ?? [];
+const tenantRent = rentRows.find(
   (l) => l.status === 'ACTIVE' && l.tenant?.email === 'tenant@proplity.com',
 );
-if (tenantLease) {
+if (tenantRent) {
   const invs = (await (await mp.request.get('/api/v1/invoices')).json()).data ?? [];
-  if (!invs.some((i) => i.leaseId === tenantLease.id && i.status === 'UNPAID')) {
+  if (!invs.some((i) => i.rentId === tenantRent.id && i.status === 'UNPAID')) {
     await write(mp, 'POST', '/api/v1/invoices', {
-      leaseId: tenantLease.id,
+      rentId: tenantRent.id,
       type: 'RENT',
       amount: 150000,
       dueDate: new Date(Date.now() + 5 * 86400000).toISOString(),
@@ -397,8 +397,8 @@ await shot(tp, 'feat_tenant_autopay_active', async () => {
   await tp.getByText(/Auto-pay is active/).scrollIntoViewIfNeeded();
 });
 // A guest access code for the unit, so the Access Codes card shows one.
-const leases = (await (await tp.request.get('/api/v1/leases')).json()).data ?? [];
-const active = leases.find((l) => l.status === 'ACTIVE') ?? leases[0];
+const rents = (await (await tp.request.get('/api/v1/rents')).json()).data ?? [];
+const active = rents.find((l) => l.status === 'ACTIVE') ?? rents[0];
 if (active) {
   await write(tp, 'POST', '/api/v1/access-codes', {
     data: {

@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { LeaseStatus, Role } from '@prisma/client';
+import { RentStatus, Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   setSystemSettings,
 } from '../helpers/fixtures';
 import { apiFetch } from '../helpers/client';
@@ -50,8 +50,8 @@ describe('identity-document retention (ISS-039, ADR-0012)', () => {
   it('deletes the ID of a tenant whose tenancy ended over 12 months ago, and clears the profile link', async () => {
     const tenant = await createUser(Role.TENANT);
     const unit = await createUnit((await createProperty()).id);
-    await createLease(unit.id, tenant.id, {
-      status: LeaseStatus.EXPIRED,
+    await createRent(unit.id, tenant.id, {
+      status: RentStatus.EXPIRED,
       endDate: new Date(Date.now() - 400 * DAY),
     });
     const file = await idDoc(tenant.id);
@@ -74,9 +74,9 @@ describe('identity-document retention (ISS-039, ADR-0012)', () => {
     const recent = await createUser(Role.TENANT);
     const unitA = await createUnit((await createProperty()).id);
     const unitB = await createUnit((await createProperty()).id);
-    await createLease(unitA.id, active.id, { status: LeaseStatus.ACTIVE });
-    await createLease(unitB.id, recent.id, {
-      status: LeaseStatus.EXPIRED,
+    await createRent(unitA.id, active.id, { status: RentStatus.ACTIVE });
+    await createRent(unitB.id, recent.id, {
+      status: RentStatus.EXPIRED,
       endDate: new Date(Date.now() - 30 * DAY),
     });
     const a = await idDoc(active.id);
@@ -119,7 +119,7 @@ describe('identity-document retention (ISS-039, ADR-0012)', () => {
     expect(await status(fPending.id)).toBe('READY');
   });
 
-  it('leaves users with no lease and no application alone', async () => {
+  it('leaves users with no rent and no application alone', async () => {
     const user = await createUser(Role.TENANT);
     const file = await idDoc(user.id);
     await runRetention();
@@ -136,8 +136,8 @@ describe('retention: the admin switch and periods (ADR-0015)', () => {
   async function endedTenancy(daysAgo: number) {
     const tenant = await createUser(Role.TENANT);
     const unit = await createUnit((await createProperty()).id);
-    await createLease(unit.id, tenant.id, {
-      status: LeaseStatus.EXPIRED,
+    await createRent(unit.id, tenant.id, {
+      status: RentStatus.EXPIRED,
       endDate: new Date(Date.now() - daysAgo * DAY),
     });
     return idDoc(tenant.id);

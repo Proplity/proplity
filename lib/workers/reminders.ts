@@ -3,9 +3,9 @@ import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RENT_DUE_SOON_DAYS = 3;
-const LEASE_ENDING_DAYS = 60;
+const RENT_ENDING_DAYS = 60;
 
-// One reminder per invoice and one per lease, however many times the daily job runs: the title
+// One reminder per invoice and one per rent, however many times the daily job runs: the title
 // carries the invoice number or the end date, and a reminder is skipped when the recipient
 // already has a notification with that title.
 async function alreadyTold(recipientId: string, title: string) {
@@ -16,25 +16,25 @@ async function alreadyTold(recipientId: string, title: string) {
   return !!existing;
 }
 
-export async function runReminders(): Promise<{ dueSoon: number; leasesEnding: number }> {
+export async function runReminders(): Promise<{ dueSoon: number; rentsEnding: number }> {
   const now = new Date();
   let dueSoon = 0;
-  let leasesEnding = 0;
+  let rentsEnding = 0;
 
   // Unpaid rent and charges falling due in the next few days.
   const soon = await prisma.invoice.findMany({
     where: {
       status: { in: ['UNPAID', 'PARTIALLY_PAID'] },
-      leaseId: { not: null },
+      rentId: { not: null },
       dueDate: { gt: now, lte: new Date(now.getTime() + RENT_DUE_SOON_DAYS * MS_PER_DAY) },
     },
-    include: { lease: { select: { tenantId: true } } },
+    include: { rent: { select: { tenantId: true } } },
   });
   for (const invoice of soon) {
-    if (!invoice.lease) continue;
+    if (!invoice.rent) continue;
     const title = `Payment due soon: ${invoice.invoiceNumber}`;
-    if (await alreadyTold(invoice.lease.tenantId, title)) continue;
-    await notifyAndEmail(invoice.lease.tenantId, {
+    if (await alreadyTold(invoice.rent.tenantId, title)) continue;
+    await notifyAndEmail(invoice.rent.tenantId, {
       title,
       body: `Invoice ${invoice.invoiceNumber} for ₦${invoice.amount.toLocaleString()} is due on ${invoice.dueDate.toDateString()}.`,
       link: '/dashboard',
@@ -42,34 +42,34 @@ export async function runReminders(): Promise<{ dueSoon: number; leasesEnding: n
     dueSoon += 1;
   }
 
-  // Active leases ending within two months: the tenant and the property team both need to act.
-  const ending = await prisma.lease.findMany({
+  // Active rents ending within two months: the tenant and the property team both need to act.
+  const ending = await prisma.rent.findMany({
     where: {
       status: 'ACTIVE',
-      endDate: { gt: now, lte: new Date(now.getTime() + LEASE_ENDING_DAYS * MS_PER_DAY) },
+      endDate: { gt: now, lte: new Date(now.getTime() + RENT_ENDING_DAYS * MS_PER_DAY) },
     },
     include: { unit: { include: { property: true } } },
   });
-  for (const lease of ending) {
-    const where = `unit ${lease.unit.unitNumber} at ${lease.unit.property.name}`;
-    const title = `Lease ending ${lease.endDate.toDateString()}: unit ${lease.unit.unitNumber}`;
-    if (await alreadyTold(lease.tenantId, title)) continue;
-    await notifyAndEmail(lease.tenantId, {
+  for (const rent of ending) {
+    const where = `unit ${rent.unit.unitNumber} at ${rent.unit.property.name}`;
+    const title = `Rent ending ${rent.endDate.toDateString()}: unit ${rent.unit.unitNumber}`;
+    if (await alreadyTold(rent.tenantId, title)) continue;
+    await notifyAndEmail(rent.tenantId, {
       title,
-      body: `Your lease for ${where} ends on ${lease.endDate.toDateString()}. Talk to the property team about renewing.`,
+      body: `Your rent for ${where} ends on ${rent.endDate.toDateString()}. Talk to the property team about renewing.`,
       link: '/dashboard',
     });
     await notifyPropertyTeam(
-      lease.unit.property,
+      rent.unit.property,
       {
         title,
-        body: `The lease for ${where} ends on ${lease.endDate.toDateString()}. Decide whether to renew it.`,
-        link: `/dashboard/tenants/${lease.id}`,
+        body: `The rent for ${where} ends on ${rent.endDate.toDateString()}. Decide whether to renew it.`,
+        link: `/dashboard/tenants/${rent.id}`,
       },
       { email: false },
     );
-    leasesEnding += 1;
+    rentsEnding += 1;
   }
 
-  return { dueSoon, leasesEnding };
+  return { dueSoon, rentsEnding };
 }

@@ -9,7 +9,7 @@ enum InvoiceType {
   // Re-added 2026-09-28 -- originally removed in migration
   // 20260822172214_sync_schema_drift per CLAUDE.md ("only ASSOCIATION_FEE in
   // PRD scope... additive to re-add later if a real requirement appears").
-  // A real requirement appeared (UI/UX gap audit): Unit/Lease.serviceCharge
+  // A real requirement appeared (UI/UX gap audit): Unit/Rent.serviceCharge
   // now generates its own invoice line, kept separate from RENT.
   SERVICE_CHARGE
 }
@@ -70,8 +70,8 @@ enum PayoutMethod {
 // never raw card/account data.
 model AutoPayMandate {
   id                  String          @id @default(uuid())
-  leaseId             String
-  lease               Lease           @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  rentId             String
+  rent               Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
   provider            PaymentProvider @default(PAYSTACK)
   paymentMethodToken  String
   status              AutoPayStatus   @default(ACTIVE)
@@ -84,7 +84,7 @@ model AutoPayMandate {
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
-  @@index([leaseId, status])
+  @@index([rentId, status])
 }
 
 model Invoice {
@@ -97,13 +97,13 @@ model Invoice {
   // is native to Postgres 13+; confirm your DB version supports it, or
   // enable pgcrypto if targeting an older version.
   invoiceNumber           String                   @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
-  leaseId                 String?
-  lease                   Lease?                   @relation(fields: [leaseId], references: [id])
+  rentId                 String?
+  rent                   Rent?                   @relation(fields: [rentId], references: [id])
   maintenanceRequestId    String?
   maintenanceRequest      MaintenanceRequest?      @relation(fields: [maintenanceRequestId], references: [id])
-  // Direct charge to a person, for invoices that aren't scoped to a lease or
+  // Direct charge to a person, for invoices that aren't scoped to a rent or
   // maintenance ticket — e.g. an ASSOCIATION_FEE billed estate-wide. At least
-  // one of leaseId / maintenanceRequestId / userId should be set; enforce
+  // one of rentId / maintenanceRequestId / userId should be set; enforce
   // that in application code, Prisma can't express an "at least one of" constraint.
   userId                  String?
   user                    User?                    @relation(fields: [userId], references: [id])
@@ -120,7 +120,7 @@ model Invoice {
   updatedAt               DateTime                 @updatedAt
 
   @@index([status])
-  @@index([leaseId])
+  @@index([rentId])
 }
 
 model Payment {

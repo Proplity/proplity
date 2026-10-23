@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   bookableViewingTime,
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
@@ -103,7 +103,7 @@ describe('applications and viewings need a listed property (ISS-143)', () => {
     expect((await taken(s.managerCookie, s.prop.id)).status).toBe(200);
 
     const resident = await createUser(Role.TENANT);
-    await createLease(s.unit.id, resident.id, { status: 'ACTIVE' });
+    await createRent(s.unit.id, resident.id, { status: 'ACTIVE' });
     const residentCookie = await authCookie(resident.id, resident.role);
     expect((await taken(residentCookie, s.prop.id)).status).toBe(200);
     expect((await apply(residentCookie, s.unit.id)).status).toBe(201);

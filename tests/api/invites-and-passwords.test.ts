@@ -6,7 +6,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createPasswordResetToken,
   createVerificationToken,
   FIXTURE_PASSWORD,
@@ -31,7 +31,7 @@ describe('inviting a new tenant by email is gated and capped (ISS-154)', () => {
     const property = await createProperty({ managerId: manager.id, isPublished: approved });
     const cookie = await authCookie(manager.id, manager.role);
     const invite = async (email: string, unitId?: string) =>
-      apiFetch('/api/v1/leases', {
+      apiFetch('/api/v1/rents', {
         method: 'POST',
         cookie,
         body: {
@@ -90,17 +90,17 @@ describe('inviting a new tenant by email is gated and capped (ISS-154)', () => {
     expect((await s.invite('fresh@test.local')).status).toBe(201);
   });
 
-  it('does not limit a lease for someone who already has an account, or an admin', async () => {
+  it('does not limit a rent for someone who already has an account, or an admin', async () => {
     const s = await setup();
     const existing = await createUser(Role.TENANT, { email: 'member@test.local' });
     await s.invite('a@test.local');
     await s.invite('b@test.local');
     expect((await s.invite('member@test.local')).status).toBe(201);
-    expect(await testPrisma.lease.count({ where: { tenantId: existing.id } })).toBe(1);
+    expect(await testPrisma.rent.count({ where: { tenantId: existing.id } })).toBe(1);
 
     const admin = await createUser(Role.ADMIN);
     const unit = await createUnit(s.property.id);
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: await authCookie(admin.id, admin.role),
       body: {

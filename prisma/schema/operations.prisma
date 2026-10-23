@@ -50,7 +50,7 @@ model MaintenanceRequest {
   id                      String                   @id @default(uuid())
   unitId                  String
   unit                    Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  // Null for a work order: a repair the property team raises itself (a vacant or unleased unit, or
+  // Null for a work order: a repair the property team raises itself (a vacant or unrented unit, or
   // something they found) rather than one a tenant reported. Everything that reads the tenant must
   // cope with that: there is no tenant to confirm the repair, rate the vendor or be told.
   tenantId                String?

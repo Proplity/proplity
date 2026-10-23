@@ -11,26 +11,26 @@ const LIST_LIMIT = 500;
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-// MANAGER/ADMIN only, exactly as scoped in the plan -- unlike lease access
+// MANAGER/ADMIN only, exactly as scoped in the plan -- unlike rent access
 // elsewhere, LANDLORD is deliberately not included here.
 export const GET = withAuth(
   async (_req, { session }, ctx: RouteCtx) => {
     const { id } = await ctx.params;
 
     try {
-      const lease = await prisma.lease.findUnique({
+      const rent = await prisma.rent.findUnique({
         where: { id },
         include: { unit: { select: { property: true } } },
       });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
       // Only the property's own team reads the notes on its tenants (ISS-144).
-      if (!canManageProperty(session, lease.unit.property)) {
+      if (!canManageProperty(session, rent.unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
       const notes = await prisma.note.findMany({
         take: LIST_LIMIT,
-        where: { leaseId: id },
+        where: { rentId: id },
         orderBy: { createdAt: 'desc' },
       });
       return NextResponse.json({ data: notes });
@@ -48,12 +48,12 @@ export const POST = withAuth(
     const { id } = await ctx.params;
 
     try {
-      const lease = await prisma.lease.findUnique({
+      const rent = await prisma.rent.findUnique({
         where: { id },
         include: { unit: { select: { property: true } } },
       });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
-      if (!canManageProperty(session, lease.unit.property)) {
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
+      if (!canManageProperty(session, rent.unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
@@ -61,7 +61,7 @@ export const POST = withAuth(
       if (!validated.success) return validated.response;
 
       const note = await prisma.note.create({
-        data: { leaseId: id, authorId: session.sub, body: validated.data.body },
+        data: { rentId: id, authorId: session.sub, body: validated.data.body },
       });
       return NextResponse.json({ data: note }, { status: 201 });
     } catch (err) {

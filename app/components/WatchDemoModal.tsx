@@ -63,8 +63,8 @@ const DEMO_CHAPTERS = [
     ],
   },
   {
-    id: 'leases-tenants',
-    title: 'Digital Leases & Tenant Portal',
+    id: 'rents-tenants',
+    title: 'Digital Rents & Tenant Portal',
     icon: Users,
     badge: '100% Paperless',
     description:
@@ -75,7 +75,7 @@ const DEMO_CHAPTERS = [
       { label: 'Paper Reduction', value: '100%' },
     ],
     features: [
-      'Click-wrap digital lease signing with audit trail',
+      'Click-wrap digital rent signing with audit trail',
       'Automated tenant screening and KYC check',
       'Built-in broadcast announcements and alerts',
       'Resident self-service portal for payments and requests',

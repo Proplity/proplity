@@ -15,8 +15,8 @@ const LIST_LIMIT = 500;
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-async function loadLeaseWithProperty(id: string) {
-  return prisma.lease.findUnique({
+async function loadRentWithProperty(id: string) {
+  return prisma.rent.findUnique({
     where: { id },
     include: { unit: { include: { property: true } } },
   });
@@ -26,18 +26,18 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
   const { id } = await ctx.params;
 
   try {
-    const lease = await loadLeaseWithProperty(id);
-    if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+    const rent = await loadRentWithProperty(id);
+    if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
 
-    const isOwnerTenant = session.role === 'TENANT' && lease.tenantId === session.sub;
-    if (!isOwnerTenant && !canManageProperty(session, lease.unit.property)) {
+    const isOwnerTenant = session.role === 'TENANT' && rent.tenantId === session.sub;
+    if (!isOwnerTenant && !canManageProperty(session, rent.unit.property)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const notices = await prisma.notice.findMany({
       take: LIST_LIMIT,
       // A draft is the property team's work in progress; the tenant sees a notice once it is sent (ISS-145).
-      where: { leaseId: id, ...(isOwnerTenant ? { status: { not: 'DRAFT' } } : {}) },
+      where: { rentId: id, ...(isOwnerTenant ? { status: { not: 'DRAFT' } } : {}) },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json({ data: notices });
@@ -61,27 +61,27 @@ const bodySchema = z.object({
 });
 
 // A notice only matters once it is sent: the tenant is told in the app and by email.
-/** A notice may point at an invoice, but only one on its own lease (ISS-145). */
-async function invoiceBelongsToLease(invoiceId: string, leaseId: string) {
+/** A notice may point at an invoice, but only one on its own rent (ISS-145). */
+async function invoiceBelongsToRent(invoiceId: string, rentId: string) {
   const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, leaseId },
+    where: { id: invoiceId, rentId },
     select: { id: true },
   });
   return !!invoice;
 }
 
 async function tellTenantOfNotice(
-  lease: { tenantId: string; unit: { unitNumber: string; property: { name: string } } },
+  rent: { tenantId: string; unit: { unitNumber: string; property: { name: string } } },
   type: string,
   content: string | null,
   req: NotifyRequest,
 ) {
   const label = type.replace(/_/g, ' ').toLowerCase();
   await notifyAndEmail(
-    lease.tenantId,
+    rent.tenantId,
     {
       title: `New notice: ${label}`,
-      body: `You have a ${label} for unit ${lease.unit.unitNumber} at ${lease.unit.property.name}.${content ? `\n\n${content}` : ''}`,
+      body: `You have a ${label} for unit ${rent.unit.unitNumber} at ${rent.unit.property.name}.${content ? `\n\n${content}` : ''}`,
       link: '/dashboard',
     },
     { req },
@@ -91,11 +91,11 @@ async function tellTenantOfNotice(
 const TENANT_SETTABLE_STATUSES: NoticeStatus[] = ['VIEWED', 'ACCEPTED', 'REJECTED', 'COUNTERED'];
 
 export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
-  const { id: leaseId } = await ctx.params;
+  const { id: rentId } = await ctx.params;
 
   try {
-    const lease = await loadLeaseWithProperty(leaseId);
-    if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+    const rent = await loadRentWithProperty(rentId);
+    if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
 
     const validated = await validateBody(req, bodySchema);
     if (!validated.success) return validated.response;
@@ -105,13 +105,13 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       await assertOwnsFileUrls([documentUrl], session.sub, 'notices');
     }
 
-    const isOwnerTenant = session.role === 'TENANT' && lease.tenantId === session.sub;
-    const canManage = canManageProperty(session, lease.unit.property);
+    const isOwnerTenant = session.role === 'TENANT' && rent.tenantId === session.sub;
+    const canManage = canManageProperty(session, rent.unit.property);
 
     // Update an existing notice.
     if (id) {
       const notice = await prisma.notice.findUnique({ where: { id } });
-      if (!notice || notice.leaseId !== leaseId) {
+      if (!notice || notice.rentId !== rentId) {
         return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
       }
       // A draft is not the tenant's to answer (ISS-145).
@@ -136,13 +136,13 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
         // A counter or a rejection needs the property team to act; a plain read does not.
         if (status !== 'VIEWED') {
           await notifyPropertyTeam(
-            lease.unit.property,
+            rent.unit.property,
             {
               title: `Tenant ${status.toLowerCase()} a ${notice.type.replace(/_/g, ' ').toLowerCase()}`,
-              body: `The tenant of unit ${lease.unit.unitNumber} at ${lease.unit.property.name} ${
+              body: `The tenant of unit ${rent.unit.unitNumber} at ${rent.unit.property.name} ${
                 status === 'COUNTERED' ? 'sent a counter-proposal to' : `${status.toLowerCase()}`
               } the ${notice.type.replace(/_/g, ' ').toLowerCase()}.`,
-              link: `/dashboard/tenants/${lease.id}`,
+              link: `/dashboard/tenants/${rent.id}`,
             },
             { req },
           );
@@ -151,8 +151,8 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       }
 
       if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      if (invoiceId && !(await invoiceBelongsToLease(invoiceId, leaseId))) {
-        return NextResponse.json({ error: 'That invoice is not on this lease' }, { status: 400 });
+      if (invoiceId && !(await invoiceBelongsToRent(invoiceId, rentId))) {
+        return NextResponse.json({ error: 'That invoice is not on this rent' }, { status: 400 });
       }
 
       const updated = await prisma.notice.update({
@@ -168,7 +168,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
         },
       });
       if (status === 'SENT' && notice.status !== 'SENT') {
-        await tellTenantOfNotice(lease, updated.type, updated.content, req);
+        await tellTenantOfNotice(rent, updated.type, updated.content, req);
       }
       return NextResponse.json({ data: updated });
     }
@@ -177,13 +177,13 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     if (!type)
       return NextResponse.json({ error: 'type is required to create a notice' }, { status: 400 });
-    if (invoiceId && !(await invoiceBelongsToLease(invoiceId, leaseId))) {
-      return NextResponse.json({ error: 'That invoice is not on this lease' }, { status: 400 });
+    if (invoiceId && !(await invoiceBelongsToRent(invoiceId, rentId))) {
+      return NextResponse.json({ error: 'That invoice is not on this rent' }, { status: 400 });
     }
 
     const created = await prisma.notice.create({
       data: {
-        leaseId,
+        rentId,
         type,
         invoiceId,
         content,
@@ -194,7 +194,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       },
     });
     if (created.status === 'SENT') {
-      await tellTenantOfNotice(lease, created.type, created.content, req);
+      await tellTenantOfNotice(rent, created.type, created.content, req);
     }
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (err) {

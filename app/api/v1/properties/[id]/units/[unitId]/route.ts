@@ -221,10 +221,10 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           });
         }
 
-        // If unit was purely a pending unit without leases, delete it
+        // If unit was purely a pending unit without rents, delete it
         if (found.unit.amenities.includes('approval:pending')) {
-          const leaseCount = await prisma.lease.count({ where: { unitId } });
-          if (leaseCount === 0) {
+          const rentCount = await prisma.rent.count({ where: { unitId } });
+          if (rentCount === 0) {
             await prisma.unit.delete({ where: { id: unitId } });
             return NextResponse.json({ data: { id: unitId, rejected: true, deleted: true } });
           }
@@ -336,13 +336,13 @@ export const DELETE = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Lease.unit has onDelete: Cascade -- a hard delete here would silently
-    // wipe lease/tenancy history for the unit. Refuse rather than cascade;
+    // Rent.unit has onDelete: Cascade -- a hard delete here would silently
+    // wipe rent/tenancy history for the unit. Refuse rather than cascade;
     // there's no ARCHIVED UnitStatus to soft-delete into instead.
-    const leaseCount = await prisma.lease.count({ where: { unitId } });
-    if (leaseCount > 0) {
+    const rentCount = await prisma.rent.count({ where: { unitId } });
+    if (rentCount > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete a unit with lease history', code: 'HAS_LEASES' },
+        { error: 'Cannot delete a unit with rent history', code: 'HAS_RENTS' },
         { status: 409 },
       );
     }

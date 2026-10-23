@@ -35,7 +35,7 @@ export const POST = withAuth(
           include: {
             _count: { select: { mergedFrom: true } },
             units: {
-              select: { id: true, leases: { where: { status: 'ACTIVE' }, select: { id: true } } },
+              select: { id: true, rents: { where: { status: 'ACTIVE' }, select: { id: true } } },
             },
           },
         }),
@@ -68,11 +68,11 @@ export const POST = withAuth(
         );
       }
 
-      // Merging rejects and unpublishes the source; units and leases are not moved, so a
+      // Merging rejects and unpublishes the source; units and rents are not moved, so a
       // listing with live tenancies must not be merged away.
-      if (source.units.some((u) => u.leases.length > 0)) {
+      if (source.units.some((u) => u.rents.length > 0)) {
         return NextResponse.json(
-          { error: 'This listing has active leases and cannot be merged' },
+          { error: 'This listing has active rents and cannot be merged' },
           { status: 400 },
         );
       }

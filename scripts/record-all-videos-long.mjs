@@ -431,7 +431,7 @@ async function main() {
       // Portfolio Tenants Roster
       await page.goto('/dashboard/tenants');
       await page.waitForTimeout(1200);
-      await setHud('👥 Landlord Portfolio Tenant Roster & Active Leases');
+      await setHud('👥 Landlord Portfolio Tenant Roster & Active Rents');
       await smoothScroll(300);
       await page.waitForTimeout(2000);
 
@@ -481,7 +481,7 @@ async function main() {
       // Direct Tenant Onboarding
       await page.goto('/dashboard/tenants/add');
       await page.waitForTimeout(1200);
-      await setHud('✉️ Direct Tenant Onboarding & Lease Invitation Builder');
+      await setHud('✉️ Direct Tenant Onboarding & Rent Invitation Builder');
       await smoothScroll(350);
       await page.waitForTimeout(2000);
     },

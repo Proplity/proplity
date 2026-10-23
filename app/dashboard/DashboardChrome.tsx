@@ -297,7 +297,7 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
                 <h3 className="mb-2 text-sm font-semibold">AI Assistant</h3>
                 <p className="mb-3 text-xs text-gray-600">
                   {role === 'tenant'
-                    ? 'Get instant help with payments, maintenance, and lease questions'
+                    ? 'Get instant help with payments, maintenance, and rent questions'
                     : 'Get instant help with tenant queries, rent tracking, and more'}
                 </p>
                 <button

@@ -13,7 +13,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
   const propertySql = Prisma.sql`(pr."managerId" = ${userId} OR pr."landlordId" = ${userId})`;
   const invoiceWhere: Prisma.InvoiceWhereInput = {
     OR: [
-      { lease: { unit: { property: scope } } },
+      { rent: { unit: { property: scope } } },
       { maintenanceRequest: { unit: { property: scope } } },
     ],
   };
@@ -23,8 +23,8 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
 
   const [
     properties,
-    leaseStatusCounts,
-    unpaidLeaseRows,
+    rentStatusCounts,
+    unpaidRentRows,
     collectedAll,
     collectedMonth,
     pendingRows,
@@ -37,20 +37,20 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
     payments,
   ] = await Promise.all([
     prisma.property.findMany({ where: scope, select: { units: { select: { status: true } } } }),
-    prisma.lease.groupBy({
+    prisma.rent.groupBy({
       by: ['status'],
       where: { unit: { property: scope } },
       _count: { _all: true },
     }),
-    // Earliest unpaid due date per active lease -> due / overdue.
-    prisma.$queryRaw<{ leaseId: string; due: Date }[]>(Prisma.sql`
-      SELECT i."leaseId" AS "leaseId", MIN(i."dueDate") AS due
+    // Earliest unpaid due date per active rent -> due / overdue.
+    prisma.$queryRaw<{ rentId: string; due: Date }[]>(Prisma.sql`
+      SELECT i."rentId" AS "rentId", MIN(i."dueDate") AS due
       FROM "Invoice" i
-      JOIN "Lease" l ON l."id" = i."leaseId" AND l."status" = 'ACTIVE'
+      JOIN "Rent" l ON l."id" = i."rentId" AND l."status" = 'ACTIVE'
       JOIN "Unit" u ON u."id" = l."unitId"
       JOIN "Property" pr ON pr."id" = u."propertyId"
       WHERE i."status" NOT IN ('PAID', 'CANCELLED') AND ${propertySql}
-      GROUP BY i."leaseId"`),
+      GROUP BY i."rentId"`),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { invoice: invoiceWhere } }),
     prisma.payment.aggregate({
       _sum: { amount: true },
@@ -63,7 +63,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
         ON p."invoiceId" = i."id"
       WHERE i."status" NOT IN ('PAID', 'CANCELLED')
         AND (
-          i."leaseId" IN (SELECT l."id" FROM "Lease" l JOIN "Unit" u ON u."id" = l."unitId"
+          i."rentId" IN (SELECT l."id" FROM "Rent" l JOIN "Unit" u ON u."id" = l."unitId"
             JOIN "Property" pr ON pr."id" = u."propertyId" WHERE ${propertySql})
           OR i."maintenanceRequestId" IN (SELECT m."id" FROM "MaintenanceRequest" m
             JOIN "Unit" u ON u."id" = m."unitId" JOIN "Property" pr ON pr."id" = u."propertyId"
@@ -72,7 +72,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
     prisma.$queryRaw<{ m: string; v: number }[]>(Prisma.sql`
       SELECT to_char(date_trunc('month', i."dueDate"), 'YYYY-MM') AS m, SUM(i."amount") AS v
       FROM "Invoice" i
-      JOIN "Lease" l ON l."id" = i."leaseId" JOIN "Unit" u ON u."id" = l."unitId"
+      JOIN "Rent" l ON l."id" = i."rentId" JOIN "Unit" u ON u."id" = l."unitId"
       JOIN "Property" pr ON pr."id" = u."propertyId"
       WHERE i."dueDate" >= ${sixMonthsAgo} AND i."dueDate" < ${monthEnd} AND ${propertySql}
       GROUP BY m`),
@@ -80,7 +80,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
       SELECT to_char(date_trunc('month', p."paidAt"), 'YYYY-MM') AS m, SUM(p."amount") AS v
       FROM "Payment" p
       JOIN "Invoice" i ON i."id" = p."invoiceId"
-      JOIN "Lease" l ON l."id" = i."leaseId" JOIN "Unit" u ON u."id" = l."unitId"
+      JOIN "Rent" l ON l."id" = i."rentId" JOIN "Unit" u ON u."id" = l."unitId"
       JOIN "Property" pr ON pr."id" = u."propertyId"
       WHERE p."paidAt" >= ${sixMonthsAgo} AND p."paidAt" < ${monthEnd} AND ${propertySql}
       GROUP BY m`),
@@ -88,7 +88,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
       SELECT pr."name" AS name, SUM(p."amount") AS amount
       FROM "Payment" p
       JOIN "Invoice" i ON i."id" = p."invoiceId"
-      JOIN "Lease" l ON l."id" = i."leaseId" JOIN "Unit" u ON u."id" = l."unitId"
+      JOIN "Rent" l ON l."id" = i."rentId" JOIN "Unit" u ON u."id" = l."unitId"
       JOIN "Property" pr ON pr."id" = u."propertyId"
       WHERE ${propertySql}
       GROUP BY pr."id", pr."name" ORDER BY amount DESC LIMIT 12`),
@@ -102,7 +102,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
       where: { status: { notIn: ['COMPLETED', 'CANCELLED'] }, unit: { property: scope } },
       _count: { _all: true },
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: {
         status: 'ACTIVE',
         unit: { property: scope },
@@ -129,7 +129,7 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
         paymentMethod: true,
         invoice: {
           select: {
-            lease: {
+            rent: {
               select: {
                 tenant: { select: { name: true } },
                 unit: { select: { property: { select: { name: true } } } },
@@ -150,17 +150,17 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
     else if (occupied > 0) partial++;
   }
 
-  const leaseCount = (...s: string[]) =>
-    leaseStatusCounts.filter((g) => s.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
-  const activeLeases = leaseCount('ACTIVE');
+  const rentCount = (...s: string[]) =>
+    rentStatusCounts.filter((g) => s.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
+  const activeRents = rentCount('ACTIVE');
 
-  // Rent status of active leases; leases with no unpaid invoice are "paid".
-  const rentStatusByLease: Record<string, 'due' | 'overdue'> = {};
-  for (const r of unpaidLeaseRows) {
-    rentStatusByLease[r.leaseId] = new Date(r.due) < now ? 'overdue' : 'due';
+  // Rent status of active rents; rents with no unpaid invoice are "paid".
+  const rentStatusByRent: Record<string, 'due' | 'overdue'> = {};
+  for (const r of unpaidRentRows) {
+    rentStatusByRent[r.rentId] = new Date(r.due) < now ? 'overdue' : 'due';
   }
-  const overdue = Object.values(rentStatusByLease).filter((s) => s === 'overdue').length;
-  const due = Object.values(rentStatusByLease).length - overdue;
+  const overdue = Object.values(rentStatusByRent).filter((s) => s === 'overdue').length;
+  const due = Object.values(rentStatusByRent).length - overdue;
 
   const collected = num(collectedAll._sum.amount);
   const pending = num(pendingRows[0]?.pending);
@@ -196,13 +196,13 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
       partial,
       vacant: properties.length - fully - partial,
     },
-    leases: {
-      active: activeLeases,
-      terminated: leaseCount('TERMINATED', 'EXPIRED'),
-      paid: activeLeases - due - overdue,
+    rents: {
+      active: activeRents,
+      terminated: rentCount('TERMINATED', 'EXPIRED'),
+      paid: activeRents - due - overdue,
       due,
       overdue,
-      rentStatusByLease,
+      rentStatusByRent,
     },
     money: {
       collected,
@@ -233,8 +233,8 @@ export async function ownerBreakdownSummary(userId: string, now = new Date()) {
       amount: p.amount,
       paidAt: p.paidAt,
       method: p.paymentMethod,
-      tenant: p.invoice.lease?.tenant.name ?? null,
-      property: p.invoice.lease?.unit.property.name ?? null,
+      tenant: p.invoice.rent?.tenant.name ?? null,
+      property: p.invoice.rent?.unit.property.name ?? null,
     })),
   };
 }

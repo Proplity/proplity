@@ -240,7 +240,7 @@ async function main() {
       await humanType(page.getByPlaceholder('Enter your password'), PW);
       await smoothClick(page.getByRole('button', { name: 'Sign In' }));
       await page.waitForURL('**/dashboard**', { timeout: 15000 });
-      await setHud('🏠 Tenant Dashboard: Active Lease & Rent Due Banner');
+      await setHud('🏠 Tenant Dashboard: Active Rent & Rent Due Banner');
       await smoothMove(400, 300);
       await page.waitForTimeout(800);
 
@@ -285,7 +285,7 @@ async function main() {
 
       await page.goto('/dashboard/tenants');
       await page.waitForTimeout(800);
-      await setHud('👥 Portfolio Tenant Roster & Active Lease Records');
+      await setHud('👥 Portfolio Tenant Roster & Active Rent Records');
       await smoothScroll(300);
 
       await page.goto('/dashboard/breakdown/revenue');
@@ -319,7 +319,7 @@ async function main() {
 
       await page.goto('/dashboard/tenants/add');
       await page.waitForTimeout(800);
-      await setHud('✉️ Direct Tenant Onboarding & Lease Invite Builder');
+      await setHud('✉️ Direct Tenant Onboarding & Rent Invite Builder');
       await smoothScroll(350);
       await page.waitForTimeout(1000);
     },

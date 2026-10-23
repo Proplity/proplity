@@ -87,16 +87,16 @@ are configured for this environment before treating it as a defect.
 - [ ] Browse available properties and view details on one
 - [ ] Schedule a viewing for a property before renting it: pick a date from tomorrow (a Sunday is refused) and a start time between 9:00 AM and 5:00 PM (Lagos time)
 - [ ] One person at a time: with a viewing booked at a property for 10:00 AM (by another account, still requested or confirmed), open the same property's form on the same date. 10:00 AM is marked "(booked)", listed under the time field and cannot be chosen; another property, or another time, is free. After the manager declines the request (or its owner cancels it), 10:00 AM can be booked again. If someone books your time while you are on step 2, confirming sends you back to choose another time
-- [ ] The dashboard's **Needs your attention** list shows a lease to sign, payments due or overdue, finished repairs to rate and an unfinished profile; each row opens the right screen
-- [ ] Notifications arrive (bell, and an email in the dev inbox) for a lease to sign, a new invoice, a completed repair and an overdue payment
+- [ ] The dashboard's **Needs your attention** list shows a rent to sign, payments due or overdue, finished repairs to rate and an unfinished profile; each row opens the right screen
+- [ ] Notifications arrive (bell, and an email in the dev inbox) for a rent to sign, a new invoice, a completed repair and an overdue payment
 - [ ] Complete your profile (first **Apply Now** redirects to _Complete Your
       Profile_) — phone, year of birth, emergency contact, ID upload;
       previous landlord optional. Confirm the application can't be reached
       until the required fields are filled
 - [ ] Apply to rent a property — the 3-step form (Applicant read-only,
       Employment, Review & Submit)
-- [ ] _My Rentals_ — every current and past lease, linking to the property
-- [ ] View "my dashboard" — see current lease/unit at a glance
+- [ ] _My Rentals_ — every current and past rent, linking to the property
+- [ ] View "my dashboard" — see current rent/unit at a glance
 - [ ] Submit a maintenance request (e.g. "kitchen tap is leaking") with
       photos, urgency level, and a preferred time
 - [ ] Track a maintenance request — watch its status change as staff and
@@ -124,7 +124,7 @@ are configured for this environment before treating it as a defect.
 - [ ] Set up auto-pay — with no card payment yet it says "No saved card yet";
       after a card payment it offers **Enable Auto-Pay**, shows "Auto-pay is
       active (card ending …)", and **Cancel Auto-Pay** reverts it
-- [ ] Sign a lease that is awaiting signature (card at the top of the
+- [ ] Sign a rent that is awaiting signature (card at the top of the
       dashboard)
 - [ ] Message their landlord/manager directly in the app
 - [ ] View the neighbourhood report for their property (safety, flooding,
@@ -147,11 +147,11 @@ are configured for this environment before treating it as a defect.
 - [ ] Schedule Review — sends a message to the property's manager and opens
       the thread; disabled with "No manager assigned yet" when there's none
 - [ ] Generate, copy and deactivate a manager invitation code
-- [ ] Add a tenant — set up a new tenant + lease on one of their units
-      (**note**: the lease starts as Pending; open that tenant's page and
-      click **Activate Lease** afterward, which is what actually marks the
+- [ ] Add a tenant — set up a new tenant + rent on one of their units
+      (**note**: the rent starts as Pending; open that tenant's page and
+      click **Activate Rent** afterward, which is what actually marks the
       unit occupied — this is an intentional second step, not a bug)
-- [ ] View a tenant's details and lease terms
+- [ ] View a tenant's details and rent terms
 - [ ] See maintenance requests coming in on their properties
 - [ ] Get notified when a tenant pays rent or submits a maintenance request
 - [ ] Message tenants, managers, or vendors
@@ -168,7 +168,7 @@ Same as landlord, plus the day-to-day operational tools:
       occupancy counts
 - [ ] Manage the tenant list — add, view, and track all tenants. Adding a
       tenant pre-fills the unit's service charge
-- [ ] On a lease: **Renew Lease** (creates the new lease, expires the old),
+- [ ] On a rent: **Renew Rent** (creates the new rent, expires the old),
       **Send Notice** (each type), **Send Invoice** (each type incl.
       Service Charge) — the tenant sees both
 - [ ] **Bank Transfers** tab: transfers waiting for confirmation, confirmed
@@ -284,7 +284,7 @@ Same as landlord, plus the day-to-day operational tools:
 - **Email, file uploads, and rent payment** each depend on a provider key
   being configured for this deployment (see the note at the top). Ask your
   technical contact which are live in the environment you're testing.
-- **Adding a tenant is a two-step process** — creating the lease, then
+- **Adding a tenant is a two-step process** — creating the rent, then
   separately activating it — by design, not a missed step in the flow.
 
 ---

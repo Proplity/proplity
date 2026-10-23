@@ -55,8 +55,8 @@ model User {
   loginAttempts                LoginAttempt[]
   managedProperties            Property[]                @relation("ManagedProperties")
   ownedProperties              Property[]                @relation("OwnedProperties")
-  leases                       Lease[]                   @relation("TenantLeases")
-  leaseSignatures              LeaseSignature[]
+  rents                       Rent[]                   @relation("TenantRents")
+  rentSignatures              RentSignature[]
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
   approvedRepairs              MaintenanceRequest[]      @relation("RepairApprovals")
@@ -139,7 +139,7 @@ model KycVerification {
   @@index([userId, submittedAt])
 }
 
-// Internal staff-only annotation about a person or lease — distinct from
+// Internal staff-only annotation about a person or rent — distinct from
 // Message/Conversation, which is tenant-facing communication. A note is
 // never visible to the person it's about.
 model Note {
@@ -148,8 +148,8 @@ model Note {
   author      User     @relation("NoteAuthor", fields: [authorId], references: [id])
   aboutUserId String?
   aboutUser   User?    @relation("NoteAboutUser", fields: [aboutUserId], references: [id])
-  leaseId     String?
-  lease       Lease?   @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  rentId     String?
+  rent       Rent?   @relation(fields: [rentId], references: [id], onDelete: Cascade)
   body        String
   createdAt   DateTime @default(now())
 

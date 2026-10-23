@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createInvoice,
   createMaintenanceRequest,
   bookableViewingTime,
@@ -25,21 +25,21 @@ function hasKey(value: unknown, key: string): boolean {
   return false;
 }
 
-describe('private notes on a lease belong to the property team (ISS-144)', () => {
+describe('private notes on a rent belong to the property team (ISS-144)', () => {
   beforeAll(async () => {
     await resetDb();
   });
 
-  it('keeps one manager out of the notes on another manager’s lease', async () => {
+  it('keeps one manager out of the notes on another manager’s rent', async () => {
     const owner = await createUser(Role.MANAGER);
     const stranger = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: owner.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const ownerCookie = await authCookie(owner.id, owner.role);
     const strangerCookie = await authCookie(stranger.id, stranger.role);
-    const url = `/api/v1/leases/${lease.id}/notes`;
+    const url = `/api/v1/rents/${rent.id}/notes`;
 
     const written = await apiFetch(url, {
       method: 'POST',
@@ -52,7 +52,7 @@ describe('private notes on a lease belong to the property team (ISS-144)', () =>
     expect(
       (await apiFetch(url, { method: 'POST', cookie: strangerCookie, body: { body: 'x' } })).status,
     ).toBe(403);
-    expect(await testPrisma.note.count({ where: { leaseId: lease.id } })).toBe(1);
+    expect(await testPrisma.note.count({ where: { rentId: rent.id } })).toBe(1);
 
     const own = await apiFetch<{ data: unknown[] }>(url, { cookie: ownerCookie });
     expect(own.status).toBe(200);
@@ -65,38 +65,38 @@ describe('a tenant sees only the notices the property team has sent (ISS-145)', 
     await resetDb();
   });
 
-  it('hides drafts from the notice list and the lease, and refuses answers to them', async () => {
+  it('hides drafts from the notice list and the rent, and refuses answers to them', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const draft = await testPrisma.notice.create({
       data: {
-        leaseId: lease.id,
+        rentId: rent.id,
         type: 'TERMINATION_NOTICE',
         status: 'DRAFT',
         content: 'Not sent yet',
       },
     });
     const sent = await testPrisma.notice.create({
-      data: { leaseId: lease.id, type: 'RENT_INCREASE', status: 'SENT', content: 'From March' },
+      data: { rentId: rent.id, type: 'RENT_INCREASE', status: 'SENT', content: 'From March' },
     });
     const tenantCookie = await authCookie(tenant.id, tenant.role);
     const managerCookie = await authCookie(manager.id, manager.role);
 
-    const list = await apiFetch<{ data: { id: string }[] }>(`/api/v1/leases/${lease.id}/notices`, {
+    const list = await apiFetch<{ data: { id: string }[] }>(`/api/v1/rents/${rent.id}/notices`, {
       cookie: tenantCookie,
     });
     expect(list.body.data.map((n) => n.id)).toEqual([sent.id]);
 
     const detail = await apiFetch<{ data: { notices: { id: string }[] } }>(
-      `/api/v1/leases/${lease.id}`,
+      `/api/v1/rents/${rent.id}`,
       { cookie: tenantCookie },
     );
     expect(detail.body.data.notices.map((n) => n.id)).toEqual([sent.id]);
 
-    const answer = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const answer = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: tenantCookie,
       body: { id: draft.id, status: 'ACCEPTED' },
@@ -105,21 +105,21 @@ describe('a tenant sees only the notices the property team has sent (ISS-145)', 
     expect((await testPrisma.notice.findUnique({ where: { id: draft.id } }))?.status).toBe('DRAFT');
 
     // The property team still sees both.
-    const team = await apiFetch<{ data: { id: string }[] }>(`/api/v1/leases/${lease.id}/notices`, {
+    const team = await apiFetch<{ data: { id: string }[] }>(`/api/v1/rents/${rent.id}/notices`, {
       cookie: managerCookie,
     });
     expect(team.body.data).toHaveLength(2);
   });
 
-  it('will not attach a notice to an invoice of another lease', async () => {
+  it('will not attach a notice to an invoice of another rent', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const other = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
-    const lease = await createLease((await createUnit(property.id)).id, tenant.id);
-    const otherLease = await createLease((await createUnit(property.id)).id, other.id);
-    const foreign = await createInvoice({ leaseId: otherLease.id });
-    const res = await apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+    const rent = await createRent((await createUnit(property.id)).id, tenant.id);
+    const otherRent = await createRent((await createUnit(property.id)).id, other.id);
+    const foreign = await createInvoice({ rentId: otherRent.id });
+    const res = await apiFetch(`/api/v1/rents/${rent.id}/notices`, {
       method: 'POST',
       cookie: await authCookie(manager.id, manager.role),
       body: { type: 'PAYMENT_REMINDER', invoiceId: foreign.id },
@@ -214,7 +214,7 @@ describe('who can be named on a new property (ISS-147)', () => {
   });
 });
 
-describe('the property record is not sent to people who only need the lease, repair or invoice (ISS-148)', () => {
+describe('the property record is not sent to people who only need the rent, repair or invoice (ISS-148)', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -233,8 +233,8 @@ describe('the property record is not sent to people who only need the lease, rep
       data: { moderationNotes: 'Possible duplicate of: Other Court (abc)' },
     });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
-    const invoice = await createInvoice({ leaseId: lease.id });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
+    const invoice = await createInvoice({ rentId: rent.id });
     const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
     const application = await testPrisma.application.create({
       data: { unitId: unit.id, applicantId: tenant.id, details: {} },
@@ -243,8 +243,8 @@ describe('the property record is not sent to people who only need the lease, rep
     const vendorCookie = await authCookie(vendor.id, vendor.role);
 
     const seen = [
-      await apiFetch('/api/v1/leases', { cookie: tenantCookie }),
-      await apiFetch(`/api/v1/leases/${lease.id}`, { cookie: tenantCookie }),
+      await apiFetch('/api/v1/rents', { cookie: tenantCookie }),
+      await apiFetch(`/api/v1/rents/${rent.id}`, { cookie: tenantCookie }),
       await apiFetch(`/api/v1/invoices/${invoice.id}`, { cookie: tenantCookie }),
       await apiFetch('/api/v1/maintenance/requests', { cookie: tenantCookie }),
       await apiFetch(`/api/v1/maintenance/requests/${request.id}`, { cookie: tenantCookie }),

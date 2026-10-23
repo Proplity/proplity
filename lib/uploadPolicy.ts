@@ -9,7 +9,7 @@ export const FOLDER_ROLES: Record<UploadFolder, Role[]> = {
   profile: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR],
   properties: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
   notices: [Role.LANDLORD, Role.MANAGER, Role.ADMIN],
-  leases: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
+  rents: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
   communications: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR, Role.ADMIN],
   reconciliation: [Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.ADMIN],
 };

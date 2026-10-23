@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
-import { LeaseStatus, PaymentFrequency, LateFeeType } from '@prisma/client';
+import { RentStatus, PaymentFrequency, LateFeeType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -21,11 +21,11 @@ type RouteCtx = { params: Promise<{ id: string }> };
 /**
  * Thrown from inside a $transaction so the whole activation rolls back --
  * returning a plain NextResponse from within the callback would commit the
- * lease.update that already ran. Caught below and mapped to a 409.
+ * rent.update that already ran. Caught below and mapped to a 409.
  */
 class UnitAlreadyOccupiedError extends Error {
-  constructor(public readonly conflictingLeaseId: string) {
-    super('Unit already has an active lease');
+  constructor(public readonly conflictingRentId: string) {
+    super('Unit already has an active rent');
   }
 }
 
@@ -43,8 +43,8 @@ const tenantSelect = {
   emergencyContactPhone: true,
 } as const;
 
-function loadLease(id: string) {
-  return prisma.lease.findUnique({
+function loadRent(id: string) {
+  return prisma.rent.findUnique({
     where: { id },
     include: {
       unit: { include: { property: PUBLIC_PROPERTY } },
@@ -68,27 +68,27 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
   const { id } = await ctx.params;
 
   try {
-    const lease = await loadLease(id);
-    if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+    const rent = await loadRent(id);
+    if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
 
-    const isOwnerTenant = session.role === 'TENANT' && lease.tenantId === session.sub;
-    if (!isOwnerTenant && !canManageProperty(session, lease.unit.property)) {
+    const isOwnerTenant = session.role === 'TENANT' && rent.tenantId === session.sub;
+    if (!isOwnerTenant && !canManageProperty(session, rent.unit.property)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Drafts are the property team's work in progress (ISS-145).
     if (isOwnerTenant) {
-      lease.notices = lease.notices.filter((n) => n.status !== 'DRAFT');
+      rent.notices = rent.notices.filter((n) => n.status !== 'DRAFT');
     }
 
-    return NextResponse.json({ data: lease });
+    return NextResponse.json({ data: rent });
   } catch (err) {
     return handleApiError(err);
   }
 });
 
 const patchSchema = z.object({
-  status: z.nativeEnum(LeaseStatus).optional(),
+  status: z.nativeEnum(RentStatus).optional(),
   renew: z
     .object({
       startDate: z.coerce.date(),
@@ -98,7 +98,7 @@ const patchSchema = z.object({
       deposit: z.number().nonnegative(),
     })
     .optional(),
-  // Landlord/manager autonomy over an existing lease's late-fee terms,
+  // Landlord/manager autonomy over an existing rent's late-fee terms,
   // deliberately unbounded -- no platform-imposed min/max.
   gracePeriodDays: z.number().int().nonnegative().optional(),
   lateFeeType: z.nativeEnum(LateFeeType).optional(),
@@ -112,12 +112,12 @@ export const PATCH = withAuth(
     const { id } = await ctx.params;
 
     try {
-      const lease = await prisma.lease.findUnique({
+      const rent = await prisma.rent.findUnique({
         where: { id },
         include: { unit: { include: { property: true } } },
       });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
-      if (!canManageProperty(session, lease.unit.property)) {
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
+      if (!canManageProperty(session, rent.unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
@@ -134,58 +134,58 @@ export const PATCH = withAuth(
       } = validated.data;
 
       if (signedAgreementUrl) {
-        await assertOwnsFileUrls([signedAgreementUrl], session.sub, 'leases');
+        await assertOwnsFileUrls([signedAgreementUrl], session.sub, 'rents');
       }
 
-      // Renewal (rule 6): a NEW Lease row linked via renewedFromId, old
-      // lease set to EXPIRED -- never a PENDING_RENEWAL status, it doesn't
+      // Renewal (rule 6): a NEW Rent row linked via renewedFromId, old
+      // rent set to EXPIRED -- never a PENDING_RENEWAL status, it doesn't
       // exist. This route call represents the acceptance moment, so the
-      // new lease starts ACTIVE. Same unit stays occupied throughout, but
+      // new rent starts ACTIVE. Same unit stays occupied throughout, but
       // set it explicitly anyway rather than assuming it was already right.
       if (renew) {
-        const newLease = await prisma.$transaction(async (tx) => {
+        const newRent = await prisma.$transaction(async (tx) => {
           // Two requests for the same unit must take turns: without the lock both could pass the
-          // check below and the unit would end up with two active leases (ISS-139).
-          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${lease.unitId} FOR UPDATE`;
-          // Same guard, minus the lease being renewed FROM -- that one is set
+          // check below and the unit would end up with two active rents (ISS-139).
+          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${rent.unitId} FOR UPDATE`;
+          // Same guard, minus the rent being renewed FROM -- that one is set
           // to EXPIRED a few lines down, so it is not a real conflict. Any
-          // OTHER active lease on the unit is.
-          const conflicting = await tx.lease.findFirst({
-            where: { unitId: lease.unitId, status: 'ACTIVE', id: { not: lease.id } },
+          // OTHER active rent on the unit is.
+          const conflicting = await tx.rent.findFirst({
+            where: { unitId: rent.unitId, status: 'ACTIVE', id: { not: rent.id } },
             select: { id: true },
           });
           if (conflicting) {
             throw new UnitAlreadyOccupiedError(conflicting.id);
           }
 
-          const created = await tx.lease.create({
+          const created = await tx.rent.create({
             data: {
-              unitId: lease.unitId,
-              tenantId: lease.tenantId,
+              unitId: rent.unitId,
+              tenantId: rent.tenantId,
               startDate: renew.startDate,
               endDate: renew.endDate,
               rentAmount: renew.rentAmount,
-              paymentFrequency: renew.paymentFrequency ?? lease.paymentFrequency,
+              paymentFrequency: renew.paymentFrequency ?? rent.paymentFrequency,
               deposit: renew.deposit,
               status: 'ACTIVE',
-              renewedFromId: lease.id,
+              renewedFromId: rent.id,
             },
           });
-          await tx.lease.update({ where: { id: lease.id }, data: { status: 'EXPIRED' } });
-          await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'OCCUPIED' } });
+          await tx.rent.update({ where: { id: rent.id }, data: { status: 'EXPIRED' } });
+          await tx.unit.update({ where: { id: rent.unitId }, data: { status: 'OCCUPIED' } });
           return created;
         });
 
         await notifyAndEmail(
-          lease.tenantId,
+          rent.tenantId,
           {
-            title: 'Your lease was renewed',
-            body: `Your lease for unit ${lease.unit.unitNumber} at ${lease.unit.property.name} was renewed: ${renew.startDate.toDateString()} to ${renew.endDate.toDateString()}, rent ₦${renew.rentAmount.toLocaleString()}.`,
+            title: 'Your rent was renewed',
+            body: `Your rent for unit ${rent.unit.unitNumber} at ${rent.unit.property.name} was renewed: ${renew.startDate.toDateString()} to ${renew.endDate.toDateString()}, rent ₦${renew.rentAmount.toLocaleString()}.`,
             link: '/dashboard',
           },
           { req },
         );
-        return NextResponse.json({ data: newLease }, { status: 201 });
+        return NextResponse.json({ data: newRent }, { status: 201 });
       }
 
       const termsUpdate = {
@@ -198,81 +198,79 @@ export const PATCH = withAuth(
 
       if (status || Object.keys(termsUpdate).length > 0) {
         const updated = await prisma.$transaction(async (tx) => {
-          // Serialise changes to one unit's leases: the occupancy check below reads the other
-          // leases, so two activations at once must not both pass it (ISS-139).
-          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${lease.unitId} FOR UPDATE`;
-          const result = await tx.lease.update({
+          // Serialise changes to one unit's rents: the occupancy check below reads the other
+          // rents, so two activations at once must not both pass it (ISS-139).
+          await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${rent.unitId} FOR UPDATE`;
+          const result = await tx.rent.update({
             where: { id },
             data: { ...(status ? { status } : {}), ...termsUpdate },
           });
 
-          // Unit.status was previously never touched by a lease's own
+          // Unit.status was previously never touched by a rent's own
           // lifecycle (documented gap in CLAUDE.md) -- ACTIVE occupies the
           // unit; TERMINATED/EXPIRED frees it back up, but only once no
-          // other ACTIVE lease remains on the same unit (defensive, since
-          // nothing in the schema prevents more than one lease per unit).
+          // other ACTIVE rent remains on the same unit (defensive, since
+          // nothing in the schema prevents more than one rent per unit).
           if (status === 'ACTIVE') {
             // Occupancy guard, the mirror of the release check below. The
-            // freeing path was already defensive about a second ACTIVE lease;
+            // freeing path was already defensive about a second ACTIVE rent;
             // the occupying path was not, so a unit could be handed to a
-            // second tenant while the first was still in it. Creating a lease
+            // second tenant while the first was still in it. Creating a rent
             // is deliberately still allowed on an occupied unit -- next
-            // year's lease is normally signed before this year's ends -- so
+            // year's rent is normally signed before this year's ends -- so
             // ACTIVATION, not creation, is the right place to draw the line.
-            const conflicting = await tx.lease.findFirst({
-              where: { unitId: lease.unitId, status: 'ACTIVE', id: { not: id } },
+            const conflicting = await tx.rent.findFirst({
+              where: { unitId: rent.unitId, status: 'ACTIVE', id: { not: id } },
               select: { id: true, tenantId: true },
             });
             if (conflicting) {
               throw new UnitAlreadyOccupiedError(conflicting.id);
             }
-            await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'OCCUPIED' } });
+            await tx.unit.update({ where: { id: rent.unitId }, data: { status: 'OCCUPIED' } });
             await reopenThreadsWhenTenancyResumes(tx, {
-              id: lease.id,
-              tenantId: lease.tenantId,
-              propertyId: lease.unit.propertyId,
+              id: rent.id,
+              tenantId: rent.tenantId,
+              propertyId: rent.unit.propertyId,
             });
           } else if (status === 'TERMINATED' || status === 'EXPIRED') {
-            const stillActive = await tx.lease.findFirst({
-              where: { unitId: lease.unitId, status: 'ACTIVE', id: { not: lease.id } },
+            const stillActive = await tx.rent.findFirst({
+              where: { unitId: rent.unitId, status: 'ACTIVE', id: { not: rent.id } },
             });
             if (!stillActive) {
-              await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'VACANT' } });
+              await tx.unit.update({ where: { id: rent.unitId }, data: { status: 'VACANT' } });
             }
             // The tenant's gate codes end with the tenancy (ISS-138).
             await revokeCodesWhenTenancyEnds(tx, {
-              id: lease.id,
-              unitId: lease.unitId,
-              tenantId: lease.tenantId,
+              id: rent.id,
+              unitId: rent.unitId,
+              tenantId: rent.tenantId,
             });
-            // ...and so does their say in the lease and community threads (ISS-142).
+            // ...and so does their say in the rent and community threads (ISS-142).
             await closeThreadsWhenTenancyEnds(tx, {
-              id: lease.id,
-              unitId: lease.unitId,
-              tenantId: lease.tenantId,
-              propertyId: lease.unit.propertyId,
+              id: rent.id,
+              unitId: rent.unitId,
+              tenantId: rent.tenantId,
+              propertyId: rent.unit.propertyId,
             });
           }
 
           return result;
         });
-        const unitLabel = `unit ${lease.unit.unitNumber} at ${lease.unit.property.name}`;
+        const unitLabel = `unit ${rent.unit.unitNumber} at ${rent.unit.property.name}`;
         const statusNote: Record<string, string> = {
-          ACTIVE: `Your lease for ${unitLabel} is now active.`,
-          TERMINATED: `Your lease for ${unitLabel} was terminated.`,
-          EXPIRED: `Your lease for ${unitLabel} has ended.`,
+          ACTIVE: `Your rent for ${unitLabel} is now active.`,
+          TERMINATED: `Your rent for ${unitLabel} was terminated.`,
+          EXPIRED: `Your rent for ${unitLabel} has ended.`,
         };
         await notifyAndEmail(
-          lease.tenantId,
+          rent.tenantId,
           {
             title:
-              status && statusNote[status]
-                ? `Lease ${status.toLowerCase()}`
-                : 'Lease terms updated',
+              status && statusNote[status] ? `Rent ${status.toLowerCase()}` : 'Rent terms updated',
             body:
               status && statusNote[status]
                 ? statusNote[status]
-                : `The terms of your lease for ${unitLabel} were updated. Open it to see what changed.`,
+                : `The terms of your rent for ${unitLabel} were updated. Open it to see what changed.`,
             link: '/dashboard',
           },
           { req },
@@ -285,9 +283,9 @@ export const PATCH = withAuth(
       if (err instanceof UnitAlreadyOccupiedError) {
         return NextResponse.json(
           {
-            error: 'This unit already has an active lease',
+            error: 'This unit already has an active rent',
             code: 'UNIT_OCCUPIED',
-            conflictingLeaseId: err.conflictingLeaseId,
+            conflictingRentId: err.conflictingRentId,
           },
           { status: 409 },
         );

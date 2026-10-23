@@ -47,9 +47,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
     vi.clearAllMocks();
   });
 
-  it('respects lease grace period: does not flag invoice before grace period expires', async () => {
+  it('respects rent grace period: does not flag invoice before grace period expires', async () => {
     const now = new Date();
-    // Due 2 days ago, but lease has 7 days grace period -> 5 days remaining in grace
+    // Due 2 days ago, but rent has 7 days grace period -> 5 days remaining in grace
     const candidateInvoice = {
       id: 'inv-grace',
       invoiceNumber: 'INV-1001',
@@ -57,8 +57,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 2 * MS_PER_DAY),
       amount: 150_000,
-      leaseId: 'lease-1',
-      lease: {
+      rentId: 'rent-1',
+      rent: {
         gracePeriodDays: 7,
         lateFeeType: 'PERCENTAGE',
         lateFeePercentage: 5,
@@ -86,8 +86,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 10 * MS_PER_DAY),
       amount: 200_000,
-      leaseId: 'lease-2',
-      lease: {
+      rentId: 'rent-2',
+      rent: {
         gracePeriodDays: 7,
         lateFeeType: 'PERCENTAGE',
         lateFeePercentage: 5, // 5% of 200,000 = 10,000
@@ -115,7 +115,7 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       data: expect.objectContaining({
         type: 'LATE_FEE',
         amount: 10_000,
-        leaseId: 'lease-2',
+        rentId: 'rent-2',
         description: expect.stringContaining('[late-fee-for:inv-overdue]'),
       }),
     });
@@ -130,8 +130,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'OVERDUE',
       dueDate: new Date(now.getTime() - 15 * MS_PER_DAY),
       amount: 500_000,
-      leaseId: 'lease-3',
-      lease: {
+      rentId: 'rent-3',
+      rent: {
         gracePeriodDays: 5,
         lateFeeType: 'FIXED',
         lateFeePercentage: 0,
@@ -164,8 +164,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       // Stored as midnight UTC, which is 01:00 on the 10th in Lagos.
       dueDate: new Date('2026-03-10T00:00:00Z'),
       amount: 100_000,
-      leaseId: 'lease-lagos',
-      lease: {
+      rentId: 'rent-lagos',
+      rent: {
         gracePeriodDays: 0,
         lateFeeType: 'FIXED',
         lateFeeFlatAmount: 5000,
@@ -221,7 +221,7 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       vi.useFakeTimers();
       const invoice = {
         ...noGraceInvoice(),
-        lease: { ...noGraceInvoice().lease, gracePeriodDays: 7 },
+        rent: { ...noGraceInvoice().rent, gracePeriodDays: 7 },
       };
       // Grace ends on the 17th, so the 17th itself is still on time.
       vi.setSystemTime(new Date('2026-03-17T12:00:00Z'));
@@ -249,8 +249,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 5 * MS_PER_DAY),
       amount: 45_000,
-      leaseId: 'lease-4',
-      lease: {
+      rentId: 'rent-4',
+      rent: {
         gracePeriodDays: 0,
         lateFeeType: 'FIXED',
         lateFeeFlatAmount: 5000,
@@ -276,8 +276,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'OVERDUE',
       dueDate: new Date(now.getTime() - 20 * MS_PER_DAY),
       amount: 100_000,
-      leaseId: 'lease-5',
-      lease: {
+      rentId: 'rent-5',
+      rent: {
         gracePeriodDays: 5,
         lateFeeType: 'FIXED',
         lateFeeFlatAmount: 5000,
@@ -306,12 +306,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       const dueInvoice = {
         id: 'inv-due-1',
         amount: 250_000,
-        leaseId: 'lease-autopay-1',
+        rentId: 'rent-autopay-1',
         status: 'UNPAID',
         dueDate: new Date(Date.now() - MS_PER_DAY),
         payments: [],
-        lease: {
-          id: 'lease-autopay-1',
+        rent: {
+          id: 'rent-autopay-1',
           status: 'ACTIVE',
           tenantId: 'tenant-123',
           tenant: { id: 'tenant-123', email: 'tenant@example.com', name: 'Test Tenant' },
@@ -355,12 +355,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       const dueInvoice = {
         id: 'inv-due-2',
         amount: 300_000,
-        leaseId: 'lease-autopay-2',
+        rentId: 'rent-autopay-2',
         status: 'OVERDUE',
         dueDate: new Date(Date.now() - 3 * MS_PER_DAY),
         payments: [],
-        lease: {
-          id: 'lease-autopay-2',
+        rent: {
+          id: 'rent-autopay-2',
           status: 'ACTIVE',
           tenantId: 'tenant-456',
           tenant: { id: 'tenant-456', email: 'autopay@example.com', name: 'Autopay User' },
@@ -409,12 +409,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
         {
           id: 'inv-gate',
           amount: 100_000,
-          leaseId: 'lease-gate',
+          rentId: 'rent-gate',
           status: 'UNPAID',
           dueDate: new Date(Date.now() - MS_PER_DAY),
           payments: [],
-          lease: {
-            id: 'lease-gate',
+          rent: {
+            id: 'rent-gate',
             status: 'ACTIVE',
             tenantId: 'tenant-gate',
             tenant: { id: 'tenant-gate', email: 'gate@example.com', name: 'Gate' },

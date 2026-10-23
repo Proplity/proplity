@@ -37,7 +37,7 @@ export const GET = withAuth(async (req, { session }) => {
     if (session.role === 'TENANT') {
       filters.push({
         OR: [
-          { lease: { tenantId: session.sub } },
+          { rent: { tenantId: session.sub } },
           { maintenanceRequest: { tenantId: session.sub } },
           { userId: session.sub },
         ],
@@ -48,7 +48,7 @@ export const GET = withAuth(async (req, { session }) => {
       filters.push({
         OR: [
           {
-            lease: {
+            rent: {
               unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
             },
           },
@@ -71,7 +71,7 @@ export const GET = withAuth(async (req, { session }) => {
         take,
         include: {
           payments: { select: PUBLIC_PAYMENT_SELECT, orderBy: { paidAt: 'desc' } },
-          lease: {
+          rent: {
             select: {
               id: true,
               tenant: { select: { id: true, name: true } },
@@ -93,7 +93,7 @@ export const GET = withAuth(async (req, { session }) => {
 });
 
 const createInvoiceSchema = z.object({
-  leaseId: z.string().optional(),
+  rentId: z.string().optional(),
   maintenanceRequestId: z.string().optional(),
   userId: z.string().optional(),
   type: z.nativeEnum(InvoiceType),
@@ -111,7 +111,7 @@ async function announceInvoice(
     invoiceNumber: string;
     amount: number;
     dueDate: Date;
-    leaseId: string | null;
+    rentId: string | null;
     maintenanceRequestId: string | null;
     userId: string | null;
   },
@@ -155,12 +155,12 @@ async function announceInvoice(
     return;
   }
 
-  if (invoice.leaseId) {
-    const lease = await prisma.lease.findUnique({
-      where: { id: invoice.leaseId },
+  if (invoice.rentId) {
+    const rent = await prisma.rent.findUnique({
+      where: { id: invoice.rentId },
       select: { tenantId: true },
     });
-    if (lease) await notifyAndEmail(lease.tenantId, toPay, { req: ctx.req });
+    if (rent) await notifyAndEmail(rent.tenantId, toPay, { req: ctx.req });
     return;
   }
   if (invoice.userId) await notifyAndEmail(invoice.userId, toPay, { req: ctx.req });
@@ -171,13 +171,13 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, createInvoiceSchema);
       if (!validated.success) return validated.response;
-      const { leaseId, maintenanceRequestId, userId, ...rest } = validated.data;
+      const { rentId, maintenanceRequestId, userId, ...rest } = validated.data;
 
       // Prisma can't express "at least one of" as a schema constraint --
       // enforced here (rule: Multi-FK models needing app-level validation).
-      if (!leaseId && !maintenanceRequestId && !userId) {
+      if (!rentId && !maintenanceRequestId && !userId) {
         return NextResponse.json(
-          { error: 'At least one of leaseId, maintenanceRequestId, or userId is required' },
+          { error: 'At least one of rentId, maintenanceRequestId, or userId is required' },
           { status: 400 },
         );
       }
@@ -198,9 +198,9 @@ export const POST = withAuth(
             { status: 403 },
           );
         }
-        // A vendor bills the job only: not a lease or another user (which would put an
+        // A vendor bills the job only: not a rent or another user (which would put an
         // invoice in front of an unrelated tenant), and never one that starts as paid.
-        if (leaseId || userId) {
+        if (rentId || userId) {
           return NextResponse.json(
             { error: 'Vendors may only bill the maintenance job itself' },
             { status: 403 },
@@ -217,27 +217,27 @@ export const POST = withAuth(
         }
       }
 
-      // MANAGER (ISS-050): may bill only leases and maintenance requests on
+      // MANAGER (ISS-050): may bill only rents and maintenance requests on
       // properties they manage. They cannot bill an arbitrary user, create
       // subscription invoices, or create an invoice that is already paid.
       // ADMIN is unrestricted; VENDOR was checked above.
       if (session.role === 'MANAGER') {
         if (userId || rest.type === 'SUBSCRIPTION') {
           return NextResponse.json(
-            { error: 'Managers can only invoice leases and maintenance requests they manage' },
+            { error: 'Managers can only invoice rents and maintenance requests they manage' },
             { status: 403 },
           );
         }
         if (rest.status && rest.status !== 'UNPAID') {
           return NextResponse.json({ error: 'New invoices must start as UNPAID' }, { status: 400 });
         }
-        if (leaseId) {
-          const lease = await prisma.lease.findUnique({
-            where: { id: leaseId },
+        if (rentId) {
+          const rent = await prisma.rent.findUnique({
+            where: { id: rentId },
             include: { unit: { include: { property: true } } },
           });
-          if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
-          if (!canManageProperty(session, lease.unit.property)) {
+          if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
+          if (!canManageProperty(session, rent.unit.property)) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
           }
         }
@@ -298,7 +298,7 @@ export const POST = withAuth(
         }
       }
 
-      const data = { leaseId, maintenanceRequestId, userId, ...rest };
+      const data = { rentId, maintenanceRequestId, userId, ...rest };
 
       // Admin-configurable (Platform Settings, SystemSettings.
       // autoCompleteMaintenanceOnInvoice): a MAINTENANCE invoice against a

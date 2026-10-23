@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -492,18 +492,18 @@ describe('properties: detail visibility (unpublished listings are not public)', 
     const property = await createProperty({ isPublished: false });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id);
+    await createRent(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
     const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
     expect(res.status).toBe(200);
   });
 
-  it('404s an unpublished property for a tenant who leases somewhere else', async () => {
+  it('404s an unpublished property for a tenant who rents somewhere else', async () => {
     const property = await createProperty({ isPublished: false });
     const otherProperty = await createProperty({ isPublished: true });
     const otherUnit = await createUnit(otherProperty.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(otherUnit.id, tenant.id);
+    await createRent(otherUnit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
     const res = await apiFetch(`/api/v1/properties/${property.id}`, { cookie });
     expect(res.status).toBe(404);
@@ -584,16 +584,16 @@ describe('properties: moderation (ADMIN review queue) + publish gating', () => {
   });
 });
 
-describe('properties: verified reviews (leaseId provenance)', () => {
+describe('properties: verified reviews (rentId provenance)', () => {
   beforeAll(async () => {
     await resetDb();
   });
 
-  it('marks a review verified only when the reviewer has a real lease on a unit of this property, set once at creation', async () => {
+  it('marks a review verified only when the reviewer has a real rent on a unit of this property, set once at creation', async () => {
     const property = await createProperty({ isPublished: true });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id);
+    await createRent(unit.id, tenant.id);
 
     const stranger = await createUser(Role.TENANT);
     await testPrisma.propertyViewing.create({
@@ -642,12 +642,12 @@ describe('properties: units', () => {
     await resetDb();
   });
 
-  it('rejects a unit delete when the unit has lease history, to avoid cascading away tenancy records', async () => {
+  it('rejects a unit delete when the unit has rent history, to avoid cascading away tenancy records', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id);
+    await createRent(unit.id, tenant.id);
     const cookie = await authCookie(manager.id, manager.role);
 
     const res = await apiFetch(`/api/v1/properties/${property.id}/units/${unit.id}`, {
@@ -662,7 +662,7 @@ describe('properties: units', () => {
     expect(stillThere.status).toBe(200);
   });
 
-  it('lets a unit with no lease history be deleted by the owning manager', async () => {
+  it('lets a unit with no rent history be deleted by the owning manager', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
@@ -1281,7 +1281,7 @@ describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
     expect(ok.status).toBe(200);
   });
 
-  it('will not merge away a listing that others were merged into, or one with active leases', async () => {
+  it('will not merge away a listing that others were merged into, or one with active rents', async () => {
     const admin = await createUser(Role.ADMIN);
     const cookie = await authCookie(admin.id, admin.role);
     const a = await createProperty({});
@@ -1298,8 +1298,8 @@ describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
     const tenant = await createUser(Role.TENANT);
     const d = await createProperty({});
     const unit = await createUnit(d.id);
-    const lease = await createLease(unit.id, tenant.id);
-    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'ACTIVE' } });
+    const rent = await createRent(unit.id, tenant.id);
+    await testPrisma.rent.update({ where: { id: rent.id }, data: { status: 'ACTIVE' } });
     const e = await createProperty({});
     const live = await apiFetch(`/api/v1/properties/${d.id}/merge`, {
       method: 'POST',
@@ -1307,7 +1307,7 @@ describe('properties: merge guards and CSRF (ISS-067, ISS-070)', () => {
       body: { targetPropertyId: e.id },
     });
     expect(live.status).toBe(400);
-    expect(live.body.error).toContain('active leases');
+    expect(live.body.error).toContain('active rents');
   });
 });
 
@@ -1316,13 +1316,13 @@ describe('invoices: vendor billing limits', () => {
     await resetDb();
   });
 
-  it("a vendor cannot attach a job invoice to someone else's lease or create it as paid", async () => {
+  it("a vendor cannot attach a job invoice to someone else's rent or create it as paid", async () => {
     const vendor = await createUser(Role.VENDOR);
     const tenant = await createUser(Role.TENANT);
     const stranger = await createUser(Role.TENANT);
     const prop = await createProperty({});
     const unit = await createUnit(prop.id);
-    const lease = await createLease(unit.id, stranger.id);
+    const rent = await createRent(unit.id, stranger.id);
     const mr = await testPrisma.maintenanceRequest.create({
       data: {
         unitId: unit.id,
@@ -1335,18 +1335,18 @@ describe('invoices: vendor billing limits', () => {
       },
     });
     const cookie = await authCookie(vendor.id, vendor.role);
-    const onLease = await apiFetch('/api/v1/invoices', {
+    const onRent = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,
       body: {
         type: 'MAINTENANCE',
         maintenanceRequestId: mr.id,
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 5000,
         dueDate: new Date().toISOString(),
       },
     });
-    expect(onLease.status).toBe(403);
+    expect(onRent.status).toBe(403);
     const paid = await apiFetch('/api/v1/invoices', {
       method: 'POST',
       cookie,

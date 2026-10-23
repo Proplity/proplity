@@ -4,7 +4,7 @@ import { appUrl } from '@/lib/appUrl';
 import { z } from 'zod';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { LeaseStatus, PaymentFrequency, LateFeeType, Prisma } from '@prisma/client';
+import { RentStatus, PaymentFrequency, LateFeeType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
@@ -15,7 +15,7 @@ import { sendEmail } from '@/lib/email';
 import { notifyAndEmail } from '@/lib/notifications';
 import { getSystemSettings } from '@/lib/systemSettings';
 
-// VENDOR has no legitimate reason to list leases -- everyone else's access
+// VENDOR has no legitimate reason to list rents -- everyone else's access
 // is scoped below, not gated by role.
 export const GET = withAuth(
   async (req, { session }) => {
@@ -24,8 +24,8 @@ export const GET = withAuth(
       const { skip, take, page, limit } = parsePagination(searchParams);
       const status = searchParams.get('status');
 
-      const where: Prisma.LeaseWhereInput = {
-        ...(status ? { status: status as LeaseStatus } : {}),
+      const where: Prisma.RentWhereInput = {
+        ...(status ? { status: status as RentStatus } : {}),
       };
 
       if (session.role === 'TENANT') {
@@ -37,8 +37,8 @@ export const GET = withAuth(
       }
       // ADMIN: no extra scoping.
 
-      const [leases, total] = await Promise.all([
-        prisma.lease.findMany({
+      const [rents, total] = await Promise.all([
+        prisma.rent.findMany({
           where,
           skip,
           take,
@@ -50,10 +50,10 @@ export const GET = withAuth(
           },
           orderBy: { createdAt: 'desc' },
         }),
-        prisma.lease.count({ where }),
+        prisma.rent.count({ where }),
       ]);
 
-      return NextResponse.json({ data: leases, meta: buildMeta(total, page, limit) });
+      return NextResponse.json({ data: rents, meta: buildMeta(total, page, limit) });
     } catch (err) {
       return handleApiError(err);
     }
@@ -68,7 +68,7 @@ class InviteLimitError extends Error {
   }
 }
 
-const createLeaseSchema = z
+const createRentSchema = z
   .object({
     unitId: z.string(),
     // Either an existing tenant by id, or invite-a-new-tenant by email --
@@ -79,7 +79,7 @@ const createLeaseSchema = z
     tenantName: z.string().optional(),
     tenantPhone: z.string().optional(),
     // Creating the tenancy from an APPROVED application (ISS-046): the
-    // applicant becomes the tenant and the application is linked to the lease.
+    // applicant becomes the tenant and the application is linked to the rent.
     applicationId: z.string().optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
@@ -104,7 +104,7 @@ const createLeaseSchema = z
 export const POST = withAuth(
   async (req, { session }) => {
     try {
-      const validated = await validateBody(req, createLeaseSchema);
+      const validated = await validateBody(req, createRentSchema);
       if (!validated.success) return validated.response;
       const {
         unitId,
@@ -136,9 +136,9 @@ export const POST = withAuth(
             { status: 404 },
           );
         }
-        if (application.status !== 'APPROVED' || application.leaseId) {
+        if (application.status !== 'APPROVED' || application.rentId) {
           return NextResponse.json(
-            { error: 'Only an approved application without a lease can start a tenancy' },
+            { error: 'Only an approved application without a rent can start a tenancy' },
             { status: 409 },
           );
         }
@@ -246,46 +246,46 @@ export const POST = withAuth(
         }
       }
 
-      // Initial RENT invoice created in the same transaction -- a lease
+      // Initial RENT invoice created in the same transaction -- a rent
       // shouldn't be able to exist with no corresponding first bill. Service
       // charge is billed as its own InvoiceType.SERVICE_CHARGE line, not
       // merged into the RENT invoice's amount (see CLAUDE.md).
       const result = await prisma.$transaction(async (tx) => {
-        const lease = await tx.lease.create({ data: { unitId, tenantId: tenantId!, ...rest } });
+        const rent = await tx.rent.create({ data: { unitId, tenantId: tenantId!, ...rest } });
         if (applicationId) {
           // Claim the application in the same write that checks it is still free: two requests for
-          // one application at once (a double-click) otherwise each make a lease and an invoice
-          // (ISS-140). The loser changes nothing: throwing rolls its lease back.
+          // one application at once (a double-click) otherwise each make a rent and an invoice
+          // (ISS-140). The loser changes nothing: throwing rolls its rent back.
           const claimed = await tx.application.updateMany({
-            where: { id: applicationId, status: 'APPROVED', leaseId: null },
-            data: { leaseId: lease.id },
+            where: { id: applicationId, status: 'APPROVED', rentId: null },
+            data: { rentId: rent.id },
           });
           if (claimed.count === 0) throw new ApplicationAlreadyUsedError();
         }
         const invoice = await tx.invoice.create({
           data: {
-            leaseId: lease.id,
+            rentId: rent.id,
             type: 'RENT',
-            amount: lease.rentAmount,
-            dueDate: lease.startDate,
+            amount: rent.rentAmount,
+            dueDate: rent.startDate,
             description: 'Initial rent invoice',
           },
         });
-        if (lease.serviceCharge > 0) {
+        if (rent.serviceCharge > 0) {
           await tx.invoice.create({
             data: {
-              leaseId: lease.id,
+              rentId: rent.id,
               type: 'SERVICE_CHARGE',
-              amount: lease.serviceCharge,
-              dueDate: lease.startDate,
+              amount: rent.serviceCharge,
+              dueDate: rent.startDate,
               description: 'Initial service charge invoice',
             },
           });
         }
-        return { lease, invoice };
+        return { rent, invoice };
       });
 
-      // If the tenant already existed (not invited with token), notify them of their new lease
+      // If the tenant already existed (not invited with token), notify them of their new rent
       if (!invited && tenantId) {
         try {
           const [existingTenantUser, unitDetails] = await Promise.all([
@@ -301,23 +301,23 @@ export const POST = withAuth(
           if (existingTenantUser && unitDetails) {
             await sendEmail({
               to: existingTenantUser.email,
-              subject: `New Lease Agreement Ready for Review: Unit ${unitDetails.unitNumber}`,
-              body: `Hi ${existingTenantUser.name},\n\nA new lease agreement has been prepared for you for unit ${unitDetails.unitNumber} at ${unitDetails.property.name}.\n\nPlease sign in to your Proplity dashboard to review and digitally sign your lease:\n${appUrl('/dashboard', req)}`,
+              subject: `New Rent Agreement Ready for Review: Unit ${unitDetails.unitNumber}`,
+              body: `Hi ${existingTenantUser.name},\n\nA new rent agreement has been prepared for you for unit ${unitDetails.unitNumber} at ${unitDetails.property.name}.\n\nPlease sign in to your Proplity dashboard to review and digitally sign your rent:\n${appUrl('/dashboard', req)}`,
             });
           }
-        } catch (leaseEmailErr) {
-          console.error('Failed to email tenant about new lease', leaseEmailErr);
+        } catch (rentEmailErr) {
+          console.error('Failed to email tenant about new rent', rentEmailErr);
         }
       }
 
-      // The tenant has a lease to read and sign, and an invoice to pay: tell them in the app
-      // (the invite or lease email above already went by email).
+      // The tenant has a rent to read and sign, and an invoice to pay: tell them in the app
+      // (the invite or rent email above already went by email).
       const where = `unit ${unit.unitNumber} at ${unit.property.name}`;
       await notifyAndEmail(
         tenantId!,
         {
-          title: 'Lease ready to sign',
-          body: `A lease for ${where} was prepared for you. Review it and add your signature.`,
+          title: 'Rent ready to sign',
+          body: `A rent for ${where} was prepared for you. Review it and add your signature.`,
           link: '/dashboard',
         },
         { email: false },
@@ -333,7 +333,7 @@ export const POST = withAuth(
       );
 
       return NextResponse.json(
-        { data: { ...result.lease, initialInvoice: result.invoice, tenantInvited: invited } },
+        { data: { ...result.rent, initialInvoice: result.invoice, tenantInvited: invited } },
         { status: 201 },
       );
     } catch (err) {
@@ -348,7 +348,7 @@ export const POST = withAuth(
       }
       if (err instanceof ApplicationAlreadyUsedError) {
         return NextResponse.json(
-          { error: 'Only an approved application without a lease can start a tenancy' },
+          { error: 'Only an approved application without a rent can start a tenancy' },
           { status: 409 },
         );
       }

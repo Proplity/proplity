@@ -79,7 +79,7 @@ const createRequestSchema = z.object({
 });
 
 // A work order: a repair the property team raises itself, on any unit it manages (occupied, vacant,
-// not yet leased or listed). It has no tenant, so there is nobody to confirm it or rate the vendor.
+// not yet rented or listed). It has no tenant, so there is nobody to confirm it or rate the vendor.
 // The property team still pays the vendor, exactly as for a tenant's repair.
 const workOrderSchema = createRequestSchema.extend({ vendorId: z.string().optional() });
 
@@ -159,12 +159,12 @@ export const POST = withAuth(
       const { unitId, ...rest } = validated.data;
       await assertOwnsFileUrls(rest.mediaUrls ?? [], session.sub, 'maintenance-requests');
 
-      const activeLease = await prisma.lease.findFirst({
+      const activeRent = await prisma.rent.findFirst({
         where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
       });
-      if (!activeLease) {
+      if (!activeRent) {
         return NextResponse.json(
-          { error: 'You must have an active lease on this unit to submit a request' },
+          { error: 'You must have an active rent on this unit to submit a request' },
           { status: 403 },
         );
       }

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   // password is only meaningful for an invited user who never set one
-  // (see POST /api/v1/leases's tenantEmail path) -- optional and backward
+  // (see POST /api/v1/rents's tenantEmail path) -- optional and backward
   // compatible with plain register-style verification.
   const passwordHash = password ? await bcrypt.hash(password, 12) : undefined;
 

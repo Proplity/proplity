@@ -28,7 +28,7 @@ export async function runPaymentReliabilityScorer(): Promise<{
   skippedNoHistory: number;
 }> {
   const now = new Date();
-  const leases = await prisma.lease.findMany({
+  const rents = await prisma.rent.findMany({
     where: { status: { in: ['ACTIVE', 'EXPIRED'] } },
     include: {
       invoices: {
@@ -43,8 +43,8 @@ export async function runPaymentReliabilityScorer(): Promise<{
   let scored = 0;
   let skippedNoHistory = 0;
 
-  for (const lease of leases) {
-    if (lease.invoices.length === 0) {
+  for (const rent of rents) {
+    if (rent.invoices.length === 0) {
       skippedNoHistory += 1;
       continue;
     }
@@ -53,7 +53,7 @@ export async function runPaymentReliabilityScorer(): Promise<{
     let late = 0;
     let missed = 0;
 
-    for (const invoice of lease.invoices) {
+    for (const invoice of rent.invoices) {
       if (invoice.status === 'PAID') {
         const firstPayment = invoice.payments[0];
         if (firstPayment && firstPayment.paidAt <= invoice.dueDate) onTime += 1;
@@ -66,8 +66,8 @@ export async function runPaymentReliabilityScorer(): Promise<{
     }
 
     const { paymentReliability, riskScore } = scoreFromRatio(onTime, late, missed);
-    await prisma.lease.update({
-      where: { id: lease.id },
+    await prisma.rent.update({
+      where: { id: rent.id },
       data: { paymentReliability, riskScore, riskScoreUpdatedAt: now },
     });
     scored += 1;

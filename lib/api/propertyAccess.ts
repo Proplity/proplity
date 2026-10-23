@@ -46,7 +46,7 @@ export function isPublicUnit(unit: { amenities?: string[] | null }) {
 /**
  * Fields of a property that only the property team and admins read: the moderator's notes (which
  * can name other listings) and the staged edits. A tenant, vendor or applicant who gets the
- * property inside a lease, repair, invoice or application never needs them (ISS-148).
+ * property inside a rent, repair, invoice or application never needs them (ISS-148).
  */
 export const PROPERTY_OMIT_INTERNAL = { moderationNotes: true, metadata: true } as const;
 

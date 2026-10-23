@@ -16,7 +16,7 @@ import {
   XCircle,
   Info,
 } from 'lucide-react';
-import { useActiveLease } from '@/hooks/useLeases';
+import { useActiveRent } from '@/hooks/useRents';
 import { useProperty } from '@/hooks/useProperties';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
 import { toast } from 'sonner';
@@ -99,8 +99,8 @@ export function NeighbourhoodReport() {
   const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const { data: lease, loading: leaseLoading } = useActiveLease();
-  const propertyId = lease?.unit?.propertyId ?? null;
+  const { data: rent, loading: rentLoading } = useActiveRent();
+  const propertyId = rent?.unit?.propertyId ?? null;
   const { data: property, loading: propertyLoading } = useProperty(propertyId);
   const report = property?.neighbourhoodReports[0] ?? null;
 
@@ -123,17 +123,17 @@ export function NeighbourhoodReport() {
     setShowPaymentModal(false);
   };
 
-  if (leaseLoading || propertyLoading) {
+  if (rentLoading || propertyLoading) {
     return <div className="p-6 text-gray-500">Loading your neighbourhood report…</div>;
   }
 
-  if (!lease) {
+  if (!rent) {
     return (
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Link href="/dashboard" className="rounded-lg p-2 hover:bg-gray-100">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <p className="text-gray-500">You need an active lease to view a neighbourhood report.</p>
+        <p className="text-gray-500">You need an active rent to view a neighbourhood report.</p>
       </div>
     );
   }

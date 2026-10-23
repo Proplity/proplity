@@ -29,7 +29,7 @@ import { api } from '@/lib/apiClient';
 import { formatViewingTime } from '@/lib/viewingSlots';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
-import { useLeases } from '@/hooks/useLeases';
+import { useRents } from '@/hooks/useRents';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useApplications, useReviewApplication } from '@/hooks/useApplications';
@@ -1017,7 +1017,7 @@ function ApplicationRow({
 export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) {
   const auth = useAuth();
   const { data: property, loading, refetch: refetchProperty } = useProperty(propertyId);
-  const { data: leases } = useLeases();
+  const { data: rents } = useRents();
   const { data: invoices } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: pendingApplications, refetch: refetchApplications } = useApplications({
@@ -1060,7 +1060,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
     );
   }
 
-  // Role + ownership gate: the underlying leases/invoices/maintenance hooks
+  // Role + ownership gate: the underlying rents/invoices/maintenance hooks
   // are already server-scoped to the caller's own data, so a tenant Browse
   // this page never actually receives another tenant's records -- this gate
   // is what decides whether to *render* the manager-only sections at all.
@@ -1071,15 +1071,15 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
       auth.user.id === property.managerId ||
       auth.user.id === property.landlordId);
 
-  const propertyLeases = leases.filter((l) => l.unit?.propertyId === propertyId);
+  const propertyRents = rents.filter((l) => l.unit?.propertyId === propertyId);
   const propertyApplications = pendingApplications.filter(
     (a) => a.unit?.property.id === propertyId,
   );
   // Approved but no tenancy yet: the manager's next step (ISS-046).
   const awaitingTenancy = approvedApplications.filter(
-    (a) => a.unit?.property.id === propertyId && !a.leaseId,
+    (a) => a.unit?.property.id === propertyId && !a.rentId,
   );
-  const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === propertyId);
+  const propertyInvoices = invoices.filter((i) => i.rent?.unit.property.id === propertyId);
   const propertyMaintenance = maintenanceRequests
     .filter((r) => r.unit?.propertyId === propertyId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1328,7 +1328,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
               </div>
               <div className="divide-y divide-gray-200">
                 {property.units.map((unit) => {
-                  const lease = propertyLeases.find(
+                  const rent = propertyRents.find(
                     (l) => l.unitId === unit.id && l.status === 'ACTIVE',
                   );
                   return (
@@ -1439,21 +1439,21 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                             </div>
                           );
                         })()}
-                      {lease && lease.tenant ? (
+                      {rent && rent.tenant ? (
                         <>
                           <div className="mb-3 flex items-start justify-between">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold text-white">
-                                {lease.tenant.name.charAt(0)}
+                                {rent.tenant.name.charAt(0)}
                               </div>
                               <div>
-                                <p className="font-medium">{lease.tenant.name}</p>
-                                <p className="text-sm text-gray-600">{lease.tenant.email}</p>
+                                <p className="font-medium">{rent.tenant.name}</p>
+                                <p className="text-sm text-gray-600">{rent.tenant.email}</p>
                               </div>
                             </div>
                             <button
                               onClick={() =>
-                                onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })
+                                onNavigate?.({ type: 'tenant-detail', rentId: rent.id })
                               }
                               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                             >
@@ -1463,12 +1463,12 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <p className="text-gray-600">Phone</p>
-                              <p className="font-medium">{lease.tenant.phoneNumber ?? 'N/A'}</p>
+                              <p className="font-medium">{rent.tenant.phoneNumber ?? 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Lease End</p>
+                              <p className="text-gray-600">Rent End</p>
                               <p className="font-medium">
-                                {new Date(lease.endDate).toLocaleDateString()}
+                                {new Date(rent.endDate).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -1477,7 +1477,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                         <p className="text-sm text-gray-400">
                           {unit.status === 'VACANT'
                             ? 'Vacant'
-                            : `No active lease (${unit.status.toLowerCase()})`}
+                            : `No active rent (${unit.status.toLowerCase()})`}
                         </p>
                       )}
                     </div>

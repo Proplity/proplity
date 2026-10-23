@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { Building2, Home, CheckCircle2, Clock, XCircle } from 'lucide-react';
-import { useLeases } from '@/hooks/useLeases';
-import type { Lease } from '@/lib/api/types';
+import { useRents } from '@/hooks/useRents';
+import type { Rent } from '@/lib/api/types';
 
 const STATUS_META: Record<string, { label: string; icon: typeof Clock; className: string }> = {
   ACTIVE: { label: 'Active', icon: CheckCircle2, className: 'bg-green-100 text-green-800' },
@@ -13,15 +13,15 @@ const STATUS_META: Record<string, { label: string; icon: typeof Clock; className
 };
 
 // Tenants previously had no way to see anything beyond their single current
-// lease (TenantDashboard's useActiveLease) -- no record of past tenancies
-// once a lease expired/terminated, or renewed into a new lease row.
+// rent (TenantDashboard's useActiveRent) -- no record of past tenancies
+// once a rent expired/terminated, or renewed into a new rent row.
 export default function MyRentalsPage() {
   const router = useRouter();
-  // No status filter -- useLeases is already server-scoped to "the caller's
-  // own leases" for a tenant, so this returns every lease they've ever had.
-  const { data: leases, loading, error } = useLeases();
+  // No status filter -- useRents is already server-scoped to "the caller's
+  // own rents" for a tenant, so this returns every rent they've ever had.
+  const { data: rents, loading, error } = useRents();
 
-  const sorted = [...leases].sort(
+  const sorted = [...rents].sort(
     (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
   );
 
@@ -30,9 +30,7 @@ export default function MyRentalsPage() {
       <div>
         <h1 className="text-2xl font-semibold">My Rentals</h1>
         <p className="text-sm text-gray-500">
-          {loading
-            ? 'Loading…'
-            : `${leases.length} lease${leases.length === 1 ? '' : 's'} on record`}
+          {loading ? 'Loading…' : `${rents.length} rent${rents.length === 1 ? '' : 's'} on record`}
         </p>
       </div>
 
@@ -61,14 +59,14 @@ export default function MyRentalsPage() {
       )}
 
       <div className="space-y-3">
-        {sorted.map((lease: Lease) => {
-          const meta = STATUS_META[lease.status] ?? STATUS_META.EXPIRED;
+        {sorted.map((rent: Rent) => {
+          const meta = STATUS_META[rent.status] ?? STATUS_META.EXPIRED;
           const StatusIcon = meta.icon;
-          const property = lease.unit?.property;
+          const property = rent.unit?.property;
           return (
             <button
-              key={lease.id}
-              // /dashboard/tenants/[id] is the manager-facing lease console
+              key={rent.id}
+              // /dashboard/tenants/[id] is the manager-facing rent console
               // (Terminate/Renew/Activate) -- a tenant viewing their own
               // rental history goes to the property page instead, which
               // already branches to a read-only view for the tenant role.
@@ -84,17 +82,17 @@ export default function MyRentalsPage() {
                   <div>
                     <p className="font-medium text-gray-900">
                       {property?.name ?? 'Property'}
-                      {lease.unit?.unitNumber ? ` — Unit ${lease.unit.unitNumber}` : ''}
+                      {rent.unit?.unitNumber ? ` — Unit ${rent.unit.unitNumber}` : ''}
                     </p>
                     <p className="text-sm text-gray-500">{property?.address}</p>
                     <p className="mt-1 text-xs text-gray-400">
-                      {new Date(lease.startDate).toLocaleDateString('en-GB', {
+                      {new Date(rent.startDate).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
                       })}{' '}
                       –{' '}
-                      {new Date(lease.endDate).toLocaleDateString('en-GB', {
+                      {new Date(rent.endDate).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -110,7 +108,7 @@ export default function MyRentalsPage() {
                     {meta.label}
                   </div>
                   <p className="text-sm font-semibold text-gray-900">
-                    ₦{lease.rentAmount.toLocaleString()}/{lease.paymentFrequency.toLowerCase()}
+                    ₦{rent.rentAmount.toLocaleString()}/{rent.paymentFrequency.toLowerCase()}
                   </p>
                 </div>
               </div>

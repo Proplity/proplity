@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createInvoice,
   createConversation,
@@ -37,10 +37,10 @@ describe('dashboard: needs your attention', () => {
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'PENDING' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'PENDING' });
     await createMaintenanceRequest(unit.id, tenant.id, { title: 'Broken gate' });
     await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       status: 'OVERDUE',
       dueDate: new Date(Date.now() - DAY),
     });
@@ -49,9 +49,9 @@ describe('dashboard: needs your attention', () => {
     const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
     expect(byId['rent-overdue']).toMatchObject({ count: 1, severity: 'high' });
     expect(byId['repairs-unassigned']).toMatchObject({ count: 1, detail: 'Broken gate' });
-    expect(byId['leases-unsigned']).toMatchObject({
+    expect(byId['rents-unsigned']).toMatchObject({
       count: 1,
-      href: `/dashboard/tenants/${lease.id}`,
+      href: `/dashboard/tenants/${rent.id}`,
     });
     // High before medium.
     expect(rows.findIndex((r) => r.id === 'rent-overdue')).toBeLessThan(
@@ -61,14 +61,14 @@ describe('dashboard: needs your attention', () => {
     expect(await attention(other)).toEqual([]);
   });
 
-  it('tells a tenant about a lease to sign, an overdue payment and an unfinished profile', async () => {
+  it('tells a tenant about a rent to sign, an overdue payment and an unfinished profile', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'PENDING' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'PENDING' });
     await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       status: 'OVERDUE',
       dueDate: new Date(Date.now() - DAY),
     });
@@ -76,19 +76,19 @@ describe('dashboard: needs your attention', () => {
     const rows = await attention(tenant);
     const ids = rows.map((r) => r.id);
     expect(ids).toEqual(
-      expect.arrayContaining(['lease-to-sign', 'invoices-overdue', 'profile-incomplete']),
+      expect.arrayContaining(['rent-to-sign', 'invoices-overdue', 'profile-incomplete']),
     );
     expect(rows.find((r) => r.id === 'profile-incomplete')?.href).toBe(
       '/dashboard/settings?tab=completion',
     );
 
-    // Once signed, the lease drops off the list.
-    await apiFetch(`/api/v1/leases/${lease.id}/sign`, {
+    // Once signed, the rent drops off the list.
+    await apiFetch(`/api/v1/rents/${rent.id}/sign`, {
       method: 'POST',
       cookie: await authCookie(tenant.id, tenant.role),
       body: { fullName: 'T Enant' },
     });
-    expect((await attention(tenant)).map((r) => r.id)).not.toContain('lease-to-sign');
+    expect((await attention(tenant)).map((r) => r.id)).not.toContain('rent-to-sign');
   });
 
   it('shows a vendor new jobs and finished jobs with no invoice, and an admin the review queue', async () => {
@@ -124,40 +124,40 @@ describe('notifications: actions that need someone', () => {
     await resetDb();
   });
 
-  it('tells the other side when a lease is signed, and both when it is fully signed', async () => {
+  it('tells the other side when a rent is signed, and both when it is fully signed', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'PENDING' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'PENDING' });
 
-    await apiFetch(`/api/v1/leases/${lease.id}/sign`, {
+    await apiFetch(`/api/v1/rents/${rent.id}/sign`, {
       method: 'POST',
       cookie: await authCookie(tenant.id, tenant.role),
       body: { fullName: 'T Enant' },
     });
-    expect((await notices(manager.id)).map((n) => n.title)).toContain('Tenant signed the lease');
+    expect((await notices(manager.id)).map((n) => n.title)).toContain('Tenant signed the rent');
 
-    await apiFetch(`/api/v1/leases/${lease.id}/sign`, {
+    await apiFetch(`/api/v1/rents/${rent.id}/sign`, {
       method: 'POST',
       cookie: await authCookie(manager.id, manager.role),
       body: { fullName: 'M Anager' },
     });
-    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Lease fully signed');
+    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Rent fully signed');
     const mgr = await notices(manager.id);
-    expect(mgr.find((n) => n.title === 'Lease fully signed')?.link).toBe(
-      `/dashboard/tenants/${lease.id}`,
+    expect(mgr.find((n) => n.title === 'Rent fully signed')?.link).toBe(
+      `/dashboard/tenants/${rent.id}`,
     );
   });
 
-  it('tells a tenant when staff create a lease and when its status changes', async () => {
+  it('tells a tenant when staff create a rent and when its status changes', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const cookie = await authCookie(manager.id, manager.role);
 
-    const created = await apiFetch<{ data: { id: string } }>('/api/v1/leases', {
+    const created = await apiFetch<{ data: { id: string } }>('/api/v1/rents', {
       method: 'POST',
       cookie,
       body: {
@@ -171,15 +171,15 @@ describe('notifications: actions that need someone', () => {
     });
     expect(created.status).toBe(201);
     const titles = (await notices(tenant.id)).map((n) => n.title);
-    expect(titles).toContain('Lease ready to sign');
+    expect(titles).toContain('Rent ready to sign');
     expect(titles.some((t) => t.startsWith('Invoice INV-'))).toBe(true);
 
-    await apiFetch(`/api/v1/leases/${created.body.data.id}`, {
+    await apiFetch(`/api/v1/rents/${created.body.data.id}`, {
       method: 'PATCH',
       cookie,
       body: { status: 'ACTIVE' },
     });
-    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Lease active');
+    expect((await notices(tenant.id)).map((n) => n.title)).toContain('Rent active');
   });
 
   it('tells the property team about a vendor invoice and asks the tenant to confirm the repair', async () => {
@@ -219,7 +219,7 @@ describe('notifications: actions that need someone', () => {
     const vendor = await createUser(Role.VENDOR);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    await createLease(unit.id, tenant.id);
+    await createRent(unit.id, tenant.id);
     const request = await createMaintenanceRequest(unit.id, tenant.id, {
       vendorId: vendor.id,
       status: 'COMPLETED',
@@ -264,35 +264,35 @@ describe('notifications: actions that need someone', () => {
     expect(await notices(a.id)).toHaveLength(0);
   });
 
-  it('the daily reminders job warns about rent due soon and leases ending, once each', async () => {
+  it('the daily reminders job warns about rent due soon and rents ending, once each', async () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, {
+    const rent = await createRent(unit.id, tenant.id, {
       endDate: new Date(Date.now() + 30 * DAY),
     });
     await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       dueDate: new Date(Date.now() + 2 * DAY),
       status: 'UNPAID',
     });
 
     const run = () =>
-      apiFetch<{ result: { dueSoon: number; leasesEnding: number } }>('/api/v1/cron/reminders', {
+      apiFetch<{ result: { dueSoon: number; rentsEnding: number } }>('/api/v1/cron/reminders', {
         method: 'POST',
         headers: { 'x-cron-secret': CRON_SECRET },
       });
     const first = await run();
     expect(first.status).toBe(200);
-    expect(first.body.result).toEqual({ dueSoon: 1, leasesEnding: 1 });
+    expect(first.body.result).toEqual({ dueSoon: 1, rentsEnding: 1 });
     const second = await run();
-    expect(second.body.result).toEqual({ dueSoon: 0, leasesEnding: 0 });
+    expect(second.body.result).toEqual({ dueSoon: 0, rentsEnding: 0 });
 
     const titles = (await notices(tenant.id)).map((n) => n.title);
     expect(titles.some((t) => t.startsWith('Payment due soon: INV-'))).toBe(true);
-    expect(titles.some((t) => t.startsWith('Lease ending'))).toBe(true);
-    expect((await notices(manager.id)).some((n) => n.title.startsWith('Lease ending'))).toBe(true);
+    expect(titles.some((t) => t.startsWith('Rent ending'))).toBe(true);
+    expect((await notices(manager.id)).some((n) => n.title.startsWith('Rent ending'))).toBe(true);
   });
 
   it('the overdue job tells the tenant and the property team', async () => {
@@ -300,9 +300,9 @@ describe('notifications: actions that need someone', () => {
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { gracePeriodDays: 0 });
+    const rent = await createRent(unit.id, tenant.id, { gracePeriodDays: 0 });
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       dueDate: new Date(Date.now() - 3 * DAY),
       status: 'UNPAID',
     });
