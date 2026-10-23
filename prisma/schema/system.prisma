@@ -1,3 +1,21 @@
+enum UnitBillingOwner {
+  MANAGER_ELSE_LANDLORD
+  CREATOR
+  BOTH
+}
+
+enum OverageMode {
+  ALLOW_AND_BILL
+  HARD_STOP
+  CONFIRM_EACH_TIME
+}
+
+enum DowngradeRule {
+  BLOCK
+  GRACE_PERIOD
+  ALLOW_AND_BILL
+}
+
 // Platform-wide singleton configuration. The single row (id = 'global') is
 // auto-created by the seed script or by the first-run setup wizard. Guards
 // the one-time superadmin bootstrap flow: once setupComplete flips to true,
@@ -6,36 +24,46 @@
 // simpler than a generic key/value settings table for the handful of
 // booleans this app actually needs.
 model SystemSettings {
-  id                               String   @id @default("global")
-  setupComplete                    Boolean  @default(false)
+  id                                   String           @id @default("global")
+  setupComplete                        Boolean          @default(false)
   // When true (default), submitting a vendor invoice against a maintenance
   // request also marks that request COMPLETED in the same transaction.
   // Admin-toggleable (Platform Settings) for operators who invoice interim
   // costs mid-job and don't want that to auto-close the request.
-  autoCompleteMaintenanceOnInvoice Boolean  @default(true)
+  autoCompleteMaintenanceOnInvoice     Boolean          @default(true)
   // When true (default), a job the vendor finishes asks the tenant to confirm it is fixed (or
   // report a problem). Turning it off stops new requests; ones already waiting stay answerable.
-  requireTenantRepairConfirmation  Boolean  @default(true)
+  requireTenantRepairConfirmation      Boolean          @default(true)
   // When true (default), a payment the property team records by hand (cash or a transfer, on the
   // tenant's record or a vendor's bill) is not counted until someone other than the person who
   // recorded it confirms it. Switched off, the recorder's own entry counts at once (still
   // audit-logged, with the receipt). Two switches because the two kinds of money differ: what a
   // tenant owes, and what the team owes a vendor. A tenant recording their own transfer always
   // waits for the team, whatever these say.
-  requireSecondPersonForTenantPayments Boolean @default(true)
-  requireSecondPersonForVendorPayments Boolean @default(true)
+  requireSecondPersonForTenantPayments Boolean          @default(true)
+  requireSecondPersonForVendorPayments Boolean          @default(true)
   // Automatic card charging (the auto-pay charger) and identity-document retention are both off
   // until an admin switches them on here AND the deployment allows them (AUTOPAY_WORKER_ENABLED /
   // RETENTION_ENABLED): the deploy flag is the lock, this is the day-to-day switch (ADR-0015).
-  autopayChargingEnabled           Boolean  @default(false)
-  retentionEnabled                 Boolean  @default(false)
+  autopayChargingEnabled               Boolean          @default(false)
+  retentionEnabled                     Boolean          @default(false)
   // How long identity documents are kept: after a tenancy ended with nothing pending or active,
   // and after the last rejected application. Defaults are ADR-0012's proposal (12 months, 90
   // days); the API refuses values below 30 and 7 days so a typo cannot delete everything.
-  retentionAfterTenancyDays        Int      @default(365)
-  retentionAfterRejectionDays      Int      @default(90)
+  retentionAfterTenancyDays            Int              @default(365)
+  retentionAfterRejectionDays          Int              @default(90)
   // How many new people one manager or landlord may start a tenancy for by email address in a day
   // (each sends an invitation email from Proplity). 0 stops them; admins are not limited (ISS-154).
-  tenantInvitesPerDay              Int      @default(10)
-  updatedAt                        DateTime @updatedAt
+  tenantInvitesPerDay                  Int              @default(10)
+  // Plans and limits (Admin > Plans & billing). Limits are off until billing is live: with them on
+  // and nobody able to pay, a free account would be stuck at its included units.
+  enforcePlanLimits                    Boolean          @default(false)
+  // Whose plan the units of a property count against.
+  unitBillingOwner                     UnitBillingOwner @default(MANAGER_ELSE_LANDLORD)
+  // What happens when someone adds units beyond what their plan includes.
+  overageMode                          OverageMode      @default(ALLOW_AND_BILL)
+  // What happens when someone moves to a plan that includes fewer units than they have.
+  downgradeRule                        DowngradeRule    @default(BLOCK)
+  downgradeGraceDays                   Int              @default(30)
+  updatedAt                            DateTime         @updatedAt
 }

@@ -70,8 +70,8 @@ enum PayoutMethod {
 // never raw card/account data.
 model AutoPayMandate {
   id                  String          @id @default(uuid())
-  rentId             String
-  rent               Rent           @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rentId              String
+  rent                Rent            @relation(fields: [rentId], references: [id], onDelete: Cascade)
   provider            PaymentProvider @default(PAYSTACK)
   paymentMethodToken  String
   status              AutoPayStatus   @default(ACTIVE)
@@ -97,8 +97,8 @@ model Invoice {
   // is native to Postgres 13+; confirm your DB version supports it, or
   // enable pgcrypto if targeting an older version.
   invoiceNumber           String                   @unique @default(dbgenerated("('INV-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8)))"))
-  rentId                 String?
-  rent                   Rent?                   @relation(fields: [rentId], references: [id])
+  rentId                  String?
+  rent                    Rent?                    @relation(fields: [rentId], references: [id])
   maintenanceRequestId    String?
   maintenanceRequest      MaintenanceRequest?      @relation(fields: [maintenanceRequestId], references: [id])
   // Direct charge to a person, for invoices that aren't scoped to a rent or

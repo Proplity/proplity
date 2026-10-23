@@ -189,6 +189,8 @@ export type CreateUnitInput = {
   depositAmount?: number;
   sqft?: number;
   amenities?: string[];
+  /** Sent again after the person has seen what units over their plan cost (OVERAGE_NEEDS_CONFIRMATION). */
+  confirmOverage?: boolean;
 };
 
 export type PropertyViewing = {
@@ -347,6 +349,11 @@ export type PlatformSettings = {
   retentionAfterTenancyDays: number;
   retentionAfterRejectionDays: number;
   tenantInvitesPerDay: number;
+  enforcePlanLimits: boolean;
+  unitBillingOwner: 'MANAGER_ELSE_LANDLORD' | 'CREATOR' | 'BOTH';
+  overageMode: 'ALLOW_AND_BILL' | 'HARD_STOP' | 'CONFIRM_EACH_TIME';
+  downgradeRule: 'BLOCK' | 'GRACE_PERIOD' | 'ALLOW_AND_BILL';
+  downgradeGraceDays: number;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -680,17 +687,77 @@ export type AuditLog = {
   createdAt: string;
 };
 
+/** A plan an admin has set up (Admin > Plans & billing). Prices are whole naira. */
+export type Plan = {
+  id: string;
+  key: string;
+  name: string;
+  tagline: string | null;
+  monthlyPrice: number;
+  yearlyPrice: number | null;
+  unitsIncluded: number;
+  usersIncluded: number;
+  overagePerUnit: number | null;
+  monthlyCredits: number;
+  features: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  isPopular: boolean;
+  sortOrder: number;
+};
+
+export type PlanInput = Partial<Omit<Plan, 'id'>> &
+  Pick<Plan, 'key' | 'name' | 'monthlyPrice' | 'unitsIncluded'>;
+
+export type PaidService = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  creditCost: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export type PlanUsage = {
+  units: number;
+  unitsIncluded: number;
+  extraUnits: number;
+  overageMonthly: number;
+  users: number;
+  usersIncluded: number;
+};
+
+/** The signed-in account's plan, what it uses against it, and its credits (GET /subscriptions/me). */
 export type Subscription = {
   userId: string;
-  tier: 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE';
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'TRIALING';
+  billingCycle: 'MONTHLY' | 'YEARLY';
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  graceEndsAt: string | null;
+  /** A paid plan whose period ended: the account is back on the default plan. */
+  lapsed: boolean;
+  plan: Plan;
+  usage: PlanUsage;
+  credits: { balance: number };
+  limitsEnforced: boolean;
+  subscriptionsEnabled: boolean;
 };
 
 export type CheckoutSubscriptionInput = {
-  tier: 'FREE' | 'PRO';
+  planKey: string;
   billingCycle?: 'monthly' | 'yearly';
   confirmDowngrade?: boolean;
+};
+
+export type CreditEntry = {
+  id: string;
+  delta: number;
+  reason: 'MONTHLY_ALLOWANCE' | 'ADMIN_GRANT' | 'PURCHASE' | 'SPEND' | 'REFUND';
+  serviceKey: string | null;
+  note: string | null;
+  createdAt: string;
 };
 
 export type Application = {

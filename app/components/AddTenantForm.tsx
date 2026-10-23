@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useProperties, useUnits } from '@/hooks/useProperties';
 import { useCreateRent } from '@/hooks/useRents';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 const STEPS = ['Tenant Info', 'Link Property', 'Rent Details', 'Review'];
 
@@ -450,7 +451,7 @@ export function AddTenantForm() {
                           </div>
                           <p className="text-sm font-semibold text-blue-600">
                             ₦{unit.rentAmount.toLocaleString()}/
-                            {unit.listedPaymentFrequency.toLowerCase()}
+                            {perFrequency(unit.listedPaymentFrequency)}
                           </p>
                         </div>
                         {selectedUnitId === unit.id && (
@@ -564,7 +565,7 @@ export function AddTenantForm() {
                 >
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
-                  <option value="biannually">Bi-Annually</option>
+                  <option value="biannually">Every 6 months</option>
                   <option value="yearly">Yearly</option>
                 </select>
               </div>

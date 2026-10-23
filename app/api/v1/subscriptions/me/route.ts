@@ -3,47 +3,70 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { getSystemSettings } from '@/lib/systemSettings';
+import {
+  getAccountPlan,
+  getDefaultPlan,
+  getUsage,
+  countUnitsFor,
+  graceEndsAtFrom,
+} from '@/lib/plans';
+import { creditBalance } from '@/lib/credits';
 
+// The signed-in account's plan, what it is using against that plan, and its credits.
 export const GET = withAuth(async (_req, { session }) => {
   try {
-    if (!subscriptionsEnabled()) {
-      return NextResponse.json({
-        data: {
-          userId: session.sub,
-          tier: 'FREE',
-          status: 'ACTIVE',
-          currentPeriodEnd: null,
-        },
-      });
-    }
+    const settings = await getSystemSettings();
 
-    let subscription = await prisma.subscription.findUnique({ where: { userId: session.sub } });
-    // A plan set to end with its paid period reverts to FREE once that period is over.
+    // A plan set to end with its paid period goes back to the default plan once that period is over.
+    const existing = await prisma.subscription.findUnique({ where: { userId: session.sub } });
     if (
-      subscription &&
-      subscription.cancelAtPeriodEnd &&
-      subscription.currentPeriodEnd &&
-      subscription.currentPeriodEnd <= new Date()
+      existing &&
+      existing.cancelAtPeriodEnd &&
+      existing.currentPeriodEnd &&
+      existing.currentPeriodEnd <= new Date()
     ) {
-      subscription = await prisma.subscription.update({
+      const fallback = await getDefaultPlan();
+      const units = await countUnitsFor(settings.unitBillingOwner, session.sub);
+      const grace =
+        settings.enforcePlanLimits &&
+        settings.downgradeRule === 'GRACE_PERIOD' &&
+        units > fallback.unitsIncluded
+          ? graceEndsAtFrom(settings.downgradeGraceDays)
+          : null;
+      await prisma.subscription.update({
         where: { userId: session.sub },
         data: {
-          tier: 'FREE',
+          planId: fallback.id,
           status: 'ACTIVE',
           cancelAtPeriodEnd: false,
           currentPeriodStart: null,
           currentPeriodEnd: null,
+          graceEndsAt: grace,
         },
       });
     }
-    // No row yet = never subscribed -- represented as a real FREE tier
-    // rather than null, so the frontend has one shape to render either way.
+
+    const { plan, subscription, lapsed } = await getAccountPlan(session.sub);
+    const [usage, credits] = await Promise.all([
+      getUsage(session.sub, settings),
+      creditBalance(session.sub),
+    ]);
+
     return NextResponse.json({
-      data: subscription ?? {
+      data: {
         userId: session.sub,
-        tier: 'FREE',
-        status: 'ACTIVE',
-        currentPeriodEnd: null,
+        status: subscription?.status ?? 'ACTIVE',
+        billingCycle: subscription?.billingCycle ?? 'MONTHLY',
+        currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+        graceEndsAt: subscription?.graceEndsAt ?? null,
+        lapsed,
+        plan,
+        usage,
+        credits: { balance: credits },
+        limitsEnforced: settings.enforcePlanLimits,
+        subscriptionsEnabled: subscriptionsEnabled(),
       },
     });
   } catch (err) {

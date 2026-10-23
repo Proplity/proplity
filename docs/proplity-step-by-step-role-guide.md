@@ -78,7 +78,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 10. **Dynamic Property Trust Score Badge**: Algorithmic trust rating badge computed daily by background workers (\`Property.trustScore\`, ISS-013).
 11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
-13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
+13. **Plans and Pricing**: The plans an admin has set up (a free plan and paid plans, with the units, users, extra-unit price and monthly credits each includes), with a monthly or yearly price (\`/pricing\`).
 14. **Platform Inquiries & Contact Form**: Contact and support form (\`/contact\`, \`ContactPage.tsx\`) that emails the Proplity team; the visitor sees "Message sent!" only when the email went out, otherwise an error with their text kept.
 15. **Interactive Platform Guide**: Visual role-by-role guide with 100+ interactive fullscreen screenshots (\`/proplity-guide\`).
 
@@ -148,7 +148,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 65. **Manager Invitation Code Dispatch**: Send customized email invitations to property managers; monitor active codes and deactivate anytime.
 66. **Disbursement Bank Account Management**: Register and manage verified Nigerian bank accounts (NUBAN) for receiving rental payouts.
 67. **Vendor Maintenance Payout Approvals**: Review and approve vendor repair invoices before disbursements are processed (ISS-012).
-68. **Subscription Plan Management & Upgrades**: Manage platform tier subscriptions (Free, Starter, Pro), switch billing tiers with safe downgrade confirmations.
+68. **Plan Management, Usage and Credits**: A manager or landlord sees their plan, how many units and users they are using, any extra units and what they cost, and their credits on the dashboard; they switch plans with safe downgrade confirmations. An admin edits plans, the limit rules, paid services and credits at Admin > Plans & billing.
 
 ---
 

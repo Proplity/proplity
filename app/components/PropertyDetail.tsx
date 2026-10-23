@@ -47,6 +47,7 @@ import { PropertyPhotoManager } from './PropertyPhotoManager';
 import { GateCheckCard } from './GateCheckCard';
 import type { Page } from '../dashboard/navigateToPage';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -1262,7 +1263,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
             <DollarSign className="h-5 w-5 text-green-600" />
             <span className="font-semibold text-green-600">
               ₦{(cheapestUnit?.rentAmount ?? 0).toLocaleString()}/
-              {(cheapestUnit?.listedPaymentFrequency ?? 'year').toLowerCase()}
+              {perFrequency(cheapestUnit?.listedPaymentFrequency)}
             </span>
           </div>
         </div>
@@ -1358,7 +1359,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                           <span className="text-xs text-gray-500">
                             {unit.bedrooms} bed · {unit.bathrooms} bath · ₦
                             {unit.rentAmount.toLocaleString()}/
-                            {unit.listedPaymentFrequency.toLowerCase()}
+                            {perFrequency(unit.listedPaymentFrequency)}
                           </span>
                           {canManage && (
                             <button

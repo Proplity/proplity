@@ -15,6 +15,7 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { toast } from 'sonner';
 import type { Invoice } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface TenantManagementProps {
   onNavigate: (page: Page) => void;
@@ -180,7 +181,7 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                       <DollarSign className="h-4 w-4 text-gray-400" />
                       <span className="font-semibold">₦{rent.rentAmount.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-gray-500">/{rent.paymentFrequency.toLowerCase()}</p>
+                    <p className="text-xs text-gray-500">/{perFrequency(rent.paymentFrequency)}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span

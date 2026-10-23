@@ -19,6 +19,7 @@ import {
 } from '@prisma/client';
 import { testPrisma } from './db';
 import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
+import { DEFAULT_PLANS } from '../../lib/planDefaults';
 
 let counter = 0;
 function unique(prefix: string) {
@@ -103,6 +104,7 @@ export async function createProperty(
     state: string;
     managerId: string | null;
     landlordId: string | null;
+    createdById: string | null;
     isPublished: boolean;
     moderationStatus: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
     metadata: any;
@@ -116,6 +118,7 @@ export async function createProperty(
       state: overrides.state ?? 'Lagos',
       managerId: overrides.managerId ?? null,
       landlordId: overrides.landlordId ?? null,
+      createdById: overrides.createdById ?? null,
       isPublished: overrides.isPublished ?? false,
       moderationStatus:
         overrides.moderationStatus ?? (overrides.isPublished ? 'APPROVED' : 'PENDING_REVIEW'),
@@ -391,4 +394,12 @@ export async function setSystemSettings(data: Prisma.SystemSettingsUncheckedUpda
     update: data,
     create: { id: 'global', ...(data as Prisma.SystemSettingsUncheckedCreateInput) },
   });
+}
+
+/** Puts the default plans in the table (the app seeds them itself on first use; tests that write
+ *  a Subscription directly need the rows first). Returns them by key. */
+export async function seedPlans() {
+  await testPrisma.plan.createMany({ data: DEFAULT_PLANS, skipDuplicates: true });
+  const plans = await testPrisma.plan.findMany();
+  return Object.fromEntries(plans.map((p) => [p.key, p])) as Record<string, (typeof plans)[number]>;
 }

@@ -6,6 +6,8 @@ import { handleApiError } from '@/lib/api/errors';
 import { notifyAndEmail, notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { countUnitsFor, graceEndsAtFrom } from '@/lib/plans';
 import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
@@ -209,9 +211,9 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // A subscription invoice paying activates the subscription itself --
-        // tier/cycle have no dedicated column, encoded into the description
-        // at checkout time (see subscriptions/checkout/route.ts).
+        // A subscription invoice paying activates the subscription itself -- plan/cycle have no
+        // dedicated column, encoded into the description at checkout time (see
+        // subscriptions/checkout/route.ts).
         if (
           subscriptionsEnabled() &&
           invoice.type === 'SUBSCRIPTION' &&
@@ -219,33 +221,52 @@ export async function POST(req: NextRequest) {
           outcome.status === 'PAID' &&
           !outcome.wasPaid
         ) {
-          const match = invoice.description?.match(/tier=(\w+) cycle=(\w+)/);
-          const tier = (match?.[1] as 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE' | undefined) ?? 'PRO';
-          const cycle = match?.[2] === 'yearly' ? 'yearly' : 'monthly';
-          const now = new Date();
-          const periodEnd = new Date(now);
-          if (cycle === 'yearly') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-          else periodEnd.setMonth(periodEnd.getMonth() + 1);
+          const match = invoice.description?.match(/plan=([a-z0-9-]+) cycle=(\w+)/);
+          const plan = match ? await prisma.plan.findUnique({ where: { key: match[1] } }) : null;
+          if (!plan) {
+            console.error('Paid subscription invoice names no known plan', invoice.id);
+          } else {
+            const cycle = match?.[2] === 'yearly' ? 'YEARLY' : 'MONTHLY';
+            const now = new Date();
+            const periodEnd = new Date(now);
+            if (cycle === 'YEARLY') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+            else periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-          await prisma.subscription.upsert({
-            where: { userId: invoice.userId },
-            create: {
-              userId: invoice.userId,
-              tier,
-              status: 'ACTIVE',
-              providerSubscriptionId: data.reference,
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-            },
-            update: {
-              tier,
-              status: 'ACTIVE',
-              providerSubscriptionId: data.reference,
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-              cancelAtPeriodEnd: false,
-            },
-          });
+            // Moving to a plan that includes fewer units than the account has opens the admin's
+            // grace period, when that is the rule.
+            const settings = await getSystemSettings();
+            const units = await countUnitsFor(settings.unitBillingOwner, invoice.userId);
+            const graceEndsAt =
+              settings.enforcePlanLimits &&
+              settings.downgradeRule === 'GRACE_PERIOD' &&
+              units > plan.unitsIncluded
+                ? graceEndsAtFrom(settings.downgradeGraceDays)
+                : null;
+
+            await prisma.subscription.upsert({
+              where: { userId: invoice.userId },
+              create: {
+                userId: invoice.userId,
+                planId: plan.id,
+                billingCycle: cycle,
+                status: 'ACTIVE',
+                providerSubscriptionId: data.reference,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                graceEndsAt,
+              },
+              update: {
+                planId: plan.id,
+                billingCycle: cycle,
+                status: 'ACTIVE',
+                providerSubscriptionId: data.reference,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                cancelAtPeriodEnd: false,
+                graceEndsAt,
+              },
+            });
+          }
         }
       }
     }

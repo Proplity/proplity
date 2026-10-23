@@ -5,6 +5,8 @@ import { handleApiError } from '@/lib/api/errors';
 import { canManageProperty } from '@/lib/api/propertyAccess';
 import { parseCsv } from '@/lib/csv';
 import { parseXlsx } from '@/lib/xlsx';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { PlanLimitError, assertUnitCapacity } from '@/lib/plans';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -56,8 +58,21 @@ export const POST = withAuth(
       // Units added by an owner or manager wait for admin approval, same as adding one by hand.
       const pendingApproval = session.role === 'LANDLORD' || session.role === 'MANAGER';
 
-      let created = 0;
       const errors: { row: number; error: string }[] = [];
+      const toCreate: {
+        propertyId: string;
+        unitNumber: string;
+        rentAmount: number;
+        bedrooms?: number;
+        bathrooms?: number;
+        squareFeet?: number | null;
+        amenities?: string[];
+      }[] = [];
+      const taken = new Set(
+        (
+          await prisma.unit.findMany({ where: { propertyId: id }, select: { unitNumber: true } })
+        ).map((u) => u.unitNumber),
+      );
 
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
@@ -72,30 +87,48 @@ export const POST = withAuth(
           errors.push({ row: i + 2, error: 'rentAmount must be a positive number' });
           continue;
         }
-
-        try {
-          await prisma.unit.create({
-            data: {
-              propertyId: id,
-              unitNumber,
-              rentAmount,
-              bedrooms: r.bedrooms ? Number(r.bedrooms) || 1 : undefined,
-              bathrooms: r.bathrooms ? Number(r.bathrooms) || 1 : undefined,
-              squareFeet: r.sqft ? Number(r.sqft) || null : undefined,
-              ...(pendingApproval ? { amenities: ['approval:pending'] } : {}),
-            },
-          });
-          created += 1;
-        } catch {
+        if (taken.has(unitNumber)) {
           errors.push({
             row: i + 2,
             error: `Could not create unit "${unitNumber}" (duplicate unit number?)`,
           });
+          continue;
         }
+        taken.add(unitNumber);
+        toCreate.push({
+          propertyId: id,
+          unitNumber,
+          rentAmount,
+          bedrooms: r.bedrooms ? Number(r.bedrooms) || 1 : undefined,
+          bathrooms: r.bathrooms ? Number(r.bathrooms) || 1 : undefined,
+          squareFeet: r.sqft ? Number(r.sqft) || null : undefined,
+          ...(pendingApproval ? { amenities: ['approval:pending'] } : {}),
+        });
       }
+
+      // The plan's unit limit covers the whole file at once: it is all added or none of it is,
+      // inside one transaction, so a limit cannot be passed halfway through a file.
+      const settings = await getSystemSettings();
+      const created = await prisma.$transaction(async (tx) => {
+        await assertUnitCapacity(tx, {
+          settings,
+          property,
+          adding: toCreate.length,
+          actor: { id: session.sub, role: session.role },
+          confirmOverage: formData.get('confirmOverage') === 'true',
+        });
+        const result = await tx.unit.createMany({ data: toCreate, skipDuplicates: true });
+        return result.count;
+      });
 
       return NextResponse.json({ data: { created, errors } }, { status: 201 });
     } catch (err) {
+      if (err instanceof PlanLimitError) {
+        return NextResponse.json(
+          { error: err.message, code: err.code, ...err.details },
+          { status: err.status },
+        );
+      }
       return handleApiError(err);
     }
   },

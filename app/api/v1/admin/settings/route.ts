@@ -7,6 +7,8 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/systemSettings';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
+import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
+import { DowngradeRule, OverageMode, UnitBillingOwner } from '@prisma/client';
 
 // Admin-only platform toggles, backed by the same SystemSettings singleton
 // row the /setup wizard uses. GET never writes (findUnique + defaults, via
@@ -63,6 +65,16 @@ const updateSchema = z
       .int('Enter a whole number')
       .min(INVITE_LIMITS.perDay.min, `At least ${INVITE_LIMITS.perDay.min}`)
       .max(INVITE_LIMITS.perDay.max, `At most ${INVITE_LIMITS.perDay.max} a day`)
+      .optional(),
+    enforcePlanLimits: z.boolean().optional(),
+    unitBillingOwner: z.nativeEnum(UnitBillingOwner).optional(),
+    overageMode: z.nativeEnum(OverageMode).optional(),
+    downgradeRule: z.nativeEnum(DowngradeRule).optional(),
+    downgradeGraceDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(DOWNGRADE_GRACE_DAYS.min, `At least ${DOWNGRADE_GRACE_DAYS.min} day`)
+      .max(DOWNGRADE_GRACE_DAYS.max, `At most ${DOWNGRADE_GRACE_DAYS.max} days`)
       .optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), {

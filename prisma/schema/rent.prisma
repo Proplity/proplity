@@ -47,8 +47,8 @@ enum NoticeStatus {
 
 model Notice {
   id            String       @id @default(uuid())
-  rentId       String
-  rent         Rent        @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rentId        String
+  rent          Rent         @relation(fields: [rentId], references: [id], onDelete: Cascade)
   // Optional precise link for PAYMENT_REMINDER notices about one specific
   // overdue invoice, rather than the rent's rent in general.
   invoiceId     String?
@@ -109,7 +109,7 @@ model Rent {
   lateFeeType        LateFeeType         @default(PERCENTAGE)
   signedAgreementUrl String?
   agreementSignedAt  DateTime?
-  status             RentStatus         @default(PENDING)
+  status             RentStatus          @default(PENDING)
   // PRD §6.1 "Smart Rent Intelligence" — late-payment prediction and risk
   // flagging. Nullable and timestamped: these are computed periodically by a
   // scoring job, not always populated (e.g. a brand-new rent has no payment
@@ -129,8 +129,8 @@ model Rent {
   // prior rent. Lets renewals be traced instead of looking like an unrelated
   // new Rent row on the same unit.
   renewedFromId      String?             @unique
-  renewedFrom        Rent?              @relation("RentRenewal", fields: [renewedFromId], references: [id])
-  renewedInto        Rent?              @relation("RentRenewal")
+  renewedFrom        Rent?               @relation("RentRenewal", fields: [renewedFromId], references: [id])
+  renewedInto        Rent?               @relation("RentRenewal")
   applications       Application[]
   signatures         RentSignature[]
   createdAt          DateTime            @default(now())
@@ -153,8 +153,8 @@ model Rent {
 // signing twice.
 model RentSignature {
   id            String   @id @default(uuid())
-  rentId       String
-  rent         Rent    @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rentId        String
+  rent          Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
   signerId      String
   signer        User     @relation(fields: [signerId], references: [id])
   signerRole    Role
@@ -196,8 +196,8 @@ model Application {
   // same "verified at creation, never re-checked" pattern as
   // PropertyReview.rentId (rule 4). Optional: most applications, including
   // every REJECTED one, never produce a rent at all.
-  rentId      String?
-  rent        Rent?            @relation(fields: [rentId], references: [id], onDelete: SetNull)
+  rentId       String?
+  rent         Rent?             @relation(fields: [rentId], references: [id], onDelete: SetNull)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 

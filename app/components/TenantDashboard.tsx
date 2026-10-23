@@ -29,6 +29,7 @@ import { RentSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { AttentionCard } from './AttentionCard';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface TenantDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -260,7 +261,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
               </p>
               <p className="text-lg font-semibold">
                 ₦{(rent.rentAmount + rent.serviceCharge).toLocaleString()}/
-                {rent.paymentFrequency.toLowerCase()}
+                {perFrequency(rent.paymentFrequency)}
               </p>
               {rent.serviceCharge > 0 && (
                 <p className="mt-0.5 text-xs text-gray-400">

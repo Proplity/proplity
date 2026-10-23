@@ -11,6 +11,8 @@ import { safeUrlList } from '@/lib/api/urlField';
 
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { PlanLimitError, assertUnitCapacity } from '@/lib/plans';
 
 // Lists are capped so one busy record cannot return an unbounded response (ISS-073).
 const LIST_LIMIT = 500;
@@ -54,6 +56,8 @@ const createUnitSchema = z.object({
   amenities: z.array(z.string()).optional(),
   mediaUrls: safeUrlList.optional(),
   sqft: z.number().int().optional(),
+  // Sent again after the screen has shown what units over the plan will cost (OVERAGE_NEEDS_CONFIRMATION).
+  confirmOverage: z.boolean().optional(),
 });
 
 export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
@@ -68,7 +72,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const validated = await validateBody(req, createUnitSchema);
     if (!validated.success) return validated.response;
-    const { sqft, ...data } = validated.data;
+    const { sqft, confirmOverage, ...data } = validated.data;
 
     const isLandlordOrManager = session.role === 'LANDLORD' || session.role === 'MANAGER';
     const amenities = data.amenities ?? [];
@@ -79,8 +83,20 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
         ? [...amenities, 'approval:pending']
         : amenities;
 
-    const unit = await prisma.unit.create({
-      data: { ...data, amenities: unitAmenities, propertyId: id, squareFeet: sqft },
+    // The plan's unit limit is checked and the unit created in one transaction, so two requests at
+    // once cannot both squeeze under it.
+    const settings = await getSystemSettings();
+    const unit = await prisma.$transaction(async (tx) => {
+      await assertUnitCapacity(tx, {
+        settings,
+        property,
+        adding: 1,
+        actor: { id: session.sub, role: session.role },
+        confirmOverage,
+      });
+      return tx.unit.create({
+        data: { ...data, amenities: unitAmenities, propertyId: id, squareFeet: sqft },
+      });
     });
 
     // Notify admins of new unit awaiting review
@@ -109,6 +125,12 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     return NextResponse.json({ data: serializeUnit(unit) }, { status: 201 });
   } catch (err) {
+    if (err instanceof PlanLimitError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, ...err.details },
+        { status: err.status },
+      );
+    }
     return handleApiError(err);
   }
 });

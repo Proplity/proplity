@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Building2, Home, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { useRents } from '@/hooks/useRents';
 import type { Rent } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 const STATUS_META: Record<string, { label: string; icon: typeof Clock; className: string }> = {
   ACTIVE: { label: 'Active', icon: CheckCircle2, className: 'bg-green-100 text-green-800' },
@@ -108,7 +109,7 @@ export default function MyRentalsPage() {
                     {meta.label}
                   </div>
                   <p className="text-sm font-semibold text-gray-900">
-                    ₦{rent.rentAmount.toLocaleString()}/{rent.paymentFrequency.toLowerCase()}
+                    ₦{rent.rentAmount.toLocaleString()}/{perFrequency(rent.paymentFrequency)}
                   </p>
                 </div>
               </div>

@@ -291,8 +291,8 @@ Same as landlord, plus the day-to-day operational tools:
 
 ## Automated tests
 
-- **API Integration suite (Vitest)** — `pnpm test`. 678 tests across 58 files under
-  `tests/` (568 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 110 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
+- **API Integration suite (Vitest)** — `pnpm test`. 713 tests across 59 files under
+  `tests/` (603 in `tests/api/`, including bank reconciliation and vendor payouts in `tests/api/bank-reconciliation-and-payouts.test.ts`; the other 110 are the mocked unit, fuzz, security and anomaly tests that `pnpm test:unit` runs on their own),
   the API tests making real HTTP calls against a spawned `next dev` server and a dedicated
   `proplity_test_db` (dropped and recreated per run). Copy `.env.test.example`
   to `.env.test` first. Run in CI on every PR.

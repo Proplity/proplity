@@ -210,6 +210,7 @@ export const POST = withAuth(
               }
             : {}),
           isPublished: false,
+          createdById: session.sub,
           ...(session.role === 'MANAGER' && !data.managerId ? { managerId: session.sub } : {}),
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },

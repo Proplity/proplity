@@ -6,6 +6,7 @@ import { PropertyApplicationForm } from '../../../../components/PropertyApplicat
 import { useProperty } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 import { isTenantProfileComplete } from '@/lib/tenantProfile';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 export default function Page() {
   const { id } = useParams<{ id: string }>();
@@ -41,7 +42,7 @@ export default function Page() {
     ? (property.units.find((u) => u.status === 'VACANT') ?? cheapestUnit)
     : undefined;
   const propertyPrice = cheapestUnit
-    ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${cheapestUnit.listedPaymentFrequency.toLowerCase()}`
+    ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${perFrequency(cheapestUnit.listedPaymentFrequency)}`
     : '';
 
   if (property && !targetUnit) {

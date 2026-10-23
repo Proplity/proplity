@@ -54,9 +54,11 @@ model User {
   passwordResetToken           PasswordResetToken?
   loginAttempts                LoginAttempt[]
   managedProperties            Property[]                @relation("ManagedProperties")
+  createdProperties            Property[]                @relation("CreatedProperties")
+  creditEntries                CreditEntry[]
   ownedProperties              Property[]                @relation("OwnedProperties")
-  rents                       Rent[]                   @relation("TenantRents")
-  rentSignatures              RentSignature[]
+  rents                        Rent[]                    @relation("TenantRents")
+  rentSignatures               RentSignature[]
   maintenanceRequests          MaintenanceRequest[]      @relation("TenantMaintenance")
   assignedJobs                 MaintenanceRequest[]      @relation("VendorJobs")
   approvedRepairs              MaintenanceRequest[]      @relation("RepairApprovals")
@@ -148,19 +150,12 @@ model Note {
   author      User     @relation("NoteAuthor", fields: [authorId], references: [id])
   aboutUserId String?
   aboutUser   User?    @relation("NoteAboutUser", fields: [aboutUserId], references: [id])
-  rentId     String?
-  rent       Rent?   @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rentId      String?
+  rent        Rent?    @relation(fields: [rentId], references: [id], onDelete: Cascade)
   body        String
   createdAt   DateTime @default(now())
 
   @@index([aboutUserId, createdAt])
-}
-
-enum PlanTier {
-  FREE
-  BASIC
-  PRO
-  ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -181,7 +176,13 @@ model Subscription {
   id                     String             @id @default(uuid())
   userId                 String             @unique
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tier                   PlanTier           @default(FREE)
+  // Null = never bought a plan, so on the default (free) plan (see billing.prisma).
+  planId                 String?
+  plan                   Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
+  billingCycle           BillingCycle       @default(MONTHLY)
+  // After a move to a smaller plan the owner may keep adding units until this time, when the
+  // admin's downgrade rule is GRACE_PERIOD.
+  graceEndsAt            DateTime?
   status                 SubscriptionStatus @default(ACTIVE)
   providerSubscriptionId String?
   currentPeriodStart     DateTime?
