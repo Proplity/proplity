@@ -146,6 +146,8 @@ export type CreatePropertyInput = {
 };
 
 export type UpdatePropertyInput = {
+  /** A company's managing partner can hand a property to someone on their team. */
+  managerId?: string;
   name?: string;
   address?: string;
   city?: string;
@@ -354,6 +356,7 @@ export type PlatformSettings = {
   overageMode: 'ALLOW_AND_BILL' | 'HARD_STOP' | 'CONFIRM_EACH_TIME';
   downgradeRule: 'BLOCK' | 'GRACE_PERIOD' | 'ALLOW_AND_BILL';
   downgradeGraceDays: number;
+  teamMemberAccess: 'ASSIGNED_ONLY' | 'ALL_COMPANY';
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -743,6 +746,8 @@ export type Subscription = {
   credits: { balance: number };
   limitsEnforced: boolean;
   subscriptionsEnabled: boolean;
+  canChangePlan: boolean;
+  company: { isPartner: boolean } | null;
 };
 
 export type CheckoutSubscriptionInput = {
@@ -1229,4 +1234,23 @@ export type InitiateVendorPayoutInput = {
   bankAccountId?: string;
   payoutMethod?: PayoutMethod;
   notes?: string;
+};
+
+/** A person in a company (GET /team). */
+export type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  isPartner: boolean;
+  /** Properties they are the manager of. */
+  properties: number;
+};
+
+export type TeamOverview = {
+  organisation: { id: string; name: string } | null;
+  isPartner: boolean;
+  members: TeamMember[];
+  seats: { used: number; included: number };
+  limitsEnforced: boolean;
 };

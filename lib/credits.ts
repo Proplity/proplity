@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { getAccountPlan, ensureDefaultServices } from '@/lib/plans';
+import { billingAccountOf } from '@/lib/team';
 
 // "2026-10": the calendar month the monthly allowance belongs to.
 export function currentPeriodKey(now = new Date()): string {
@@ -12,12 +13,13 @@ export function currentPeriodKey(now = new Date()): string {
  * writes a row.
  */
 export async function ensureMonthlyAllowance(userId: string): Promise<void> {
-  const { plan } = await getAccountPlan(userId);
+  // Credits belong to the account that pays: a company's members share their partner's.
+  const { plan, billingAccountId } = await getAccountPlan(userId);
   if (plan.monthlyCredits <= 0) return;
   await prisma.creditEntry.createMany({
     data: [
       {
-        userId,
+        userId: billingAccountId,
         delta: plan.monthlyCredits,
         reason: 'MONTHLY_ALLOWANCE',
         periodKey: currentPeriodKey(),
@@ -30,7 +32,11 @@ export async function ensureMonthlyAllowance(userId: string): Promise<void> {
 
 export async function creditBalance(userId: string): Promise<number> {
   await ensureMonthlyAllowance(userId);
-  const sum = await prisma.creditEntry.aggregate({ where: { userId }, _sum: { delta: true } });
+  const accountId = await billingAccountOf(userId);
+  const sum = await prisma.creditEntry.aggregate({
+    where: { userId: accountId },
+    _sum: { delta: true },
+  });
   return sum._sum.delta ?? 0;
 }
 
@@ -51,13 +57,17 @@ export class CreditError extends Error {
 export async function spendCredits(userId: string, serviceKey: string, note?: string) {
   await ensureDefaultServices();
   await ensureMonthlyAllowance(userId);
+  const accountId = await billingAccountOf(userId);
   return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credits:${userId}`}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credits:${accountId}`}))`;
     const service = await tx.paidService.findUnique({ where: { key: serviceKey } });
     if (!service || !service.isActive) {
       throw new CreditError(404, 'UNKNOWN_SERVICE', 'That service is not available');
     }
-    const sum = await tx.creditEntry.aggregate({ where: { userId }, _sum: { delta: true } });
+    const sum = await tx.creditEntry.aggregate({
+      where: { userId: accountId },
+      _sum: { delta: true },
+    });
     const balance = sum._sum.delta ?? 0;
     if (balance < service.creditCost) {
       throw new CreditError(
@@ -67,7 +77,15 @@ export async function spendCredits(userId: string, serviceKey: string, note?: st
       );
     }
     return tx.creditEntry.create({
-      data: { userId, delta: -service.creditCost, reason: 'SPEND', serviceKey, note },
+      data: {
+        userId: accountId,
+        delta: -service.creditCost,
+        reason: 'SPEND',
+        serviceKey,
+        note,
+        // Who in the company spent it.
+        createdById: userId,
+      },
     });
   });
 }

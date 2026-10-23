@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
 import { creditBalance } from '@/lib/credits';
+import { billingAccountOf } from '@/lib/team';
 
 // An admin adds credits to an account, or takes some back with a negative amount (never below 0).
 const grantSchema = z
@@ -37,17 +38,19 @@ export const POST = withAuth(
         );
       }
 
+      // Credits belong to the account that pays: for a company member, their managing partner.
+      const accountId = await billingAccountOf(user.id);
       const balance = await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credits:${user.id}`}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credits:${accountId}`}))`;
         const sum = await tx.creditEntry.aggregate({
-          where: { userId: user.id },
+          where: { userId: accountId },
           _sum: { delta: true },
         });
         const current = sum._sum.delta ?? 0;
         if (current + amount < 0) return null;
         await tx.creditEntry.create({
           data: {
-            userId: user.id,
+            userId: accountId,
             delta: amount,
             reason: 'ADMIN_GRANT',
             note,
@@ -69,7 +72,12 @@ export const POST = withAuth(
         },
       });
       return NextResponse.json({
-        data: { userId: user.id, name: user.name, balance: await creditBalance(user.id) },
+        data: {
+          userId: user.id,
+          name: user.name,
+          balance: await creditBalance(user.id),
+          creditedTo: accountId,
+        },
       });
     } catch (err) {
       return handleApiError(err);

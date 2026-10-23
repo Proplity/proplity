@@ -29,6 +29,7 @@ export async function getSystemSettings() {
     overageMode: settings?.overageMode ?? 'ALLOW_AND_BILL',
     downgradeRule: settings?.downgradeRule ?? 'BLOCK',
     downgradeGraceDays: settings?.downgradeGraceDays ?? DOWNGRADE_GRACE_DAYS.default,
+    teamMemberAccess: settings?.teamMemberAccess ?? 'ASSIGNED_ONLY',
   };
 }
 

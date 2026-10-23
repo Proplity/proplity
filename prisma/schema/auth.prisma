@@ -56,6 +56,11 @@ model User {
   managedProperties            Property[]                @relation("ManagedProperties")
   createdProperties            Property[]                @relation("CreatedProperties")
   creditEntries                CreditEntry[]
+  // A company account (for example a firm of managers). Everyone in it, the managing partner
+  // included, has this set; the partner is the Organisation's ownerId and is the one who pays.
+  organisationId               String?
+  organisation                 Organisation?             @relation("OrganisationMembers", fields: [organisationId], references: [id], onDelete: SetNull)
+  ownedOrganisation            Organisation?             @relation("OrganisationOwner")
   ownedProperties              Property[]                @relation("OwnedProperties")
   rents                        Rent[]                    @relation("TenantRents")
   rentSignatures               RentSignature[]
@@ -94,6 +99,8 @@ model User {
   vendorPayoutsReceived        VendorPayout[]            @relation("VendorPayoutsReceived")
   vendorPayoutsInitiated       VendorPayout[]            @relation("VendorPayoutsInitiated")
   vendorPayoutsApproved        VendorPayout[]            @relation("VendorPayoutsApproved")
+
+  @@index([organisationId])
 }
 
 // PRD §5.4 "Professional business profile" — 1:1 with a User whose role is VENDOR.
@@ -278,4 +285,17 @@ model LoginAttempt {
   createdAt  DateTime @default(now())
 
   @@index([identifier, createdAt])
+}
+
+// A company: a managing partner and the people in the firm who manage properties. Each person has
+// their own login (a MANAGER account). The partner's plan covers the whole company: its seats are
+// the plan's users, its units are every member's units, its credits are shared.
+model Organisation {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String   @unique
+  owner     User     @relation("OrganisationOwner", fields: [ownerId], references: [id])
+  members   User[]   @relation("OrganisationMembers")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

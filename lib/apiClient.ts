@@ -16,6 +16,7 @@ import type {
   PaidService,
   Plan,
   PlanInput,
+  TeamOverview,
   CreateAutoPayMandateInput,
   ConditionReport,
   Conversation,
@@ -555,6 +556,22 @@ export const api = {
   },
   plans: {
     list: () => apiClient.get<{ data: Plan[] }>('/api/v1/plans'),
+  },
+  team: {
+    get: () => apiClient.get<{ data: TeamOverview }>('/api/v1/team'),
+    create: (name: string) =>
+      apiClient.post<{ data: { id: string; name: string } }>('/api/v1/team', { name }),
+    rename: (name: string) =>
+      apiClient.patch<{ data: { id: string; name: string } }>('/api/v1/team', { name }),
+    addMember: (body: { name: string; email: string; phoneNumber?: string }) =>
+      apiClient.post<{ data: { id: string; name: string; email: string } }>(
+        '/api/v1/team/members',
+        body,
+      ),
+    removeMember: (id: string) =>
+      apiClient.delete<{ data: { id: string; propertiesReassigned: number } }>(
+        `/api/v1/team/members/${id}`,
+      ),
   },
   services: {
     list: () =>

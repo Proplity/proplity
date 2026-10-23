@@ -8,7 +8,7 @@ import { validateCSRF } from '@/lib/auth/csrf';
 import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/systemSettings';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
 import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
-import { DowngradeRule, OverageMode, UnitBillingOwner } from '@prisma/client';
+import { DowngradeRule, OverageMode, TeamMemberAccess, UnitBillingOwner } from '@prisma/client';
 
 // Admin-only platform toggles, backed by the same SystemSettings singleton
 // row the /setup wizard uses. GET never writes (findUnique + defaults, via
@@ -70,6 +70,7 @@ const updateSchema = z
     unitBillingOwner: z.nativeEnum(UnitBillingOwner).optional(),
     overageMode: z.nativeEnum(OverageMode).optional(),
     downgradeRule: z.nativeEnum(DowngradeRule).optional(),
+    teamMemberAccess: z.nativeEnum(TeamMemberAccess).optional(),
     downgradeGraceDays: z
       .number()
       .int('Enter a whole number of days')

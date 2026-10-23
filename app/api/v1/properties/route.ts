@@ -8,10 +8,12 @@ import { getServerSession } from '@/lib/auth/session';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
+import { managedIdsOf } from '@/lib/team';
 import {
   PENDING_UNIT_FLAG,
   PRIVATE_UNIT_FLAG,
   isPublicUnit,
+  propertyScopeWhere,
   serializeUnit,
 } from '@/lib/api/propertyAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
@@ -37,9 +39,7 @@ export async function GET(req: NextRequest) {
       }
 
       const where: Record<string, unknown> =
-        jwtSession.role === 'ADMIN'
-          ? {}
-          : { OR: [{ managerId: jwtSession.sub }, { landlordId: jwtSession.sub }] };
+        jwtSession.role === 'ADMIN' ? {} : propertyScopeWhere(await managedIdsOf(jwtSession.sub));
 
       const [properties, total] = await Promise.all([
         prisma.property.findMany({
@@ -160,7 +160,11 @@ export const POST = withAuth(
     // or landlord cannot put someone else's account on a listing; that is the same rule as moving
     // a property afterwards, which only an admin may do.
     if (session.role !== 'ADMIN') {
-      const ownManagerSeat = data.managerId === undefined || data.managerId === session.sub;
+      // A company's managing partner may also put one of their own team in the manager's seat.
+      const ownManagerSeat =
+        data.managerId === undefined ||
+        data.managerId === session.sub ||
+        (!!session.org?.isOwner && session.org.memberIds.includes(data.managerId));
       const ownLandlordSeat = data.landlordId === undefined || data.landlordId === session.sub;
       const roleMatches =
         (data.managerId === undefined || session.role === 'MANAGER') &&

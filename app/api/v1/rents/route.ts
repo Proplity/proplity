@@ -10,7 +10,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY, propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { sendEmail } from '@/lib/email';
 import { notifyAndEmail } from '@/lib/notifications';
 import { getSystemSettings } from '@/lib/systemSettings';
@@ -32,7 +32,7 @@ export const GET = withAuth(
         where.tenantId = session.sub;
       } else if (session.role === 'MANAGER' || session.role === 'LANDLORD') {
         where.unit = {
-          property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] },
+          property: { ...propertyScopeWhere(session.scope) },
         };
       }
       // ADMIN: no extra scoping.

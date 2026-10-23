@@ -1,4 +1,4 @@
-import { Property, Role } from '@prisma/client';
+import { Prisma, Property, Role } from '@prisma/client';
 
 /**
  * True if the session belongs to the property's own manager/landlord, or an
@@ -7,14 +7,21 @@ import { Property, Role } from '@prisma/client';
  * own listing rather than just any authenticated user of the right role.
  */
 export function canManageProperty(
-  session: { sub: string; role: Role },
+  session: { sub: string; role: Role; scope?: string[] },
   property: Pick<Property, 'managerId' | 'landlordId'>,
 ) {
+  if (session.role === 'ADMIN') return true;
+  // `scope` is the person plus, for a company, the people whose properties they may manage.
+  const ids = session.scope ?? [session.sub];
   return (
-    session.role === 'ADMIN' ||
-    property.managerId === session.sub ||
-    property.landlordId === session.sub
+    (!!property.managerId && ids.includes(property.managerId)) ||
+    (!!property.landlordId && ids.includes(property.landlordId))
   );
+}
+
+/** Prisma filter for the properties managed or owned by any of these users. */
+export function propertyScopeWhere(ids: string[]): Prisma.PropertyWhereInput {
+  return { OR: [{ managerId: { in: ids } }, { landlordId: { in: ids } }] };
 }
 
 export function serializeUnit<T extends { squareFeet: number | null }>(unit: T) {

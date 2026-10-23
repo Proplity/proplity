@@ -148,7 +148,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 65. **Manager Invitation Code Dispatch**: Send customized email invitations to property managers; monitor active codes and deactivate anytime.
 66. **Disbursement Bank Account Management**: Register and manage verified Nigerian bank accounts (NUBAN) for receiving rental payouts.
 67. **Vendor Maintenance Payout Approvals**: Review and approve vendor repair invoices before disbursements are processed (ISS-012).
-68. **Plan Management, Usage and Credits**: A manager or landlord sees their plan, how many units and users they are using, any extra units and what they cost, and their credits on the dashboard; they switch plans with safe downgrade confirmations. An admin edits plans, the limit rules, paid services and credits at Admin > Plans & billing.
+68. **Plan Management, Usage and Credits**: A manager or landlord sees their plan, how many units and users they are using, any extra units and what they cost, and their credits on the dashboard; they switch plans with safe downgrade confirmations. An admin edits plans, the limit rules, paid services and credits at Admin > Plans & billing. A manager can also start a company at **Team**: add people (each gets an email to set a password and signs in as a manager), remove them and choose who manages which property. The company shares one plan, one unit allowance and one credit balance, and only the managing partner changes the plan. A member sees their own properties, or the whole company's if an admin set it that way.
 
 ---
 

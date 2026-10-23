@@ -16,6 +16,7 @@ import {
   Home,
   Search,
   Users,
+  UsersRound,
   Wrench,
   MessageSquare,
   Settings,
@@ -70,6 +71,7 @@ function getTabsForRole(role: Role) {
           shortLabel: 'Schedules',
           icon: CalendarClock,
         },
+        { href: '/dashboard/team', label: 'Team', icon: UsersRound },
       ];
     case 'tenant':
       return [

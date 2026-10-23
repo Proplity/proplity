@@ -8,12 +8,12 @@ in [`../components/dashboard.md`](../components/dashboard.md).
 
 Tabs by role (from `getTabsForRole` in `DashboardChrome.tsx`):
 
-| Role     | Tabs                                                                                                     |
-| :------- | :------------------------------------------------------------------------------------------------------- |
-| Tenant   | Dashboard, Browse Properties, Payment History, My Rentals, Messages                                      |
-| Manager  | Dashboard, My Properties, Discover Properties, Tenants, Maintenance, Messages, Bank Transfers, Schedules |
-| Landlord | Portfolio, Tenants, Maintenance, Messages, Bank Transfers, Schedules                                     |
-| Vendor   | My Jobs, Invoices, Messages                                                                              |
+| Role     | Tabs                                                                                                           |
+| :------- | :------------------------------------------------------------------------------------------------------------- |
+| Tenant   | Dashboard, Browse Properties, Payment History, My Rentals, Messages                                            |
+| Manager  | Dashboard, My Properties, Discover Properties, Tenants, Maintenance, Messages, Bank Transfers, Schedules, Team |
+| Landlord | Portfolio, Tenants, Maintenance, Messages, Bank Transfers, Schedules                                           |
+| Vendor   | My Jobs, Invoices, Messages                                                                                    |
 
 ## Home and shared pages
 
@@ -60,10 +60,11 @@ Tabs by role (from `getTabsForRole` in `DashboardChrome.tsx`):
 
 ## Money
 
-| Route                        | File                                 | Roles             | Description                                                                                                                        |
-| :--------------------------- | :----------------------------------- | :---------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard/payment-history` | `dashboard/payment-history/page.tsx` | tenant            | Invoices and payments, pay by card, **Paid another way** (bank transfer or cash), receipts, auto-pay                               |
-| `/dashboard/reconciliation`  | `dashboard/reconciliation/page.tsx`  | manager, landlord | Bank transfers recorded by tenants or the team; someone other than the recorder confirms or rejects (admins use `/admin/payments`) |
+| Route                        | File                                 | Roles             | Description                                                                                                                                                                                                          |
+| :--------------------------- | :----------------------------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard/payment-history` | `dashboard/payment-history/page.tsx` | tenant            | Invoices and payments, pay by card, **Paid another way** (bank transfer or cash), receipts, auto-pay                                                                                                                 |
+| `/dashboard/reconciliation`  | `dashboard/reconciliation/page.tsx`  | manager, landlord | Bank transfers recorded by tenants or the team; someone other than the recorder confirms or rejects (admins use `/admin/payments`)                                                                                   |
+| `/dashboard/team`            | `dashboard/team/page.tsx`            | manager           | The company: create it, see the seats the plan includes, add a person (they get an email to set a password), remove one, and choose who manages which property (`TeamPanel`). Shown to a company's members read-only |
 
 ## Vendor
 

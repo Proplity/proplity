@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { PUBLIC_PAYMENT_SELECT } from '@/lib/api/paymentSelect';
 import { z } from 'zod';
 import { InvoiceStatus, InvoiceType, Prisma } from '@prisma/client';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
@@ -49,12 +49,12 @@ export const GET = withAuth(async (req, { session }) => {
         OR: [
           {
             rent: {
-              unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+              unit: { property: { ...propertyScopeWhere(session.scope) } },
             },
           },
           {
             maintenanceRequest: {
-              unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+              unit: { property: { ...propertyScopeWhere(session.scope) } },
             },
           },
         ],

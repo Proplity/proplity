@@ -42,10 +42,12 @@ export async function createUser(
     name: string;
     status: UserStatus;
     phoneNumber: string | null;
+    organisationId: string | null;
   }> = {},
 ) {
   return testPrisma.user.create({
     data: {
+      organisationId: overrides.organisationId ?? null,
       email: overrides.email ?? `${unique(role.toLowerCase())}@test.local`,
       name: overrides.name ?? `Test ${role}`,
       passwordHash: await passwordHash(),

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { toCsv } from '@/lib/csv';
@@ -29,10 +30,7 @@ export const GET = withAuth(
     try {
       const format = req.nextUrl.searchParams.get('format') === 'xlsx' ? 'xlsx' : 'csv';
 
-      const where =
-        session.role === 'ADMIN'
-          ? {}
-          : { OR: [{ managerId: session.sub }, { landlordId: session.sub }] };
+      const where = session.role === 'ADMIN' ? {} : propertyScopeWhere(session.scope);
 
       const properties = await prisma.property.findMany({
         where,

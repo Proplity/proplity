@@ -4,6 +4,7 @@ import { ApplicationStatus, Prisma } from '@prisma/client';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
 import { listingOpenTo } from '@/lib/api/listingAccess';
 import { prisma } from '@/lib/db';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
@@ -26,7 +27,7 @@ export const GET = withAuth(async (req, { session }) => {
       filters.push({ applicantId: session.sub });
     } else if (session.role === 'MANAGER' || session.role === 'LANDLORD') {
       filters.push({
-        unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+        unit: { property: { ...propertyScopeWhere(session.scope) } },
       });
     }
     // ADMIN and VENDOR: no extra scoping needed for ADMIN (sees all);

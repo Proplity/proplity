@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PropertyType, Role, Prisma } from '@prisma/client';
+import { PropertyType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, isPublicUnit, serializeUnit } from '@/lib/api/propertyAccess';
-import { getServerSession } from '@/lib/auth/session';
+import { sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
 import { listingHash } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
@@ -62,8 +62,7 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
-    const jwtSession = await getServerSession();
-    const session = jwtSession ? { sub: jwtSession.sub, role: jwtSession.role as Role } : null;
+    const session = await sessionOrNull();
     const manages = !!session && canManageProperty(session, property);
     // Any rent at all, not just ACTIVE: a tenant mid-renewal or just past
     // their end date still needs the property's announcements and their own
@@ -156,7 +155,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     // ordinary listing edit -- restrict it to ADMIN, and require the target
     // id to actually be a user with the matching role.
     if (validated.data.managerId !== undefined || validated.data.landlordId !== undefined) {
-      if (session.role !== 'ADMIN') {
+      // A company's managing partner may hand a property they run to someone on their own team.
+      const partnerHandover =
+        session.role === 'MANAGER' &&
+        !!session.org?.isOwner &&
+        validated.data.landlordId === undefined &&
+        !!validated.data.managerId &&
+        session.org.memberIds.includes(validated.data.managerId);
+      if (session.role !== 'ADMIN' && !partnerHandover) {
         return NextResponse.json(
           { error: "Only an admin may reassign a property's manager or landlord" },
           { status: 403 },

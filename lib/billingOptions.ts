@@ -55,8 +55,22 @@ export const DOWNGRADE_RULES = [
   },
 ] as const;
 
+export const TEAM_MEMBER_ACCESS = [
+  {
+    value: 'ASSIGNED_ONLY',
+    label: 'Only the properties they manage',
+    hint: "A team member sees the properties assigned to them. The managing partner always sees every member's properties.",
+  },
+  {
+    value: 'ALL_COMPANY',
+    label: "All of the company's properties",
+    hint: 'Every team member sees and can manage every property any member of the company manages.',
+  },
+] as const;
+
 export const DOWNGRADE_GRACE_DAYS = { min: 1, max: 365, default: 30 } as const;
 
 export type UnitBillingOwner = (typeof UNIT_BILLING_OWNERS)[number]['value'];
 export type OverageMode = (typeof OVERAGE_MODES)[number]['value'];
+export type TeamMemberAccess = (typeof TEAM_MEMBER_ACCESS)[number]['value'];
 export type DowngradeRule = (typeof DOWNGRADE_RULES)[number]['value'];

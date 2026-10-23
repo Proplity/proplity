@@ -66,6 +66,9 @@ export const GET = withAuth(async (_req, { session }) => {
         usage,
         credits: { balance: credits },
         limitsEnforced: settings.enforcePlanLimits,
+        // A team member works on the managing partner's plan and cannot change it.
+        canChangePlan: !session.org || session.org.isOwner,
+        company: session.org ? { isPartner: session.org.isOwner } : null,
         subscriptionsEnabled: subscriptionsEnabled(),
       },
     });

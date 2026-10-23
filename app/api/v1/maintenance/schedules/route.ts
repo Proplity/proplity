@@ -6,7 +6,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { anchorDay } from '@/lib/maintenanceSchedule';
 
 export const GET = withAuth(
@@ -19,7 +19,7 @@ export const GET = withAuth(
         session.role === 'ADMIN'
           ? {}
           : {
-              unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+              unit: { property: { ...propertyScopeWhere(session.scope) } },
             };
 
       const [schedules, total] = await Promise.all([
