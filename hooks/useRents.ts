@@ -2,68 +2,68 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/apiClient';
 import { useApiSubmit } from './useApiSubmit';
 import type {
-  CreateLeaseInput,
-  Lease,
+  CreateRentInput,
+  Rent,
   Note,
-  UpdateLeaseTermsInput,
-  RenewLeaseInput,
+  UpdateRentTermsInput,
+  RenewRentInput,
   CreateNoticeInput,
 } from '@/lib/api/types';
 
-export function useCreateLease() {
-  return useApiSubmit((body: CreateLeaseInput) =>
-    api.leases.create(body).then((res) => res.data.data),
+export function useCreateRent() {
+  return useApiSubmit((body: CreateRentInput) =>
+    api.rents.create(body).then((res) => res.data.data),
   );
 }
 
-// Edits an existing lease's grace period / late-fee terms -- landlord/
-// manager autonomy, see leases/[id] PATCH.
-export function useUpdateLeaseTerms(leaseId: string) {
-  return useApiSubmit((body: UpdateLeaseTermsInput) =>
-    api.leases.updateTerms(leaseId, body).then((res) => res.data.data),
+// Edits an existing rent's grace period / late-fee terms -- landlord/
+// manager autonomy, see rents/[id] PATCH.
+export function useUpdateRentTerms(rentId: string) {
+  return useApiSubmit((body: UpdateRentTermsInput) =>
+    api.rents.updateTerms(rentId, body).then((res) => res.data.data),
   );
 }
 
-// Explicit lease lifecycle transitions (e.g. activating a PENDING lease,
+// Explicit rent lifecycle transitions (e.g. activating a PENDING rent,
 // terminating an ACTIVE one) -- Unit.status is kept in sync server-side.
-export function useUpdateLeaseStatus(leaseId: string) {
+export function useUpdateRentStatus(rentId: string) {
   return useApiSubmit((status: string) =>
-    api.leases.updateStatus(leaseId, status).then((res) => res.data.data),
+    api.rents.updateStatus(rentId, status).then((res) => res.data.data),
   );
 }
 
-// Renews a lease: creates a new ACTIVE Lease row linked via renewedFromId
-// and expires the current one -- see the `renew` branch of leases/[id] PATCH.
-export function useRenewLease(leaseId: string) {
-  return useApiSubmit((body: RenewLeaseInput) =>
-    api.leases.renew(leaseId, body).then((res) => res.data.data),
+// Renews a rent: creates a new ACTIVE Rent row linked via renewedFromId
+// and expires the current one -- see the `renew` branch of rents/[id] PATCH.
+export function useRenewRent(rentId: string) {
+  return useApiSubmit((body: RenewRentInput) =>
+    api.rents.renew(rentId, body).then((res) => res.data.data),
   );
 }
 
-// Click-wrap e-signature -- see app/api/v1/leases/[id]/sign/route.ts.
-export function useSignLease(leaseId: string) {
+// Click-wrap e-signature -- see app/api/v1/rents/[id]/sign/route.ts.
+export function useSignRent(rentId: string) {
   return useApiSubmit((fullName: string) =>
-    api.leases.sign(leaseId, fullName).then((res) => res.data.data),
+    api.rents.sign(rentId, fullName).then((res) => res.data.data),
   );
 }
 
-// The logged-in tenant's own active lease -- a tenant has exactly one in
+// The logged-in tenant's own active rent -- a tenant has exactly one in
 // the seeded data model. Used to thread a real unitId into forms (e.g.
 // MaintenanceRequestForm) that only ever had a mock property address, no id.
-export function useActiveLease() {
-  const [data, setData] = useState<Lease | null>(null);
+export function useActiveRent() {
+  const [data, setData] = useState<Rent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    api.leases
+    api.rents
       .list({ status: 'ACTIVE' })
       .then((res) => {
         if (!cancelled) setData(res.data.data[0] ?? null);
       })
       .catch(() => {
-        if (!cancelled) setError('Failed to load your lease');
+        if (!cancelled) setError('Failed to load your rent');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -76,11 +76,11 @@ export function useActiveLease() {
   return { data, loading, error };
 }
 
-// Every lease visible to the logged-in user (server-scoped by role --
+// Every rent visible to the logged-in user (server-scoped by role --
 // tenant sees their own, manager/landlord see their properties', admin sees
 // all). Used by TenantManagement's tenant list and Dashboard's summary.
-export function useLeases(params?: { status?: string }) {
-  const [data, setData] = useState<Lease[]>([]);
+export function useRents(params?: { status?: string }) {
+  const [data, setData] = useState<Rent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,10 +88,10 @@ export function useLeases(params?: { status?: string }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.leases.list(params);
+      const res = await api.rents.list(params);
       setData(res.data.data);
     } catch {
-      setError('Failed to load leases');
+      setError('Failed to load rents');
     } finally {
       setLoading(false);
     }
@@ -108,16 +108,16 @@ export function useLeases(params?: { status?: string }) {
   return { data, loading, error, refetch };
 }
 
-// Full detail for one lease -- tenant (incl. emergency contact), unit +
+// Full detail for one rent -- tenant (incl. emergency contact), unit +
 // property, notices, and invoices (each with its payments). Used by
-// TenantDetail, the manager-facing "this tenant's lease" view.
-export function useLease(leaseId: string | null) {
-  const [data, setData] = useState<Lease | null>(null);
+// TenantDetail, the manager-facing "this tenant's rent" view.
+export function useRent(rentId: string | null) {
+  const [data, setData] = useState<Rent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
-    if (!leaseId) {
+    if (!rentId) {
       setData(null);
       setLoading(false);
       return;
@@ -125,14 +125,14 @@ export function useLease(leaseId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.leases.get(leaseId);
+      const res = await api.rents.get(rentId);
       setData(res.data.data);
     } catch {
-      setError('Failed to load lease');
+      setError('Failed to load rent');
     } finally {
       setLoading(false);
     }
-  }, [leaseId]);
+  }, [rentId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -144,15 +144,15 @@ export function useLease(leaseId: string | null) {
   return { data, loading, error, refetch };
 }
 
-// Manager notes on a lease (real Note model, leaseId-scoped). Not wired to
+// Manager notes on a rent (real Note model, rentId-scoped). Not wired to
 // a form until TenantDetail's "Manager Notes" section.
-export function useLeaseNotes(leaseId: string | null) {
+export function useRentNotes(rentId: string | null) {
   const [data, setData] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
-    if (!leaseId) {
+    if (!rentId) {
       setData([]);
       setLoading(false);
       return;
@@ -160,14 +160,14 @@ export function useLeaseNotes(leaseId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.leases.notes.list(leaseId);
+      const res = await api.rents.notes.list(rentId);
       setData(res.data.data);
     } catch {
       setError('Failed to load notes');
     } finally {
       setLoading(false);
     }
-  }, [leaseId]);
+  }, [rentId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,18 +179,18 @@ export function useLeaseNotes(leaseId: string | null) {
   return { data, loading, error, refetch };
 }
 
-export function useCreateLeaseNote(leaseId: string) {
+export function useCreateRentNote(rentId: string) {
   return useApiSubmit((body: string) =>
-    api.leases.notes.create(leaseId, body).then((res) => res.data.data),
+    api.rents.notes.create(rentId, body).then((res) => res.data.data),
   );
 }
 
-// Drafts and immediately sends a formal lease notice (rent increase,
+// Drafts and immediately sends a formal rent notice (rent increase,
 // default, termination, etc.) -- the backend route also supports a DRAFT
 // status and a separate update step, but "Send Notice" from the tenant
 // console has no draft-review UI, so this always creates it pre-SENT.
-export function useCreateNotice(leaseId: string) {
+export function useCreateNotice(rentId: string) {
   return useApiSubmit((body: CreateNoticeInput) =>
-    api.leases.notices.create(leaseId, body).then((res) => res.data.data),
+    api.rents.notices.create(rentId, body).then((res) => res.data.data),
   );
 }

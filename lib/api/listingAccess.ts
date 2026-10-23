@@ -20,7 +20,7 @@ type ListedProperty = {
 
 /**
  * What a caller may see of a property's listing (ISS-143, ISS-146). The property team, admins and
- * people who hold or held a lease there see everything. Everyone else, signed in or not, sees it
+ * people who hold or held a rent there see everything. Everyone else, signed in or not, sees it
  * only while it is public: published, approved and not merged away, and then without the units
  * marked private or still awaiting an admin's approval.
  */
@@ -30,7 +30,7 @@ export async function listingViewer(
 ): Promise<{ seesAll: boolean; visible: boolean }> {
   if (session) {
     if (canManageProperty(session, property)) return { seesAll: true, visible: true };
-    const lives = await prisma.lease.findFirst({
+    const lives = await prisma.rent.findFirst({
       where: { tenantId: session.sub, unit: { propertyId: property.id } },
       select: { id: true },
     });

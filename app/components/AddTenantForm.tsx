@@ -24,9 +24,9 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useProperties, useUnits } from '@/hooks/useProperties';
-import { useCreateLease } from '@/hooks/useLeases';
+import { useCreateRent } from '@/hooks/useRents';
 
-const STEPS = ['Tenant Info', 'Link Property', 'Lease Details', 'Review'];
+const STEPS = ['Tenant Info', 'Link Property', 'Rent Details', 'Review'];
 
 const RENT_FREQUENCY_MAP: Record<string, string> = {
   monthly: 'MONTHLY',
@@ -40,7 +40,7 @@ export function AddTenantForm() {
   const applicationId = useSearchParams().get('applicationId');
   const [fromApplicant, setFromApplicant] = useState<string | null>(null);
   const { data: properties } = useProperties();
-  const { submit: createLease, submitting, error } = useCreateLease();
+  const { submit: createRent, submitting, error } = useCreateRent();
 
   const [step, setStep] = useState(0);
   const [propertySearch, setPropertySearch] = useState('');
@@ -58,7 +58,7 @@ export function AddTenantForm() {
     employer: '',
   });
 
-  const [leaseDetails, setLeaseDetails] = useState({
+  const [rentDetails, setRentDetails] = useState({
     startDate: '',
     endDate: '',
     rentAmount: '',
@@ -74,7 +74,7 @@ export function AddTenantForm() {
   const { data: vacantUnits } = useUnits(selectedPropertyId, 'VACANT');
 
   // Opened from an approved application (ISS-046): preselect its property and
-  // unit, fill the applicant in as the tenant, and jump to the lease terms.
+  // unit, fill the applicant in as the tenant, and jump to the rent terms.
   useEffect(() => {
     if (!applicationId) return;
     let cancelled = false;
@@ -82,7 +82,7 @@ export function AddTenantForm() {
       .get(applicationId)
       .then((res) => {
         const app = res.data.data;
-        if (cancelled || app.status !== 'APPROVED' || app.leaseId || !app.unit) return;
+        if (cancelled || app.status !== 'APPROVED' || app.rentId || !app.unit) return;
         const [first, ...rest] = (app.applicant?.name ?? '').split(' ');
         setSelectedPropertyId(app.unit.property.id);
         setSelectedUnitId(app.unitId);
@@ -107,7 +107,7 @@ export function AddTenantForm() {
     const unit = vacantUnits.find((u) => u.id === selectedUnitId);
     if (unit) {
       const timer = setTimeout(() => {
-        setLeaseDetails((s) =>
+        setRentDetails((s) =>
           s.rentAmount
             ? s
             : {
@@ -128,7 +128,7 @@ export function AddTenantForm() {
     if (vacantUnits.length === 1) {
       const timer = setTimeout(() => {
         setSelectedUnitId(vacantUnits[0].id);
-        setLeaseDetails((s) => ({
+        setRentDetails((s) => ({
           ...s,
           rentAmount: String(vacantUnits[0].rentAmount),
           serviceCharge: String(vacantUnits[0].serviceCharge ?? 0),
@@ -156,8 +156,7 @@ export function AddTenantForm() {
     if (step === 0)
       return tenantInfo.firstName && tenantInfo.lastName && tenantInfo.email && tenantInfo.phone;
     if (step === 1) return selectedUnitId !== null;
-    if (step === 2)
-      return leaseDetails.startDate && leaseDetails.endDate && leaseDetails.rentAmount;
+    if (step === 2) return rentDetails.startDate && rentDetails.endDate && rentDetails.rentAmount;
     return true;
   };
 
@@ -169,29 +168,29 @@ export function AddTenantForm() {
     }
 
     try {
-      const lease = await createLease({
+      const rent = await createRent({
         unitId: selectedUnitId,
         ...(fromApplicant && applicationId ? { applicationId } : {}),
         tenantEmail: tenantInfo.email,
         tenantName: `${tenantInfo.firstName} ${tenantInfo.lastName}`.trim(),
         tenantPhone: tenantInfo.phone || undefined,
-        startDate: leaseDetails.startDate,
-        endDate: leaseDetails.endDate,
-        rentAmount: parseFloat(leaseDetails.rentAmount) || 0,
-        serviceCharge: parseFloat(leaseDetails.serviceCharge) || 0,
+        startDate: rentDetails.startDate,
+        endDate: rentDetails.endDate,
+        rentAmount: parseFloat(rentDetails.rentAmount) || 0,
+        serviceCharge: parseFloat(rentDetails.serviceCharge) || 0,
         // Security Deposit and Agency Fee inputs were removed from this form
         // (the latter was never actually submitted anywhere -- dead form
-        // state). `deposit` is a required, non-nullable field on Lease.
+        // state). `deposit` is a required, non-nullable field on Rent.
         deposit: 0,
-        paymentFrequency: RENT_FREQUENCY_MAP[leaseDetails.rentFrequency] ?? 'ANNUAL',
-        gracePeriodDays: parseInt(leaseDetails.gracePeriodDays, 10) || 0,
-        lateFeeType: leaseDetails.lateFeeType,
-        lateFeePercentage: parseFloat(leaseDetails.lateFeePercentage) || 0,
-        lateFeeFlatAmount: parseFloat(leaseDetails.lateFeeFlatAmount) || 0,
+        paymentFrequency: RENT_FREQUENCY_MAP[rentDetails.rentFrequency] ?? 'ANNUAL',
+        gracePeriodDays: parseInt(rentDetails.gracePeriodDays, 10) || 0,
+        lateFeeType: rentDetails.lateFeeType,
+        lateFeePercentage: parseFloat(rentDetails.lateFeePercentage) || 0,
+        lateFeeFlatAmount: parseFloat(rentDetails.lateFeeFlatAmount) || 0,
       });
 
       toast.success(
-        lease.tenantInvited
+        rent.tenantInvited
           ? `Tenancy created! An invitation has been sent to ${tenantInfo.email} to set up their account.`
           : `Tenancy created and linked to the existing account for ${tenantInfo.email}.`,
       );
@@ -220,7 +219,7 @@ export function AddTenantForm() {
       {fromApplicant && (
         <p className="mb-6 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           Creating a tenancy for <strong>{fromApplicant}</strong> from their approved application.
-          Set the lease terms below.
+          Set the rent terms below.
         </p>
       )}
 
@@ -421,7 +420,7 @@ export function AddTenantForm() {
                         key={unit.id}
                         onClick={() => {
                           setSelectedUnitId(unit.id);
-                          setLeaseDetails((s) => ({
+                          setRentDetails((s) => ({
                             ...s,
                             rentAmount: String(unit.rentAmount),
                             serviceCharge: String(unit.serviceCharge ?? 0),
@@ -468,12 +467,12 @@ export function AddTenantForm() {
           </div>
         )}
 
-        {/* STEP 2 — Lease Details */}
+        {/* STEP 2 — Rent Details */}
         {step === 2 && (
           <div className="space-y-5">
             <div className="mb-2 flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
-              <h2 className="font-semibold text-gray-800">Lease Details</h2>
+              <h2 className="font-semibold text-gray-800">Rent Details</h2>
             </div>
 
             {selectedProperty && selectedUnit && (
@@ -491,15 +490,15 @@ export function AddTenantForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Lease Start Date <span className="text-red-500">*</span>
+                  Rent Start Date <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Calendar className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="date"
-                    value={leaseDetails.startDate}
+                    value={rentDetails.startDate}
                     onChange={(e) =>
-                      setLeaseDetails((s) => ({
+                      setRentDetails((s) => ({
                         ...s,
                         startDate: e.target.value,
                       }))
@@ -510,15 +509,15 @@ export function AddTenantForm() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Lease End Date <span className="text-red-500">*</span>
+                  Rent End Date <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Calendar className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="date"
-                    value={leaseDetails.endDate}
+                    value={rentDetails.endDate}
                     onChange={(e) =>
-                      setLeaseDetails((s) => ({
+                      setRentDetails((s) => ({
                         ...s,
                         endDate: e.target.value,
                       }))
@@ -537,9 +536,9 @@ export function AddTenantForm() {
                 <div className="relative">
                   <DollarSign className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    value={leaseDetails.rentAmount}
+                    value={rentDetails.rentAmount}
                     onChange={(e) =>
-                      setLeaseDetails((s) => ({
+                      setRentDetails((s) => ({
                         ...s,
                         rentAmount: e.target.value,
                       }))
@@ -554,9 +553,9 @@ export function AddTenantForm() {
                   Rent Frequency
                 </label>
                 <select
-                  value={leaseDetails.rentFrequency}
+                  value={rentDetails.rentFrequency}
                   onChange={(e) =>
-                    setLeaseDetails((s) => ({
+                    setRentDetails((s) => ({
                       ...s,
                       rentFrequency: e.target.value,
                     }))
@@ -579,9 +578,9 @@ export function AddTenantForm() {
                 <div className="relative">
                   <DollarSign className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    value={leaseDetails.serviceCharge}
+                    value={rentDetails.serviceCharge}
                     onChange={(e) =>
-                      setLeaseDetails((s) => ({
+                      setRentDetails((s) => ({
                         ...s,
                         serviceCharge: e.target.value,
                       }))
@@ -596,8 +595,8 @@ export function AddTenantForm() {
                 <p className="text-lg font-semibold">
                   ₦
                   {(
-                    (parseFloat(leaseDetails.rentAmount) || 0) +
-                    (parseFloat(leaseDetails.serviceCharge) || 0)
+                    (parseFloat(rentDetails.rentAmount) || 0) +
+                    (parseFloat(rentDetails.serviceCharge) || 0)
                   ).toLocaleString()}
                 </p>
               </div>
@@ -608,9 +607,9 @@ export function AddTenantForm() {
                 Payment Due Day of Month
               </label>
               <select
-                value={leaseDetails.paymentDueDay}
+                value={rentDetails.paymentDueDay}
                 onChange={(e) =>
-                  setLeaseDetails((s) => ({
+                  setRentDetails((s) => ({
                     ...s,
                     paymentDueDay: e.target.value,
                   }))
@@ -634,9 +633,9 @@ export function AddTenantForm() {
                 <input
                   type="number"
                   min={0}
-                  value={leaseDetails.gracePeriodDays}
+                  value={rentDetails.gracePeriodDays}
                   onChange={(e) =>
-                    setLeaseDetails((s) => ({ ...s, gracePeriodDays: e.target.value }))
+                    setRentDetails((s) => ({ ...s, gracePeriodDays: e.target.value }))
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="7"
@@ -648,9 +647,9 @@ export function AddTenantForm() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Late Fee</label>
                 <select
-                  value={leaseDetails.lateFeeType}
+                  value={rentDetails.lateFeeType}
                   onChange={(e) =>
-                    setLeaseDetails((s) => ({
+                    setRentDetails((s) => ({
                       ...s,
                       lateFeeType: e.target.value as 'PERCENTAGE' | 'FIXED',
                     }))
@@ -660,26 +659,26 @@ export function AddTenantForm() {
                   <option value="PERCENTAGE">Percentage of rent</option>
                   <option value="FIXED">Flat amount (₦)</option>
                 </select>
-                {leaseDetails.lateFeeType === 'PERCENTAGE' ? (
+                {rentDetails.lateFeeType === 'PERCENTAGE' ? (
                   <>
                     <input
                       type="number"
                       min={0}
                       step="0.1"
-                      value={leaseDetails.lateFeePercentage}
+                      value={rentDetails.lateFeePercentage}
                       onChange={(e) =>
-                        setLeaseDetails((s) => ({ ...s, lateFeePercentage: e.target.value }))
+                        setRentDetails((s) => ({ ...s, lateFeePercentage: e.target.value }))
                       }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       placeholder="0"
                     />
-                    {parseFloat(leaseDetails.lateFeePercentage) > 0 &&
-                      parseFloat(leaseDetails.rentAmount) > 0 && (
+                    {parseFloat(rentDetails.lateFeePercentage) > 0 &&
+                      parseFloat(rentDetails.rentAmount) > 0 && (
                         <p className="mt-1 text-xs text-gray-400">
                           ≈ ₦
                           {(
-                            (parseFloat(leaseDetails.rentAmount) *
-                              parseFloat(leaseDetails.lateFeePercentage)) /
+                            (parseFloat(rentDetails.rentAmount) *
+                              parseFloat(rentDetails.lateFeePercentage)) /
                             100
                           ).toLocaleString()}{' '}
                           per overdue invoice
@@ -690,9 +689,9 @@ export function AddTenantForm() {
                   <input
                     type="number"
                     min={0}
-                    value={leaseDetails.lateFeeFlatAmount}
+                    value={rentDetails.lateFeeFlatAmount}
                     onChange={(e) =>
-                      setLeaseDetails((s) => ({ ...s, lateFeeFlatAmount: e.target.value }))
+                      setRentDetails((s) => ({ ...s, lateFeeFlatAmount: e.target.value }))
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     placeholder="e.g. 10000"
@@ -748,31 +747,31 @@ export function AddTenantForm() {
               </div>
 
               <div className="bg-gray-50 px-4 py-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                Lease
+                Rent
               </div>
               <div className="grid grid-cols-2 gap-y-2 px-4 py-3 text-sm">
                 <span className="text-gray-500">Start Date</span>
-                <span className="font-medium">{leaseDetails.startDate}</span>
+                <span className="font-medium">{rentDetails.startDate}</span>
                 <span className="text-gray-500">End Date</span>
-                <span className="font-medium">{leaseDetails.endDate}</span>
+                <span className="font-medium">{rentDetails.endDate}</span>
                 <span className="text-gray-500">Rent</span>
                 <span className="font-medium">
-                  ₦{leaseDetails.rentAmount} / {leaseDetails.rentFrequency}
+                  ₦{rentDetails.rentAmount} / {rentDetails.rentFrequency}
                 </span>
-                {(parseFloat(leaseDetails.serviceCharge) || 0) > 0 && (
+                {(parseFloat(rentDetails.serviceCharge) || 0) > 0 && (
                   <>
                     <span className="text-gray-500">Service Charge</span>
-                    <span className="font-medium">₦{leaseDetails.serviceCharge}</span>
+                    <span className="font-medium">₦{rentDetails.serviceCharge}</span>
                   </>
                 )}
                 <span className="text-gray-500">Due Day</span>
                 <span className="font-medium">
-                  {leaseDetails.paymentDueDay}
-                  {Number(leaseDetails.paymentDueDay) === 1
+                  {rentDetails.paymentDueDay}
+                  {Number(rentDetails.paymentDueDay) === 1
                     ? 'st'
-                    : Number(leaseDetails.paymentDueDay) === 2
+                    : Number(rentDetails.paymentDueDay) === 2
                       ? 'nd'
-                      : Number(leaseDetails.paymentDueDay) === 3
+                      : Number(rentDetails.paymentDueDay) === 3
                         ? 'rd'
                         : 'th'}{' '}
                   of month

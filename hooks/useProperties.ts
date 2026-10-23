@@ -111,7 +111,7 @@ export function useMyProperties() {
 }
 
 // A property's real units -- needed anywhere a form must pick a specific
-// unit, not just a property (Lease.unitId requires one).
+// unit, not just a property (Rent.unitId requires one).
 export function useUnits(propertyId: string | null, status?: string) {
   const [data, setData] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);

@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createConversation,
 } from '../helpers/fixtures';
@@ -28,10 +28,10 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const otherUnit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
-    await createLease(otherUnit.id, neighbour.id, { status: 'ACTIVE' });
-    const leaseThread = await createConversation('LEASE_THREAD', [manager.id, tenant.id], {
-      leaseId: lease.id,
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
+    await createRent(otherUnit.id, neighbour.id, { status: 'ACTIVE' });
+    const rentThread = await createConversation('RENT_THREAD', [manager.id, tenant.id], {
+      rentId: rent.id,
     });
     const board = await createConversation(
       'COMMUNITY_DISCUSSION',
@@ -50,8 +50,8 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
       apiFetch<{ data: Message[] }>(`/api/v1/conversations/${conversationId}/messages`, {
         cookie,
       });
-    const patchLease = (status: string) =>
-      apiFetch(`/api/v1/leases/${lease.id}`, {
+    const patchRent = (status: string) =>
+      apiFetch(`/api/v1/rents/${rent.id}`, {
         method: 'PATCH',
         cookie: managerCookie,
         body: { status },
@@ -61,38 +61,36 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
       tenant,
       neighbour,
       property,
-      lease,
-      leaseThread,
+      rent,
+      rentThread,
       board,
       managerCookie,
       tenantCookie,
       post,
       read,
-      patchLease,
+      patchRent,
     };
   }
 
-  it('freezes the lease and community threads for them when the lease is terminated', async () => {
+  it('freezes the rent and community threads for them when the rent is terminated', async () => {
     const s = await setup();
-    expect((await s.post(s.tenantCookie, s.leaseThread.id, 'before it ends')).status).toBe(201);
+    expect((await s.post(s.tenantCookie, s.rentThread.id, 'before it ends')).status).toBe(201);
     expect((await s.post(s.tenantCookie, s.board.id, 'hello neighbours')).status).toBe(201);
 
-    expect((await s.patchLease('TERMINATED')).status).toBe(200);
+    expect((await s.patchRent('TERMINATED')).status).toBe(200);
 
     // They cannot add to either thread...
-    expect((await s.post(s.tenantCookie, s.leaseThread.id, 'after')).status).toBe(403);
+    expect((await s.post(s.tenantCookie, s.rentThread.id, 'after')).status).toBe(403);
     expect((await s.post(s.tenantCookie, s.board.id, 'after')).status).toBe(403);
 
     // ...the manager still can, and the tenant does not see it...
-    expect((await s.post(s.managerCookie, s.leaseThread.id, 'after the move-out')).status).toBe(
-      201,
-    );
+    expect((await s.post(s.managerCookie, s.rentThread.id, 'after the move-out')).status).toBe(201);
     expect((await s.post(s.managerCookie, s.board.id, 'new notice for the building')).status).toBe(
       201,
     );
 
     // ...but they still read what was said while they were a tenant.
-    const mine = await s.read(s.tenantCookie, s.leaseThread.id);
+    const mine = await s.read(s.tenantCookie, s.rentThread.id);
     expect(mine.status).toBe(200);
     expect(mine.body.data.map((m) => m.body)).toEqual(['before it ends']);
     const board = await s.read(s.tenantCookie, s.board.id);
@@ -102,7 +100,7 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
     const inbox = await apiFetch<{
       data: { id: string; leftAt: string | null; unreadCount: number; lastMessage: Message }[];
     }>('/api/v1/conversations', { cookie: s.tenantCookie });
-    const thread = inbox.body.data.find((c) => c.id === s.leaseThread.id);
+    const thread = inbox.body.data.find((c) => c.id === s.rentThread.id);
     expect(thread?.leftAt).toBeTruthy();
     expect(thread?.lastMessage.body).toBe('before it ends');
     expect(thread?.unreadCount).toBe(0);
@@ -110,16 +108,16 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
 
   it('does not notify them of messages written after they left', async () => {
     const s = await setup();
-    await s.patchLease('EXPIRED');
-    await s.post(s.managerCookie, s.leaseThread.id, 'deposit is on its way');
+    await s.patchRent('EXPIRED');
+    await s.post(s.managerCookie, s.rentThread.id, 'deposit is on its way');
     const notes = await testPrisma.notification.count({ where: { recipientId: s.tenant.id } });
-    // Only the "lease expired" notice; nothing about the new message.
+    // Only the "rent expired" notice; nothing about the new message.
     expect(notes).toBe(1);
   });
 
   it('leaves the neighbours, and the tenant when a renewal keeps them in the unit, untouched', async () => {
     const s = await setup();
-    const res = await apiFetch(`/api/v1/leases/${s.lease.id}`, {
+    const res = await apiFetch(`/api/v1/rents/${s.rent.id}`, {
       method: 'PATCH',
       cookie: s.managerCookie,
       body: {
@@ -137,21 +135,21 @@ describe('a tenant whose tenancy ends keeps the history but not the conversation
     expect((await s.post(neighbourCookie, s.board.id, 'me too')).status).toBe(201);
   });
 
-  it('keeps a tenant in the community board while another of their leases there is active', async () => {
+  it('keeps a tenant in the community board while another of their rents there is active', async () => {
     const s = await setup();
     const second = await createUnit(s.property.id);
-    await createLease(second.id, s.tenant.id, { status: 'ACTIVE' });
-    await s.patchLease('TERMINATED');
-    expect((await s.post(s.tenantCookie, s.leaseThread.id, 'x')).status).toBe(403);
+    await createRent(second.id, s.tenant.id, { status: 'ACTIVE' });
+    await s.patchRent('TERMINATED');
+    expect((await s.post(s.tenantCookie, s.rentThread.id, 'x')).status).toBe(403);
     expect((await s.post(s.tenantCookie, s.board.id, 'still a resident')).status).toBe(201);
   });
 
-  it('lets them post again if the lease is set active again', async () => {
+  it('lets them post again if the rent is set active again', async () => {
     const s = await setup();
-    await s.patchLease('TERMINATED');
-    expect((await s.post(s.tenantCookie, s.leaseThread.id, 'locked')).status).toBe(403);
-    await s.patchLease('ACTIVE');
-    expect((await s.post(s.tenantCookie, s.leaseThread.id, 'back')).status).toBe(201);
+    await s.patchRent('TERMINATED');
+    expect((await s.post(s.tenantCookie, s.rentThread.id, 'locked')).status).toBe(403);
+    await s.patchRent('ACTIVE');
+    expect((await s.post(s.tenantCookie, s.rentThread.id, 'back')).status).toBe(201);
     expect((await s.post(s.tenantCookie, s.board.id, 'back too')).status).toBe(201);
   });
 });
@@ -173,14 +171,14 @@ describe('a property that moves to another manager or landlord takes its old sta
       landlordId: landlord.id,
     });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const request = await createMaintenanceRequest(unit.id, tenant.id, { vendorId: vendor.id });
 
-    const leaseThread = await createConversation(
-      'LEASE_THREAD',
+    const rentThread = await createConversation(
+      'RENT_THREAD',
       [oldManager.id, tenant.id, landlord.id],
       {
-        leaseId: lease.id,
+        rentId: rent.id,
       },
     );
     const board = await createConversation(
@@ -197,7 +195,7 @@ describe('a property that moves to another manager or landlord takes its old sta
     const direct = await createConversation('DIRECT', [oldManager.id, tenant.id]);
     await testPrisma.message.create({
       data: {
-        conversationId: leaseThread.id,
+        conversationId: rentThread.id,
         senderId: oldManager.id,
         senderType: 'USER',
         body: 'welcome',
@@ -222,21 +220,21 @@ describe('a property that moves to another manager or landlord takes its old sta
         .sort();
     const sorted = (...ids: string[]) => ids.sort();
 
-    expect(await members(leaseThread.id)).toEqual(sorted(newManager.id, tenant.id, landlord.id));
+    expect(await members(rentThread.id)).toEqual(sorted(newManager.id, tenant.id, landlord.id));
     expect(await members(board.id)).toEqual(sorted(newManager.id, tenant.id, landlord.id));
     expect(await members(repair.id)).toEqual(
       sorted(newManager.id, tenant.id, vendor.id, landlord.id),
     );
     expect(await members(direct.id)).toEqual(sorted(oldManager.id, tenant.id));
 
-    // The old manager can no longer read the lease thread; the tenant still sees who wrote 'welcome'.
+    // The old manager can no longer read the rent thread; the tenant still sees who wrote 'welcome'.
     const oldCookie = await authCookie(oldManager.id, oldManager.role);
     expect(
-      (await apiFetch(`/api/v1/conversations/${leaseThread.id}/messages`, { cookie: oldCookie }))
+      (await apiFetch(`/api/v1/conversations/${rentThread.id}/messages`, { cookie: oldCookie }))
         .status,
     ).toBe(403);
     const asTenant = await apiFetch<{ data: Message[] }>(
-      `/api/v1/conversations/${leaseThread.id}/messages`,
+      `/api/v1/conversations/${rentThread.id}/messages`,
       { cookie: await authCookie(tenant.id, tenant.role) },
     );
     expect(asTenant.body.data[0].sender?.name).toBe('Old Manager');

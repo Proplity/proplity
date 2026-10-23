@@ -33,23 +33,23 @@ export const POST = withAuth(async (req, { session }) => {
     const invoice = await prisma.invoice.findUnique({
       where: { id: validated.data.invoiceId },
       include: {
-        lease: true,
+        rent: true,
         payments: { select: { amount: true } },
         maintenanceRequest: { include: { unit: { include: { property: true } } } },
       },
     });
     if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    // A vendor's job invoice has no lease and no user: the party who pays it is
+    // A vendor's job invoice has no rent and no user: the party who pays it is
     // whoever runs the property (its manager or landlord, ISS-051).
     const isPropertySidePayer =
-      !invoice.leaseId &&
+      !invoice.rentId &&
       !invoice.userId &&
       !!invoice.maintenanceRequest &&
       canManageProperty(session, invoice.maintenanceRequest.unit.property);
     const isPayer =
       invoice.userId === session.sub ||
-      invoice.lease?.tenantId === session.sub ||
+      invoice.rent?.tenantId === session.sub ||
       isPropertySidePayer;
     if (!isPayer && session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

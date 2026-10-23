@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
 
 // Needs a reachable, seeded database -- prisma/seed.ts gives
-// tenant@proplity.com an active lease, which the maintenance request form
+// tenant@proplity.com an active rent, which the maintenance request form
 // requires.
 
 test('tenant can submit a maintenance request', async ({ page }) => {

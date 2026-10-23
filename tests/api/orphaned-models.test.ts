@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -36,7 +36,7 @@ describe('announcements (property-scoped)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const managerCookie = await authCookie(manager.id, manager.role);
 
     await apiFetch(`/api/v1/properties/${property.id}/announcements`, {
@@ -104,7 +104,7 @@ describe('violations (unit-scoped)', () => {
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const stranger = await createUser(Role.TENANT);
     const managerCookie = await authCookie(manager.id, manager.role);
 

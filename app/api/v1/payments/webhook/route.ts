@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       const invoice = await prisma.invoice.findUnique({
         where: { id: invoiceId },
         include: {
-          lease: {
+          rent: {
             include: {
               unit: {
                 include: {
@@ -169,8 +169,8 @@ export async function POST(req: NextRequest) {
       }
 
       {
-        if (invoice.type === 'RENT' && invoice.lease) {
-          const property = invoice.lease.unit?.property;
+        if (invoice.type === 'RENT' && invoice.rent) {
+          const property = invoice.rent.unit?.property;
           const managersToNotify = [property?.landlordId, property?.managerId].filter(
             (id): id is string => Boolean(id),
           );
@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
               link: '/dashboard',
             });
           }
-          if (invoice.lease.tenantId) {
-            await notifyUser(invoice.lease.tenantId, {
+          if (invoice.rent.tenantId) {
+            await notifyUser(invoice.rent.tenantId, {
               type: 'SYSTEM',
               title: 'Rent Payment Confirmed',
               body: `Your rent payment of ₦${amount.toLocaleString()} has been received. Thank you!`,

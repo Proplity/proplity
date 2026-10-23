@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createConversation,
 } from '../helpers/fixtures';
@@ -83,25 +83,25 @@ describe('conversations: create -- MAINTENANCE_THREAD', () => {
   });
 });
 
-describe('conversations: create -- LEASE_THREAD and COMMUNITY_DISCUSSION', () => {
+describe('conversations: create -- RENT_THREAD and COMMUNITY_DISCUSSION', () => {
   beforeAll(async () => {
     await resetDb();
   });
 
-  it('LEASE_THREAD forbids a stranger and derives tenant + manager + landlord as participants', async () => {
+  it('RENT_THREAD forbids a stranger and derives tenant + manager + landlord as participants', async () => {
     const manager = await createUser(Role.MANAGER);
     const landlord = await createUser(Role.LANDLORD);
     const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const stranger = await createUser(Role.TENANT);
 
     const strangerCookie = await authCookie(stranger.id, stranger.role);
     const forbidden = await apiFetch('/api/v1/conversations', {
       method: 'POST',
       cookie: strangerCookie,
-      body: { type: 'LEASE_THREAD', leaseId: lease.id },
+      body: { type: 'RENT_THREAD', rentId: rent.id },
     });
     expect(forbidden.status).toBe(403);
 
@@ -109,7 +109,7 @@ describe('conversations: create -- LEASE_THREAD and COMMUNITY_DISCUSSION', () =>
     const created = await apiFetch('/api/v1/conversations', {
       method: 'POST',
       cookie: tenantCookie,
-      body: { type: 'LEASE_THREAD', leaseId: lease.id },
+      body: { type: 'RENT_THREAD', rentId: rent.id },
     });
     expect(created.status).toBe(201);
 
@@ -121,15 +121,15 @@ describe('conversations: create -- LEASE_THREAD and COMMUNITY_DISCUSSION', () =>
     );
   });
 
-  it('COMMUNITY_DISCUSSION requires an active lease or management on the property, and includes every active tenant', async () => {
+  it('COMMUNITY_DISCUSSION requires an active rent or management on the property, and includes every active tenant', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id });
     const unit1 = await createUnit(property.id);
     const unit2 = await createUnit(property.id);
     const tenant1 = await createUser(Role.TENANT);
     const tenant2 = await createUser(Role.TENANT);
-    await createLease(unit1.id, tenant1.id);
-    await createLease(unit2.id, tenant2.id);
+    await createRent(unit1.id, tenant1.id);
+    await createRent(unit2.id, tenant2.id);
     const outsider = await createUser(Role.TENANT);
 
     const outsiderCookie = await authCookie(outsider.id, outsider.role);

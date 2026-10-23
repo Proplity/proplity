@@ -188,7 +188,7 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
   };
 
   // Recent Activity: a real feed merged from payments, completed
-  // maintenance, and newly-active leases -- replacing the mock's 4
+  // maintenance, and newly-active rents -- replacing the mock's 4
   // hardcoded fabricated events.
   const activity = [
     ...(summary?.recentPayments ?? []).map((payment) => ({
@@ -207,8 +207,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
         amount: r.finalCost != null ? `₦${r.finalCost.toLocaleString()}` : undefined,
         time: r.completedAt!,
       })),
-    ...(summary?.recentLeases ?? []).map((l) => ({
-      event: 'Lease active',
+    ...(summary?.recentRents ?? []).map((l) => ({
+      event: 'Rent active',
       tenant: l.tenant?.name,
       property: l.unit?.property?.name,
       amount: undefined,

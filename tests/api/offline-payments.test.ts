@@ -4,7 +4,7 @@ import { InvoiceStatus, InvoiceType, Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
   createInvoice,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createProperty,
   createUnit,
@@ -45,14 +45,14 @@ function signWebhookBody(rawBody: string) {
     .digest('hex');
 }
 
-/** A property team (manager and landlord), a tenant on a lease, and a vendor with a billed job. */
+/** A property team (manager and landlord), a tenant on a rent, and a vendor with a billed job. */
 async function world(opts: { amount?: number } = {}) {
   const manager = await createUser(Role.MANAGER, { name: 'Mary Manager' });
   const landlord = await createUser(Role.LANDLORD, { name: 'Lola Landlord' });
   const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
   const unit = await createUnit(property.id);
   const tenant = await createUser(Role.TENANT, { name: 'Tunde Tenant' });
-  const lease = await createLease(unit.id, tenant.id);
+  const rent = await createRent(unit.id, tenant.id);
   const vendor = await createUser(Role.VENDOR, { name: 'Vera Vendor' });
   await testPrisma.vendorProfile.create({
     data: { userId: vendor.id, businessName: 'Vera Pipes Ltd', verificationStatus: 'VERIFIED' },
@@ -69,7 +69,7 @@ async function world(opts: { amount?: number } = {}) {
     status: InvoiceStatus.UNPAID,
   });
   const rentInvoice = await createInvoice({
-    leaseId: lease.id,
+    rentId: rent.id,
     type: InvoiceType.RENT,
     amount: 200_000,
     status: InvoiceStatus.UNPAID,
@@ -80,7 +80,7 @@ async function world(opts: { amount?: number } = {}) {
     property,
     unit,
     tenant,
-    lease,
+    rent,
     vendor,
     job,
     vendorInvoice,
@@ -255,9 +255,9 @@ describe('offline payments: recording and confirming', () => {
     const property = await createProperty({ landlordId: landlord.id });
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       amount: 90_000,
       type: InvoiceType.RENT,
     });
@@ -441,7 +441,7 @@ describe('payments: what the API never returns, and who is told', () => {
     await resetDb();
   });
 
-  it('never returns the provider payload (payer email, card details) in any invoice, lease or transfer response', async () => {
+  it('never returns the provider payload (payer email, card details) in any invoice, rent or transfer response', async () => {
     const w = await world();
     const secretPayload = JSON.stringify({
       data: {
@@ -477,8 +477,8 @@ describe('payments: what the API never returns, and who is told', () => {
       ['/api/v1/invoices', w.cookies.vendor],
       [`/api/v1/invoices/${w.rentInvoice.id}`, w.cookies.tenant],
       [`/api/v1/invoices/${w.rentInvoice.id}`, w.cookies.manager],
-      [`/api/v1/leases/${w.lease.id}`, w.cookies.tenant],
-      [`/api/v1/leases/${w.lease.id}`, w.cookies.manager],
+      [`/api/v1/rents/${w.rent.id}`, w.cookies.tenant],
+      [`/api/v1/rents/${w.rent.id}`, w.cookies.manager],
       [`/api/v1/maintenance/requests/${w.job.id}`, w.cookies.manager],
       [`/api/v1/maintenance/requests/${w.job.id}`, w.cookies.vendor],
     ];

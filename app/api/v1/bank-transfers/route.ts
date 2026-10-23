@@ -43,7 +43,7 @@ export const GET = withAuth(async (req, { session }) => {
         invoice: {
           OR: [
             {
-              lease: {
+              rent: {
                 unit: {
                   property: {
                     OR: [{ managerId: session.sub }, { landlordId: session.sub }],

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
     const { skip, take, page, limit } = parsePagination(searchParams);
     const verifiedOnly = searchParams.get('verified') === 'true';
 
-    const where = { propertyId: id, ...(verifiedOnly ? { leaseId: { not: null } } : {}) };
+    const where = { propertyId: id, ...(verifiedOnly ? { rentId: { not: null } } : {}) };
 
     const [reviews, total] = await Promise.all([
       prisma.propertyReview.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
 
     const data = reviews.map((r) => ({
       ...r,
-      verified: r.leaseId !== null,
+      verified: r.rentId !== null,
       kind: reviewerKind(r),
     }));
     return NextResponse.json({ data, meta: buildMeta(total, page, limit) });
@@ -57,9 +57,9 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ error: 'You cannot review a property you run' }, { status: 403 });
     }
 
-    // Only people who have been there rate it: a lease, or a confirmed viewing that has happened.
+    // Only people who have been there rate it: a rent, or a confirmed viewing that has happened.
     // The verified badge is resolved once, here, at creation time -- never re-checked at read time
-    // (a review shouldn't lose its badge if the underlying lease later expires).
+    // (a review shouldn't lose its badge if the underlying rent later expires).
     const basis = await findReviewBasis(session.sub, id);
     if (!basis) {
       return NextResponse.json(
@@ -83,7 +83,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
         data: {
           propertyId: id,
           reviewerId: session.sub,
-          leaseId: basis.leaseId,
+          rentId: basis.rentId,
           rating: validated.data.rating,
           comment: validated.data.comment,
         },
@@ -97,7 +97,7 @@ export const POST = withAuth(async (req, { session }, ctx: RouteCtx) => {
     }
 
     return NextResponse.json(
-      { data: { ...review, verified: review.leaseId !== null, kind: basis.kind } },
+      { data: { ...review, verified: review.rentId !== null, kind: basis.kind } },
       { status: 201 },
     );
   } catch (err) {

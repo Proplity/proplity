@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role, ViewingStatus } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -38,7 +38,7 @@ describe('only people who have been to a property can review it (ISS-149)', () =
     return { property, unit, review, viewing };
   }
 
-  it('refuses someone with no lease and no viewing, and stores nothing', async () => {
+  it('refuses someone with no rent and no viewing, and stores nothing', async () => {
     const s = await setup();
     const stranger = await createUser(Role.TENANT);
     const res = await s.review(stranger.id);
@@ -47,11 +47,11 @@ describe('only people who have been to a property can review it (ISS-149)', () =
     expect(await testPrisma.propertyReview.count({ where: { propertyId: s.property.id } })).toBe(0);
   });
 
-  it('lets a tenant review, labelled Tenant and verified, even after the lease ended', async () => {
+  it('lets a tenant review, labelled Tenant and verified, even after the rent ended', async () => {
     const s = await setup();
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(s.unit.id, tenant.id);
-    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'TERMINATED' } });
+    const rent = await createRent(s.unit.id, tenant.id);
+    await testPrisma.rent.update({ where: { id: rent.id }, data: { status: 'TERMINATED' } });
     const res = await s.review(tenant.id, 5);
     expect(res.status).toBe(201);
     expect(res.body.data.kind).toBe('TENANT');
@@ -90,7 +90,7 @@ describe('only people who have been to a property can review it (ISS-149)', () =
     }
   });
 
-  it('does not count a viewing or lease at a different property', async () => {
+  it('does not count a viewing or rent at a different property', async () => {
     const s = await setup();
     const other = await createProperty({ isPublished: true });
     const otherUnit = await createUnit(other.id);
@@ -105,7 +105,7 @@ describe('only people who have been to a property can review it (ISS-149)', () =
       },
     });
     const tenant = await createUser(Role.TENANT);
-    await createLease(otherUnit.id, tenant.id);
+    await createRent(otherUnit.id, tenant.id);
     expect((await s.review(guest.id)).status).toBe(403);
     expect((await s.review(tenant.id)).status).toBe(403);
   });
@@ -113,7 +113,7 @@ describe('only people who have been to a property can review it (ISS-149)', () =
   it('shows the label on the review list and the property page', async () => {
     const s = await setup();
     const tenant = await createUser(Role.TENANT);
-    await createLease(s.unit.id, tenant.id);
+    await createRent(s.unit.id, tenant.id);
     const guest = await createUser(Role.TENANT);
     await s.viewing(guest.id, 'CONFIRMED', -2 * HOUR);
     await s.review(tenant.id, 5);

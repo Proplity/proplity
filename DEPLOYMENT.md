@@ -124,7 +124,7 @@ Ten workers exist in `lib/workers/`, dispatched by
 - `rent-invoicer` (tells the tenant about each new rent invoice)
 - `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true` **and** an admin switches it on in Platform Settings, ADR-0015)
 - `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
-- `reminders` (rent due in 3 days; lease ending within 60 days; one reminder each)
+- `reminders` (rent due in 3 days; rent ending within 60 days; one reminder each)
 - `maintenance-schedule-dispatcher` (tells the property team and the tenant)
 - `access-code-expiry-janitor`
 - `payment-reliability-scorer`
@@ -176,7 +176,7 @@ Give each worker its own schedule and drop the fan-out:
 ```
 
 Note that **the rent invoicer advances only one billing cycle per run** by
-design, so a lease several cycles behind catches up over several days on a
+design, so a rent several cycles behind catches up over several days on a
 daily schedule.
 
 ---

@@ -1,4 +1,4 @@
-enum LeaseStatus {
+enum RentStatus {
   PENDING
   ACTIVE
   EXPIRED
@@ -12,8 +12,8 @@ enum PaymentFrequency {
   MONTHLY
 }
 
-// Which of Lease's two late-fee fields is actually applied by
-// overdueFlagger -- landlord/manager picks one mode per lease, never both
+// Which of Rent's two late-fee fields is actually applied by
+// overdueFlagger -- landlord/manager picks one mode per rent, never both
 // (avoids ambiguity over whether they'd stack).
 enum LateFeeType {
   PERCENTAGE
@@ -21,7 +21,7 @@ enum LateFeeType {
 }
 
 // Covers PRD §5.1 "AI-generated renewal and rent increase notices" and §6.1
-// Lease & Document Intelligence ("AI-drafted: Renewal offers, Rent increase
+// Rent & Document Intelligence ("AI-drafted: Renewal offers, Rent increase
 // notices, Default notices" + "Expiration alerts"). Also doubles as the
 // escalation-state record for overdue-rent reminders (§6.1 Smart Rent
 // Intelligence's reminder -> call -> notice ladder) via PAYMENT_REMINDER,
@@ -47,10 +47,10 @@ enum NoticeStatus {
 
 model Notice {
   id            String       @id @default(uuid())
-  leaseId       String
-  lease         Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  rentId       String
+  rent         Rent        @relation(fields: [rentId], references: [id], onDelete: Cascade)
   // Optional precise link for PAYMENT_REMINDER notices about one specific
-  // overdue invoice, rather than the lease's rent in general.
+  // overdue invoice, rather than the rent's rent in general.
   invoiceId     String?
   invoice       Invoice?     @relation(fields: [invoiceId], references: [id])
   type          NoticeType
@@ -64,7 +64,7 @@ model Notice {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  @@index([leaseId, type])
+  @@index([rentId, type])
 }
 
 enum PaymentReliability {
@@ -80,16 +80,16 @@ enum RiskLevel {
   HIGH
 }
 
-model Lease {
+model Rent {
   id                 String              @id @default(uuid())
   unitId             String
   unit               Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
   tenantId           String
-  tenant             User                @relation("TenantLeases", fields: [tenantId], references: [id])
+  tenant             User                @relation("TenantRents", fields: [tenantId], references: [id])
   startDate          DateTime
   endDate            DateTime
   /// Amount due per payment CYCLE, not necessarily per calendar month —
-  /// the actual period is set by `paymentFrequency` (e.g. an ANNUAL lease's
+  /// the actual period is set by `paymentFrequency` (e.g. an ANNUAL rent's
   /// rentAmount is the full year's rent due at once, not a monthly figure).
   /// Renamed from `monthlyRent`, which was ambiguous once frequencies beyond
   /// MONTHLY were added — see prior schema review.
@@ -102,17 +102,17 @@ model Lease {
   deposit            Float
   gracePeriodDays    Int                 @default(7)
   // Landlord/manager autonomy, not a platform default: 0 means "no late
-  // fee" until a lease's owner deliberately sets one. Which of this field
+  // fee" until a rent's owner deliberately sets one. Which of this field
   // vs lateFeeFlatAmount is actually used is decided by lateFeeType.
   lateFeePercentage  Float               @default(0)
   lateFeeFlatAmount  Float               @default(0)
   lateFeeType        LateFeeType         @default(PERCENTAGE)
   signedAgreementUrl String?
   agreementSignedAt  DateTime?
-  status             LeaseStatus         @default(PENDING)
+  status             RentStatus         @default(PENDING)
   // PRD §6.1 "Smart Rent Intelligence" — late-payment prediction and risk
   // flagging. Nullable and timestamped: these are computed periodically by a
-  // scoring job, not always populated (e.g. a brand-new lease has no payment
+  // scoring job, not always populated (e.g. a brand-new rent has no payment
   // history yet to score), and the timestamp lets the UI show how stale the
   // score is rather than presenting a silently-outdated number as current.
   paymentReliability PaymentReliability?
@@ -124,15 +124,15 @@ model Lease {
   autoPayMandates    AutoPayMandate[]
   notes              Note[]
   propertyReviews    PropertyReview[]
-  // Self-relation: renewedFromId is unique because a given prior lease can be
-  // renewed into at most one new lease, and a new lease renews at most one
-  // prior lease. Lets renewals be traced instead of looking like an unrelated
-  // new Lease row on the same unit.
+  // Self-relation: renewedFromId is unique because a given prior rent can be
+  // renewed into at most one new rent, and a new rent renews at most one
+  // prior rent. Lets renewals be traced instead of looking like an unrelated
+  // new Rent row on the same unit.
   renewedFromId      String?             @unique
-  renewedFrom        Lease?              @relation("LeaseRenewal", fields: [renewedFromId], references: [id])
-  renewedInto        Lease?              @relation("LeaseRenewal")
+  renewedFrom        Rent?              @relation("RentRenewal", fields: [renewedFromId], references: [id])
+  renewedInto        Rent?              @relation("RentRenewal")
   applications       Application[]
-  signatures         LeaseSignature[]
+  signatures         RentSignature[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -148,13 +148,13 @@ model Lease {
 // signature with an audit trail is itself a real, legally-recognized
 // e-signature method (same category as clicking "I agree"), not a fake
 // stand-in -- same "honest, real, but narrower" principle as ad campaigns'
-// zero stats. One row per signer per lease (a lease has at least a tenant
+// zero stats. One row per signer per rent (a rent has at least a tenant
 // and a manager/landlord party) -- `@@unique` prevents the same person
 // signing twice.
-model LeaseSignature {
+model RentSignature {
   id            String   @id @default(uuid())
-  leaseId       String
-  lease         Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  rentId       String
+  rent         Rent    @relation(fields: [rentId], references: [id], onDelete: Cascade)
   signerId      String
   signer        User     @relation(fields: [signerId], references: [id])
   signerRole    Role
@@ -162,7 +162,7 @@ model LeaseSignature {
   ipAddress     String?
   signedAt      DateTime @default(now())
 
-  @@unique([leaseId, signerId])
+  @@unique([rentId, signerId])
 }
 
 enum ApplicationStatus {
@@ -173,9 +173,9 @@ enum ApplicationStatus {
 
 // A prospective tenant's rental application for a specific unit —
 // PropertyApplicationForm.tsx's ~20-field form (personal/employment/
-// references) submits here. Scoped to Unit, not Lease, since an approved
+// references) submits here. Scoped to Unit, not Rent, since an approved
 // application still needs a separate, deliberate action to actually create
-// the Lease (matches how AddTenantForm's own lease-creation flow works —
+// the Rent (matches how AddTenantForm's own rent-creation flow works —
 // approval doesn't auto-generate a tenancy, a manager still sets terms).
 model Application {
   id           String            @id @default(uuid())
@@ -192,12 +192,12 @@ model Application {
   reviewedBy   User?             @relation("ReviewedApplications", fields: [reviewedById], references: [id])
   reviewedAt   DateTime?
   reviewNotes  String?
-  // Set once, at creation time, to the Lease this application resulted in --
+  // Set once, at creation time, to the Rent this application resulted in --
   // same "verified at creation, never re-checked" pattern as
-  // PropertyReview.leaseId (rule 4). Optional: most applications, including
-  // every REJECTED one, never produce a lease at all.
-  leaseId      String?
-  lease        Lease?            @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  // PropertyReview.rentId (rule 4). Optional: most applications, including
+  // every REJECTED one, never produce a rent at all.
+  rentId      String?
+  rent        Rent?            @relation(fields: [rentId], references: [id], onDelete: SetNull)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 

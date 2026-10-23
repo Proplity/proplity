@@ -15,7 +15,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 // payments recorded, and every entry is written to the audit log with who
 // recorded it.
 //
-// This route is only for an invoice that belongs to no lease and no repair (an account
+// This route is only for an invoice that belongs to no rent and no repair (an account
 // holder's own invoice, which only an admin can reach). Money a tenant owes, or that is paid to a
 // vendor, is recorded as a transfer (POST /bank-transfers), which keeps the proof, issues the
 // receipt and, unless an admin switched the two-person rule off for that kind of money, waits for
@@ -35,18 +35,18 @@ export const POST = withAuth(
       const invoice = await prisma.invoice.findUnique({
         where: { id },
         include: {
-          lease: { include: { unit: { include: { property: true } } } },
+          rent: { include: { unit: { include: { property: true } } } },
           maintenanceRequest: { include: { unit: { include: { property: true } } } },
         },
       });
       if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-      const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
+      const property = invoice.rent?.unit.property ?? invoice.maintenanceRequest?.unit.property;
       if (session.role !== 'ADMIN' && !(property && canManageProperty(session, property))) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      if (invoice.leaseId || invoice.maintenanceRequestId) {
+      if (invoice.rentId || invoice.maintenanceRequestId) {
         return NextResponse.json(
           {
             error:
@@ -118,8 +118,8 @@ export const POST = withAuth(
         throw err;
       }
 
-      if (invoice.lease?.tenantId) {
-        await notifyUser(invoice.lease.tenantId, {
+      if (invoice.rent?.tenantId) {
+        await notifyUser(invoice.rent.tenantId, {
           type: 'SYSTEM',
           title: 'Payment recorded',
           body: `A payment of ₦${amount.toLocaleString()} was recorded on your account.`,

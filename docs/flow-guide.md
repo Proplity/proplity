@@ -2,7 +2,7 @@
 
 _Last updated 2026-10-16 — covers complete operational flows including
 tenant profile gate, 3-step applications, multi-unit listings with service
-charge, full media gallery and photo manager, auto-pay, lease renewal/notices/invoices,
+charge, full media gallery and photo manager, auto-pay, rent renewal/notices/invoices,
 landlord report download, neighbourhood report editor, duplicate listing merge/unmerge,
 and admin user suspension & security audit log._
 
@@ -77,9 +77,9 @@ for tenants; admins go to their admin area).
 
 **1. Log in** at `/login` with your email and password.
 
-**2. Your dashboard** shows your current unit, lease dates, a payment panel,
+**2. Your dashboard** shows your current unit, rent dates, a payment panel,
 and three quick actions: _Generate Report_, _Message Manager_, _Request
-Repair_. If you have a lease waiting for your signature, a signing card
+Repair_. If you have a rent waiting for your signature, a signing card
 appears at the top.
 
 **3. Message your manager** — click _Message Manager_ (dashboard quick
@@ -132,7 +132,7 @@ started.
     click **Submit Application**.
 
 **9. View your rentals** — open _My Rentals_ from the sidebar for every
-lease you've had — current and past — with its dates, rent and status.
+rent you've had — current and past — with its dates, rent and status.
 Click one to open that property's page.
 
 **10. Pay rent** — open _Payment History_ (or use the payment panel on your
@@ -241,7 +241,7 @@ demographics (0–10), add key features and status notes.
 **4. View your tenants** — open _Tenants_ from the sidebar to see everyone
 renting from you, their property, rent, and payment status.
 
-**5. Open a tenant's detail page** — click any tenant to see their lease
+**5. Open a tenant's detail page** — click any tenant to see their rent
 terms, payment history, and documents. Click **Message Tenant** to open a
 direct conversation with them (shared with your property manager, so
 either of you can pick it up).
@@ -271,7 +271,7 @@ Tenant flow, steps 13–15).
 Everything a landlord can do, plus the day-to-day operational tools:
 
 **1. Log in.** Your dashboard shows portfolio stats — total properties,
-active leases, rent collected, pending maintenance — each one clickable
+active rents, rent collected, pending maintenance — each one clickable
 through to a detailed breakdown (e.g. **View All Renewals →**).
 
 **2. My Properties** — open _My Properties_ for a searchable list of the
@@ -290,24 +290,24 @@ vendor browsing the same page won't see it — it's manager/landlord-only).
 
 1.  _Tenant Info_: name, email, phone (NIN/occupation optional).
 2.  _Link Property_: pick a property, then one of its **vacant** units.
-3.  _Lease Details_: start/end date (rent and **service charge** auto-fill
+3.  _Rent Details_: start/end date (rent and **service charge** auto-fill
     from the unit, adjustable, with a combined total shown), frequency.
 4.  _Review_ → **Create Tenancy**. You're returned to the tenant list —
     **the new tenancy starts as Pending**, not Active.
-5.  Open that tenant from the list and click **Activate Lease** — this
+5.  Open that tenant from the list and click **Activate Rent** — this
     is the deliberate second step that actually marks the unit occupied,
     not a bug in the flow.
 
-**3b. Run a tenancy** — open a tenant from the list. On the lease page:
+**3b. Run a tenancy** — open a tenant from the list. On the rent page:
 
-- **Renew Lease** — pre-fills a same-length term starting the day after the
-  current lease ends (edit dates, rent, deposit), then creates the renewal
-  and takes you to the new lease; the old one is marked expired.
+- **Renew Rent** — pre-fills a same-length term starting the day after the
+  current rent ends (edit dates, rent, deposit), then creates the renewal
+  and takes you to the new rent; the old one is marked expired.
 - **Send Notice** — pick a type (Payment Reminder, Rent Increase, Renewal
   Offer, Default, Expiration Alert, Termination), write a message, send.
 - **Send Invoice** (Quick Actions) — pick a type (including Service Charge),
   amount, due date, optional description; the tenant sees it immediately.
-- **Terminate Lease**, **Message Tenant**, and lease-terms editing
+- **Terminate Rent**, **Message Tenant**, and rent-terms editing
   (grace period, late fee) as before.
 
 **4. Manage maintenance requests** — open _Maintenance_ to see every
@@ -421,7 +421,7 @@ listing.
 - **Approval Date & Edited Badges**: displays approved dates and highlights listings with an **Edited** badge if resubmitted after changes.
 - **Duplicate Detection & Merge**: listings sharing an address and city display a
   **Possible duplicate** badge. Admins can click **Merge** to designate a canonical
-  listing and merge duplicates (`MergeDuplicateModal`), consolidating units, leases, and inquiries.
+  listing and merge duplicates (`MergeDuplicateModal`), consolidating units, rents, and inquiries.
 - **Undo Merge**: the **Merged** tab lists all merged properties, allowing one-click
   **Undo Merge** to restore a listing if needed.
 
@@ -502,7 +502,7 @@ in their own account, live:
   live.
 - **Email, file uploads, and rent payment** each depend on a provider key
   being configured for this deployment (see the note at the top).
-- **Adding a tenant is a two-step process** — creating the lease, then
+- **Adding a tenant is a two-step process** — creating the rent, then
   separately activating it — by design, not a missed step in the flow.
 - **Listing a new property requires admin review** before it goes live —
   by design, to keep listings trustworthy.

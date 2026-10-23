@@ -6,11 +6,11 @@ import { getSystemSettings, retentionOn } from '@/lib/systemSettings';
 // Retention for identity documents (ADR-0012, ISS-039). Identity documents
 // are personal data (NDPR), so they are removed once there is no reason to
 // hold them:
-//   - tenancy ended: the user has leases, none pending or active, and the
+//   - tenancy ended: the user has rents, none pending or active, and the
 //     latest one ended more than the tenancy period ago (365 days unless an admin set another);
 //   - never became a tenant: the user has applications, all rejected, and
 //     the latest decision is more than the rejection period old (90 days unless set).
-// Users with no lease and no application are left alone (no trigger yet).
+// Users with no rent and no application are left alone (no trigger yet).
 //
 // Deleting is irreversible, so it only happens when both gates are open (ADR-0015): the
 // deployment allows it (RETENTION_ENABLED=true) and an admin has switched it on in Platform
@@ -32,13 +32,13 @@ async function eligibleOwnerIds(
   const eligible = new Set<string>();
 
   for (const { ownerId } of owners) {
-    const leases = await prisma.lease.findMany({
+    const rents = await prisma.rent.findMany({
       where: { tenantId: ownerId },
       select: { status: true, endDate: true },
     });
-    if (leases.length > 0) {
-      const stillNeeded = leases.some((l) => l.status === 'PENDING' || l.status === 'ACTIVE');
-      const latestEnd = Math.max(...leases.map((l) => l.endDate.getTime()));
+    if (rents.length > 0) {
+      const stillNeeded = rents.some((l) => l.status === 'PENDING' || l.status === 'ACTIVE');
+      const latestEnd = Math.max(...rents.map((l) => l.endDate.getTime()));
       if (!stillNeeded && now - latestEnd > tenancyEndedMs) eligible.add(ownerId);
       continue;
     }

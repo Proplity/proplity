@@ -7,7 +7,7 @@
 enum ConversationType {
   DIRECT // 1:1, e.g. tenant <-> manager
   MAINTENANCE_THREAD // tied to a MaintenanceRequest
-  LEASE_THREAD // tied to a Lease (renewal discussion, notices, etc.)
+  RENT_THREAD // tied to a Rent (renewal discussion, notices, etc.)
   COMMUNITY_DISCUSSION // §5.3 discussion boards — multi-participant, no context link required
   SUPPORT
 }
@@ -38,8 +38,8 @@ model Conversation {
   property             Property?                 @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   maintenanceRequestId String?                   @unique
   maintenanceRequest   MaintenanceRequest?       @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
-  leaseId              String?
-  lease                Lease?                    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  rentId              String?
+  rent                Rent?                    @relation(fields: [rentId], references: [id], onDelete: Cascade)
   participants         ConversationParticipant[]
   messages             Message[]
   createdAt            DateTime                  @default(now())
@@ -54,7 +54,7 @@ model ConversationParticipant {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastReadAt     DateTime?
   joinedAt       DateTime     @default(now())
-  // Set when the person's link to the thread ends (a tenant's lease ends): they keep reading
+  // Set when the person's link to the thread ends (a tenant's rent ends): they keep reading
   // what was said up to this moment, cannot post, and see nothing newer (ISS-142).
   leftAt         DateTime?
 

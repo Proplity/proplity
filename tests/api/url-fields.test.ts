@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 import { isSafeUrl } from '../../lib/api/urlField';
@@ -37,12 +37,12 @@ describe('URL fields reject unsafe links over the API', () => {
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     const managerCookie = await authCookie(manager.id, manager.role);
     const tenantCookie = await authCookie(tenant.id, tenant.role);
 
     const notice = (documentUrl: string) =>
-      apiFetch(`/api/v1/leases/${lease.id}/notices`, {
+      apiFetch(`/api/v1/rents/${rent.id}/notices`, {
         method: 'POST',
         cookie: managerCookie,
         body: { type: 'PAYMENT_REMINDER', content: 'Hello', documentUrl },

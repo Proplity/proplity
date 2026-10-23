@@ -9,7 +9,7 @@ async function tellOverdue(invoice: {
   invoiceNumber: string;
   amount: number;
   dueDate: Date;
-  lease: {
+  rent: {
     tenantId: string;
     unit: {
       unitNumber: string;
@@ -17,19 +17,19 @@ async function tellOverdue(invoice: {
     };
   } | null;
 }) {
-  const lease = invoice.lease;
-  if (!lease?.unit?.property) return;
+  const rent = invoice.rent;
+  if (!rent?.unit?.property) return;
   try {
-    await notifyAndEmail(lease.tenantId, {
+    await notifyAndEmail(rent.tenantId, {
       title: `Invoice ${invoice.invoiceNumber} is overdue`,
       body: `Your payment of ₦${invoice.amount.toLocaleString()} was due on ${invoice.dueDate.toDateString()} and is now overdue. Please pay as soon as you can to avoid late fees.`,
       link: '/dashboard',
     });
     await notifyPropertyTeam(
-      lease.unit.property,
+      rent.unit.property,
       {
         title: `Rent overdue: ${invoice.invoiceNumber}`,
-        body: `Invoice ${invoice.invoiceNumber} (₦${invoice.amount.toLocaleString()}) for unit ${lease.unit.unitNumber} at ${lease.unit.property.name} is overdue.`,
+        body: `Invoice ${invoice.invoiceNumber} (₦${invoice.amount.toLocaleString()}) for unit ${rent.unit.unitNumber} at ${rent.unit.property.name} is overdue.`,
         link: '/dashboard/breakdown/rent',
       },
       { email: false },
@@ -55,7 +55,7 @@ export async function runOverdueFlagger(): Promise<{
   // because the fee hasn't been created yet) still needs one.
   const candidates = await prisma.invoice.findMany({
     where: { status: { in: ['UNPAID', 'OVERDUE'] }, dueDate: { lt: now } },
-    include: { lease: { include: { unit: { include: { property: true } } } } },
+    include: { rent: { include: { unit: { include: { property: true } } } } },
   });
 
   let flagged = 0;
@@ -63,14 +63,14 @@ export async function runOverdueFlagger(): Promise<{
   let lateFeesCreated = 0;
 
   for (const invoice of candidates) {
-    // Lease.gracePeriodDays (default 7) was accepted at lease creation and
-    // never read anywhere else until now -- an invoice with no lease (a
+    // Rent.gracePeriodDays (default 7) was accepted at rent creation and
+    // never read anywhere else until now -- an invoice with no rent (a
     // MAINTENANCE or direct userId invoice) has no grace concept, so it's
     // overdue right at its due date, same as before this fix.
-    const gracePeriodDays = invoice.lease?.gracePeriodDays ?? 0;
+    const gracePeriodDays = invoice.rent?.gracePeriodDays ?? 0;
     const graceDeadline = new Date(invoice.dueDate.getTime() + gracePeriodDays * MS_PER_DAY);
     // "Due on the 1st" means pay by the end of the 1st in Lagos, so the invoice is only overdue
-    // once that Lagos day is over (ISS-141). Without this a no-grace lease was flagged, and the
+    // once that Lagos day is over (ISS-141). Without this a no-grace rent was flagged, and the
     // late fee charged, at 03:00 Lagos time on the due date itself.
     const overdueFrom = viewingDayBounds(viewingDateKey(graceDeadline)).end;
     if (overdueFrom > now) continue; // still within grace period -- not overdue yet
@@ -79,14 +79,14 @@ export async function runOverdueFlagger(): Promise<{
       await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'OVERDUE' } });
       flagged += 1;
 
-      if (invoice.leaseId) {
+      if (invoice.rentId) {
         const existingReminder = await prisma.notice.findFirst({
           where: { invoiceId: invoice.id, type: 'PAYMENT_REMINDER' },
         });
         if (!existingReminder) {
           await prisma.notice.create({
             data: {
-              leaseId: invoice.leaseId,
+              rentId: invoice.rentId,
               invoiceId: invoice.id,
               type: 'PAYMENT_REMINDER',
               status: 'SENT',
@@ -101,19 +101,19 @@ export async function runOverdueFlagger(): Promise<{
     }
 
     // Late fee: one-time per overdue invoice, RENT only (a late fee on a
-    // SECURITY_DEPOSIT or MAINTENANCE invoice doesn't map to what a lease's
+    // SECURITY_DEPOSIT or MAINTENANCE invoice doesn't map to what a rent's
     // late-fee terms mean), and never on a LATE_FEE invoice itself --
     // without that exclusion, a late fee's own dueDate (set to "now" at
     // creation, so immediately overdue) would make it a candidate next run
     // and compound indefinitely. Landlord/manager picks exactly one mode
-    // per lease (lateFeeType) -- percentage-of-rent or a flat amount --
+    // per rent (lateFeeType) -- percentage-of-rent or a flat amount --
     // never both stacked together.
-    if (invoice.type === 'RENT' && invoice.lease) {
-      const lease = invoice.lease;
+    if (invoice.type === 'RENT' && invoice.rent) {
+      const rent = invoice.rent;
       const lateFeeAmount =
-        lease.lateFeeType === 'FIXED'
-          ? lease.lateFeeFlatAmount
-          : Math.round(invoice.amount * (lease.lateFeePercentage / 100) * 100) / 100;
+        rent.lateFeeType === 'FIXED'
+          ? rent.lateFeeFlatAmount
+          : Math.round(invoice.amount * (rent.lateFeePercentage / 100) * 100) / 100;
 
       if (lateFeeAmount > 0) {
         // No FK from a LATE_FEE invoice back to the RENT invoice it's for --
@@ -125,10 +125,10 @@ export async function runOverdueFlagger(): Promise<{
           where: { type: 'LATE_FEE', description: { contains: marker } },
         });
         if (!existingLateFee) {
-          const label = lease.lateFeeType === 'FIXED' ? `flat fee` : `${lease.lateFeePercentage}%`;
+          const label = rent.lateFeeType === 'FIXED' ? `flat fee` : `${rent.lateFeePercentage}%`;
           await prisma.invoice.create({
             data: {
-              leaseId: invoice.leaseId!,
+              rentId: invoice.rentId!,
               type: 'LATE_FEE',
               amount: lateFeeAmount,
               dueDate: now,

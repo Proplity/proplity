@@ -20,7 +20,7 @@ const AVATAR_COLORS = [
 const TYPE_LABEL: Record<Conversation['type'], string> = {
   DIRECT: 'Direct message',
   MAINTENANCE_THREAD: 'Maintenance',
-  LEASE_THREAD: 'Lease',
+  RENT_THREAD: 'Rent',
   COMMUNITY_DISCUSSION: 'Community board',
   SUPPORT: 'Support',
 };
@@ -43,7 +43,7 @@ function describe(conv: Conversation, selfId: string | undefined) {
   const name = conv.title || others.map((p) => p.user.name).join(', ') || 'Conversation';
   const subtitle =
     conv.maintenanceRequest?.title ??
-    conv.lease?.unit.property.name ??
+    conv.rent?.unit.property.name ??
     conv.property?.name ??
     TYPE_LABEL[conv.type];
   return { name, subtitle, others };

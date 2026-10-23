@@ -43,8 +43,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       breakdown: 'properties' as const,
     },
     {
-      label: 'Active Leases',
-      value: loading || !summary ? '—' : String(summary.leases.active),
+      label: 'Active Rents',
+      value: loading || !summary ? '—' : String(summary.rents.active),
       icon: Users,
       breakdown: 'tenants' as const,
     },
@@ -116,7 +116,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div
                 key={payment.id}
                 onClick={() =>
-                  payment.leaseId && onNavigate({ type: 'tenant-detail', leaseId: payment.leaseId })
+                  payment.rentId && onNavigate({ type: 'tenant-detail', rentId: payment.rentId })
                 }
                 className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
               >
@@ -150,23 +150,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <h2 className="font-semibold">Upcoming Renewals</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {upcomingRenewals.map((lease) => {
-              const daysLeft = Math.ceil((new Date(lease.endDate).getTime() - now) / MS_PER_DAY);
+            {upcomingRenewals.map((rent) => {
+              const daysLeft = Math.ceil((new Date(rent.endDate).getTime() - now) / MS_PER_DAY);
               return (
                 <div
-                  key={lease.id}
-                  onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
+                  key={rent.id}
+                  onClick={() => onNavigate({ type: 'tenant-detail', rentId: rent.id })}
                   className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
                 >
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="font-medium">{lease.tenant?.name ?? 'Unknown tenant'}</p>
+                    <p className="font-medium">{rent.tenant?.name ?? 'Unknown tenant'}</p>
                     <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
                       {daysLeft}d left
                     </span>
                   </div>
-                  <p className="mb-1 text-sm text-gray-600">{lease.unit?.property?.name ?? '—'}</p>
+                  <p className="mb-1 text-sm text-gray-600">{rent.unit?.property?.name ?? '—'}</p>
                   <p className="text-sm font-medium text-orange-600">
-                    Due: {new Date(lease.endDate).toLocaleDateString()}
+                    Due: {new Date(rent.endDate).toLocaleDateString()}
                   </p>
                 </div>
               );

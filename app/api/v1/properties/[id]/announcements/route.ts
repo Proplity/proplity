@@ -20,10 +20,10 @@ async function canViewProperty(
 ) {
   if (canManageProperty(session, property)) return true;
   if (session.role !== 'TENANT') return false;
-  const activeLease = await prisma.lease.findFirst({
+  const activeRent = await prisma.rent.findFirst({
     where: { unit: { propertyId }, tenantId: session.sub, status: 'ACTIVE' },
   });
-  return !!activeLease;
+  return !!activeRent;
 }
 
 // Tenants of the property need to read these too -- VENDOR has no
@@ -75,18 +75,18 @@ export const POST = withAuth(
         data: { propertyId: id, authorId: session.sub, ...validated.data },
       });
 
-      // Notify every tenant with an active lease on this property. Awaited
+      // Notify every tenant with an active rent on this property. Awaited
       // (Vercel can freeze the function right after the response is sent,
       // so an un-awaited promise here isn't reliably delivered) but errors
       // are swallowed inside notifyUsers -- a notification hiccup must not
       // roll back a successfully published announcement.
-      const activeLeases = await prisma.lease.findMany({
+      const activeRents = await prisma.rent.findMany({
         where: { unit: { propertyId: id }, status: 'ACTIVE' },
         select: { tenantId: true },
         distinct: ['tenantId'],
       });
       await notifyUsers(
-        activeLeases.map((l) => l.tenantId),
+        activeRents.map((l) => l.tenantId),
         {
           type: 'ANNOUNCEMENT',
           title: `New announcement: ${property.name}`,

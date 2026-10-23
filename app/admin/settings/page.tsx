@@ -462,7 +462,7 @@ export default function AdminSettingsPage() {
           <div>
             <p className="font-medium text-gray-900">Tenant invitations by email</p>
             <p className="mt-1 max-w-xl text-sm text-gray-600">
-              When a manager or landlord starts a lease for an email address with no account,
+              When a manager or landlord starts a rent for an email address with no account,
               Proplity emails that person an invitation. This is how many new people one manager or
               landlord can invite in a day. They can only do it on a listing an admin has approved.
               Admins are not limited. Set 0 to stop invitations.

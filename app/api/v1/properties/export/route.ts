@@ -39,7 +39,7 @@ export const GET = withAuth(
         include: {
           units: {
             include: {
-              leases: {
+              rents: {
                 where: { status: 'ACTIVE' },
                 include: { tenant: { select: { name: true, email: true } } },
                 take: 1,
@@ -52,7 +52,7 @@ export const GET = withAuth(
 
       const rows = properties.flatMap((property) =>
         property.units.map((unit) => {
-          const tenant = unit.leases[0]?.tenant;
+          const tenant = unit.rents[0]?.tenant;
           return {
             propertyName: property.name,
             address: property.address,

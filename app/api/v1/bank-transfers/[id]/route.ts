@@ -16,7 +16,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       include: {
         invoice: {
           include: {
-            lease: {
+            rent: {
               include: {
                 unit: { include: { property: PUBLIC_PROPERTY } },
               },
@@ -63,7 +63,7 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
 
     const isSubmitter = submission.submittedById === session.sub;
     const property =
-      submission.invoice.lease?.unit.property ??
+      submission.invoice.rent?.unit.property ??
       submission.invoice.maintenanceRequest?.unit.property;
 
     const canManage =

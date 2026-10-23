@@ -229,17 +229,17 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
 
   if (file.folder === 'profile' || file.folder === 'applications') {
     if (!scope) return false;
-    const [application, lease] = await Promise.all([
+    const [application, rent] = await Promise.all([
       prisma.application.findFirst({
         where: { applicantId: file.ownerId, unit: { property: scope } },
         select: { id: true },
       }),
-      prisma.lease.findFirst({
+      prisma.rent.findFirst({
         where: { tenantId: file.ownerId, unit: { property: scope } },
         select: { id: true },
       }),
     ]);
-    return Boolean(application || lease);
+    return Boolean(application || rent);
   }
 
   if (file.folder === 'maintenance-requests') {
@@ -278,28 +278,28 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     const url = fileUrl(file.id);
     const notice = await prisma.notice.findFirst({
       where: { documentUrl: url },
-      include: { lease: { include: { unit: { include: { property: true } } } } },
+      include: { rent: { include: { unit: { include: { property: true } } } } },
     });
     if (!notice) return false;
-    if (notice.lease.tenantId === actor.sub) return true;
+    if (notice.rent.tenantId === actor.sub) return true;
     if (!scope) return false;
     return (
-      notice.lease.unit.property.managerId === actor.sub ||
-      notice.lease.unit.property.landlordId === actor.sub
+      notice.rent.unit.property.managerId === actor.sub ||
+      notice.rent.unit.property.landlordId === actor.sub
     );
   }
 
-  if (file.folder === 'leases') {
+  if (file.folder === 'rents') {
     const url = fileUrl(file.id);
-    const lease = await prisma.lease.findFirst({
+    const rent = await prisma.rent.findFirst({
       where: { signedAgreementUrl: url },
       include: { unit: { include: { property: true } } },
     });
-    if (!lease) return false;
-    if (lease.tenantId === actor.sub) return true;
+    if (!rent) return false;
+    if (rent.tenantId === actor.sub) return true;
     if (!scope) return false;
     return (
-      lease.unit.property.managerId === actor.sub || lease.unit.property.landlordId === actor.sub
+      rent.unit.property.managerId === actor.sub || rent.unit.property.landlordId === actor.sub
     );
   }
 
@@ -329,7 +329,7 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
       include: {
         invoice: {
           include: {
-            lease: { include: { unit: { include: { property: true } } } },
+            rent: { include: { unit: { include: { property: true } } } },
             maintenanceRequest: { include: { unit: { include: { property: true } } } },
           },
         },
@@ -337,15 +337,15 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
     });
     if (!submission) return false;
     if (submission.submittedById === actor.sub) return true;
-    // Once confirmed, the payer on the lease and the vendor who was paid may read the proof too:
+    // Once confirmed, the payer on the rent and the vendor who was paid may read the proof too:
     // it is attached to their receipt.
     if (submission.status === 'APPROVED') {
-      if (submission.invoice.lease?.tenantId === actor.sub) return true;
+      if (submission.invoice.rent?.tenantId === actor.sub) return true;
       if (submission.invoice.maintenanceRequest?.vendorId === actor.sub) return true;
     }
     if (!scope) return false;
     const property =
-      submission.invoice.lease?.unit.property ??
+      submission.invoice.rent?.unit.property ??
       submission.invoice.maintenanceRequest?.unit.property;
     if (!property) return false;
     return property.managerId === actor.sub || property.landlordId === actor.sub;

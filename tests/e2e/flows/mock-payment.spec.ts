@@ -8,7 +8,7 @@ import { loginAs, SEED_USERS, SEED_PASSWORD } from '../helpers/auth';
 // Logs in as manager on `request` ONLY (a second /auth/login call on the
 // same APIRequestContext would overwrite that session cookie, since it's
 // the same cookie jar) -- the tenant is identified by email off the
-// manager's own lease list instead of a second login.
+// manager's own rent list instead of a second login.
 async function createUnpaidInvoiceForTenant(
   request: APIRequestContext,
   baseURL: string,
@@ -24,21 +24,21 @@ async function createUnpaidInvoiceForTenant(
   });
   expect(loginRes.ok()).toBe(true);
 
-  const leasesRes = await request.get('/api/v1/leases');
-  const leases = (await leasesRes.json()).data as Array<{
+  const rentsRes = await request.get('/api/v1/rents');
+  const rents = (await rentsRes.json()).data as Array<{
     id: string;
     status: string;
     tenant: { email: string } | null;
   }>;
-  const lease = leases.find(
+  const rent = rents.find(
     (l) => l.tenant?.email === SEED_USERS.tenant.email && l.status === 'ACTIVE',
   );
-  if (!lease) throw new Error('No active lease found for the seeded tenant');
+  if (!rent) throw new Error('No active rent found for the seeded tenant');
 
   const invoiceRes = await request.post('/api/v1/invoices', {
     headers: { origin: baseURL },
     data: {
-      leaseId: lease.id,
+      rentId: rent.id,
       type: 'RENT',
       amount,
       dueDate: new Date().toISOString(),

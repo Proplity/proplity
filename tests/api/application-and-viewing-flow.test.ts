@@ -5,7 +5,7 @@ import { createUser, createProperty, createUnit, bookableViewingTime } from '../
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
-const lease = (unitId: string, extra: Record<string, unknown> = {}) => ({
+const rent = (unitId: string, extra: Record<string, unknown> = {}) => ({
   unitId,
   startDate: '2027-01-01',
   endDate: '2027-12-31',
@@ -69,10 +69,10 @@ describe('application review: notifications and tenancy (ISS-046)', () => {
     const id = app.body.data.id as string;
 
     // Not approved yet -> refused.
-    const early = await apiFetch('/api/v1/leases', {
+    const early = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: mCookie,
-      body: lease(unit.id, { applicationId: id }),
+      body: rent(unit.id, { applicationId: id }),
     });
     expect(early.status).toBe(409);
 
@@ -81,21 +81,21 @@ describe('application review: notifications and tenancy (ISS-046)', () => {
       cookie: mCookie,
       body: { status: 'APPROVED' },
     });
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: mCookie,
-      body: lease(unit.id, { applicationId: id }),
+      body: rent(unit.id, { applicationId: id }),
     });
     expect(res.status).toBe(201);
     expect(res.body.data.tenantId).toBe(tenant.id);
     const linked = await testPrisma.application.findUnique({ where: { id } });
-    expect(linked?.leaseId).toBe(res.body.data.id);
+    expect(linked?.rentId).toBe(res.body.data.id);
 
     // Same application cannot start a second tenancy.
-    const again = await apiFetch('/api/v1/leases', {
+    const again = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: mCookie,
-      body: lease(unit.id, { applicationId: id }),
+      body: rent(unit.id, { applicationId: id }),
     });
     expect(again.status).toBe(409);
   });
@@ -108,10 +108,10 @@ describe('application review: notifications and tenancy (ISS-046)', () => {
       cookie: tCookie,
       body: { unitId: unit.id, details: {} },
     });
-    const res = await apiFetch('/api/v1/leases', {
+    const res = await apiFetch('/api/v1/rents', {
       method: 'POST',
       cookie: mCookie,
-      body: lease(other.id, { applicationId: app.body.data.id }),
+      body: rent(other.id, { applicationId: app.body.data.id }),
     });
     expect(res.status).toBe(404);
   });

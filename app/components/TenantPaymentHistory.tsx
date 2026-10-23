@@ -43,9 +43,9 @@ type PaymentRecord = {
 // invoice still owing money renders as one pending/upcoming record instead
 // -- there's no separate "scheduled payment" model to source that from.
 // The tenant sees the vendor's bill on their own repair here too, but is not a party to it: the
-// receipt and "paid another way" are for invoices on their lease or addressed to them.
+// receipt and "paid another way" are for invoices on their rent or addressed to them.
 function isOwnInvoice(invoice: Invoice, meId: string | undefined): boolean {
-  return !!meId && (invoice.lease?.tenant.id === meId || invoice.userId === meId);
+  return !!meId && (invoice.rent?.tenant.id === meId || invoice.userId === meId);
 }
 
 function toRecords(invoices: Invoice[], meId: string | undefined): PaymentRecord[] {

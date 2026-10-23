@@ -6,7 +6,7 @@ import {
   KycStatus,
   PropertyType,
   UnitStatus,
-  LeaseStatus,
+  RentStatus,
   PaymentFrequency,
   WaterSupplyType,
   ElectricalSetup,
@@ -73,7 +73,7 @@ async function main() {
   await prisma.neighbourhoodReport.deleteMany();
   await prisma.accessLog.deleteMany();
   await prisma.accessCode.deleteMany();
-  await prisma.lease.deleteMany();
+  await prisma.rent.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.property.deleteMany();
   await prisma.managerInviteCode.deleteMany();
@@ -464,8 +464,8 @@ async function main() {
   const unitYaba1A = propYaba.units.find((u) => u.unitNumber === '1A')!;
   const unitHighland2A = propHighland.units.find((u) => u.unitNumber === '2A')!;
 
-  // 5. Create Leases
-  const leaseJordan = await prisma.lease.create({
+  // 5. Create Rents
+  const rentJordan = await prisma.rent.create({
     data: {
       unitId: unitHighland4B.id,
       tenantId: tenantJordan.id,
@@ -476,11 +476,11 @@ async function main() {
       deposit: 350000.0,
       gracePeriodDays: 7,
       lateFeePercentage: 5.0,
-      status: LeaseStatus.ACTIVE,
+      status: RentStatus.ACTIVE,
     },
   });
 
-  const leaseAdewale = await prisma.lease.create({
+  const rentAdewale = await prisma.rent.create({
     data: {
       unitId: unitHeights203.id,
       tenantId: tenantAdewale.id,
@@ -490,11 +490,11 @@ async function main() {
       paymentFrequency: PaymentFrequency.ANNUAL,
       deposit: 85000.0,
       gracePeriodDays: 5,
-      status: LeaseStatus.ACTIVE,
+      status: RentStatus.ACTIVE,
     },
   });
 
-  const leaseTunde = await prisma.lease.create({
+  const rentTunde = await prisma.rent.create({
     data: {
       unitId: unitYaba1A.id,
       tenantId: tenantTunde.id,
@@ -504,7 +504,7 @@ async function main() {
       paymentFrequency: PaymentFrequency.ANNUAL,
       deposit: 40000.0,
       gracePeriodDays: 7,
-      status: LeaseStatus.ACTIVE,
+      status: RentStatus.ACTIVE,
     },
   });
 
@@ -766,7 +766,7 @@ async function main() {
     data: {
       propertyId: propHeights.id,
       reviewerId: tenantAdewale.id,
-      leaseId: leaseAdewale.id, // Verified lease
+      rentId: rentAdewale.id, // Verified rent
       rating: 5,
       comment:
         'Lekki Heights is an excellent residence. Power is very stable and maintenance responses are immediate.',
@@ -777,7 +777,7 @@ async function main() {
     data: {
       propertyId: propHighland.id,
       reviewerId: tenantJordan.id,
-      leaseId: leaseJordan.id, // Verified lease
+      rentId: rentJordan.id, // Verified rent
       rating: 4,
       comment:
         'Great layout and high quality structure. Traffic gets a bit busy around Admiralty Way during rush hours.',
@@ -788,7 +788,7 @@ async function main() {
   const invRentJordan = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1001',
-      leaseId: leaseJordan.id,
+      rentId: rentJordan.id,
       type: InvoiceType.RENT,
       amount: 3500000.0,
       dueDate: new Date('2026-01-01'),
@@ -811,7 +811,7 @@ async function main() {
   const invUtilityAdewale = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1002',
-      leaseId: leaseAdewale.id,
+      rentId: rentAdewale.id,
       type: InvoiceType.UTILITY,
       amount: 45000.0,
       dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Due in 5 days
@@ -823,7 +823,7 @@ async function main() {
   const invServiceTunde = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1003',
-      leaseId: leaseTunde.id,
+      rentId: rentTunde.id,
       type: InvoiceType.ASSOCIATION_FEE,
       amount: 25000.0,
       dueDate: new Date('2026-02-15'),
@@ -863,7 +863,7 @@ async function main() {
   const invUtilityTunde = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-1004',
-      leaseId: leaseTunde.id,
+      rentId: rentTunde.id,
       type: InvoiceType.UTILITY,
       amount: 18000.0,
       dueDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
@@ -927,7 +927,7 @@ async function main() {
     data: {
       authorId: manager.id,
       aboutUserId: tenantTunde.id,
-      leaseId: leaseTunde.id,
+      rentId: rentTunde.id,
       body: 'Tenant paid service charge early. Good compliance record.',
       createdAt: new Date(),
     },

@@ -61,12 +61,12 @@ export const POST = withAuth(
       let action: AccessLogAction;
       let granted = false;
 
-      // A tenant's code belongs to their tenancy (ISS-138). Ending a lease revokes the codes, but a
-      // lease that ended some other way must not leave a working door behind, so the gate asks too.
+      // A tenant's code belongs to their tenancy (ISS-138). Ending a rent revokes the codes, but a
+      // rent that ended some other way must not leave a working door behind, so the gate asks too.
       const tenancyEnded =
         accessCode.status === 'ACTIVE' &&
         accessCode.createdBy.role === 'TENANT' &&
-        !(await prisma.lease.findFirst({
+        !(await prisma.rent.findFirst({
           where: { unitId, tenantId: accessCode.createdById, status: 'ACTIVE' },
           select: { id: true },
         }));

@@ -61,7 +61,7 @@ proplity/
 │   │   ├── 📁 maintenance/ (+[id]), maintenance-request/new/, tenant-maintenance/
 │   │   ├── 📁 tenants/ (+add, +[id])
 │   │   ├── 📁 properties/ (+new, +[id], +[id]/apply, +[id]/schedule-viewing)   # "Properties" nav = manager "My Properties"
-│   │   ├── 📁 rentals/                      # Tenant "My Rentals" (current + past leases)
+│   │   ├── 📁 rentals/                      # Tenant "My Rentals" (current + past rents)
 │   │   ├── 📁 profile/complete/             # One-time tenant profile gate
 │   │   ├── 📁 vendor/jobs/[id]/ (+invoice)
 │   │   └── 📁 breakdown/[type]/
@@ -79,7 +79,7 @@ proplity/
 │   │   │                                    #   neighbourhood-report, ads, announcements, equipment
 │   │   ├── 📁 applications/, manager-codes/ # Rental applications; landlord→manager invite codes (+check, +redeem)
 │   │   ├── 📁 maintenance/                  # categories, requests (+[id], +rating), schedules
-│   │   ├── 📁 leases/                       # +[id], notes, notices, sign
+│   │   ├── 📁 rents/                       # +[id], notes, notices, sign
 │   │   ├── 📁 invoices/, payments/          # payments: initialize, availability, webhook, autopay, authorization
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
@@ -109,7 +109,7 @@ proplity/
 │
 ├── 📁 context/AuthContext.tsx               # Session context; silent refresh on reload, exposes the extended User profile
 │
-├── 📁 hooks/                                # 27 files. Reads: useProperties, useLeases, useInvoices, useMaintenanceRequests, useConversations,
+├── 📁 hooks/                                # 27 files. Reads: useProperties, useRents, useInvoices, useMaintenanceRequests, useConversations,
 │   │                                        #   useVendors, useAdminUsers, useAuditLogs, useAnnouncements, useEquipment, useViolations, …
 │   │                                        # Writes go through useApiSubmit (plain per-render submit — never wrap in useCallback([]))
 │   ├── 📄 useApiSubmit.ts, useAuthRefresh.ts (13-min proactive refresh)
@@ -144,7 +144,7 @@ proplity/
 │       └── 📁 helpers/auth.ts
 │
 ├── 📁 prisma/
-│   ├── 📁 schema/                           # 11 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit, storage) — 43 models
+│   ├── 📁 schema/                           # 11 modular files (base, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
 │   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
