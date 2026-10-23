@@ -33,6 +33,7 @@ import { api } from '@/lib/apiClient';
 import { toCsv } from '@/lib/csv';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { AttentionCard } from './AttentionCard';
+import { PlanUsageCard } from './PlanUsageCard';
 
 interface LandlordDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -226,6 +227,8 @@ export function LandlordDashboard({ onNavigate }: LandlordDashboardProps = {}) {
       </div>
 
       <AttentionCard />
+
+      <PlanUsageCard />
 
       {/* Sticky Setup & Profile Completion Prompt for Landlords */}
       {!loading && !bankLoading && (propertyCount === 0 || (bankAccounts ?? []).length === 0) && (

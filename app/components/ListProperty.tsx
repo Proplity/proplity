@@ -61,6 +61,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
   } = useCreateProperty();
   const [submittingUnit, setSubmittingUnit] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [planLimitMessage, setPlanLimitMessage] = useState<string | null>(null);
   const submitting = creatingProperty || submittingUnit;
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
   const [unitStatuses, setUnitStatuses] = useState<UnitSubmitStatus[]>([]);
@@ -250,23 +251,59 @@ export function ListProperty({ userRole }: ListPropertyProps) {
   // back on a partial failure, since units 1..k already exist by then.
   // Returns whether every unit in `indexes` succeeded, computed from local
   // results rather than re-reading (possibly stale) React state.
+  //
+  // A unit over the plan's limit is refused with a reason, which is shown instead of the generic
+  // message; when the admin's rule is to confirm each time, the person is asked once and that
+  // answer covers the rest of this run.
   const createUnitsSequentially = async (propertyId: string, indexes: number[]) => {
     let allSucceeded = true;
+    let confirmedOverage = false;
+    let limitMessage: string | null = null;
     for (const index of indexes) {
+      if (limitMessage) {
+        setUnitStatuses((s) => s.map((st, i) => (i === index ? 'failed' : st)));
+        allSucceeded = false;
+        continue;
+      }
       setUnitStatuses((s) => s.map((st, i) => (i === index ? 'creating' : st)));
       try {
-        await api.properties.createUnit(propertyId, unitPayload(units[index]));
+        try {
+          await api.properties.createUnit(propertyId, {
+            ...unitPayload(units[index]),
+            ...(confirmedOverage ? { confirmOverage: true } : {}),
+          });
+        } catch (err) {
+          const data = (err as { response?: { data?: { code?: string; error?: string } } }).response
+            ?.data;
+          if (
+            data?.code === 'OVERAGE_NEEDS_CONFIRMATION' &&
+            window.confirm(`${data.error}\n\nAdd the unit anyway?`)
+          ) {
+            confirmedOverage = true;
+            await api.properties.createUnit(propertyId, {
+              ...unitPayload(units[index]),
+              confirmOverage: true,
+            });
+          } else {
+            if (data?.code === 'PLAN_LIMIT' || data?.code === 'OVERAGE_NEEDS_CONFIRMATION') {
+              limitMessage = data.error ?? null;
+            }
+            throw err;
+          }
+        }
         setUnitStatuses((s) => s.map((st, i) => (i === index ? 'created' : st)));
       } catch {
         setUnitStatuses((s) => s.map((st, i) => (i === index ? 'failed' : st)));
         allSucceeded = false;
       }
     }
+    if (limitMessage) setPlanLimitMessage(limitMessage);
     return allSucceeded;
   };
 
   const handleSubmit = async () => {
     setSubmitError(null);
+    setPlanLimitMessage(null);
     try {
       // Property has no subtype field beyond the 4-value PropertyType enum
       // -- the mock form's granular types (Duplex, Bungalow, ...) have no
@@ -330,6 +367,7 @@ export function ListProperty({ userRole }: ListPropertyProps) {
       .map((s, i) => (s === 'failed' ? i : -1))
       .filter((i) => i >= 0);
     if (failedIndexes.length === 0) return;
+    setPlanLimitMessage(null);
     setSubmittingUnit(true);
     let allSucceeded = false;
     try {
@@ -988,7 +1026,12 @@ export function ListProperty({ userRole }: ListPropertyProps) {
         {submitError && (
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {submitError}
+            <span>
+              {submitError}
+              {planLimitMessage && (
+                <span className="mt-1 block font-medium">{planLimitMessage}</span>
+              )}
+            </span>
           </div>
         )}
       </div>

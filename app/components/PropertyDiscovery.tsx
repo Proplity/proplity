@@ -18,6 +18,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface PropertyDiscoveryProps {
   onNavigate: (page: Page) => void;
@@ -86,7 +87,7 @@ function AdStatusAndButton({
 function cardFields(property: Property) {
   const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
   const anyVacant = property.units.some((u) => u.status === 'VACANT');
-  const freq = cheapestUnit?.listedPaymentFrequency.toLowerCase() ?? 'year';
+  const freq = perFrequency(cheapestUnit?.listedPaymentFrequency);
 
   return {
     price: cheapestUnit

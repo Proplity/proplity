@@ -5,18 +5,24 @@ import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { getSystemSettings } from '@/lib/systemSettings';
+import {
+  checkDowngrade,
+  countUnitsFor,
+  getAccountPlan,
+  graceEndsAtFrom,
+  listPlans,
+  priceFor,
+} from '@/lib/plans';
 
-// Server-authoritative pricing -- never trust a client-sent amount for a
-// real charge. Mirrors PricingPage.tsx's PLANS: 'starter' is free (handled
-// below with no Paystack call at all), 'professional' -> PRO, 'enterprise'
-// is custom/sales-assisted and never reaches self-serve checkout, same as
-// today's onGetStarted-instead-of-onSelectPlan behavior.
-const PRO_PRICING = { monthly: 29_999, annual: 23_999 * 12 };
-
+// Server-authoritative pricing -- never trust a client-sent amount for a real charge. The price is
+// read from the Plan row the admin edits, plus any units beyond the plan's included ones, worked
+// out here at the moment of checkout. A plan that comes to 0 (the free plan) is handled below with
+// no Paystack call at all.
 const checkoutSchema = z.object({
-  tier: z.enum(['FREE', 'PRO']),
+  planKey: z.string().min(1),
   billingCycle: z.enum(['monthly', 'yearly']).optional(),
-  // Needed to switch to FREE while a paid period is still running.
+  // Needed to switch to a free plan while a paid period is still running.
   confirmDowngrade: z.boolean().optional(),
 });
 
@@ -29,25 +35,57 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, checkoutSchema);
       if (!validated.success) return validated.response;
-      const { tier, billingCycle = 'monthly', confirmDowngrade } = validated.data;
+      const { planKey, billingCycle = 'monthly', confirmDowngrade } = validated.data;
+      const cycle = billingCycle === 'yearly' ? 'YEARLY' : 'MONTHLY';
 
-      if (tier === 'FREE') {
-        // Someone who has already paid for the current period keeps it: choosing
-        // FREE ends the plan at the end of that period, never straight away, and
-        // only after they confirm (ISS-056).
-        const current = await prisma.subscription.findUnique({ where: { userId: session.sub } });
-        const paidUntil = current?.currentPeriodEnd;
+      const plan = (await listPlans({ onlyActive: true })).find((p) => p.key === planKey);
+      if (!plan) return NextResponse.json({ error: 'That plan is not available' }, { status: 404 });
+
+      const settings = await getSystemSettings();
+      const units = await countUnitsFor(settings.unitBillingOwner, session.sub);
+      const price = priceFor(plan, cycle, units);
+      if (!price) {
+        return NextResponse.json(
+          { error: `The ${plan.name} plan cannot be paid for by the year` },
+          { status: 400 },
+        );
+      }
+
+      // Moving to a plan that includes less than the account uses follows the admin's rule.
+      const current = await getAccountPlan(session.sub);
+      let graceDays: number | null = null;
+      if (
+        plan.unitsIncluded < current.plan.unitsIncluded ||
+        plan.usersIncluded < current.plan.usersIncluded
+      ) {
+        const check = await checkDowngrade(session.sub, plan, settings);
+        if (!check.allowed) {
+          return NextResponse.json(
+            { error: check.message, code: 'DOWNGRADE_BLOCKED', ...check.details },
+            { status: 409 },
+          );
+        }
+        graceDays = check.graceDays;
+      }
+
+      if (price.total === 0) {
+        // Someone who has already paid for the current period keeps it: choosing a free plan ends
+        // the paid plan at the end of that period, never straight away, and only after they
+        // confirm (ISS-056).
+        const row = await prisma.subscription.findUnique({ where: { userId: session.sub } });
+        const paidUntil = row?.currentPeriodEnd;
         if (
-          current &&
-          current.tier !== 'FREE' &&
-          current.status === 'ACTIVE' &&
+          row &&
+          !current.lapsed &&
+          !current.plan.isDefault &&
+          row.status === 'ACTIVE' &&
           paidUntil &&
           paidUntil > new Date()
         ) {
           if (!confirmDowngrade) {
             return NextResponse.json(
               {
-                error: `You have paid for ${current.tier} until ${paidUntil.toISOString().slice(0, 10)}. Switching to Free keeps your plan until then and then ends it.`,
+                error: `You have paid for ${current.plan.name} until ${paidUntil.toISOString().slice(0, 10)}. Switching to ${plan.name} keeps your plan until then and then ends it.`,
                 code: 'DOWNGRADE_NEEDS_CONFIRMATION',
                 paidUntil,
               },
@@ -74,36 +112,50 @@ export const POST = withAuth(
         // No payment at all -- activate directly.
         const subscription = await prisma.subscription.upsert({
           where: { userId: session.sub },
-          create: { userId: session.sub, tier: 'FREE', status: 'ACTIVE' },
+          create: {
+            userId: session.sub,
+            planId: plan.id,
+            status: 'ACTIVE',
+            graceEndsAt: graceEndsAtFrom(graceDays),
+          },
           update: {
-            tier: 'FREE',
+            planId: plan.id,
             status: 'ACTIVE',
             currentPeriodStart: null,
             currentPeriodEnd: null,
             cancelAtPeriodEnd: false,
+            graceEndsAt: graceEndsAtFrom(graceDays),
           },
         });
         return NextResponse.json({ data: { activated: true, subscription } }, { status: 201 });
       }
 
-      const amount = billingCycle === 'yearly' ? PRO_PRICING.annual : PRO_PRICING.monthly;
-
-      // Tier/cycle have no dedicated Invoice column -- encoded into the
-      // description text (matching the codebase's existing convention for
-      // fields with no schema home, e.g. MaintenanceRequestForm's location
-      // note) so the webhook can read them back after Paystack confirms
-      // payment, without a schema change or touching /payments/initialize.
+      // Plan/cycle have no dedicated Invoice column -- encoded into the description text
+      // (matching the codebase's existing convention for fields with no schema home) so the
+      // webhook can read them back after Paystack confirms payment, without a schema change or
+      // touching /payments/initialize.
       const invoice = await prisma.invoice.create({
         data: {
           userId: session.sub,
           type: 'SUBSCRIPTION',
-          amount,
+          amount: price.total,
           dueDate: new Date(),
-          description: `Proplity subscription checkout — tier=${tier} cycle=${billingCycle}`,
+          description: `Proplity subscription checkout — plan=${plan.key} cycle=${billingCycle}${
+            price.extraUnits > 0 ? ` (includes ${price.extraUnits} extra unit(s))` : ''
+          }`,
         },
       });
 
-      return NextResponse.json({ data: { invoiceId: invoice.id, amount } }, { status: 201 });
+      return NextResponse.json(
+        {
+          data: {
+            invoiceId: invoice.id,
+            amount: price.total,
+            breakdown: { base: price.base, overage: price.overage, extraUnits: price.extraUnits },
+          },
+        },
+        { status: 201 },
+      );
     } catch (err) {
       return handleApiError(err);
     }

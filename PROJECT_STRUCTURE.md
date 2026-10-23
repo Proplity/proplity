@@ -15,10 +15,10 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 111 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 32 migrations")]
+    Postgres[("🐘 PostgreSQL — 46 models, 12 schema files, 36 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
     Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 103 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 111 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
@@ -144,8 +144,8 @@ proplity/
 │       └── 📁 helpers/auth.ts
 │
 ├── 📁 prisma/
-│   ├── 📁 schema/                           # 11 modular files (base, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
+│   ├── 📁 schema/                           # 12 modular files (base, billing, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
+│   ├── 📁 migrations/                       # 36 migrations, latest: 20261023120000_plans_credits_and_limits
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below

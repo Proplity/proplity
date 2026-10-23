@@ -1,0 +1,82 @@
+// Plans, credits and the paid-services catalogue. Everything here is edited by an admin (Admin >
+// Plans & billing), never in code: the numbers are business decisions that change, and the first
+// set is a placeholder until real prices are chosen. lib/plans.ts seeds the defaults when the
+// table is empty.
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+// One row per plan a manager or landlord can be on. The row with isDefault is what everybody
+// without a paid subscription is on (the free plan). Prices are whole naira.
+model Plan {
+  id             String         @id @default(uuid())
+  // Stable handle used by checkout and the pricing page ("small", "medium", ...). Renaming a plan
+  // changes `name`, never `key`.
+  key            String         @unique
+  name           String
+  tagline        String?
+  // Per month when paid monthly. 0 = free.
+  monthlyPrice   Int            @default(0)
+  // The whole price of a year when paid yearly; null = no yearly option.
+  yearlyPrice    Int?
+  unitsIncluded  Int
+  usersIncluded  Int            @default(1)
+  // Naira per extra unit per month beyond unitsIncluded; null = this plan cannot go over.
+  overagePerUnit Int?
+  // Credits added to the account each calendar month.
+  monthlyCredits Int            @default(0)
+  // Bullet points shown on the pricing page.
+  features       String[]
+  isDefault      Boolean        @default(false)
+  // Inactive plans cannot be bought; current subscribers keep them.
+  isActive       Boolean        @default(true)
+  isPopular      Boolean        @default(false)
+  sortOrder      Int            @default(0)
+  subscriptions  Subscription[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+// An extra a manager or landlord can pay for in credits (for example generating a rent agreement).
+model PaidService {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  creditCost  Int
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum CreditReason {
+  MONTHLY_ALLOWANCE
+  ADMIN_GRANT
+  PURCHASE
+  SPEND
+  REFUND
+}
+
+// An account's credit balance is the sum of its entries, never a stored number, so every change
+// leaves a row. Positive = credits in, negative = credits used.
+model CreditEntry {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta       Int
+  reason      CreditReason
+  // The PaidService.key a SPEND was for.
+  serviceKey  String?
+  note        String?
+  // "2026-10" on a MONTHLY_ALLOWANCE: the unique key below stops a month being granted twice.
+  periodKey   String?
+  // The admin who granted or adjusted.
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, periodKey])
+  @@index([userId, createdAt])
+}

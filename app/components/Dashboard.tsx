@@ -4,6 +4,7 @@ import { useOwnerSummary } from '@/hooks/useDashboardSummary';
 import { useLinkedLandlords, useRedeemManagerCode } from '@/hooks/useManagerCodes';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { AttentionCard } from './AttentionCard';
+import { PlanUsageCard } from './PlanUsageCard';
 
 interface DashboardProps {
   onNavigate: (page: Page) => void;
@@ -75,6 +76,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       <AttentionCard />
+
+      <PlanUsageCard />
 
       {loading && <p className="text-sm text-gray-500">Loading your portfolio…</p>}
 

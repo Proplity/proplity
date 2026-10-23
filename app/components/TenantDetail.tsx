@@ -35,6 +35,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { PaidAnotherWayForm } from './PaidAnotherWayForm';
 import { toast } from 'sonner';
 import type { Rent, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface TenantDetailProps {
   rentId: string;
@@ -601,7 +602,7 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-green-600" />
                   <p className="font-semibold text-green-600">
-                    ₦{rent.rentAmount.toLocaleString()}/{rent.paymentFrequency.toLowerCase()}
+                    ₦{rent.rentAmount.toLocaleString()}/{perFrequency(rent.paymentFrequency)}
                   </p>
                 </div>
               </div>

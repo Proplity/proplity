@@ -95,6 +95,9 @@ model Property {
   manager               User?                 @relation("ManagedProperties", fields: [managerId], references: [id])
   landlordId            String?
   landlord              User?                 @relation("OwnedProperties", fields: [landlordId], references: [id])
+  // Who added the listing; one of the choices for whose plan its units count against.
+  createdById           String?
+  createdBy             User?                 @relation("CreatedProperties", fields: [createdById], references: [id])
   units                 Unit[]
   announcements         Announcement[]
   conversations         Conversation[]
@@ -158,7 +161,7 @@ model Unit {
   status                 UnitStatus            @default(VACANT)
   mediaUrls              String[]
   amenities              String[]
-  rents                 Rent[]
+  rents                  Rent[]
   maintenanceRequests    MaintenanceRequest[]
   accessCodes            AccessCode[]
   violations             Violation[]
@@ -256,8 +259,8 @@ model PropertyReview {
   // onDelete: SetNull rather than Cascade — deleting the Rent later (should
   // that ever happen) shouldn't take the review down with it, just drop its
   // verified status back to unverified.
-  rentId    String?
-  rent      Rent?   @relation(fields: [rentId], references: [id], onDelete: SetNull)
+  rentId     String?
+  rent       Rent?    @relation(fields: [rentId], references: [id], onDelete: SetNull)
   rating     Int
   comment    String?
   createdAt  DateTime @default(now())

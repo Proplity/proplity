@@ -9,6 +9,8 @@ import { FEATURED_GRADIENTS, FeaturedPropertyModal, featuredFields } from './Fea
 import { useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { usePlans } from '@/hooks/usePlans';
+import { planBullets, planPriceLabel } from '@/lib/planDisplay';
 import {
   ArrowRight,
   Shield,
@@ -32,6 +34,7 @@ export function LandingPage() {
   const { user } = useAuth();
   const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const { data: plans } = usePlans();
   const { data: allProperties, loading: featuredLoading } = useProperties();
   const featured = allProperties.slice(0, 6);
   const [featuredIndex, setFeaturedIndex] = useState<number | null>(null);
@@ -715,61 +718,24 @@ export function LandingPage() {
             </div>
 
             <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-3">
-              {[
-                {
-                  name: 'Starter',
-                  price: '₦9,999',
-                  units: 'Up to 10 units',
-                  features: [
-                    'Property & Tenant Management',
-                    'Rent Collection',
-                    'Basic Maintenance',
-                    'Email Support',
-                  ],
-                },
-                {
-                  name: 'Professional',
-                  price: '₦29,999',
-                  units: 'Up to 50 units',
-                  features: [
-                    'Everything in Starter',
-                    'AI Assistant',
-                    'WhatsApp Integration',
-                    'Advanced Analytics',
-                    'Priority Support',
-                  ],
-                  popular: true,
-                },
-                {
-                  name: 'Enterprise',
-                  price: 'Custom',
-                  units: '100+ units',
-                  features: [
-                    'Everything in Professional',
-                    'Custom Integration',
-                    'Dedicated Account Manager',
-                    'SLA Guarantee',
-                    '24/7 Phone Support',
-                  ],
-                },
-              ].map((plan, index) => (
+              {plans.map((plan, index) => (
                 <div
                   key={index}
-                  className={`rounded-xl border-2 bg-white p-8 ${plan.popular ? 'scale-105 border-blue-600 shadow-xl' : 'border-gray-200'} relative`}
+                  className={`rounded-xl border-2 bg-white p-8 ${plan.isPopular ? 'scale-105 border-blue-600 shadow-xl' : 'border-gray-200'} relative`}
                 >
-                  {plan.popular && (
+                  {plan.isPopular && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 transform rounded-full bg-blue-600 px-4 py-1 text-sm font-medium text-white">
                       Most Popular
                     </div>
                   )}
                   <h3 className="mb-2 text-2xl font-bold">{plan.name}</h3>
-                  <p className="mb-4 text-gray-600">{plan.units}</p>
+                  <p className="mb-4 text-gray-600">{plan.tagline}</p>
                   <p className="mb-6 text-4xl font-bold">
-                    {plan.price}
-                    <span className="text-lg text-gray-600">/month</span>
+                    {planPriceLabel(plan, false).amount}
+                    <span className="text-lg text-gray-600">{planPriceLabel(plan, false).per}</span>
                   </p>
                   <ul className="mb-8 space-y-3">
-                    {plan.features.map((feature, i) => (
+                    {planBullets(plan).map((feature, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span>{feature}</span>
@@ -777,9 +743,9 @@ export function LandingPage() {
                     ))}
                   </ul>
                   <Link
-                    href={`/register?plan=${plan.name.toLowerCase()}`}
+                    href={`/register?plan=${plan.key}`}
                     className={`block w-full rounded-lg py-3 text-center font-semibold ${
-                      plan.popular
+                      plan.isPopular
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'border-2 border-gray-300 hover:bg-gray-50'
                     }`}

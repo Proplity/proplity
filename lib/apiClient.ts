@@ -12,6 +12,10 @@ import type {
   AutoPayMandate,
   BankAccount,
   CheckoutSubscriptionInput,
+  CreditEntry,
+  PaidService,
+  Plan,
+  PlanInput,
   CreateAutoPayMandateInput,
   ConditionReport,
   Conversation,
@@ -462,6 +466,33 @@ export const api = {
           Paginated<AuditLog> & { facets?: { actions: string[]; entityTypes: string[] } }
         >('/api/v1/admin/audit-logs', { params }),
     },
+    plans: {
+      list: () => apiClient.get<{ data: Plan[] }>('/api/v1/admin/plans'),
+      create: (body: PlanInput) => apiClient.post<{ data: Plan }>('/api/v1/admin/plans', body),
+      update: (id: string, body: Partial<Omit<Plan, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: Plan }>(`/api/v1/admin/plans/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/plans/${id}`),
+    },
+    services: {
+      list: () => apiClient.get<{ data: PaidService[] }>('/api/v1/admin/services'),
+      create: (body: {
+        key: string;
+        name: string;
+        description?: string | null;
+        creditCost: number;
+        isActive?: boolean;
+      }) => apiClient.post<{ data: PaidService }>('/api/v1/admin/services', body),
+      update: (id: string, body: Partial<Omit<PaidService, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: PaidService }>(`/api/v1/admin/services/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/services/${id}`),
+    },
+    credits: {
+      grant: (body: { email: string; amount: number; note?: string }) =>
+        apiClient.post<{ data: { userId: string; name: string | null; balance: number } }>(
+          '/api/v1/admin/credits',
+          body,
+        ),
+    },
     settings: {
       get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
       update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
@@ -522,14 +553,31 @@ export const api = {
         body,
       ),
   },
+  plans: {
+    list: () => apiClient.get<{ data: Plan[] }>('/api/v1/plans'),
+  },
+  services: {
+    list: () =>
+      apiClient.get<{
+        data: { key: string; name: string; description: string | null; creditCost: number }[];
+      }>('/api/v1/services'),
+  },
+  credits: {
+    me: () =>
+      apiClient.get<{ data: { balance: number; entries: CreditEntry[] } }>('/api/v1/credits/me'),
+  },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
     checkout: (body: CheckoutSubscriptionInput) =>
       apiClient.post<{
         data:
-          | { activated: true; subscription: Subscription }
-          | { activated: false; scheduled: true; endsAt: string; subscription: Subscription }
-          | { invoiceId: string; amount: number };
+          | { activated: true; subscription: unknown }
+          | { activated: false; scheduled: true; endsAt: string; subscription: unknown }
+          | {
+              invoiceId: string;
+              amount: number;
+              breakdown: { base: number; overage: number; extraUnits: number };
+            };
       }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {

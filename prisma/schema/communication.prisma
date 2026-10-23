@@ -38,8 +38,8 @@ model Conversation {
   property             Property?                 @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   maintenanceRequestId String?                   @unique
   maintenanceRequest   MaintenanceRequest?       @relation(fields: [maintenanceRequestId], references: [id], onDelete: Cascade)
-  rentId              String?
-  rent                Rent?                    @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rentId               String?
+  rent                 Rent?                     @relation(fields: [rentId], references: [id], onDelete: Cascade)
   participants         ConversationParticipant[]
   messages             Message[]
   createdAt            DateTime                  @default(now())

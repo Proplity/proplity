@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { RETENTION_LIMITS } from '@/lib/retentionLimits';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
+import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
 
 export { RETENTION_LIMITS };
 
@@ -23,6 +24,11 @@ export async function getSystemSettings() {
     retentionAfterRejectionDays:
       settings?.retentionAfterRejectionDays ?? RETENTION_LIMITS.rejectionDays.default,
     tenantInvitesPerDay: settings?.tenantInvitesPerDay ?? INVITE_LIMITS.perDay.default,
+    enforcePlanLimits: settings?.enforcePlanLimits ?? false,
+    unitBillingOwner: settings?.unitBillingOwner ?? 'MANAGER_ELSE_LANDLORD',
+    overageMode: settings?.overageMode ?? 'ALLOW_AND_BILL',
+    downgradeRule: settings?.downgradeRule ?? 'BLOCK',
+    downgradeGraceDays: settings?.downgradeGraceDays ?? DOWNGRADE_GRACE_DAYS.default,
   };
 }
 

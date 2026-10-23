@@ -18,6 +18,7 @@ import {
   Receipt,
   Settings,
   SlidersHorizontal,
+  Layers,
   Shield,
   User,
   LogOut,
@@ -32,6 +33,7 @@ const TABS = [
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/payments', label: 'Bank Transfers', icon: Receipt },
+  { href: '/admin/plans', label: 'Plans & billing', icon: Layers },
   { href: '/admin/security', label: 'Security', icon: Shield },
   { href: '/admin/settings', label: 'Platform Settings', icon: SlidersHorizontal },
 ];

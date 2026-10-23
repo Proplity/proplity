@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Property } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 export const FEATURED_GRADIENTS = [
   'bg-linear-to-br from-blue-400 to-blue-600',
@@ -28,10 +29,10 @@ export const FEATURED_GRADIENTS = [
 // popup both show the cheapest one, same convention as PropertyDiscovery.
 export function featuredFields(property: Property) {
   const cheapestUnit = [...property.units].sort((a, b) => a.rentAmount - b.rentAmount)[0];
-  const freq = cheapestUnit?.listedPaymentFrequency.toLowerCase() ?? 'year';
+  const freq = perFrequency(cheapestUnit?.listedPaymentFrequency);
   return {
     price: cheapestUnit
-      ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${freq === 'annual' ? 'year' : freq}`
+      ? `₦${cheapestUnit.rentAmount.toLocaleString()}/${freq}`
       : 'Price on request',
     bedrooms: cheapestUnit?.bedrooms ?? 0,
     bathrooms: cheapestUnit?.bathrooms ?? 0,

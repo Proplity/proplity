@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
   createUser,
+  seedPlans,
   createProperty,
   createUnit,
   createRent,
@@ -710,18 +711,18 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     const res = await apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'PRO' },
+      body: { planKey: 'medium' },
     });
     expect(res.status).toBe(403);
   });
 
-  it('FREE tier activates immediately with no invoice/payment involved', async () => {
+  it('the free plan activates immediately with no invoice/payment involved', async () => {
     const landlord = await createUser(Role.LANDLORD);
     const cookie = await authCookie(landlord.id, landlord.role);
     const res = await apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'FREE' },
+      body: { planKey: 'small' },
     });
     expect(res.status).toBe(201);
     expect(res.body.data.activated).toBe(true);
@@ -729,21 +730,22 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     const subscription = await testPrisma.subscription.findUnique({
       where: { userId: landlord.id },
     });
-    expect(subscription?.tier).toBe('FREE');
+    const plan = await testPrisma.plan.findUnique({ where: { id: subscription!.planId! } });
+    expect(plan?.key).toBe('small');
     expect(subscription?.status).toBe('ACTIVE');
 
     const invoiceCount = await testPrisma.invoice.count({ where: { userId: landlord.id } });
     expect(invoiceCount).toBe(0);
   });
 
-  it('PRO tier creates a real SUBSCRIPTION invoice with server-computed (not client-supplied) pricing', async () => {
+  it('a paid plan creates a real SUBSCRIPTION invoice with server-computed (not client-supplied) pricing', async () => {
     const manager = await createUser(Role.MANAGER);
     const cookie = await authCookie(manager.id, manager.role);
 
     const monthly = await apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'PRO', billingCycle: 'monthly' },
+      body: { planKey: 'medium', billingCycle: 'monthly' },
     });
     expect(monthly.status).toBe(201);
     expect(monthly.body.data.amount).toBe(29_999);
@@ -758,28 +760,28 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     const yearly = await apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'PRO', billingCycle: 'yearly' },
+      body: { planKey: 'medium', billingCycle: 'yearly' },
     });
     expect(yearly.status).toBe(201);
     expect(yearly.body.data.amount).toBe(23_999 * 12);
   });
 
-  it('GET /me defaults to a real FREE row for a user who never subscribed', async () => {
+  it('GET /me puts a user who never subscribed on the default plan', async () => {
     const landlord = await createUser(Role.LANDLORD);
     const cookie = await authCookie(landlord.id, landlord.role);
     const res = await apiFetch('/api/v1/subscriptions/me', { cookie });
     expect(res.status).toBe(200);
-    expect(res.body.data.tier).toBe('FREE');
+    expect(res.body.data.plan.key).toBe('small');
   });
 
-  it('a paid PRO invoice activates the subscription via the webhook, with the right tier/cycle read back from the invoice', async () => {
+  it('a paid plan invoice activates the subscription via the webhook, with the right plan and cycle read back from the invoice', async () => {
     const manager = await createUser(Role.MANAGER);
     const cookie = await authCookie(manager.id, manager.role);
 
     const checkout = await apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'PRO', billingCycle: 'yearly' },
+      body: { planKey: 'medium', billingCycle: 'yearly' },
     });
     expect(checkout.status).toBe(201);
     const invoiceId = checkout.body.data.invoiceId;
@@ -805,7 +807,9 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     const subscription = await testPrisma.subscription.findUnique({
       where: { userId: manager.id },
     });
-    expect(subscription?.tier).toBe('PRO');
+    const activated = await testPrisma.plan.findUnique({ where: { id: subscription!.planId! } });
+    expect(activated?.key).toBe('medium');
+    expect(subscription?.billingCycle).toBe('YEARLY');
     expect(subscription?.status).toBe('ACTIVE');
     expect(subscription?.currentPeriodEnd).not.toBeNull();
     // Yearly cycle -> period end roughly a year out, not a month.
@@ -813,7 +817,7 @@ describe('subscriptions: checkout, me, and webhook activation', () => {
     expect(daysOut).toBeGreaterThan(300);
 
     const me = await apiFetch('/api/v1/subscriptions/me', { cookie });
-    expect(me.body.data.tier).toBe('PRO');
+    expect(me.body.data.plan.key).toBe('medium');
   });
 });
 
@@ -969,7 +973,7 @@ describe('payments: autopay', () => {
   });
 });
 
-describe('subscriptions: downgrading to FREE keeps the paid period (ISS-056)', () => {
+describe('subscriptions: moving to the free plan keeps the paid period (ISS-056)', () => {
   beforeAll(async () => {
     await resetDb();
   });
@@ -978,41 +982,53 @@ describe('subscriptions: downgrading to FREE keeps the paid period (ISS-056)', (
     apiFetch('/api/v1/subscriptions/checkout', {
       method: 'POST',
       cookie,
-      body: { tier: 'FREE', ...(confirmDowngrade ? { confirmDowngrade } : {}) },
+      body: { planKey: 'small', ...(confirmDowngrade ? { confirmDowngrade } : {}) },
     });
 
   it('asks for confirmation, then keeps the paid plan until the period ends and reverts after', async () => {
     const landlord = await createUser(Role.LANDLORD);
     const cookie = await authCookie(landlord.id, landlord.role);
     const paidUntil = new Date(Date.now() + 20 * 86_400_000);
+    const plans = await seedPlans();
     await testPrisma.subscription.create({
-      data: { userId: landlord.id, tier: 'PRO', status: 'ACTIVE', currentPeriodEnd: paidUntil },
+      data: {
+        userId: landlord.id,
+        planId: plans.medium.id,
+        status: 'ACTIVE',
+        currentPeriodEnd: paidUntil,
+      },
     });
+    const planKey = async () =>
+      (
+        await testPrisma.subscription.findUnique({
+          where: { userId: landlord.id },
+          include: { plan: true },
+        })
+      )?.plan?.key;
 
     const asked = await free(cookie);
     expect(asked.status).toBe(409);
     expect(asked.body.code).toBe('DOWNGRADE_NEEDS_CONFIRMATION');
-    expect(
-      (await testPrisma.subscription.findUnique({ where: { userId: landlord.id } }))?.tier,
-    ).toBe('PRO');
+    expect(await planKey()).toBe('medium');
 
     const confirmed = await free(cookie, true);
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.data.scheduled).toBe(true);
     const row = await testPrisma.subscription.findUnique({ where: { userId: landlord.id } });
-    expect(row?.tier).toBe('PRO'); // still paid
+    expect(await planKey()).toBe('medium'); // still paid
     expect(row?.cancelAtPeriodEnd).toBe(true);
 
     const during = await apiFetch('/api/v1/subscriptions/me', { cookie });
-    expect(during.body.data.tier).toBe('PRO');
+    expect(during.body.data.plan.key).toBe('medium');
 
-    // After the paid period, the plan is Free.
+    // After the paid period, the plan is the default (free) one.
     await testPrisma.subscription.update({
       where: { userId: landlord.id },
       data: { currentPeriodEnd: new Date(Date.now() - 1000) },
     });
     const after = await apiFetch('/api/v1/subscriptions/me', { cookie });
-    expect(after.body.data.tier).toBe('FREE');
+    expect(after.body.data.plan.key).toBe('small');
+    expect(await planKey()).toBe('small');
   });
 
   it('switches straight to FREE when nothing is paid for', async () => {
