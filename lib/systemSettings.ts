@@ -31,6 +31,14 @@ export async function getSystemSettings() {
     downgradeRule: settings?.downgradeRule ?? 'BLOCK',
     downgradeGraceDays: settings?.downgradeGraceDays ?? DOWNGRADE_GRACE_DAYS.default,
     teamMemberAccess: settings?.teamMemberAccess ?? 'ASSIGNED_ONLY',
+    agreementTemplatesNeedApproval: settings?.agreementTemplatesNeedApproval ?? true,
+    agreementLandlordNameByManager: settings?.agreementLandlordNameByManager ?? true,
+    agreementAgencyFee: settings?.agreementAgencyFee ?? true,
+    agreementLegalFee: settings?.agreementLegalFee ?? true,
+    agreementCautionFee: settings?.agreementCautionFee ?? true,
+    rentActivationRule: settings?.rentActivationRule ?? 'INDEPENDENT',
+    chargeForAgreements: settings?.chargeForAgreements ?? false,
+    chargeForUploads: settings?.chargeForUploads ?? false,
   };
 }
 

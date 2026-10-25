@@ -12,6 +12,8 @@ import { canManageProperty, PUBLIC_PROPERTY, propertyScopeWhere } from '@/lib/ap
 import { sendEmail } from '@/lib/email';
 import { notifyAndEmail } from '@/lib/notifications';
 import { getSystemSettings } from '@/lib/systemSettings';
+import { listJurisdictions } from '@/lib/agreements';
+import { checkTenancyRules, jurisdictionFor, type JurisdictionRules } from '@/lib/tenancyRules';
 import {
   InviteLimitError,
   createWaitingTenant,
@@ -139,6 +141,26 @@ export const POST = withAuth(
       if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
       if (!canManageProperty(session, unit.property)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      // The place's tenancy rules (advance rent beyond the cap, a long tenancy, an area the law does
+      // not cover): a blocking one stops the rent, a warning is returned with it.
+      const jurisdiction = jurisdictionFor(unit.property, await listJurisdictions());
+      const findings = jurisdiction
+        ? checkTenancyRules(jurisdiction as JurisdictionRules, {
+            paymentFrequency: rest.paymentFrequency ?? 'ANNUAL',
+            startDate: rest.startDate,
+            endDate: rest.endDate,
+            address: unit.property.address,
+            city: unit.property.city,
+          })
+        : [];
+      const blocking = findings.filter((f) => f.mode === 'BLOCK');
+      if (blocking.length > 0) {
+        return NextResponse.json(
+          { error: blocking.map((f) => f.message).join(' '), code: 'TENANCY_RULE', findings },
+          { status: 422 },
+        );
       }
 
       let tenantId = inputTenantId;
@@ -308,7 +330,14 @@ export const POST = withAuth(
       );
 
       return NextResponse.json(
-        { data: { ...result.rent, initialInvoice: result.invoice, tenantInvited: invited } },
+        {
+          data: {
+            ...result.rent,
+            initialInvoice: result.invoice,
+            tenantInvited: invited,
+            warnings: findings,
+          },
+        },
         { status: 201 },
       );
     } catch (err) {

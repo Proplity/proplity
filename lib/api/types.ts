@@ -364,6 +364,14 @@ export type PlatformSettings = {
   downgradeRule: 'BLOCK' | 'GRACE_PERIOD' | 'ALLOW_AND_BILL';
   downgradeGraceDays: number;
   teamMemberAccess: 'ASSIGNED_ONLY' | 'ALL_COMPANY';
+  agreementTemplatesNeedApproval: boolean;
+  agreementLandlordNameByManager: boolean;
+  agreementAgencyFee: boolean;
+  agreementLegalFee: boolean;
+  agreementCautionFee: boolean;
+  rentActivationRule: 'INDEPENDENT' | 'AFTER_BOTH_SIGN';
+  chargeForAgreements: boolean;
+  chargeForUploads: boolean;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -462,6 +470,8 @@ export type Rent = {
   invoices?: Invoice[];
   tenantInvited?: boolean;
   invitation?: InvitationState;
+  /** Legal warnings for the tenancy just created (the place's rules; a blocking one refuses the rent instead). */
+  warnings?: { rule: string; mode: 'WARN' | 'BLOCK'; message: string }[];
 };
 
 export type CreateRentInput = {
@@ -1321,4 +1331,172 @@ export type InvitationBatchResult = {
   notAllowed: number;
   limitReached: boolean;
   dailyLimit: number;
+};
+
+// ── Rent agreement rules and templates ──────────────────────────────────────────────────────────
+
+export type RuleMode = 'OFF' | 'WARN' | 'BLOCK';
+
+export type Jurisdiction = {
+  id: string;
+  key: string;
+  name: string;
+  states: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  advanceRentMaxMonths: number | null;
+  advanceRentMode: RuleMode;
+  /** Days of notice to quit by payment frequency. */
+  noticeDays: Partial<Record<'MONTHLY' | 'QUARTERLY' | 'BI_ANNUAL' | 'ANNUAL', number>>;
+  excludedAreas: string[];
+  excludedAreasMode: RuleMode;
+  registrationThresholdYears: number | null;
+  stampDutyNote: string | null;
+  sourceNote: string | null;
+  rulesCheckedAt: string | null;
+  lawyerReviewed: boolean;
+  sortOrder: number;
+};
+
+export type JurisdictionInput = Partial<Omit<Jurisdiction, 'id' | 'rulesCheckedAt'>> & {
+  rulesCheckedAt?: string | null;
+};
+
+export type TemplateClauseData = {
+  id: string;
+  title: string;
+  body: string;
+  mode: 'LOCKED' | 'EDITABLE' | 'OPTIONAL';
+  defaultOn?: boolean;
+};
+
+export type AgreementTemplate = {
+  id: string;
+  key: string;
+  name: string;
+  version: number;
+  jurisdictionId: string;
+  jurisdiction?: { id: string; name: string };
+  status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
+  clauses: TemplateClauseData[];
+  witnessRequired: boolean;
+  notes: string | null;
+  approvedAt: string | null;
+  updatedAt: string;
+};
+
+export type AgreementTemplateInput = {
+  key?: string;
+  name?: string;
+  jurisdictionId?: string;
+  clauses?: TemplateClauseData[];
+  witnessRequired?: boolean;
+  notes?: string | null;
+};
+
+// ── Rent agreements ─────────────────────────────────────────────────────────────────────────────
+
+export type AgreementStatus = 'DRAFT' | 'ISSUED' | 'EXECUTED' | 'VOID';
+export type StampDutyStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'STAMPED';
+
+export type AgreementClause = { id: string; title: string; body: string };
+
+export type AgreementParty = { name: string; address: string };
+export type AgreementWitnesses = { landlord?: AgreementParty; tenant?: AgreementParty };
+
+/** A rent's agreement as the screens read it. The property team sees more than the tenant. */
+export type RentAgreementView = {
+  id: string;
+  rentId: string;
+  source: 'GENERATED' | 'UPLOADED';
+  status: AgreementStatus;
+  templateKey: string | null;
+  templateVersion: number | null;
+  clauses: AgreementClause[] | null;
+  specialConditions: string | null;
+  landlordName: string | null;
+  agentName: string | null;
+  witnesses: AgreementWitnesses | null;
+  witnessRequired: boolean;
+  fileUrl: string | null;
+  confirmedAt: string | null;
+  confirmedName: string | null;
+  stampDutyStatus: StampDutyStatus;
+  stampDutyReference: string | null;
+  stampDutyAmount: number | null;
+  stampDutyReceiptUrl: string | null;
+  stampedAt: string | null;
+  issuedAt: string | null;
+  executedAt: string | null;
+  createdAt: string;
+  // The property team only.
+  choices?: { omit?: string[]; include?: string[]; edits?: Record<string, string> } | null;
+  agencyFee?: number | null;
+  legalFee?: number | null;
+  creditsCharged?: number;
+  confirmedIp?: string | null;
+};
+
+export type RuleFindingView = { rule: string; mode: 'WARN' | 'BLOCK'; message: string };
+
+export type AgreementOptions = {
+  jurisdiction: {
+    id: string;
+    name: string;
+    lawyerReviewed: boolean;
+    stampDutyNote: string | null;
+  } | null;
+  templates: {
+    id: string;
+    key: string;
+    name: string;
+    version: number;
+    status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
+    witnessRequired: boolean;
+    clauses: TemplateClauseData[];
+  }[];
+  landlord: { hasAccount: boolean; name: string | null; canTypeName: boolean };
+  offers: { caution: boolean; agency: boolean; legal: boolean };
+  credits: { generateCost: number; uploadCost: number; balance: number | null };
+  findings: RuleFindingView[];
+  rent: {
+    rentAmount: number;
+    paymentFrequency: string;
+    startDate: string;
+    endDate: string;
+    deposit: number;
+  };
+};
+
+export type AgreementChoices = {
+  omit?: string[];
+  include?: string[];
+  edits?: Record<string, string>;
+};
+
+/** What the manager decides about a generated agreement (the same for previewing, making and editing). */
+export type GeneratedAgreementInput = {
+  templateId: string;
+  landlordName?: string;
+  agencyFee?: number | null;
+  legalFee?: number | null;
+  choices?: AgreementChoices;
+  specialConditions?: string | null;
+  witnesses?: AgreementWitnesses;
+};
+
+export type AgreementPreview = {
+  clauses: AgreementClause[];
+  specialConditions: string | null;
+  landlordName: string;
+  agentName: string | null;
+  findings: RuleFindingView[];
+};
+
+export type StampDutyInput = {
+  status?: StampDutyStatus;
+  reference?: string | null;
+  amount?: number | null;
+  receiptUrl?: string | null;
+  stampedAt?: string | null;
 };

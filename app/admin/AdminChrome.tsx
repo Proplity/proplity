@@ -19,6 +19,7 @@ import {
   Settings,
   SlidersHorizontal,
   Layers,
+  FileSignature,
   Shield,
   User,
   LogOut,
@@ -34,6 +35,7 @@ const TABS = [
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/payments', label: 'Bank Transfers', icon: Receipt },
   { href: '/admin/plans', label: 'Plans & billing', icon: Layers },
+  { href: '/admin/agreements', label: 'Rent agreements', icon: FileSignature },
   { href: '/admin/security', label: 'Security', icon: Shield },
   { href: '/admin/settings', label: 'Platform Settings', icon: SlidersHorizontal },
 ];
