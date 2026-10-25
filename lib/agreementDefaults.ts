@@ -8,6 +8,16 @@ import type { TemplateClause } from '@/lib/agreementFields';
 
 const CHECKED = new Date('2026-10-23T00:00:00.000Z');
 
+// Reported rates for stamp duty on a lease under the Stamp Duties Act (FIRS clarification and
+// published summaries, 2020 to 2023): 0.78% under 7 years, 3% from 7 to 21 years, 6% above 21 years.
+// Whether it is charged on a year's rent or on the rent for the whole term, and what the Nigeria Tax
+// Act 2025 changed, are NOT confirmed: a lawyer must check these before anyone is charged by them.
+const STAMP_TIERS = [
+  { upToYears: 7, ratePercent: 0.78 },
+  { upToYears: 21, ratePercent: 3 },
+  { upToYears: null, ratePercent: 6 },
+];
+
 export const DEFAULT_JURISDICTIONS = [
   {
     key: 'lagos',
@@ -20,6 +30,8 @@ export const DEFAULT_JURISDICTIONS = [
     excludedAreas: ['Apapa', 'Ikeja GRA', 'Ikoyi', 'Victoria Island'],
     excludedAreasMode: 'WARN',
     registrationThresholdYears: 3,
+    stampDutyTiers: STAMP_TIERS,
+    stampDutyBasis: 'TERM_RENT',
     stampDutyNote:
       'Stamp duty is a federal charge, paid through FIRS e-stamping with the parties’ tax numbers. The rate depends on the length of the tenancy (roughly 0.78% to 6% of the rent for the term). Confirm the current rate.',
     sourceNote:
@@ -39,6 +51,8 @@ export const DEFAULT_JURISDICTIONS = [
     excludedAreas: [],
     excludedAreasMode: 'WARN',
     registrationThresholdYears: null,
+    stampDutyTiers: STAMP_TIERS,
+    stampDutyBasis: 'TERM_RENT',
     stampDutyNote:
       'Stamp duty is a federal charge, paid through FIRS e-stamping. The rate depends on the length of the tenancy. Confirm the current rate.',
     sourceNote:
@@ -58,6 +72,8 @@ export const DEFAULT_JURISDICTIONS = [
     excludedAreas: [],
     excludedAreasMode: 'WARN',
     registrationThresholdYears: null,
+    stampDutyTiers: STAMP_TIERS,
+    stampDutyBasis: 'TERM_RENT',
     stampDutyNote:
       'Stamp duty is a federal charge, paid through FIRS e-stamping. The rate depends on the length of the tenancy. Confirm the current rate.',
     sourceNote:

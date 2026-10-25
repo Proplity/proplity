@@ -25,6 +25,8 @@ type Draft = {
   excludedAreasMode: RuleMode;
   registrationThresholdYears: string;
   stampDutyNote: string;
+  stampTiers: { upTo: string; rate: string }[];
+  stampBasis: 'ANNUAL_RENT' | 'TERM_RENT';
   sourceNote: string;
   rulesCheckedAt: string;
   lawyerReviewed: boolean;
@@ -55,6 +57,11 @@ const draftOf = (j?: Jurisdiction): Draft => ({
   registrationThresholdYears:
     j?.registrationThresholdYears == null ? '' : String(j.registrationThresholdYears),
   stampDutyNote: j?.stampDutyNote ?? '',
+  stampTiers: (j?.stampDutyTiers ?? []).map((t) => ({
+    upTo: t.upToYears == null ? '' : String(t.upToYears),
+    rate: String(t.ratePercent),
+  })),
+  stampBasis: j?.stampDutyBasis ?? 'TERM_RENT',
   sourceNote: j?.sourceNote ?? '',
   rulesCheckedAt: j?.rulesCheckedAt ? j.rulesCheckedAt.slice(0, 10) : '',
   lawyerReviewed: j?.lawyerReviewed ?? false,
@@ -82,6 +89,11 @@ function bodyOf(d: Draft) {
     excludedAreasMode: d.excludedAreasMode,
     registrationThresholdYears: optionalInt(d.registrationThresholdYears),
     stampDutyNote: d.stampDutyNote.trim() || null,
+    stampDutyTiers: d.stampTiers.map((t, i, all) => ({
+      upToYears: i === all.length - 1 || t.upTo.trim() === '' ? null : Number(t.upTo),
+      ratePercent: Number(t.rate),
+    })),
+    stampDutyBasis: d.stampBasis,
     sourceNote: d.sourceNote.trim() || null,
     rulesCheckedAt: d.rulesCheckedAt ? new Date(d.rulesCheckedAt).toISOString() : null,
     lawyerReviewed: d.lawyerReviewed,
@@ -264,6 +276,86 @@ function Editor({
           onChange={(e) => set('stampDutyNote', e.target.value)}
         />
       </Field>
+      <fieldset className="space-y-2 rounded-lg border border-gray-200 p-3">
+        <legend className="px-1 text-xs font-medium text-gray-700">
+          Stamp duty rates (used to quote stamp duty paid through Proplity)
+        </legend>
+        {d.stampTiers.map((t, i) => {
+          const last = i === d.stampTiers.length - 1;
+          return (
+            <div key={i} className="flex flex-wrap items-end gap-2">
+              <div className="w-40">
+                <Field label={last ? 'Longer than that' : 'Tenancy shorter than (years)'}>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    disabled={last}
+                    className={inputClass}
+                    value={last ? '' : t.upTo}
+                    onChange={(e) =>
+                      set(
+                        'stampTiers',
+                        d.stampTiers.map((x, k) => (k === i ? { ...x, upTo: e.target.value } : x)),
+                      )
+                    }
+                  />
+                </Field>
+              </div>
+              <div className="w-32">
+                <Field label="Rate (%)">
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    className={inputClass}
+                    value={t.rate}
+                    onChange={(e) =>
+                      set(
+                        'stampTiers',
+                        d.stampTiers.map((x, k) => (k === i ? { ...x, rate: e.target.value } : x)),
+                      )
+                    }
+                  />
+                </Field>
+              </div>
+              <button
+                type="button"
+                className="mb-2 text-sm text-red-700 underline"
+                onClick={() =>
+                  set(
+                    'stampTiers',
+                    d.stampTiers.filter((_, k) => k !== i),
+                  )
+                }
+              >
+                Remove
+              </button>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          className="text-sm font-medium text-blue-700 underline"
+          onClick={() => set('stampTiers', [...d.stampTiers, { upTo: '', rate: '' }])}
+        >
+          Add a rate
+        </button>
+        <Field label="The rate is charged on">
+          <select
+            className={inputClass}
+            value={d.stampBasis}
+            onChange={(e) => set('stampBasis', e.target.value as Draft['stampBasis'])}
+          >
+            <option value="TERM_RENT">All the rent for the whole tenancy</option>
+            <option value="ANNUAL_RENT">One year&apos;s rent</option>
+          </select>
+        </Field>
+        <p className="text-xs text-gray-500">
+          No rates: stamp duty cannot be quoted for this place. Put the tiers in order, shortest
+          tenancy first; the last has no limit.
+        </p>
+      </fieldset>
       <Field label="Where these rules came from, and what is unconfirmed">
         <textarea
           rows={3}

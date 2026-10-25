@@ -376,6 +376,8 @@ export type PlatformSettings = {
   witnessEsignEnabled: boolean;
   witnessLinkDays: number;
   witnessesMustSign: boolean;
+  stampDutyPaymentEnabled: boolean;
+  stampDutyServiceFee: number;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -568,7 +570,10 @@ export type Invoice = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE'
+    | 'CREDIT_PURCHASE'
+    | 'STAMP_DUTY';
   amount: number;
   dueDate: string;
   status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
@@ -1375,6 +1380,9 @@ export type Jurisdiction = {
   excludedAreasMode: RuleMode;
   registrationThresholdYears: number | null;
   stampDutyNote: string | null;
+  /** What stamp duty comes to by tenancy length: shorter than `upToYears` pays `ratePercent`; the last has no limit. */
+  stampDutyTiers: { upToYears: number | null; ratePercent: number }[];
+  stampDutyBasis: 'ANNUAL_RENT' | 'TERM_RENT';
   sourceNote: string | null;
   rulesCheckedAt: string | null;
   lawyerReviewed: boolean;
@@ -1495,6 +1503,64 @@ export type RentAgreementView = {
   legalFee?: number | null;
   creditsCharged?: number;
   confirmedIp?: string | null;
+};
+
+/** What paying stamp duty through Proplity would cost, and the order if one was started. */
+export type StampDutyOffer = {
+  enabled: boolean;
+  cardsAvailable?: boolean;
+  canPay?: boolean;
+  reason?: string | null;
+  quote?: {
+    termYears: number;
+    basis: 'ANNUAL_RENT' | 'TERM_RENT';
+    basisAmount: number;
+    ratePercent: number;
+    dutyAmount: number;
+    serviceFee: number;
+    total: number;
+  } | null;
+  order?: StampDutyOrderView | null;
+};
+
+export type StampDutyOrderView = {
+  id: string;
+  status: 'AWAITING_PAYMENT' | 'PAID' | 'COMPLETED' | 'CANCELLED';
+  dutyAmount: number;
+  serviceFee: number;
+  total: number;
+  ratePercent: number;
+  termYears: number;
+  invoiceId: string;
+  paidAt: string | null;
+  completedAt: string | null;
+  cancelReason: string | null;
+};
+
+/** One row of the admin's stamping queue. */
+export type AdminStampDutyOrder = StampDutyOrderView & {
+  reference: string | null;
+  actualAmount: number | null;
+  jurisdictionName: string;
+  basisAmount: number;
+  createdAt: string;
+  invoice: { invoiceNumber: string };
+  agreement: {
+    id: string;
+    rentId: string;
+    landlordName: string | null;
+    rent: {
+      startDate: string;
+      endDate: string;
+      rentAmount: number;
+      paymentFrequency: string;
+      tenant: { name: string; email: string };
+      unit: {
+        unitNumber: string;
+        property: { name: string; address: string; city: string; state: string | null };
+      };
+    };
+  };
 };
 
 export type RuleFindingView = { rule: string; mode: 'WARN' | 'BLOCK'; message: string };

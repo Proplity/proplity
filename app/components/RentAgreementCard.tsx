@@ -12,6 +12,7 @@ import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
 import { ConfirmDialog } from './ConfirmDialog';
 import { RentSignatureCard } from './RentSignatureCard';
 import { WitnessLinks } from './WitnessLinks';
+import { StampDutyPay } from './StampDutyPay';
 import type { Rent, RentAgreementView, StampDutyStatus } from '@/lib/api/types';
 
 const inputClass =
@@ -110,8 +111,8 @@ function StampDuty({
     <div className="mt-4 border-t border-gray-100 pt-4">
       <h3 className="text-sm font-medium text-gray-900">Stamp duty</h3>
       <p className="mt-1 text-xs text-gray-500">
-        Paid to the federal tax authority after signing, not through Proplity. Record where it
-        stands and keep the receipt here.
+        Paid to the tax authority after signing, either by you or through Proplity above. Record
+        where it stands and keep the receipt here.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <label className="block">
@@ -451,6 +452,7 @@ function TeamView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) {
           sides={['LANDLORD', 'TENANT']}
           onChanged={changed}
         />
+        {agreement.status === 'EXECUTED' && <StampDutyPay rentId={rent.id} />}
         {agreement.status !== 'DRAFT' && (
           <StampDuty rentId={rent.id} agreement={agreement} onChanged={changed} />
         )}
@@ -554,6 +556,7 @@ function TenantView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) 
           sides={['TENANT']}
           onChanged={changed}
         />
+        {agreement.status === 'EXECUTED' && <StampDutyPay rentId={rent.id} />}
 
         {uploaded && agreement.status === 'ISSUED' && (
           <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">

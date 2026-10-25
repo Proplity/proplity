@@ -108,5 +108,9 @@ model SystemSettings {
   // On: an agreement that needs witnesses is not signed (executed) until a witness on each side has
   // signed through a link, even if both parties have. Off: witnesses are recorded but never hold it up.
   witnessesMustSign                    Boolean            @default(false)
+  // Stamp duty paid through Proplity: the person pays the quoted duty plus this flat service fee (whole
+  // naira) by card and Proplity staff pay the tax authority. Off until an admin has the people to do it.
+  stampDutyPaymentEnabled              Boolean            @default(false)
+  stampDutyServiceFee                  Int                @default(0)
   updatedAt                            DateTime           @updatedAt
 }

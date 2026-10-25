@@ -10,6 +10,7 @@ import { getSystemSettings } from '@/lib/systemSettings';
 import { countUnitsFor, graceEndsAtFrom } from '@/lib/plans';
 import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
 import { grantPurchasedCredits } from '@/lib/creditPacks';
+import { receiveStampDutyPayment } from '@/lib/stampDutyPayment';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -224,6 +225,11 @@ export async function POST(req: NextRequest) {
               link: '/dashboard',
             });
           }
+        }
+
+        // Stamp duty paid in full: the order goes to Proplity staff to stamp, once.
+        if (invoice.type === 'STAMP_DUTY' && outcome.status === 'PAID') {
+          await receiveStampDutyPayment(invoice.id);
         }
 
         // A subscription invoice paying activates the subscription itself -- plan/cycle have no
