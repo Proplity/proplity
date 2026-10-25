@@ -7,6 +7,7 @@ import type {
   Note,
   UpdateRentTermsInput,
   RenewRentInput,
+  StartRenewalInput,
   CreateNoticeInput,
 } from '@/lib/api/types';
 
@@ -37,6 +38,14 @@ export function useUpdateRentStatus(rentId: string) {
 export function useRenewRent(rentId: string) {
   return useApiSubmit((body: RenewRentInput) =>
     api.rents.renew(rentId, body).then((res) => res.data.data),
+  );
+}
+
+// Renews a rent with a new agreement: a pending rent for the next term, its first invoice and a
+// draft agreement -- see rents/[id]/renew.
+export function useStartRenewal(rentId: string) {
+  return useApiSubmit((body: StartRenewalInput) =>
+    api.rents.startRenewal(rentId, body).then((res) => res.data.data),
   );
 }
 

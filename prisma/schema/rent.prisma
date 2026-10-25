@@ -128,6 +128,14 @@ model Rent {
   // renewed into at most one new rent, and a new rent renews at most one
   // prior rent. Lets renewals be traced instead of looking like an unrelated
   // new Rent row on the same unit.
+  // Renew this rent by itself when the admin has automatic renewal on (see lib/workers/renewals.ts):
+  // a new pending rent and a draft agreement are prepared a set number of days before this one ends
+  // for the manager to review and send. The new rent's rent is this one's plus the increase, and its
+  // term is `autoRenewTermMonths` long (null: as long as this one).
+  autoRenew                Boolean @default(false)
+  autoRenewIncreasePercent Float   @default(0)
+  autoRenewTermMonths      Int?
+  renewalReminders         RentReminderLog[]
   renewedFromId      String?             @unique
   renewedFrom        Rent?               @relation("RentRenewal", fields: [renewedFromId], references: [id])
   renewedInto        Rent?               @relation("RentRenewal")
@@ -204,4 +212,18 @@ model Application {
 
   @@index([unitId, status])
   @@index([applicantId])
+}
+
+// One row per reminder sent about a rent, so the daily job tells each person once however often it
+// runs. `kind` says what it was about (ENDING, ENDED_ACTIVE, UNSIGNED, AUTO_RENEWAL_FAILED) and `key`
+// which one of its kind (the day threshold, a count), unique together per rent.
+model RentReminderLog {
+  id     String   @id @default(uuid())
+  rentId String
+  rent   Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  kind   String
+  key    String
+  sentAt DateTime @default(now())
+
+  @@unique([rentId, kind, key])
 }

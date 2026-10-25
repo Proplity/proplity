@@ -52,6 +52,7 @@ import type {
   CreateRentInput,
   UpdateRentTermsInput,
   RenewRentInput,
+  StartRenewalInput,
   CreateMaintenanceRequestInput,
   CreateMessageInput,
   CreatePropertyInput,
@@ -407,6 +408,11 @@ export const api = {
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, body),
     updateStatus: (id: string, status: string) =>
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { status }),
+    startRenewal: (id: string, body: StartRenewalInput) =>
+      apiClient.post<{ data: { rent: Rent; warnings?: RuleFindingView[] } }>(
+        `/api/v1/rents/${id}/renew`,
+        body,
+      ),
     renew: (id: string, body: RenewRentInput) =>
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { renew: body }),
     agreement: {

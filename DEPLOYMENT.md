@@ -118,13 +118,14 @@ users for a database-heavy app like this one.
 
 ## 4. Background workers (cron)
 
-Ten workers exist in `lib/workers/`, dispatched by
+Eleven workers exist in `lib/workers/`, dispatched by
 `POST|GET /api/v1/cron/[job]`:
 
 - `rent-invoicer` (tells the tenant about each new rent invoice)
 - `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true` **and** an admin switches it on in Platform Settings, ADR-0015)
 - `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
-- `reminders` (rent due in 3 days; rent ending within 60 days; one reminder each)
+- `reminders` (rent due in 3 days; rent ending, at the admin's days before the end, default 90, 60 and 30; once per step, off with the admin's reminders switch)
+- `renewals` (starts signed renewals whose day has come; with the admin's switches on, prepares automatic renewals, reminds about rents running past their end and about agreements nobody has signed)
 - `maintenance-schedule-dispatcher` (tells the property team and the tenant)
 - `access-code-expiry-janitor`
 - `payment-reliability-scorer`
@@ -134,8 +135,8 @@ Ten workers exist in `lib/workers/`, dispatched by
 - `all` — runs every job above in dependency order
 
 **The Hobby plan allows 2 cron jobs at once-a-day granularity**, which is fewer
-than the ten workers need. So `vercel.json` schedules a single daily job
-against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
+than the eleven workers need. So `vercel.json` schedules a single daily job
+against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, renewals, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
 
 ```json
 "crons": [{ "path": "/api/v1/cron/all", "schedule": "0 2 * * *" }]
