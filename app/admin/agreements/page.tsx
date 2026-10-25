@@ -22,11 +22,15 @@ type SettingsBody = Parameters<typeof api.admin.settings.update>[0];
 function RulesPanel() {
   const [settings, setSettings] = useState<AdminPlatformSettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkDays, setLinkDays] = useState('14');
 
   useEffect(() => {
     api.admin.settings
       .get()
-      .then((res) => setSettings(res.data.data))
+      .then((res) => {
+        setSettings(res.data.data);
+        setLinkDays(String(res.data.data.witnessLinkDays));
+      })
       .catch(() => toast.error('Failed to load the agreement rules.'));
   }, []);
 
@@ -35,6 +39,7 @@ function RulesPanel() {
     try {
       const res = await api.admin.settings.update(body);
       setSettings(res.data.data);
+      setLinkDays(String(res.data.data.witnessLinkDays));
       toast.success('Saved.');
     } catch (err) {
       toast.error(message(err, 'Failed to save. Please try again.'));
@@ -53,7 +58,9 @@ function RulesPanel() {
       | 'agreementLegalFee'
       | 'agreementCautionFee'
       | 'chargeForAgreements'
-      | 'chargeForUploads',
+      | 'chargeForUploads'
+      | 'witnessEsignEnabled'
+      | 'witnessesMustSign',
     label: string,
   ) => (
     <Switch
@@ -119,6 +126,42 @@ function RulesPanel() {
             </label>
           ))}
         </fieldset>
+      </div>
+
+      <SwitchRow
+        title="Witnesses can sign by email"
+        hint="Lets the property team (and the tenant, for their own witness) email a witness a link to read the agreement and sign with their name. Off: witnesses are names typed on the agreement and signed on paper."
+      >
+        {toggle('witnessEsignEnabled', 'Witnesses can sign by email')}
+      </SwitchRow>
+      <SwitchRow
+        title="An agreement waits for its witnesses"
+        hint="On: an agreement that needs witnesses is not signed (and its rent does not start on signing) until a witness on each side has signed by email. Off: witnesses are recorded but never hold the agreement up."
+      >
+        {toggle('witnessesMustSign', 'An agreement waits for its witnesses')}
+      </SwitchRow>
+      <div className="flex items-end gap-3 rounded-lg border border-gray-200 p-4">
+        <label className="block w-48">
+          <span className="mb-1 block text-xs font-medium text-gray-700">
+            Witness link works for (days)
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={90}
+            value={linkDays}
+            onChange={(e) => setLinkDays(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={saving || Number(linkDays) === settings.witnessLinkDays}
+          onClick={() => save({ witnessLinkDays: Number(linkDays) })}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Save days
+        </button>
       </div>
 
       <SwitchRow

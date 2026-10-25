@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { RETENTION_LIMITS } from '@/lib/retentionLimits';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
 import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
+import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
 
 export { RETENTION_LIMITS };
 
@@ -40,6 +41,9 @@ export async function getSystemSettings() {
     chargeForAgreements: settings?.chargeForAgreements ?? false,
     chargeForUploads: settings?.chargeForUploads ?? false,
     creditPurchaseEnabled: settings?.creditPurchaseEnabled ?? true,
+    witnessEsignEnabled: settings?.witnessEsignEnabled ?? true,
+    witnessLinkDays: settings?.witnessLinkDays ?? WITNESS_LINK_DAYS.default,
+    witnessesMustSign: settings?.witnessesMustSign ?? false,
   };
 }
 

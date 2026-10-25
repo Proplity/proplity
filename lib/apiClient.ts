@@ -19,6 +19,9 @@ import type {
   CreditEntry,
   CreditPack,
   CreditShop,
+  AgreementWitnessView,
+  WitnessAgreement,
+  WitnessSideKey,
   GeneratedAgreementInput,
   InvitationBatchResult,
   Jurisdiction,
@@ -441,6 +444,18 @@ export const api = {
           `/api/v1/rents/${rentId}/agreement/void`,
           { reason },
         ),
+      witnesses: {
+        invite: (
+          rentId: string,
+          body: { side: WitnessSideKey; name: string; email: string; address?: string },
+        ) =>
+          apiClient.post<{ data: AgreementWitnessView & { emailed: boolean } }>(
+            `/api/v1/rents/${rentId}/agreement/witnesses`,
+            body,
+          ),
+        remove: (rentId: string, side: WitnessSideKey) =>
+          apiClient.delete(`/api/v1/rents/${rentId}/agreement/witnesses/${side.toLowerCase()}`),
+      },
       stampDuty: (rentId: string, body: StampDutyInput) =>
         apiClient.patch<{ data: RentAgreementView }>(
           `/api/v1/rents/${rentId}/agreement/stamp-duty`,
@@ -707,6 +722,15 @@ export const api = {
       apiClient.get<{
         data: { key: string; name: string; description: string | null; creditCost: number }[];
       }>('/api/v1/services'),
+  },
+  /** The witness's own page: reached by the emailed link, with no account. */
+  witness: {
+    get: (token: string) => apiClient.get<{ data: WitnessAgreement }>(`/api/v1/witness/${token}`),
+    sign: (token: string, fullName: string) =>
+      apiClient.post<{ data: { signed: true } }>(`/api/v1/witness/${token}`, {
+        fullName,
+        confirm: true,
+      }),
   },
   credits: {
     me: () =>

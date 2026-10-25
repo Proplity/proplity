@@ -57,6 +57,8 @@ export function AgreementDocument({ rentId }: { rentId: string }) {
     ['MANAGER', 'LANDLORD', 'ADMIN'].includes(s.signerRole),
   );
   const witnesses = agreement.witnesses ?? {};
+  const witnessSigned = (side: 'LANDLORD' | 'TENANT') =>
+    (agreement.witnessSignatures ?? []).find((w) => w.side === side && w.status === 'SIGNED');
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-8 print:max-w-none print:p-0">
@@ -185,7 +187,22 @@ export function AgreementDocument({ rentId }: { rentId: string }) {
                     <br />
                     {witnesses[side]?.address || 'Address: ____________________'}
                   </p>
-                  <Blank label="Witness signature" />
+                  {(() => {
+                    const signed = witnessSigned(side === 'landlord' ? 'LANDLORD' : 'TENANT');
+                    return signed ? (
+                      <p className="mt-3 text-sm">
+                        <span className="font-medium italic">
+                          {signed.signedName ?? signed.name}
+                        </span>
+                        <br />
+                        <span className="text-xs text-gray-500">
+                          Signed electronically on {signed.signedAt ? when(signed.signedAt) : ''}
+                        </span>
+                      </p>
+                    ) : (
+                      <Blank label="Witness signature" />
+                    );
+                  })()}
                 </div>
               ))}
             </section>

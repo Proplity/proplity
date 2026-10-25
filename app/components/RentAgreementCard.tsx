@@ -11,6 +11,7 @@ import { useRentAgreement } from '@/hooks/useRentAgreement';
 import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
 import { ConfirmDialog } from './ConfirmDialog';
 import { RentSignatureCard } from './RentSignatureCard';
+import { WitnessLinks } from './WitnessLinks';
 import type { Rent, RentAgreementView, StampDutyStatus } from '@/lib/api/types';
 
 const inputClass =
@@ -439,6 +440,12 @@ function TeamView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) {
         {agreement.status !== 'EXECUTED' && !uploaded && (
           <Witnesses rentId={rent.id} agreement={agreement} onChanged={changed} />
         )}
+        <WitnessLinks
+          rentId={rent.id}
+          agreement={agreement}
+          sides={['LANDLORD', 'TENANT']}
+          onChanged={changed}
+        />
         {agreement.status !== 'DRAFT' && (
           <StampDuty rentId={rent.id} agreement={agreement} onChanged={changed} />
         )}
@@ -530,6 +537,13 @@ function TenantView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) 
             </Link>
           )}
         </div>
+
+        <WitnessLinks
+          rentId={rent.id}
+          agreement={agreement}
+          sides={['TENANT']}
+          onChanged={changed}
+        />
 
         {uploaded && agreement.status === 'ISSUED' && (
           <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">

@@ -9,6 +9,7 @@ import { canManageProperty } from '@/lib/api/propertyAccess';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
 import { parseFileUrl } from '@/lib/fileRef';
 import { notifyAndEmail } from '@/lib/notifications';
+import { serializeWitness } from '@/lib/agreementWitness';
 import { getSystemSettings } from '@/lib/systemSettings';
 import { CreditError, prepareCredits, spendCreditsIn } from '@/lib/credits';
 import { listJurisdictions } from '@/lib/agreements';
@@ -72,7 +73,28 @@ export const GET = withAuth(
           });
         }
       }
-      return NextResponse.json({ data: serializeAgreement(agreement, viewer), findings });
+      const settings = await getSystemSettings();
+      const witnessRows = await prisma.agreementWitness.findMany({
+        where: { agreementId: agreement.id },
+        orderBy: { side: 'asc' },
+      });
+      // The tenant sees their own witness's address and the landlord's witness by name only.
+      const witnessSignatures = witnessRows.map((w) => {
+        const view = serializeWitness(w);
+        return viewer === 'TENANT' && w.side === 'LANDLORD' ? { ...view, email: null } : view;
+      });
+      return NextResponse.json({
+        data: {
+          ...serializeAgreement(agreement, viewer),
+          witnessSignatures,
+          witnessEsign: {
+            enabled: settings.witnessEsignEnabled && agreement.source === 'GENERATED',
+            mustSign: settings.witnessEsignEnabled && settings.witnessesMustSign,
+            linkDays: settings.witnessLinkDays,
+          },
+        },
+        findings,
+      });
     } catch (err) {
       return handleApiError(err);
     }

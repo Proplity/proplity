@@ -31,10 +31,11 @@ needs a session (`proxy.ts`). The components behind them are in
 
 ## Properties and receipts
 
-| Route              | File                       | Description                                                                                                                                                                                                                   |
-| :----------------- | :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/properties/[id]` | `properties/[id]/page.tsx` | The public listing page: photos, units, amenities, the neighbourhood, reviews, and the sign-in-aware buttons for applying or scheduling a viewing (`PublicPropertyDetail`)                                                    |
-| `/receipts/[id]`   | `receipts/[id]/page.tsx`   | A payment receipt that prints cleanly or saves as a PDF. `[id]` is the **payment** id. Open to every signed-in role at the edge; the API answers 404 unless the person is the payer, the payee, the property team or an admin |
+| Route              | File                       | Description                                                                                                                                                                                                                                                   |
+| :----------------- | :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/properties/[id]` | `properties/[id]/page.tsx` | The public listing page: photos, units, amenities, the neighbourhood, reviews, and the sign-in-aware buttons for applying or scheduling a viewing (`PublicPropertyDetail`)                                                                                    |
+| `/witness/[token]` | `witness/[token]/page.tsx` | The page a witness reaches from the emailed link: the agreement to read, a box for their full name and a tick, then a thank-you. No account and no app chrome; the token in the address is the only credential. An unknown, expired or withdrawn link says so |
+| `/receipts/[id]`   | `receipts/[id]/page.tsx`   | A payment receipt that prints cleanly or saves as a PDF. `[id]` is the **payment** id. Open to every signed-in role at the edge; the API answers 404 unless the person is the payer, the payee, the property team or an admin                                 |
 
 ## Utility pages
 

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
@@ -12,7 +11,7 @@ import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
 import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
 import { getSystemSettings } from '@/lib/systemSettings';
-import { activateRentAfterSigning } from '@/lib/rentLifecycle';
+import { completeSigningIfReady, type SigningOutcome } from '@/lib/agreementExecution';
 import { currentAgreement } from '@/lib/rentAgreement';
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -80,7 +79,7 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'You have already signed this rent' }, { status: 409 });
       }
 
-      const signature = await prisma.$transaction(async (tx) => {
+      const { signature, outcome } = await prisma.$transaction(async (tx) => {
         // Serialise signers of the same rent: without this a tenant and a landlord
         // signing at the same moment each see only their own signature and the rent
         // is never marked fully signed.
@@ -95,34 +94,12 @@ export const POST = withAuth(
           },
         });
 
-        // Fully executed once both a tenant-side and a landlord-side
-        // signature exist -- agreementSignedAt was a schema field nobody
-        // ever wrote to before this route existed.
-        if (!rent.agreementSignedAt) {
-          const allSignatures = await tx.rentSignature.findMany({ where: { rentId: id } });
-          const hasTenantSignature = allSignatures.some((s) => s.signerRole === Role.TENANT);
-          const hasLandlordSideSignature = allSignatures.some(
-            (s) =>
-              s.signerRole === Role.MANAGER ||
-              s.signerRole === Role.LANDLORD ||
-              s.signerRole === Role.ADMIN,
-          );
-          if (hasTenantSignature && hasLandlordSideSignature) {
-            const now = new Date();
-            await tx.rent.update({ where: { id }, data: { agreementSignedAt: now } });
-            // The generated agreement is signed by both sides: it is executed, and the rent
-            // starts if the admin's rule says it starts on signing.
-            await tx.rentAgreement.updateMany({
-              where: { rentId: id, source: 'GENERATED', status: 'ISSUED' },
-              data: { status: 'EXECUTED', executedAt: now },
-            });
-            if (settings.rentActivationRule === 'AFTER_BOTH_SIGN') {
-              await activateRentAfterSigning(tx, id);
-            }
-          }
-        }
+        // Fully executed once both a tenant-side and a landlord-side signature exist (and, when
+        // the admin requires it, the witnesses have signed): the agreement is executed and the rent
+        // starts if the admin's rule says it starts on signing.
+        const outcome: SigningOutcome = await completeSigningIfReady(tx, id, settings);
 
-        return created;
+        return { signature: created, outcome };
       });
 
       // Send signature confirmation emails
@@ -179,6 +156,17 @@ export const POST = withAuth(
         await notifyPropertyTeam(
           rent.unit.property,
           { ...fully, link: `/dashboard/tenants/${id}` },
+          { email: false },
+        );
+      } else if (outcome === 'WAITING_FOR_WITNESSES') {
+        const waiting = {
+          title: 'Signed: waiting for witnesses',
+          body: `Both sides have signed the rent for ${unitLabel}. It is complete once a witness on each side has signed.`,
+        };
+        await notifyAndEmail(rent.tenantId, { ...waiting, link: '/dashboard' }, { email: false });
+        await notifyPropertyTeam(
+          rent.unit.property,
+          { ...waiting, link: `/dashboard/tenants/${id}` },
           { email: false },
         );
       } else if (session.role === 'TENANT') {
