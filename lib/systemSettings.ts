@@ -39,6 +39,7 @@ export async function getSystemSettings() {
     rentActivationRule: settings?.rentActivationRule ?? 'INDEPENDENT',
     chargeForAgreements: settings?.chargeForAgreements ?? false,
     chargeForUploads: settings?.chargeForUploads ?? false,
+    creditPurchaseEnabled: settings?.creditPurchaseEnabled ?? true,
   };
 }
 

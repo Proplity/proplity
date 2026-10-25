@@ -12,6 +12,8 @@ enum InvoiceType {
   // A real requirement appeared (UI/UX gap audit): Unit/Rent.serviceCharge
   // now generates its own invoice line, kept separate from RENT.
   SERVICE_CHARGE
+  // A pack of credits bought by a manager or landlord (see CreditPurchase).
+  CREDIT_PURCHASE
 }
 
 enum InvoiceStatus {
@@ -116,6 +118,7 @@ model Invoice {
   notices                 Notice[]
   bankTransferSubmissions BankTransferSubmission[]
   vendorPayouts           VendorPayout[]
+  creditPurchase          CreditPurchase?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
 

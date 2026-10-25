@@ -56,6 +56,7 @@ model User {
   managedProperties            Property[]                @relation("ManagedProperties")
   createdProperties            Property[]                @relation("CreatedProperties")
   creditEntries                CreditEntry[]
+  creditPurchases              CreditPurchase[]
   // A company account (for example a firm of managers). Everyone in it, the managing partner
   // included, has this set; the partner is the Organisation's ownerId and is the one who pays.
   organisationId               String?

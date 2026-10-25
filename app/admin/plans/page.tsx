@@ -12,7 +12,7 @@ import {
   TEAM_MEMBER_ACCESS,
   UNIT_BILLING_OWNERS,
 } from '@/lib/billingOptions';
-import type { AdminPlatformSettings, PaidService, Plan } from '@/lib/api/types';
+import type { AdminPlatformSettings, CreditPack, PaidService, Plan } from '@/lib/api/types';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500';
@@ -166,6 +166,22 @@ function RulesSection() {
             disabled={saving}
             onCheckedChange={(checked) => save({ enforcePlanLimits: checked })}
             aria-label="Enforce plan limits"
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-6 rounded-lg bg-gray-50 p-4">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Let people buy credits</p>
+            <p className="mt-1 max-w-xl text-xs text-gray-600">
+              Shows the credit packs below to managers and landlords, who pay by card. Switched off,
+              the buy buttons disappear; a purchase already started can still be paid and credited.
+            </p>
+          </div>
+          <Switch
+            checked={settings.creditPurchaseEnabled}
+            disabled={saving}
+            onCheckedChange={(checked) => save({ creditPurchaseEnabled: checked })}
+            aria-label="Let people buy credits"
           />
         </div>
 
@@ -724,6 +740,190 @@ function ServicesSection() {
   );
 }
 
+function CreditPackRow({ pack, onSaved }: { pack: CreditPack; onSaved: () => void }) {
+  const [name, setName] = useState(pack.name);
+  const [credits, setCredits] = useState(String(pack.credits));
+  const [price, setPrice] = useState(String(pack.price));
+  const [active, setActive] = useState(pack.isActive);
+  const [saving, setSaving] = useState(false);
+  const dirty =
+    name !== pack.name ||
+    Number(credits) !== pack.credits ||
+    Number(price) !== pack.price ||
+    active !== pack.isActive;
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.admin.creditPacks.update(pack.id, {
+        name,
+        credits: Number(credits),
+        price: Number(price),
+        isActive: active,
+      });
+      toast.success(`${name} saved.`);
+      onSaved();
+    } catch (err) {
+      toast.error(message(err, 'Failed to save the pack.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!window.confirm(`Delete "${pack.name}"?`)) return;
+    try {
+      await api.admin.creditPacks.remove(pack.id);
+      onSaved();
+    } catch (err) {
+      toast.error(message(err, 'Failed to delete the pack.'));
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 items-end gap-3 rounded-lg border border-gray-200 p-3 sm:grid-cols-[2fr_7rem_9rem_auto]">
+      <Field label={`Name (${pack.key})`}>
+        <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
+      </Field>
+      <Field label="Credits">
+        <input
+          type="number"
+          min={1}
+          className={inputClass}
+          value={credits}
+          onChange={(e) => setCredits(e.target.value)}
+        />
+      </Field>
+      <Field label="Price (₦)">
+        <input
+          type="number"
+          min={1}
+          className={inputClass}
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+      </Field>
+      <div className="flex items-center gap-3 pb-2">
+        <label className="flex items-center gap-1.5 text-sm text-gray-700">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          On sale
+        </label>
+        <button
+          type="button"
+          disabled={!dirty || saving}
+          onClick={save}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+        >
+          Save
+        </button>
+        <button type="button" onClick={remove} aria-label={`Delete ${pack.name}`}>
+          <Trash2 className="h-4 w-4 text-red-500" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CreditPacksSection() {
+  const [packs, setPacks] = useState<CreditPack[] | null>(null);
+  const [key, setKey] = useState('');
+  const [name, setName] = useState('');
+  const [credits, setCredits] = useState('10');
+  const [price, setPrice] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const load = useCallback(() => {
+    api.admin.creditPacks
+      .list()
+      .then((res) => setPacks(res.data.data))
+      .catch(() => toast.error('Failed to load the credit packs.'));
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const add = async () => {
+    setAdding(true);
+    try {
+      await api.admin.creditPacks.create({
+        key,
+        name,
+        credits: Number(credits),
+        price: Number(price),
+      });
+      setKey('');
+      setName('');
+      setCredits('10');
+      setPrice('');
+      load();
+    } catch (err) {
+      toast.error(message(err, 'Failed to add the pack.'));
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <Section
+      icon={Coins}
+      title="Credit packs"
+      intro="The packs a manager or landlord can buy with a card. A change reaches purchases started afterwards; one already started keeps the credits and price it was made at. The shop itself is switched on or off under Plan rules."
+    >
+      {!packs ? (
+        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+      ) : (
+        <div className="space-y-3">
+          {packs.map((p) => (
+            <CreditPackRow
+              key={`${p.id}-${p.name}-${p.credits}-${p.price}-${p.isActive}`}
+              pack={p}
+              onSaved={load}
+            />
+          ))}
+          <div className="grid grid-cols-1 items-end gap-3 rounded-lg border border-dashed border-gray-300 p-3 sm:grid-cols-[1fr_1fr_7rem_9rem_auto]">
+            <Field label="Key" hint="Lower-case, for example credits-100">
+              <input className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} />
+            </Field>
+            <Field label="Name">
+              <input
+                className={inputClass}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+            <Field label="Credits">
+              <input
+                type="number"
+                min={1}
+                className={inputClass}
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
+              />
+            </Field>
+            <Field label="Price (₦)">
+              <input
+                type="number"
+                min={1}
+                className={inputClass}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </Field>
+            <button
+              type="button"
+              disabled={adding || !key || !name || !price}
+              onClick={add}
+              className="mb-0.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+            >
+              Add pack
+            </button>
+          </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function CreditsSection() {
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState('');
@@ -803,6 +1003,7 @@ export default function AdminPlansPage() {
       <RulesSection />
       <PlansSection />
       <ServicesSection />
+      <CreditPacksSection />
       <CreditsSection />
     </div>
   );

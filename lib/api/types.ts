@@ -372,6 +372,7 @@ export type PlatformSettings = {
   rentActivationRule: 'INDEPENDENT' | 'AFTER_BOTH_SIGN';
   chargeForAgreements: boolean;
   chargeForUploads: boolean;
+  creditPurchaseEnabled: boolean;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -741,6 +742,25 @@ export type PaidService = {
   creditCost: number;
   isActive: boolean;
   sortOrder: number;
+};
+
+/** A credit pack as the admin edits it. */
+export type CreditPack = {
+  id: string;
+  key: string;
+  name: string;
+  credits: number;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+/** What a manager or landlord sees of the credit shop (GET /credits/packs). */
+export type CreditShop = {
+  enabled: boolean;
+  cardsAvailable: boolean;
+  balance: number;
+  packs: { key: string; name: string; credits: number; price: number }[];
 };
 
 export type PlanUsage = {

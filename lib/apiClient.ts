@@ -17,6 +17,8 @@ import type {
   BankAccount,
   CheckoutSubscriptionInput,
   CreditEntry,
+  CreditPack,
+  CreditShop,
   GeneratedAgreementInput,
   InvitationBatchResult,
   Jurisdiction,
@@ -598,6 +600,19 @@ export const api = {
         apiClient.patch<{ data: PaidService }>(`/api/v1/admin/services/${id}`, body),
       remove: (id: string) => apiClient.delete(`/api/v1/admin/services/${id}`),
     },
+    creditPacks: {
+      list: () => apiClient.get<{ data: CreditPack[] }>('/api/v1/admin/credit-packs'),
+      create: (body: {
+        key: string;
+        name: string;
+        credits: number;
+        price: number;
+        isActive?: boolean;
+      }) => apiClient.post<{ data: CreditPack }>('/api/v1/admin/credit-packs', body),
+      update: (id: string, body: Partial<Omit<CreditPack, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: CreditPack }>(`/api/v1/admin/credit-packs/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/credit-packs/${id}`),
+    },
     credits: {
       grant: (body: { email: string; amount: number; note?: string }) =>
         apiClient.post<{ data: { userId: string; name: string | null; balance: number } }>(
@@ -696,6 +711,11 @@ export const api = {
   credits: {
     me: () =>
       apiClient.get<{ data: { balance: number; entries: CreditEntry[] } }>('/api/v1/credits/me'),
+    packs: () => apiClient.get<{ data: CreditShop }>('/api/v1/credits/packs'),
+    checkout: (packKey: string) =>
+      apiClient.post<{
+        data: { invoiceId: string; amount: number; credits: number; packName: string };
+      }>('/api/v1/credits/checkout', { packKey }),
   },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),

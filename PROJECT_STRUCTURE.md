@@ -15,10 +15,10 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 132 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 136 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 50 models, 13 schema files, 40 migrations")]
+    Postgres[("🐘 PostgreSQL — 52 models, 13 schema files, 41 migrations")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
     Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 132 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 136 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
@@ -145,7 +145,7 @@ proplity/
 │
 ├── 📁 prisma/
 │   ├── 📁 schema/                           # 12 modular files (base, billing, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 40 migrations, latest: 20261025120000_rent_agreements
+│   ├── 📁 migrations/                       # 41 migrations, latest: 20261025120000_rent_agreements
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below

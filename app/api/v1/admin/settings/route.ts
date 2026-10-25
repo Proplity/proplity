@@ -86,6 +86,7 @@ const updateSchema = z
     rentActivationRule: z.nativeEnum(RentActivationRule).optional(),
     chargeForAgreements: z.boolean().optional(),
     chargeForUploads: z.boolean().optional(),
+    creditPurchaseEnabled: z.boolean().optional(),
     downgradeGraceDays: z
       .number()
       .int('Enter a whole number of days')
