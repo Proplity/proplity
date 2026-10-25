@@ -153,8 +153,49 @@ model RentAgreement {
   voidedAt            DateTime?
   voidedById          String?
   voidReason          String?
+  witnessSignatures   AgreementWitness[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
   @@index([rentId, status])
+}
+
+enum WitnessSide {
+  LANDLORD
+  TENANT
+}
+
+// INVITED: the witness has been emailed a link. SIGNED: they added their name through it.
+enum WitnessStatus {
+  INVITED
+  SIGNED
+}
+
+// A witness to one side's signature who signs through an emailed link instead of on paper. One per
+// side per agreement. The link carries a random token; only its SHA-256 is stored, so the table
+// cannot be used to sign. Sending again replaces the token, which ends the old link. A witness
+// signs the same way the parties do: a typed name recorded with the time and address.
+model AgreementWitness {
+  id             String        @id @default(uuid())
+  agreementId    String
+  agreement      RentAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  side           WitnessSide
+  name           String
+  email          String
+  address        String?
+  tokenHash      String        @unique
+  tokenExpiresAt DateTime
+  status         WitnessStatus @default(INVITED)
+  invitedById    String?
+  // How many emails have gone out for this witness (capped, so the feature cannot be used to
+  // send a stranger mail over and over).
+  sendCount      Int           @default(1)
+  lastSentAt     DateTime      @default(now())
+  signedAt       DateTime?
+  signedName     String?
+  signedIp       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([agreementId, side])
 }

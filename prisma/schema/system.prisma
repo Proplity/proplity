@@ -101,5 +101,12 @@ model SystemSettings {
   // Whether managers and landlords can buy credit packs (Admin > Plans & billing). Off: the buy
   // buttons disappear and a purchase already started can still be paid and credited.
   creditPurchaseEnabled                Boolean            @default(true)
+  // Witnesses may sign a generated agreement through an emailed link. The link works for this many
+  // days after it is sent. Off: witnesses are typed names signed on paper, as before.
+  witnessEsignEnabled                  Boolean            @default(true)
+  witnessLinkDays                      Int                @default(14)
+  // On: an agreement that needs witnesses is not signed (executed) until a witness on each side has
+  // signed through a link, even if both parties have. Off: witnesses are recorded but never hold it up.
+  witnessesMustSign                    Boolean            @default(false)
   updatedAt                            DateTime           @updatedAt
 }

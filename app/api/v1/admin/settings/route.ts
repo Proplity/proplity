@@ -8,6 +8,7 @@ import { validateCSRF } from '@/lib/auth/csrf';
 import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/systemSettings';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
 import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
+import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
 import {
   DowngradeRule,
   OverageMode,
@@ -87,6 +88,14 @@ const updateSchema = z
     chargeForAgreements: z.boolean().optional(),
     chargeForUploads: z.boolean().optional(),
     creditPurchaseEnabled: z.boolean().optional(),
+    witnessEsignEnabled: z.boolean().optional(),
+    witnessesMustSign: z.boolean().optional(),
+    witnessLinkDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(WITNESS_LINK_DAYS.min, `At least ${WITNESS_LINK_DAYS.min} day`)
+      .max(WITNESS_LINK_DAYS.max, `At most ${WITNESS_LINK_DAYS.max} days`)
+      .optional(),
     downgradeGraceDays: z
       .number()
       .int('Enter a whole number of days')

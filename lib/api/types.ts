@@ -373,6 +373,9 @@ export type PlatformSettings = {
   chargeForAgreements: boolean;
   chargeForUploads: boolean;
   creditPurchaseEnabled: boolean;
+  witnessEsignEnabled: boolean;
+  witnessLinkDays: number;
+  witnessesMustSign: boolean;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -1424,6 +1427,40 @@ export type AgreementClause = { id: string; title: string; body: string };
 export type AgreementParty = { name: string; address: string };
 export type AgreementWitnesses = { landlord?: AgreementParty; tenant?: AgreementParty };
 
+export type WitnessSideKey = 'LANDLORD' | 'TENANT';
+
+/** A witness who signs through an emailed link (never carries the link itself). */
+export type AgreementWitnessView = {
+  id: string;
+  side: WitnessSideKey;
+  name: string;
+  email: string | null;
+  address: string | null;
+  status: 'INVITED' | 'SIGNED';
+  lastSentAt: string;
+  sendCount: number;
+  expiresAt: string;
+  signedAt: string | null;
+  signedName: string | null;
+};
+
+/** What a witness sees through their link: the agreement to read, or that they already signed. */
+export type WitnessAgreement = {
+  state: 'READY' | 'SIGNED';
+  side: WitnessSideKey;
+  witnessName: string;
+  unit: string;
+  property: string;
+  signedAt?: string | null;
+  address?: string;
+  landlordName?: string | null;
+  agentName?: string | null;
+  tenantName?: string;
+  clauses?: AgreementClause[] | null;
+  specialConditions?: string | null;
+  expiresAt?: string;
+};
+
 /** A rent's agreement as the screens read it. The property team sees more than the tenant. */
 export type RentAgreementView = {
   id: string;
@@ -1449,6 +1486,9 @@ export type RentAgreementView = {
   issuedAt: string | null;
   executedAt: string | null;
   createdAt: string;
+  // Present when the agreement is read on its own (GET), not on the answers to changes.
+  witnessSignatures?: AgreementWitnessView[];
+  witnessEsign?: { enabled: boolean; mustSign: boolean; linkDays: number };
   // The property team only.
   choices?: { omit?: string[]; include?: string[]; edits?: Record<string, string> } | null;
   agencyFee?: number | null;
