@@ -112,5 +112,18 @@ model SystemSettings {
   // naira) by card and Proplity staff pay the tax authority. Off until an admin has the people to do it.
   stampDutyPaymentEnabled              Boolean            @default(false)
   stampDutyServiceFee                  Int                @default(0)
+  // Renewing a rent with a new agreement (Renew on a rent). Off: the old one-step renewal remains.
+  agreementRenewalEnabled              Boolean            @default(true)
+  // Reminders about tenancies and agreements: tell the tenant and the property team as a tenancy
+  // nears its end, on each day in `renewalReminderDays` (days before the end date), and remind
+  // whoever has not signed an agreement every `agreementUnsignedReminderDays` days (0: never).
+  agreementRemindersEnabled            Boolean            @default(true)
+  renewalReminderDays                  Int[]              @default([90, 60, 30])
+  agreementUnsignedReminderDays        Int                @default(3)
+  // Automatic renewal: for rents the manager marked "renew automatically", prepare the renewal this
+  // many days before the rent ends. It is only ever prepared (a pending rent and a draft agreement);
+  // a person reviews and sends it.
+  autoRenewalEnabled                   Boolean            @default(false)
+  autoRenewalDaysBefore                Int                @default(60)
   updatedAt                            DateTime           @updatedAt
 }

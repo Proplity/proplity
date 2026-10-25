@@ -69,7 +69,17 @@ export const GET = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       rent.notices = rent.notices.filter((n) => n.status !== 'DRAFT');
     }
 
-    return NextResponse.json({ data: rent });
+    const settings = await getSystemSettings();
+    return NextResponse.json({
+      data: {
+        ...rent,
+        renewal: {
+          enabled: settings.agreementRenewalEnabled,
+          autoEnabled: settings.autoRenewalEnabled,
+          autoDaysBefore: settings.autoRenewalDaysBefore,
+        },
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }
@@ -93,6 +103,10 @@ const patchSchema = z.object({
   lateFeePercentage: z.number().nonnegative().optional(),
   lateFeeFlatAmount: z.number().nonnegative().optional(),
   signedAgreementUrl: safeUrl.nullable().optional(),
+  // Renew automatically when the admin has switched automatic renewal on (see lib/workers/renewals).
+  autoRenew: z.boolean().optional(),
+  autoRenewIncreasePercent: z.number().min(0).max(100).optional(),
+  autoRenewTermMonths: z.number().int().min(1).max(120).optional(),
 });
 
 export const PATCH = withAuth(
@@ -119,6 +133,9 @@ export const PATCH = withAuth(
         lateFeePercentage,
         lateFeeFlatAmount,
         signedAgreementUrl,
+        autoRenew,
+        autoRenewIncreasePercent,
+        autoRenewTermMonths,
       } = validated.data;
 
       if (signedAgreementUrl) {
@@ -183,6 +200,23 @@ export const PATCH = withAuth(
         ...(lateFeeFlatAmount !== undefined ? { lateFeeFlatAmount } : {}),
         ...(signedAgreementUrl !== undefined ? { signedAgreementUrl } : {}),
       };
+      // Only the automatic-renewal choice changing is the team's own bookkeeping: nothing the
+      // tenant agreed to moves, so the tenant is not told.
+      const renewalChoice = {
+        ...(autoRenew !== undefined ? { autoRenew } : {}),
+        ...(autoRenewIncreasePercent !== undefined ? { autoRenewIncreasePercent } : {}),
+        ...(autoRenewTermMonths !== undefined ? { autoRenewTermMonths } : {}),
+      };
+      const hasRenewalChoice = Object.keys(renewalChoice).length > 0;
+      if (autoRenew) {
+        const settings = await getSystemSettings();
+        if (!settings.autoRenewalEnabled) {
+          return NextResponse.json(
+            { error: 'Automatic renewal is switched off', code: 'AUTO_RENEWAL_OFF' },
+            { status: 403 },
+          );
+        }
+      }
 
       // With the admin's "after both sign" rule a pending rent cannot be started by hand before
       // both sides have signed; signing starts it. An admin may still override.
@@ -199,6 +233,11 @@ export const PATCH = withAuth(
         }
       }
 
+      if (!status && Object.keys(termsUpdate).length === 0 && hasRenewalChoice) {
+        const updated = await prisma.rent.update({ where: { id }, data: renewalChoice });
+        return NextResponse.json({ data: updated });
+      }
+
       if (status || Object.keys(termsUpdate).length > 0) {
         const updated = await prisma.$transaction(async (tx) => {
           // Serialise changes to one unit's rents: the occupancy check below reads the other
@@ -206,7 +245,7 @@ export const PATCH = withAuth(
           await tx.$queryRaw`SELECT "id" FROM "Unit" WHERE "id" = ${rent.unitId} FOR UPDATE`;
           const result = await tx.rent.update({
             where: { id },
-            data: { ...(status ? { status } : {}), ...termsUpdate },
+            data: { ...(status ? { status } : {}), ...termsUpdate, ...renewalChoice },
           });
 
           // Unit.status was previously never touched by a rent's own

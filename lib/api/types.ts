@@ -378,6 +378,12 @@ export type PlatformSettings = {
   witnessesMustSign: boolean;
   stampDutyPaymentEnabled: boolean;
   stampDutyServiceFee: number;
+  agreementRenewalEnabled: boolean;
+  agreementRemindersEnabled: boolean;
+  renewalReminderDays: number[];
+  agreementUnsignedReminderDays: number;
+  autoRenewalEnabled: boolean;
+  autoRenewalDaysBefore: number;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -474,6 +480,15 @@ export type Rent = {
   signatures?: RentSignature[];
   notices?: Notice[];
   invoices?: Invoice[];
+  /** Renew automatically (only runs while the admin has automatic renewal on). */
+  autoRenew?: boolean;
+  autoRenewIncreasePercent?: number;
+  autoRenewTermMonths?: number | null;
+  /** The rent this one renews, and the one that renews it (when there is one). */
+  renewedFromId?: string | null;
+  renewedInto?: { id: string; status: string; startDate: string } | null;
+  /** What the admin's switches allow for renewing this rent (on a single rent's GET). */
+  renewal?: { enabled: boolean; autoEnabled: boolean; autoDaysBefore: number };
   tenantInvited?: boolean;
   invitation?: InvitationState;
   /** Legal warnings for the tenancy just created (the place's rules; a blocking one refuses the rent instead). */
@@ -504,6 +519,21 @@ export type UpdateRentTermsInput = {
   lateFeeType?: 'PERCENTAGE' | 'FIXED';
   lateFeePercentage?: number;
   lateFeeFlatAmount?: number;
+  autoRenew?: boolean;
+  autoRenewIncreasePercent?: number;
+  autoRenewTermMonths?: number;
+};
+
+/** Renewing with a new agreement: every field is optional, the rest follows this rent's terms. */
+export type StartRenewalInput = {
+  startDate?: string;
+  endDate?: string;
+  termMonths?: number;
+  rentAmount?: number;
+  increasePercent?: number;
+  deposit?: number;
+  paymentFrequency?: string;
+  copyAgreement?: boolean;
 };
 
 export type RenewRentInput = {

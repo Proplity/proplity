@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { Switch } from '@/app/components/ui/switch';
 import { RENT_ACTIVATION_RULES } from '@/lib/agreementOptions';
+import { AUTO_RENEWAL_DAYS, UNSIGNED_REMINDER_DAYS, parseReminderDays } from '@/lib/renewalOptions';
 import type { AdminPlatformSettings } from '@/lib/api/types';
 import { JurisdictionsPanel } from './JurisdictionsPanel';
 import { TemplatesPanel } from './TemplatesPanel';
@@ -24,6 +25,9 @@ function RulesPanel() {
   const [saving, setSaving] = useState(false);
   const [linkDays, setLinkDays] = useState('14');
   const [stampFee, setStampFee] = useState('0');
+  const [reminderDays, setReminderDays] = useState('');
+  const [unsignedDays, setUnsignedDays] = useState('3');
+  const [autoDays, setAutoDays] = useState('60');
 
   useEffect(() => {
     api.admin.settings
@@ -32,6 +36,9 @@ function RulesPanel() {
         setSettings(res.data.data);
         setLinkDays(String(res.data.data.witnessLinkDays));
         setStampFee(String(res.data.data.stampDutyServiceFee));
+        setReminderDays(res.data.data.renewalReminderDays.join(', '));
+        setUnsignedDays(String(res.data.data.agreementUnsignedReminderDays));
+        setAutoDays(String(res.data.data.autoRenewalDaysBefore));
       })
       .catch(() => toast.error('Failed to load the agreement rules.'));
   }, []);
@@ -43,6 +50,9 @@ function RulesPanel() {
       setSettings(res.data.data);
       setLinkDays(String(res.data.data.witnessLinkDays));
       setStampFee(String(res.data.data.stampDutyServiceFee));
+      setReminderDays(res.data.data.renewalReminderDays.join(', '));
+      setUnsignedDays(String(res.data.data.agreementUnsignedReminderDays));
+      setAutoDays(String(res.data.data.autoRenewalDaysBefore));
       toast.success('Saved.');
     } catch (err) {
       toast.error(message(err, 'Failed to save. Please try again.'));
@@ -64,7 +74,10 @@ function RulesPanel() {
       | 'chargeForUploads'
       | 'witnessEsignEnabled'
       | 'witnessesMustSign'
-      | 'stampDutyPaymentEnabled',
+      | 'stampDutyPaymentEnabled'
+      | 'agreementRenewalEnabled'
+      | 'agreementRemindersEnabled'
+      | 'autoRenewalEnabled',
     label: string,
   ) => (
     <Switch
@@ -194,6 +207,90 @@ function RulesPanel() {
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           Save fee
+        </button>
+      </div>
+
+      <SwitchRow
+        title="Renew a rent with a new agreement"
+        hint="Shows a Renew button that makes the next rent (pending, with its first invoice) and, if the person wants, a draft agreement copied from the current one. The new rent starts once it is signed and its start date arrives; the old one ends then. Off: renewing is the older one-step change with no new agreement."
+      >
+        {toggle('agreementRenewalEnabled', 'Renew a rent with a new agreement')}
+      </SwitchRow>
+      <SwitchRow
+        title="Send agreement and renewal reminders"
+        hint="Reminds the tenant and the property team as a rent end date approaches (on the days below), when a rent has ended but is still marked active, and when an agreement has been sent but not signed."
+      >
+        {toggle('agreementRemindersEnabled', 'Send agreement and renewal reminders')}
+      </SwitchRow>
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 p-4">
+        <label className="block w-56">
+          <span className="mb-1 block text-xs font-medium text-gray-700">
+            Remind this many days before a rent ends
+          </span>
+          <input
+            value={reminderDays}
+            onChange={(e) => setReminderDays(e.target.value)}
+            placeholder="90, 60, 30"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => save({ renewalReminderDays: parseReminderDays(reminderDays) })}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Save days
+        </button>
+        <label className="block w-56">
+          <span className="mb-1 block text-xs font-medium text-gray-700">
+            Remind about an unsigned agreement after (days, 0 = never)
+          </span>
+          <input
+            type="number"
+            min={UNSIGNED_REMINDER_DAYS.min}
+            max={UNSIGNED_REMINDER_DAYS.max}
+            value={unsignedDays}
+            onChange={(e) => setUnsignedDays(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={saving || Number(unsignedDays) === settings.agreementUnsignedReminderDays}
+          onClick={() => save({ agreementUnsignedReminderDays: Number(unsignedDays) })}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Save
+        </button>
+      </div>
+      <SwitchRow
+        title="Rents can renew automatically"
+        hint="Lets a landlord or manager mark a rent to renew automatically. Shortly before it ends, the next rent and a draft agreement are prepared for a person to review and send; nothing reaches the tenant until they do. Off: no rent is prepared this way, whatever its setting."
+      >
+        {toggle('autoRenewalEnabled', 'Rents can renew automatically')}
+      </SwitchRow>
+      <div className="flex items-end gap-3 rounded-lg border border-gray-200 p-4">
+        <label className="block w-48">
+          <span className="mb-1 block text-xs font-medium text-gray-700">
+            Prepare the renewal this many days before
+          </span>
+          <input
+            type="number"
+            min={AUTO_RENEWAL_DAYS.min}
+            max={AUTO_RENEWAL_DAYS.max}
+            value={autoDays}
+            onChange={(e) => setAutoDays(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={saving || Number(autoDays) === settings.autoRenewalDaysBefore}
+          onClick={() => save({ autoRenewalDaysBefore: Number(autoDays) })}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Save days
         </button>
       </div>
 

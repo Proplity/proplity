@@ -3,6 +3,7 @@ import { RETENTION_LIMITS } from '@/lib/retentionLimits';
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
 import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
 import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
+import { AUTO_RENEWAL_DAYS, REMINDER_DAYS, UNSIGNED_REMINDER_DAYS } from '@/lib/renewalOptions';
 
 export { RETENTION_LIMITS };
 
@@ -46,6 +47,13 @@ export async function getSystemSettings() {
     witnessesMustSign: settings?.witnessesMustSign ?? false,
     stampDutyPaymentEnabled: settings?.stampDutyPaymentEnabled ?? false,
     stampDutyServiceFee: settings?.stampDutyServiceFee ?? 0,
+    agreementRenewalEnabled: settings?.agreementRenewalEnabled ?? true,
+    agreementRemindersEnabled: settings?.agreementRemindersEnabled ?? true,
+    renewalReminderDays: settings?.renewalReminderDays ?? [...REMINDER_DAYS.default],
+    agreementUnsignedReminderDays:
+      settings?.agreementUnsignedReminderDays ?? UNSIGNED_REMINDER_DAYS.default,
+    autoRenewalEnabled: settings?.autoRenewalEnabled ?? false,
+    autoRenewalDaysBefore: settings?.autoRenewalDaysBefore ?? AUTO_RENEWAL_DAYS.default,
   };
 }
 

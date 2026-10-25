@@ -9,6 +9,7 @@ import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/sys
 import { INVITE_LIMITS } from '@/lib/inviteLimits';
 import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
 import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
+import { AUTO_RENEWAL_DAYS, REMINDER_DAYS, UNSIGNED_REMINDER_DAYS } from '@/lib/renewalOptions';
 import {
   DowngradeRule,
   OverageMode,
@@ -91,6 +92,32 @@ const updateSchema = z
     witnessEsignEnabled: z.boolean().optional(),
     witnessesMustSign: z.boolean().optional(),
     stampDutyPaymentEnabled: z.boolean().optional(),
+    agreementRenewalEnabled: z.boolean().optional(),
+    agreementRemindersEnabled: z.boolean().optional(),
+    autoRenewalEnabled: z.boolean().optional(),
+    renewalReminderDays: z
+      .array(
+        z
+          .number()
+          .int('Enter whole days')
+          .min(REMINDER_DAYS.min, `At least ${REMINDER_DAYS.min} day`)
+          .max(REMINDER_DAYS.max, `At most ${REMINDER_DAYS.max} days`),
+      )
+      .max(REMINDER_DAYS.maxCount, `At most ${REMINDER_DAYS.maxCount} reminders`)
+      .refine((d) => new Set(d).size === d.length, 'Each day can only be listed once')
+      .optional(),
+    agreementUnsignedReminderDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(UNSIGNED_REMINDER_DAYS.min, 'Cannot be negative')
+      .max(UNSIGNED_REMINDER_DAYS.max, `At most ${UNSIGNED_REMINDER_DAYS.max} days`)
+      .optional(),
+    autoRenewalDaysBefore: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(AUTO_RENEWAL_DAYS.min, `At least ${AUTO_RENEWAL_DAYS.min} days`)
+      .max(AUTO_RENEWAL_DAYS.max, `At most ${AUTO_RENEWAL_DAYS.max} days`)
+      .optional(),
     stampDutyServiceFee: z
       .number()
       .int('Enter whole naira')
@@ -134,7 +161,8 @@ export const PATCH = withAuth(
       const changes: Record<string, { from: unknown; to: unknown }> = {};
       for (const [key, to] of Object.entries(validated.data)) {
         const from = before[key as keyof typeof before];
-        if (to !== undefined && from !== to) changes[key] = { from, to };
+        if (to !== undefined && JSON.stringify(from) !== JSON.stringify(to))
+          changes[key] = { from, to };
       }
       if (Object.keys(changes).length > 0) {
         await prisma.auditLog.create({

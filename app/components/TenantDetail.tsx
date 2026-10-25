@@ -20,6 +20,7 @@ import {
   useUpdateRentTerms,
   useUpdateRentStatus,
   useRenewRent,
+  useStartRenewal,
   useCreateNotice,
 } from '@/hooks/useRents';
 import { useCreateInvoice } from '@/hooks/useInvoices';
@@ -32,6 +33,7 @@ import { useConditionReports, useCreateConditionReport } from '@/hooks/useCondit
 import { ConfirmDialog } from './ConfirmDialog';
 import { PaidAnotherWayForm } from './PaidAnotherWayForm';
 import { RentAgreementCard } from './RentAgreementCard';
+import { RenewalCard } from './RenewalCard';
 import { toast } from 'sonner';
 import type { Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
 import { perFrequency } from '@/lib/paymentFrequency';
@@ -236,6 +238,11 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
   const { submit: submitStatus, submitting: savingStatus } = useUpdateRentStatus(rentId);
   const { submit: submitRenew, submitting: savingRenew, error: renewError } = useRenewRent(rentId);
   const {
+    submit: submitStartRenewal,
+    submitting: savingStartRenewal,
+    error: startRenewalError,
+  } = useStartRenewal(rentId);
+  const {
     submit: submitNotice,
     submitting: savingNotice,
     error: noticeError,
@@ -256,6 +263,7 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
     lateFeeFlatAmount: '0',
   });
   const [renewingRent, setRenewingRent] = useState(false);
+  const [prepareAgreement, setPrepareAgreement] = useState(true);
   const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
   const [renewDraft, setRenewDraft] = useState({
     startDate: '',
@@ -366,12 +374,17 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
 
   const handleRenew = async () => {
     try {
-      const newRent = await submitRenew({
+      const terms = {
         startDate: renewDraft.startDate,
         endDate: renewDraft.endDate,
         rentAmount: parseFloat(renewDraft.rentAmount) || 0,
         deposit: parseFloat(renewDraft.deposit) || 0,
-      });
+      };
+      // With the admin's renewal switch on, the next term is a pending rent with its own
+      // agreement to sign; otherwise the older one-step renewal.
+      const newRent = rent?.renewal?.enabled
+        ? (await submitStartRenewal({ ...terms, copyAgreement: prepareAgreement }))?.rent
+        : await submitRenew(terms);
       setRenewingRent(false);
       // Renewal creates a NEW rent row (old one flips to EXPIRED) -- follow
       // onto its detail page rather than showing this now-expired one.
@@ -557,12 +570,14 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
                   {savingStatus ? 'Terminating…' : 'Terminate Rent'}
                 </button>
               )}
-              <button
-                onClick={openRenewEditor}
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Renew Rent
-              </button>
+              {!rent.renewedInto && (
+                <button
+                  onClick={openRenewEditor}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Renew Rent
+                </button>
+              )}
               <button
                 onClick={() => setSendingNotice(true)}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -618,14 +633,26 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
                     />
                   </div>
                 </div>
-                {renewError && <p className="text-sm text-red-600">{renewError}</p>}
+                {rent.renewal?.enabled && (
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={prepareAgreement}
+                      onChange={(e) => setPrepareAgreement(e.target.checked)}
+                    />
+                    Prepare the new agreement from this one
+                  </label>
+                )}
+                {(startRenewalError || renewError) && (
+                  <p className="text-sm text-red-600">{startRenewalError || renewError}</p>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleRenew}
-                    disabled={savingRenew}
+                    disabled={savingRenew || savingStartRenewal}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {savingRenew ? 'Renewing…' : 'Confirm Renewal'}
+                    {savingRenew || savingStartRenewal ? 'Renewing…' : 'Confirm Renewal'}
                   </button>
                   <button
                     onClick={() => setRenewingRent(false)}
@@ -689,6 +716,8 @@ export function TenantDetail({ rentId }: TenantDetailProps) {
               </div>
             )}
           </div>
+
+          <RenewalCard key={rent.id + String(rent.autoRenew)} rent={rent} onChanged={refetchRent} />
 
           {/* Late Fee & Grace Period */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
