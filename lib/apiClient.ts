@@ -2,6 +2,8 @@ import axios from 'axios';
 import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
+  AgreementOptions,
+  AgreementPreview,
   AgreementTemplate,
   AgreementTemplateInput,
   AccessCodeDetail,
@@ -15,12 +17,16 @@ import type {
   BankAccount,
   CheckoutSubscriptionInput,
   CreditEntry,
+  GeneratedAgreementInput,
   InvitationBatchResult,
   Jurisdiction,
   JurisdictionInput,
   PaidService,
   PortfolioImportResult,
   PortfolioPreview,
+  RentAgreementView,
+  RuleFindingView,
+  StampDutyInput,
   Plan,
   PlanInput,
   TeamOverview,
@@ -395,6 +401,50 @@ export const api = {
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { status }),
     renew: (id: string, body: RenewRentInput) =>
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { renew: body }),
+    agreement: {
+      get: (rentId: string) =>
+        apiClient.get<{ data: RentAgreementView | null; findings?: RuleFindingView[] }>(
+          `/api/v1/rents/${rentId}/agreement`,
+        ),
+      options: (rentId: string) =>
+        apiClient.get<{ data: AgreementOptions }>(`/api/v1/rents/${rentId}/agreement/options`),
+      preview: (rentId: string, body: GeneratedAgreementInput) =>
+        apiClient.post<{ data: AgreementPreview }>(
+          `/api/v1/rents/${rentId}/agreement/preview`,
+          body,
+        ),
+      create: (
+        rentId: string,
+        body:
+          | ({ source: 'GENERATED' } & GeneratedAgreementInput)
+          | { source: 'UPLOADED'; fileUrl: string },
+      ) =>
+        apiClient.post<{ data: RentAgreementView; findings?: RuleFindingView[] }>(
+          `/api/v1/rents/${rentId}/agreement`,
+          body,
+        ),
+      update: (rentId: string, body: Partial<Omit<GeneratedAgreementInput, 'templateId'>>) =>
+        apiClient.patch<{ data: RentAgreementView }>(`/api/v1/rents/${rentId}/agreement`, body),
+      issue: (rentId: string) =>
+        apiClient.post<{ data: { id: string; status: string } }>(
+          `/api/v1/rents/${rentId}/agreement/issue`,
+        ),
+      confirm: (rentId: string, fullName: string) =>
+        apiClient.post<{ data: { id: string; status: string } }>(
+          `/api/v1/rents/${rentId}/agreement/confirm`,
+          { fullName },
+        ),
+      void: (rentId: string, reason?: string) =>
+        apiClient.post<{ data: { id: string; refunded: number } }>(
+          `/api/v1/rents/${rentId}/agreement/void`,
+          { reason },
+        ),
+      stampDuty: (rentId: string, body: StampDutyInput) =>
+        apiClient.patch<{ data: RentAgreementView }>(
+          `/api/v1/rents/${rentId}/agreement/stamp-duty`,
+          body,
+        ),
+    },
     /** Send (or send again) the invitation email to a tenant who has not signed in yet. */
     invite: (id: string) =>
       apiClient.post<{ data: { invitation: 'INVITED' } }>(`/api/v1/rents/${id}/invite`),

@@ -63,6 +63,7 @@ model User {
   ownedOrganisation            Organisation?             @relation("OrganisationOwner")
   approvedAgreementTemplates   AgreementTemplate[]       @relation("ApprovedAgreementTemplates")
   createdAgreementTemplates    AgreementTemplate[]       @relation("CreatedAgreementTemplates")
+  createdRentAgreements        RentAgreement[]           @relation("CreatedRentAgreements")
   ownedProperties              Property[]                @relation("OwnedProperties")
   rents                        Rent[]                    @relation("TenantRents")
   rentSignatures               RentSignature[]

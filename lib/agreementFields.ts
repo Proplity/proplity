@@ -21,7 +21,7 @@ export type TemplateClause = {
 export const AGREEMENT_FIELDS = {
   agreementDate: 'The date the agreement is made, such as 1 September 2026',
   landlordName: "The landlord's name (the owner, as typed or from their account)",
-  agentNote: 'Empty, or ", acting through its agent <name>" when a manager acts for the owner',
+  agentNote: 'Empty, or ", represented by their agent <name>" when a manager acts for the owner',
   tenantName: "The tenant's full name",
   tenantEmail: "The tenant's email address",
   tenantPhone: "The tenant's phone number, or nil",

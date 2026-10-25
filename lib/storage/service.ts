@@ -298,10 +298,20 @@ export async function canReadFile(actor: Actor, file: StoredFile): Promise<boole
       where: { signedAgreementUrl: url },
       include: { unit: { include: { property: true } } },
     });
-    if (!rent) return false;
-    if (rent.tenantId === actor.sub) return true;
-    if (!scope) return false;
-    return manages(rent.unit.property);
+    if (rent) {
+      if (rent.tenantId === actor.sub) return true;
+      if (!scope) return false;
+      return manages(rent.unit.property);
+    }
+    // An uploaded agreement and the stamp duty receipt. The tenant may read them once the
+    // agreement has been sent to them; the property team always.
+    const agreement = await prisma.rentAgreement.findFirst({
+      where: { OR: [{ fileUrl: url }, { stampDutyReceiptUrl: url }], status: { not: 'VOID' } },
+      include: { rent: { include: { unit: { include: { property: true } } } } },
+    });
+    if (!agreement) return false;
+    if (scope && manages(agreement.rent.unit.property)) return true;
+    return agreement.rent.tenantId === actor.sub && agreement.status !== 'DRAFT';
   }
 
   if (file.folder === 'communications') {

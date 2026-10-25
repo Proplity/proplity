@@ -8,26 +8,14 @@ import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
 import { notifyAndEmail } from '@/lib/notifications';
 import { revokeCodesWhenTenancyEnds } from '@/lib/accessCodes';
-import {
-  closeThreadsWhenTenancyEnds,
-  reopenThreadsWhenTenancyResumes,
-} from '@/lib/conversationAccess';
+import { closeThreadsWhenTenancyEnds } from '@/lib/conversationAccess';
+import { UnitAlreadyOccupiedError, occupyUnitForRent } from '@/lib/rentLifecycle';
 import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 import { safeUrl } from '@/lib/api/urlField';
 import { assertOwnsFileUrls } from '@/lib/storage/service';
+import { getSystemSettings } from '@/lib/systemSettings';
 
 type RouteCtx = { params: Promise<{ id: string }> };
-
-/**
- * Thrown from inside a $transaction so the whole activation rolls back --
- * returning a plain NextResponse from within the callback would commit the
- * rent.update that already ran. Caught below and mapped to a 409.
- */
-class UnitAlreadyOccupiedError extends Error {
-  constructor(public readonly conflictingRentId: string) {
-    super('Unit already has an active rent');
-  }
-}
 
 // There is no nested "emergency contact" object in the schema -- these are
 // 3 flat fields on User already, selected explicitly here to keep
@@ -196,6 +184,21 @@ export const PATCH = withAuth(
         ...(signedAgreementUrl !== undefined ? { signedAgreementUrl } : {}),
       };
 
+      // With the admin's "after both sign" rule a pending rent cannot be started by hand before
+      // both sides have signed; signing starts it. An admin may still override.
+      if (status === 'ACTIVE' && rent.status === 'PENDING' && session.role !== 'ADMIN') {
+        const settings = await getSystemSettings();
+        if (settings.rentActivationRule === 'AFTER_BOTH_SIGN' && !rent.agreementSignedAt) {
+          return NextResponse.json(
+            {
+              error: 'This rent starts once the tenant and the landlord side have both signed',
+              code: 'AGREEMENT_NOT_SIGNED',
+            },
+            { status: 409 },
+          );
+        }
+      }
+
       if (status || Object.keys(termsUpdate).length > 0) {
         const updated = await prisma.$transaction(async (tx) => {
           // Serialise changes to one unit's rents: the occupancy check below reads the other
@@ -212,26 +215,7 @@ export const PATCH = withAuth(
           // other ACTIVE rent remains on the same unit (defensive, since
           // nothing in the schema prevents more than one rent per unit).
           if (status === 'ACTIVE') {
-            // Occupancy guard, the mirror of the release check below. The
-            // freeing path was already defensive about a second ACTIVE rent;
-            // the occupying path was not, so a unit could be handed to a
-            // second tenant while the first was still in it. Creating a rent
-            // is deliberately still allowed on an occupied unit -- next
-            // year's rent is normally signed before this year's ends -- so
-            // ACTIVATION, not creation, is the right place to draw the line.
-            const conflicting = await tx.rent.findFirst({
-              where: { unitId: rent.unitId, status: 'ACTIVE', id: { not: id } },
-              select: { id: true, tenantId: true },
-            });
-            if (conflicting) {
-              throw new UnitAlreadyOccupiedError(conflicting.id);
-            }
-            await tx.unit.update({ where: { id: rent.unitId }, data: { status: 'OCCUPIED' } });
-            await reopenThreadsWhenTenancyResumes(tx, {
-              id: rent.id,
-              tenantId: rent.tenantId,
-              propertyId: rent.unit.propertyId,
-            });
+            await occupyUnitForRent(tx, rent);
           } else if (status === 'TERMINATED' || status === 'EXPIRED') {
             const stillActive = await tx.rent.findFirst({
               where: { unitId: rent.unitId, status: 'ACTIVE', id: { not: rent.id } },

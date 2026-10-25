@@ -43,6 +43,7 @@ model Jurisdiction {
   lawyerReviewed             Boolean             @default(false)
   sortOrder                  Int                 @default(0)
   templates                  AgreementTemplate[]
+  agreements                 RentAgreement[]
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
 }
@@ -53,25 +54,107 @@ model Jurisdiction {
 // clauses are the same in every agreement, EDITABLE ones the manager may reword, OPTIONAL ones the
 // manager may leave out. `body` may use {{fields}} (see lib/agreementFields.ts).
 model AgreementTemplate {
-  id              String         @id @default(uuid())
+  id              String          @id @default(uuid())
   key             String
   name            String
-  version         Int            @default(1)
+  version         Int             @default(1)
   jurisdictionId  String
-  jurisdiction    Jurisdiction   @relation(fields: [jurisdictionId], references: [id])
-  status          TemplateStatus @default(DRAFT)
+  jurisdiction    Jurisdiction    @relation(fields: [jurisdictionId], references: [id])
+  status          TemplateStatus  @default(DRAFT)
   clauses         Json
   // Whether the agreement has lines for a witness on each side.
-  witnessRequired Boolean        @default(true)
+  witnessRequired Boolean         @default(true)
   notes           String?
   approvedAt      DateTime?
   approvedById    String?
-  approvedBy      User?          @relation("ApprovedAgreementTemplates", fields: [approvedById], references: [id])
+  approvedBy      User?           @relation("ApprovedAgreementTemplates", fields: [approvedById], references: [id])
   createdById     String?
-  createdBy       User?          @relation("CreatedAgreementTemplates", fields: [createdById], references: [id])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdBy       User?           @relation("CreatedAgreementTemplates", fields: [createdById], references: [id])
+  agreements      RentAgreement[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@unique([key, version])
   @@index([jurisdictionId, status])
+}
+
+// GENERATED: made from a template. UPLOADED: an agreement the landlord already has, uploaded as a file.
+enum AgreementSource {
+  GENERATED
+  UPLOADED
+}
+
+// DRAFT: the property team is still preparing it (the tenant cannot see it). ISSUED: sent to the
+// tenant, waiting for signatures (generated) or for the tenant to confirm it (uploaded). EXECUTED:
+// signed by both sides. VOID: withdrawn before anyone signed.
+enum AgreementStatus {
+  DRAFT
+  ISSUED
+  EXECUTED
+  VOID
+}
+
+// Stamp duty is paid to the federal tax authority after signing. Proplity only records progress and
+// the receipt; it does not pay it.
+enum StampDutyStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  STAMPED
+}
+
+// The rent agreement of one rent. A rent has at most one agreement that is not void (the routes
+// hold a lock on the rent while they check). A generated agreement keeps a text snapshot of the
+// clauses it was made from, so later changes to the template never reach a signed agreement.
+model RentAgreement {
+  id                  String             @id @default(uuid())
+  rentId              String
+  rent                Rent               @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  source              AgreementSource
+  status              AgreementStatus    @default(DRAFT)
+  // Generated agreements.
+  templateId          String?
+  template            AgreementTemplate? @relation(fields: [templateId], references: [id])
+  templateKey         String?
+  templateVersion     Int?
+  jurisdictionId      String?
+  jurisdiction        Jurisdiction?      @relation(fields: [jurisdictionId], references: [id])
+  // What the manager chose: { omit, include, edits } (see ClauseChoices).
+  choices             Json?
+  // The rendered clauses: [{ id, title, body }]. This is the agreement's text.
+  clauses             Json?
+  specialConditions   String?
+  landlordName        String?
+  // The manager acting for an owner who has no account, noted on the agreement.
+  agentName           String?
+  agencyFee           Float?
+  legalFee            Float?
+  // { landlord: { name, address }, tenant: { name, address } }
+  witnesses           Json?
+  witnessRequired     Boolean            @default(true)
+  // Uploaded agreements.
+  fileUrl             String?
+  // The tenant confirming an uploaded agreement: a typed name, with the time and address.
+  confirmedAt         DateTime?
+  confirmedName       String?
+  confirmedIp         String?
+  stampDutyStatus     StampDutyStatus    @default(NOT_STARTED)
+  stampDutyReference  String?
+  stampDutyAmount     Float?
+  stampDutyReceiptUrl String?
+  stampedAt           DateTime?
+  // What it cost to make, in credits, and the ledger row that took it (refunded if it is voided
+  // before it was issued).
+  creditsCharged      Int                @default(0)
+  creditEntryId       String?
+  createdById         String?
+  createdBy           User?              @relation("CreatedRentAgreements", fields: [createdById], references: [id])
+  issuedAt            DateTime?
+  executedAt          DateTime?
+  voidedAt            DateTime?
+  voidedById          String?
+  voidReason          String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([rentId, status])
 }

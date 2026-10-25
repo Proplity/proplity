@@ -25,7 +25,8 @@ import {
   useCreateAutoPayMandate,
   useCancelAutoPayMandate,
 } from '@/hooks/useAutoPay';
-import { RentSignatureCard } from './TenantDetail';
+import { RentAgreementCard } from './RentAgreementCard';
+import { useRentAgreement } from '@/hooks/useRentAgreement';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { AttentionCard } from './AttentionCard';
@@ -143,8 +144,10 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
   const { data: pendingRents } = useRents({ status: 'PENDING' });
   const signRentId = pendingRents[0]?.id ?? rent?.id ?? null;
   const { data: signRent, refetch: refetchSignRent } = useRent(signRentId);
+  const { data: signAgreement } = useRentAgreement(signRentId);
   const showSignatureCard =
-    !!signRent && (signRent.status === 'PENDING' || (signRent.signatures ?? []).length > 0);
+    !!signRent &&
+    (signRent.status === 'PENDING' || (signRent.signatures ?? []).length > 0 || !!signAgreement);
 
   const property = rent?.unit?.property;
   const balance = summary?.money.balance ?? 0;
@@ -177,7 +180,7 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
       <AttentionCard />
 
       {signRent && showSignatureCard && (
-        <RentSignatureCard rent={signRent} onSigned={refetchSignRent} />
+        <RentAgreementCard rent={signRent} onChanged={refetchSignRent} />
       )}
 
       {/* Quick Actions */}

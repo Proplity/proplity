@@ -28,7 +28,12 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // record from before e-signature, not a task.
 const awaitingSignatures: Prisma.RentWhereInput = {
   status: { in: ['PENDING', 'ACTIVE'] },
-  OR: [{ status: 'PENDING' }, { signatures: { some: {} } }],
+  OR: [
+    { status: 'PENDING' },
+    { signatures: { some: {} } },
+    // An agreement sent to the tenant is waiting on them even for a rent that is already running.
+    { agreements: { some: { status: 'ISSUED' } } },
+  ],
 };
 const SEVERITY_ORDER: Record<AttentionSeverity, number> = { high: 0, medium: 1, low: 2 };
 
@@ -293,6 +298,8 @@ async function tenantAttention(userId: string, now: Date): Promise<AttentionItem
         tenantId: userId,
         ...awaitingSignatures,
         signatures: { none: { signerId: userId } },
+        // A draft agreement is the property team's work in progress: nothing to sign yet.
+        agreements: { none: { status: 'DRAFT' } },
       },
       select: { unit: { select: { unitNumber: true, property: { select: { name: true } } } } },
     }),

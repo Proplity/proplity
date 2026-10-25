@@ -11,6 +11,9 @@ import { getClientIp } from '@/lib/auth/rateLimit';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
 import { notifyAndEmail, notifyPropertyTeam } from '@/lib/notifications';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { activateRentAfterSigning } from '@/lib/rentLifecycle';
+import { currentAgreement } from '@/lib/rentAgreement';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -45,6 +48,30 @@ export const POST = withAuth(
 
       const validated = await validateBody(req, signSchema);
       if (!validated.success) return validated.response;
+
+      // A rent with an agreement is signed through it: not while it is still a draft, and an
+      // uploaded one is confirmed by the tenant instead (POST /rents/[id]/agreement/confirm).
+      const agreement = await currentAgreement(id);
+      if (agreement?.status === 'DRAFT') {
+        return NextResponse.json(
+          {
+            error: 'The agreement is still a draft. Send it to the tenant before anyone signs.',
+            code: 'AGREEMENT_DRAFT',
+          },
+          { status: 409 },
+        );
+      }
+      if (agreement?.source === 'UPLOADED' && agreement.status !== 'EXECUTED') {
+        return NextResponse.json(
+          {
+            error:
+              'This rent has an uploaded agreement. The tenant confirms it; nothing else needs signing.',
+            code: 'USE_CONFIRMATION',
+          },
+          { status: 409 },
+        );
+      }
+      const settings = await getSystemSettings();
 
       const existing = await prisma.rentSignature.findUnique({
         where: { rentId_signerId: { rentId: id, signerId: session.sub } },
@@ -81,7 +108,17 @@ export const POST = withAuth(
               s.signerRole === Role.ADMIN,
           );
           if (hasTenantSignature && hasLandlordSideSignature) {
-            await tx.rent.update({ where: { id }, data: { agreementSignedAt: new Date() } });
+            const now = new Date();
+            await tx.rent.update({ where: { id }, data: { agreementSignedAt: now } });
+            // The generated agreement is signed by both sides: it is executed, and the rent
+            // starts if the admin's rule says it starts on signing.
+            await tx.rentAgreement.updateMany({
+              where: { rentId: id, source: 'GENERATED', status: 'ISSUED' },
+              data: { status: 'EXECUTED', executedAt: now },
+            });
+            if (settings.rentActivationRule === 'AFTER_BOTH_SIGN') {
+              await activateRentAfterSigning(tx, id);
+            }
           }
         }
 
