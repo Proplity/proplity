@@ -61,6 +61,8 @@ model User {
   organisationId               String?
   organisation                 Organisation?             @relation("OrganisationMembers", fields: [organisationId], references: [id], onDelete: SetNull)
   ownedOrganisation            Organisation?             @relation("OrganisationOwner")
+  approvedAgreementTemplates   AgreementTemplate[]       @relation("ApprovedAgreementTemplates")
+  createdAgreementTemplates    AgreementTemplate[]       @relation("CreatedAgreementTemplates")
   ownedProperties              Property[]                @relation("OwnedProperties")
   rents                        Rent[]                    @relation("TenantRents")
   rentSignatures               RentSignature[]

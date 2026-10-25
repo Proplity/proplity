@@ -1,0 +1,77 @@
+// How strictly a legal rule is applied when someone sets up a tenancy.
+enum RuleMode {
+  OFF
+  WARN
+  BLOCK
+}
+
+// DRAFT: written, not yet approved for use (unless the admin has switched the approval
+// requirement off). APPROVED: the version managers generate agreements from. ARCHIVED: replaced by
+// a newer approved version, or retired; agreements already made from it keep their own snapshot.
+enum TemplateStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+// A place with its own tenancy rules (Lagos State, the FCT, ...). The rules are data an admin
+// edits, not code, because they differ by state and change as bills pass; nothing seeded here has
+// been reviewed by a lawyer until `lawyerReviewed` says so.
+model Jurisdiction {
+  id                         String              @id @default(uuid())
+  key                        String              @unique
+  name                       String
+  // The Property.state values this covers, compared ignoring case.
+  states                     String[]
+  // Used for a property whose state matches no jurisdiction.
+  isDefault                  Boolean             @default(false)
+  isActive                   Boolean             @default(true)
+  // The most months of rent one payment may collect in advance. Null: no cap.
+  advanceRentMaxMonths       Int?
+  advanceRentMode            RuleMode            @default(WARN)
+  // Days of notice to quit, by payment frequency: { "MONTHLY": 30, "ANNUAL": 180, ... }.
+  noticeDays                 Json                @default("{}")
+  // Areas the state's tenancy law does not cover; matched against a property's address and city.
+  excludedAreas              String[]
+  excludedAreasMode          RuleMode            @default(WARN)
+  // A tenancy at least this many years long may need a registered deed. Null: no threshold.
+  registrationThresholdYears Int?
+  stampDutyNote              String?
+  // Where the rules came from and what is unconfirmed, shown next to them.
+  sourceNote                 String?
+  rulesCheckedAt             DateTime?
+  lawyerReviewed             Boolean             @default(false)
+  sortOrder                  Int                 @default(0)
+  templates                  AgreementTemplate[]
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+}
+
+// A rent agreement wording for one jurisdiction. `key` groups the versions of one wording; editing
+// an approved version makes a new draft version, so an agreement can always say which text it used.
+// `clauses` is a list of { id, title, body, mode: LOCKED | EDITABLE | OPTIONAL, defaultOn }: LOCKED
+// clauses are the same in every agreement, EDITABLE ones the manager may reword, OPTIONAL ones the
+// manager may leave out. `body` may use {{fields}} (see lib/agreementFields.ts).
+model AgreementTemplate {
+  id              String         @id @default(uuid())
+  key             String
+  name            String
+  version         Int            @default(1)
+  jurisdictionId  String
+  jurisdiction    Jurisdiction   @relation(fields: [jurisdictionId], references: [id])
+  status          TemplateStatus @default(DRAFT)
+  clauses         Json
+  // Whether the agreement has lines for a witness on each side.
+  witnessRequired Boolean        @default(true)
+  notes           String?
+  approvedAt      DateTime?
+  approvedById    String?
+  approvedBy      User?          @relation("ApprovedAgreementTemplates", fields: [approvedById], references: [id])
+  createdById     String?
+  createdBy       User?          @relation("CreatedAgreementTemplates", fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([key, version])
+  @@index([jurisdictionId, status])
+}

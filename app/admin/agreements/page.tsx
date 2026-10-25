@@ -1,0 +1,181 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { FileText, Loader2, MapPinned, Scale } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/apiClient';
+import { Switch } from '@/app/components/ui/switch';
+import { RENT_ACTIVATION_RULES } from '@/lib/agreementOptions';
+import type { AdminPlatformSettings } from '@/lib/api/types';
+import { JurisdictionsPanel } from './JurisdictionsPanel';
+import { TemplatesPanel } from './TemplatesPanel';
+import { SwitchRow, message } from './ui';
+
+const TABS = [
+  { id: 'rules', label: 'Rules', icon: Scale },
+  { id: 'jurisdictions', label: 'Jurisdictions', icon: MapPinned },
+  { id: 'templates', label: 'Templates', icon: FileText },
+] as const;
+
+type SettingsBody = Parameters<typeof api.admin.settings.update>[0];
+
+function RulesPanel() {
+  const [settings, setSettings] = useState<AdminPlatformSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.admin.settings
+      .get()
+      .then((res) => setSettings(res.data.data))
+      .catch(() => toast.error('Failed to load the agreement rules.'));
+  }, []);
+
+  const save = async (body: SettingsBody) => {
+    setSaving(true);
+    try {
+      const res = await api.admin.settings.update(body);
+      setSettings(res.data.data);
+      toast.success('Saved.');
+    } catch (err) {
+      toast.error(message(err, 'Failed to save. Please try again.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!settings) return <Loader2 className="h-5 w-5 animate-spin text-gray-400" />;
+
+  const toggle = (
+    key:
+      | 'agreementTemplatesNeedApproval'
+      | 'agreementLandlordNameByManager'
+      | 'agreementAgencyFee'
+      | 'agreementLegalFee'
+      | 'agreementCautionFee'
+      | 'chargeForAgreements'
+      | 'chargeForUploads',
+    label: string,
+  ) => (
+    <Switch
+      checked={settings[key]}
+      disabled={saving}
+      onCheckedChange={(checked) => save({ [key]: checked })}
+      aria-label={label}
+    />
+  );
+
+  return (
+    <div className="space-y-4">
+      <SwitchRow
+        title="Templates must be approved before use"
+        hint="On: managers can only make agreements from an approved template, so a lawyer can review the wording first. Off: the newest draft or approved version of each template can be used straight away."
+      >
+        {toggle('agreementTemplatesNeedApproval', 'Templates must be approved before use')}
+      </SwitchRow>
+      <SwitchRow
+        title="The manager may type the owner's name"
+        hint="When a property has no landlord account, the manager types the owner's name on the agreement and the agent is noted. Off: the property needs a landlord account first."
+      >
+        {toggle('agreementLandlordNameByManager', "The manager may type the owner's name")}
+      </SwitchRow>
+      <SwitchRow
+        title="Offer a caution deposit"
+        hint="Shows the caution deposit on the agreement form."
+      >
+        {toggle('agreementCautionFee', 'Offer a caution deposit')}
+      </SwitchRow>
+      <SwitchRow
+        title="Offer an agency fee"
+        hint="Shows an optional agency fee on the agreement form."
+      >
+        {toggle('agreementAgencyFee', 'Offer an agency fee')}
+      </SwitchRow>
+      <SwitchRow
+        title="Offer a legal fee"
+        hint="Shows an optional legal fee on the agreement form."
+      >
+        {toggle('agreementLegalFee', 'Offer a legal fee')}
+      </SwitchRow>
+
+      <div className="space-y-2 rounded-lg border border-gray-200 p-4">
+        <fieldset disabled={saving} className="space-y-2">
+          <legend className="mb-2 text-sm font-medium text-gray-900">When a rent starts</legend>
+          {RENT_ACTIVATION_RULES.map((o) => (
+            <label
+              key={o.value}
+              className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${settings.rentActivationRule === o.value ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 hover:bg-gray-50'}`}
+            >
+              <input
+                type="radio"
+                name="rent-activation"
+                checked={settings.rentActivationRule === o.value}
+                onChange={() => save({ rentActivationRule: o.value })}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-900">{o.label}</span>
+                <span className="block text-xs text-gray-600">{o.hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </div>
+
+      <SwitchRow
+        title="Charge credits to make an agreement"
+        hint="Takes the credits the Rent agreement service costs (Admin > Plans & billing) when a manager makes an agreement from a template. Off while billing is not live."
+      >
+        {toggle('chargeForAgreements', 'Charge credits to make an agreement')}
+      </SwitchRow>
+      <SwitchRow
+        title="Charge credits to upload an existing agreement"
+        hint="Uploading an agreement you already have is free unless this is on."
+      >
+        {toggle('chargeForUploads', 'Charge credits to upload an existing agreement')}
+      </SwitchRow>
+    </div>
+  );
+}
+
+export default function AdminAgreementsPage() {
+  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('rules');
+
+  return (
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Rent agreements</h1>
+        <p className="mt-1 max-w-2xl text-sm text-gray-600">
+          The rules, places and wording behind rent agreements. Everything here is yours to change
+          without a release. The starting jurisdictions and templates have not been reviewed by a
+          lawyer.
+        </p>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto" role="tablist">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap ${
+              tab === id
+                ? 'bg-blue-600 text-white'
+                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <section className="rounded-lg border border-gray-200 bg-white p-6">
+        {tab === 'rules' && <RulesPanel />}
+        {tab === 'jurisdictions' && <JurisdictionsPanel />}
+        {tab === 'templates' && <TemplatesPanel />}
+      </section>
+    </div>
+  );
+}

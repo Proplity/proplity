@@ -2,6 +2,8 @@ import axios from 'axios';
 import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
+  AgreementTemplate,
+  AgreementTemplateInput,
   AccessCodeDetail,
   AccessVerifyResult,
   AdCampaign,
@@ -14,6 +16,8 @@ import type {
   CheckoutSubscriptionInput,
   CreditEntry,
   InvitationBatchResult,
+  Jurisdiction,
+  JurisdictionInput,
   PaidService,
   PortfolioImportResult,
   PortfolioPreview,
@@ -494,6 +498,43 @@ export const api = {
         apiClient.patch<{ data: Plan }>(`/api/v1/admin/plans/${id}`, body),
       remove: (id: string) => apiClient.delete(`/api/v1/admin/plans/${id}`),
     },
+    jurisdictions: {
+      list: () => apiClient.get<{ data: Jurisdiction[] }>('/api/v1/admin/jurisdictions'),
+      create: (body: JurisdictionInput & { key: string; name: string }) =>
+        apiClient.post<{ data: Jurisdiction }>('/api/v1/admin/jurisdictions', body),
+      update: (id: string, body: Omit<JurisdictionInput, 'key'>) =>
+        apiClient.patch<{ data: Jurisdiction }>(`/api/v1/admin/jurisdictions/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/jurisdictions/${id}`),
+    },
+    agreementTemplates: {
+      list: () => apiClient.get<{ data: AgreementTemplate[] }>('/api/v1/admin/agreement-templates'),
+      create: (
+        body: AgreementTemplateInput & {
+          key: string;
+          name: string;
+          jurisdictionId: string;
+          clauses: NonNullable<AgreementTemplateInput['clauses']>;
+        },
+      ) => apiClient.post<{ data: AgreementTemplate }>('/api/v1/admin/agreement-templates', body),
+      update: (id: string, body: Omit<AgreementTemplateInput, 'key' | 'jurisdictionId'>) =>
+        apiClient.patch<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}`,
+          body,
+        ),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/agreement-templates/${id}`),
+      approve: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/approve`,
+        ),
+      newVersion: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/new-version`,
+        ),
+      archive: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/archive`,
+        ),
+    },
     services: {
       list: () => apiClient.get<{ data: PaidService[] }>('/api/v1/admin/services'),
       create: (body: {
@@ -573,6 +614,9 @@ export const api = {
         '/api/v1/uploads/complete',
         body,
       ),
+  },
+  jurisdictions: {
+    list: () => apiClient.get<{ data: Jurisdiction[] }>('/api/v1/jurisdictions'),
   },
   plans: {
     list: () => apiClient.get<{ data: Plan[] }>('/api/v1/plans'),

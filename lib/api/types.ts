@@ -364,6 +364,14 @@ export type PlatformSettings = {
   downgradeRule: 'BLOCK' | 'GRACE_PERIOD' | 'ALLOW_AND_BILL';
   downgradeGraceDays: number;
   teamMemberAccess: 'ASSIGNED_ONLY' | 'ALL_COMPANY';
+  agreementTemplatesNeedApproval: boolean;
+  agreementLandlordNameByManager: boolean;
+  agreementAgencyFee: boolean;
+  agreementLegalFee: boolean;
+  agreementCautionFee: boolean;
+  rentActivationRule: 'INDEPENDENT' | 'AFTER_BOTH_SIGN';
+  chargeForAgreements: boolean;
+  chargeForUploads: boolean;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -1321,4 +1329,65 @@ export type InvitationBatchResult = {
   notAllowed: number;
   limitReached: boolean;
   dailyLimit: number;
+};
+
+// ── Rent agreement rules and templates ──────────────────────────────────────────────────────────
+
+export type RuleMode = 'OFF' | 'WARN' | 'BLOCK';
+
+export type Jurisdiction = {
+  id: string;
+  key: string;
+  name: string;
+  states: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  advanceRentMaxMonths: number | null;
+  advanceRentMode: RuleMode;
+  /** Days of notice to quit by payment frequency. */
+  noticeDays: Partial<Record<'MONTHLY' | 'QUARTERLY' | 'BI_ANNUAL' | 'ANNUAL', number>>;
+  excludedAreas: string[];
+  excludedAreasMode: RuleMode;
+  registrationThresholdYears: number | null;
+  stampDutyNote: string | null;
+  sourceNote: string | null;
+  rulesCheckedAt: string | null;
+  lawyerReviewed: boolean;
+  sortOrder: number;
+};
+
+export type JurisdictionInput = Partial<Omit<Jurisdiction, 'id' | 'rulesCheckedAt'>> & {
+  rulesCheckedAt?: string | null;
+};
+
+export type TemplateClauseData = {
+  id: string;
+  title: string;
+  body: string;
+  mode: 'LOCKED' | 'EDITABLE' | 'OPTIONAL';
+  defaultOn?: boolean;
+};
+
+export type AgreementTemplate = {
+  id: string;
+  key: string;
+  name: string;
+  version: number;
+  jurisdictionId: string;
+  jurisdiction?: { id: string; name: string };
+  status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
+  clauses: TemplateClauseData[];
+  witnessRequired: boolean;
+  notes: string | null;
+  approvedAt: string | null;
+  updatedAt: string;
+};
+
+export type AgreementTemplateInput = {
+  key?: string;
+  name?: string;
+  jurisdictionId?: string;
+  clauses?: TemplateClauseData[];
+  witnessRequired?: boolean;
+  notes?: string | null;
 };
