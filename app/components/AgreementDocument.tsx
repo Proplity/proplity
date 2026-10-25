@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Printer } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { useRent } from '@/hooks/useRents';
 import { useRentAgreement } from '@/hooks/useRentAgreement';
 import { useAuth } from '@/context/AuthContext';
@@ -66,14 +66,27 @@ export function AgreementDocument({ rentId }: { rentId: string }) {
         <Link href={back} className="text-sm text-gray-600 hover:text-gray-900">
           ← Back
         </Link>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Printer className="h-4 w-4" />
-          Print or save as PDF
-        </button>
+        <div className="flex gap-2">
+          {agreement.source === 'GENERATED' && (
+            <a
+              href={`/api/v1/rents/${rentId}/agreement/pdf`}
+              download
+              data-testid="agreement-pdf-download"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </button>
+        </div>
       </div>
 
       {agreement.source === 'UPLOADED' ? (

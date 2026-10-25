@@ -70,5 +70,5 @@ test('an expired or unknown link says so instead of showing an agreement', async
   );
   await page.goto(`/witness/${TOKEN}`);
   await expect(page.getByRole('heading', { name: "This link can't be used" })).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText('expired');
+  await expect(page.getByText('This link has expired. Ask for a new one.')).toBeVisible();
 });

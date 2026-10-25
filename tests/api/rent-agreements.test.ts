@@ -11,6 +11,7 @@ import {
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
+import { TEST_BASE_URL } from '../setup/constants';
 import { ensureDefaultAgreementData } from '../../lib/agreements';
 
 // Owner decisions of 2026-10-23: a manager can make a rent agreement from a template (the admin
@@ -913,3 +914,82 @@ async function ensureTemplateRestored() {
     data: { clauses: t.clauses as unknown as object },
   });
 }
+
+describe('the agreement as a PDF', () => {
+  beforeAll(async () => {
+    await resetDb();
+    await seedPlans();
+    await ensureDefaultAgreementData();
+    templateId = (
+      await testPrisma.agreementTemplate.findFirstOrThrow({ where: { key: 'lagos-residential' } })
+    ).id;
+    await setSystemSettings({
+      id: 'global',
+      agreementTemplatesNeedApproval: false,
+      rentActivationRule: 'INDEPENDENT',
+      chargeForAgreements: false,
+    });
+  });
+
+  const pdfOf = (w: World, cookie: string, query = '') =>
+    fetch(`${TEST_BASE_URL}${base(w)}/pdf${query}`, { headers: { Cookie: cookie } });
+
+  it('is made on the server for the property team, the tenant and the landlord', async () => {
+    const w = await world();
+    expect((await generate(w)).status).toBe(201);
+    // The team can download a draft; the tenant cannot until it is sent.
+    const draft = await pdfOf(w, w.m);
+    expect(draft.status).toBe(200);
+    expect(draft.headers.get('content-type')).toBe('application/pdf');
+    expect(draft.headers.get('content-disposition')).toMatch(
+      /^attachment; filename="Rent-agreement-.*\.pdf"$/,
+    );
+    expect(draft.headers.get('cache-control')).toContain('no-store');
+    const bytes = new Uint8Array(await draft.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+    expect((await pdfOf(w, w.t)).status).toBe(404);
+
+    await post(w, 'issue', w.m);
+    expect((await pdfOf(w, w.t)).status).toBe(200);
+    expect((await pdfOf(w, w.l)).status).toBe(200);
+    expect((await pdfOf(w, w.m, '?inline=1')).headers.get('content-disposition')).toMatch(
+      /^inline;/,
+    );
+  });
+
+  it('includes the signatures once they are added', async () => {
+    const w = await world();
+    await generate(w);
+    await post(w, 'issue', w.m);
+    const before = new Uint8Array(await (await pdfOf(w, w.t)).arrayBuffer());
+    await sign(w, w.t, 'Ada Okafor');
+    await sign(w, w.m, 'Bola Adeyemi');
+    const after = new Uint8Array(await (await pdfOf(w, w.t)).arrayBuffer());
+    // The text is in a subset font, so compare the documents rather than read them: the signed
+    // one differs (typed names and times replace the blank lines).
+    expect(Array.from(after).join(',')).not.toBe(Array.from(before).join(','));
+  });
+
+  it('is closed to strangers and signed-out visitors, and refuses an uploaded agreement', async () => {
+    const w = await world();
+    await generate(w);
+    await post(w, 'issue', w.m);
+    const stranger = await createUser(Role.MANAGER);
+    expect((await pdfOf(w, await authCookie(stranger.id, stranger.role))).status).toBe(403);
+    const otherTenant = await createUser(Role.TENANT);
+    expect((await pdfOf(w, await authCookie(otherTenant.id, otherTenant.role))).status).toBe(403);
+    expect((await pdfOf(w, '')).status).toBe(401);
+
+    const u = await world();
+    const fileUrl = await uploadFile(u.m);
+    await apiFetch(base(u), { method: 'POST', cookie: u.m, body: { source: 'UPLOADED', fileUrl } });
+    const res = await pdfOf(u, u.m);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('UPLOADED_AGREEMENT');
+  });
+
+  it('answers 404 for a rent with no agreement', async () => {
+    const w = await world();
+    expect((await pdfOf(w, w.m)).status).toBe(404);
+  });
+});

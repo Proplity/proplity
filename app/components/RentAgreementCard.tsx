@@ -389,9 +389,14 @@ function TeamView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) {
 
         <div className="mt-4 flex flex-wrap gap-3">
           {!uploaded && (
-            <Link href={`/agreements/${rent.id}`} className={button}>
-              View and print
-            </Link>
+            <>
+              <Link href={`/agreements/${rent.id}`} className={button}>
+                View and print
+              </Link>
+              <a href={`/api/v1/rents/${rent.id}/agreement/pdf`} download className={button}>
+                Download PDF
+              </a>
+            </>
           )}
           {uploaded && agreement.fileUrl && (
             <button
@@ -532,9 +537,14 @@ function TenantView({ rent, onChanged }: { rent: Rent; onChanged: () => void }) 
               Read the agreement
             </button>
           ) : (
-            <Link href={`/agreements/${rent.id}`} className={button}>
-              Read and print the agreement
-            </Link>
+            <>
+              <Link href={`/agreements/${rent.id}`} className={button}>
+                Read and print the agreement
+              </Link>
+              <a href={`/api/v1/rents/${rent.id}/agreement/pdf`} download className={button}>
+                Download PDF
+              </a>
+            </>
           )}
         </div>
 

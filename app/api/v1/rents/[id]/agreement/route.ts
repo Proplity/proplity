@@ -17,29 +17,15 @@ import type { ClauseChoices } from '@/lib/agreementFields';
 import { jurisdictionFor, checkTenancyRules, type JurisdictionRules } from '@/lib/tenancyRules';
 import {
   currentAgreement,
-  loadRentForAgreement,
+  accessibleRent,
   prepareGeneration,
   serializeAgreement,
-  type RentForAgreement,
 } from '@/lib/rentAgreement';
 import { createAgreementSchema, updateAgreementSchema } from '@/lib/rentAgreementSchema';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 const SERVICE_KEY = 'rent_agreement';
-
-/** The rent, if this person may see its agreement: the tenant it is for, or the property team. */
-async function accessibleRent(
-  session: Parameters<typeof canManageProperty>[0],
-  rentId: string,
-): Promise<{ rent: RentForAgreement; viewer: 'TEAM' | 'TENANT' } | 'NOT_FOUND' | 'FORBIDDEN'> {
-  const rent = await loadRentForAgreement(rentId);
-  if (!rent) return 'NOT_FOUND';
-  if (session.role === 'TENANT') {
-    return rent.tenantId === session.sub ? { rent, viewer: 'TENANT' } : 'FORBIDDEN';
-  }
-  return canManageProperty(session, rent.unit.property) ? { rent, viewer: 'TEAM' } : 'FORBIDDEN';
-}
 
 const denied = (why: 'NOT_FOUND' | 'FORBIDDEN') =>
   why === 'NOT_FOUND'
