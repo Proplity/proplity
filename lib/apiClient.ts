@@ -13,7 +13,10 @@ import type {
   BankAccount,
   CheckoutSubscriptionInput,
   CreditEntry,
+  InvitationBatchResult,
   PaidService,
+  PortfolioImportResult,
+  PortfolioPreview,
   Plan,
   PlanInput,
   TeamOverview,
@@ -223,6 +226,18 @@ export const api = {
         { headers: { 'Content-Type': undefined } },
       );
     },
+    /** A file of properties, units and tenants: preview first (saves nothing), then import it. */
+    importPortfolio: (file: File, opts: { preview?: boolean; confirmOverage?: boolean } = {}) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (opts.preview) formData.append('preview', 'true');
+      if (opts.confirmOverage) formData.append('confirmOverage', 'true');
+      return apiClient.post<{ data: PortfolioPreview & PortfolioImportResult }>(
+        '/api/v1/properties/import',
+        formData,
+        { headers: { 'Content-Type': undefined } },
+      );
+    },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
     viewingAvailability: (propertyId: string, date: string) =>
@@ -376,6 +391,11 @@ export const api = {
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { status }),
     renew: (id: string, body: RenewRentInput) =>
       apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { renew: body }),
+    /** Send (or send again) the invitation email to a tenant who has not signed in yet. */
+    invite: (id: string) =>
+      apiClient.post<{ data: { invitation: 'INVITED' } }>(`/api/v1/rents/${id}/invite`),
+    /** Send every waiting invitation that today's limit allows. */
+    inviteAll: () => apiClient.post<{ data: InvitationBatchResult }>('/api/v1/rents/invitations'),
     sign: (id: string, fullName: string) =>
       apiClient.post<{ data: RentSignature }>(`/api/v1/rents/${id}/sign`, { fullName }),
     notes: {

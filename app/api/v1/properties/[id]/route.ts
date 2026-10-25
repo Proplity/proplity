@@ -8,7 +8,7 @@ import { validateBody } from '@/lib/api/validate';
 import { canManageProperty, isPublicUnit, serializeUnit } from '@/lib/api/propertyAccess';
 import { sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
-import { listingHash } from '@/lib/propertyFingerprint';
+import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
 import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
 import { appUrl } from '@/lib/appUrl';
@@ -132,6 +132,9 @@ const updatePropertySchema = z.object({
   // /moderation route). Gated below: can only ever flip true once ADMIN has
   // approved the listing; false (unpublish) is always allowed.
   isPublished: z.boolean().optional(),
+  // Whether the property is kept for tenant management only (never listed, never reviewed). Sent
+  // on its own: false lists it (it then waits for an admin's approval), true takes it off the market.
+  managementOnly: z.boolean().optional(),
   saveAsDraft: z.boolean().optional(),
   submitForReview: z.boolean().optional(),
   cancelPendingEdits: z.boolean().optional(),
@@ -186,6 +189,65 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           );
         }
       }
+    }
+
+    // Moving between "management only" and "listed" is its own step, so it never mixes with an
+    // ordinary edit that might need the review rules below.
+    if (validated.data.managementOnly !== undefined) {
+      const { managementOnly, ...others } = validated.data;
+      if (Object.values(others).some((v) => v !== undefined)) {
+        return NextResponse.json(
+          { error: 'Change whether a property is listed on its own, without other edits' },
+          { status: 400 },
+        );
+      }
+      if (managementOnly === property.managementOnly) {
+        return NextResponse.json({ data: property });
+      }
+      if (managementOnly) {
+        // Off the market: it stops being a listing, so it also stops waiting for or being shown.
+        const updated = await prisma.property.update({
+          where: { id },
+          data: { managementOnly: true, isPublished: false },
+        });
+        return NextResponse.json({ data: updated });
+      }
+      // Onto the market: it is compared with the existing listings and sent for review like any
+      // new listing, and its units are only shown once an admin approves.
+      const hash = listingHash(property.address, property.city);
+      const duplicates = await findPossibleDuplicates(hash, property.id);
+      const updated = await prisma.property.update({
+        where: { id },
+        data: {
+          managementOnly: false,
+          listingHash: hash,
+          ...(duplicates.length > 0
+            ? {
+                moderationNotes: `Possible duplicate of: ${duplicates
+                  .map((d) => `${d.name} (${d.id})`)
+                  .join(', ')}`,
+              }
+            : {}),
+        },
+      });
+      if (updated.moderationStatus === 'PENDING_REVIEW') {
+        await notifyAdminsInApp({
+          title: 'Listing awaiting review',
+          body: `"${updated.name}" (${updated.address}, ${updated.city}) was submitted for review.`,
+          link: '/admin/properties',
+        });
+      }
+      return NextResponse.json({ data: updated, possibleDuplicates: duplicates.length });
+    }
+
+    if (validated.data.isPublished === true && property.managementOnly) {
+      return NextResponse.json(
+        {
+          error: 'This property is kept for management only. List it publicly before publishing it',
+          code: 'MANAGEMENT_ONLY',
+        },
+        { status: 409 },
+      );
     }
 
     if (validated.data.isPublished === true && property.moderationStatus !== 'APPROVED') {

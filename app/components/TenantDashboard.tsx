@@ -29,6 +29,7 @@ import { RentSignatureCard } from './TenantDetail';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { useFileViewer } from '@/context/FileViewerContext';
 import { AttentionCard } from './AttentionCard';
+import { ProfileCompletionBanner } from './ProfileCompletionBanner';
 import { perFrequency } from '@/lib/paymentFrequency';
 
 interface TenantDashboardProps {
@@ -170,6 +171,8 @@ export function TenantDashboard({ onNavigate }: TenantDashboardProps = {}) {
         <h1 className="mb-1 text-2xl font-semibold">My Rental Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here&apos;s your rental information.</p>
       </div>
+
+      <ProfileCompletionBanner />
 
       <AttentionCard />
 

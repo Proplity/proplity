@@ -80,7 +80,10 @@ export function getApprovedDate(property: Property): string | null {
 
 export default function AdminPropertiesPage() {
   const router = useRouter();
-  const { data: properties, loading, error, refetch } = useMyProperties();
+  const { data: everyProperty, loading, error, refetch } = useMyProperties();
+  // Properties kept for management only are never listed or reviewed, so they stay out of this queue.
+  const properties = everyProperty.filter((p) => !p.managementOnly);
+  const managementOnlyCount = everyProperty.length - properties.length;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<(typeof ALL_STATUSES)[number]>('PENDING_REVIEW');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -185,6 +188,8 @@ export default function AdminPropertiesPage() {
           </div>
           <p className="mt-1 text-sm text-gray-500">
             Review submissions, audit compliance, verify ownership, and publish listings.
+            {managementOnlyCount > 0 &&
+              ` ${managementOnlyCount} more ${managementOnlyCount === 1 ? 'property is' : 'properties are'} kept for management only and not shown here.`}
           </p>
         </div>
       </div>

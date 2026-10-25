@@ -247,7 +247,12 @@ export async function adminBreakdownSummary() {
   const [users, moderation, collected, pendingRows, cancelled, openByPriority, payments] =
     await Promise.all([
       prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
-      prisma.property.groupBy({ by: ['moderationStatus'], _count: { _all: true } }),
+      // Listings only: a property kept for management only has no review status to count.
+      prisma.property.groupBy({
+        by: ['moderationStatus'],
+        where: { managementOnly: false },
+        _count: { _all: true },
+      }),
       prisma.payment.aggregate({ _sum: { amount: true }, _count: { _all: true } }),
       prisma.$queryRaw<{ pending: number }[]>(Prisma.sql`
         SELECT COALESCE(SUM(GREATEST(0, i."amount" - COALESCE(p.paid, 0))), 0) AS pending

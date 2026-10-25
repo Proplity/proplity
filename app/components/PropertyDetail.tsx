@@ -349,6 +349,8 @@ function ListingStatusCard({
   const [cancellingEdits, setCancellingEdits] = useState(false);
   const [deletingDraft, setDeletingDraft] = useState(false);
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [changingListing, setChangingListing] = useState(false);
+  const [confirmListing, setConfirmListing] = useState<'list' | 'hide' | null>(null);
 
   const pendingChanges = property.metadata?.pendingChanges;
   const isUnderReview = pendingChanges?.status === 'PENDING_REVIEW';
@@ -429,7 +431,71 @@ function ListingStatusCard({
     }
   };
 
+  // Moving between "kept for management only" and "listed" is its own step: listing it sends it to
+  // an admin for review like any new listing; keeping it private takes it off the market.
+  const handleChangeListing = async (managementOnly: boolean) => {
+    setChangingListing(true);
+    try {
+      await api.properties.update(property.id, { managementOnly });
+      toast.success(
+        managementOnly
+          ? 'This property is now kept for management only.'
+          : 'Submitted to an admin for review. It is listed once they approve it.',
+      );
+      onRefetch();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg || 'Could not change this. Please try again.');
+    } finally {
+      setChangingListing(false);
+      setConfirmListing(null);
+    }
+  };
+
   const isEdited = property.moderationNotes?.includes('[EDITED]');
+
+  if (property.managementOnly) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900">Listing Status</h2>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+            Management only
+          </span>
+        </div>
+        <p className="text-sm text-gray-600">
+          This property is kept for tenant management. It is not listed, the public cannot see it,
+          and no admin reviews it. Its units still count towards your plan.
+        </p>
+        {isLandlordOrManager && (
+          <>
+            <button
+              type="button"
+              onClick={() => setConfirmListing('list')}
+              disabled={changingListing}
+              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+            >
+              List this property publicly
+            </button>
+            <p className="mt-1 text-center text-[11px] text-gray-400">
+              It goes to an admin for approval first, like any new listing
+            </p>
+          </>
+        )}
+        <ConfirmDialog
+          open={confirmListing === 'list'}
+          title="List this property publicly?"
+          description={`"${property.name}" will be sent to an admin for review. Once approved you can publish it so people can find it and apply.`}
+          confirmLabel="Send for review"
+          cancelLabel="Not now"
+          variant="warning"
+          isLoading={changingListing}
+          onCancel={() => setConfirmListing(null)}
+          onConfirm={() => handleChangeListing(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
@@ -611,6 +677,29 @@ function ListingStatusCard({
       </button>
       {(publishError || moderateError) && (
         <p className="mt-2 text-xs text-red-600">{publishError || moderateError}</p>
+      )}
+      {isLandlordOrManager && (
+        <>
+          <button
+            type="button"
+            onClick={() => setConfirmListing('hide')}
+            disabled={changingListing}
+            className="mt-3 w-full text-center text-xs font-medium text-gray-500 underline hover:text-gray-800 disabled:opacity-50"
+          >
+            Keep for management only (take off the market)
+          </button>
+          <ConfirmDialog
+            open={confirmListing === 'hide'}
+            title="Keep this property for management only?"
+            description={`"${property.name}" will be unpublished and removed from search. Your tenants, rents and invoices are not affected.`}
+            confirmLabel="Take off the market"
+            cancelLabel="Keep listed"
+            variant="warning"
+            isLoading={changingListing}
+            onCancel={() => setConfirmListing(null)}
+            onConfirm={() => handleChangeListing(true)}
+          />
+        </>
       )}
     </div>
   );

@@ -11,14 +11,15 @@ export function listingHash(address: string, city: string): string {
   return createHash('sha256').update(key).digest('hex');
 }
 
-// Other live properties that share this fingerprint. Merged-away listings
-// are excluded.
+// Other live listings that share this fingerprint. Merged-away listings are excluded, and so are
+// properties kept for management only: they are not listings, and their names are private.
 export function findPossibleDuplicates(hash: string, excludeId?: string) {
   return prisma.property.findMany({
     where: {
       listingHash: hash,
       ...(excludeId ? { id: { not: excludeId } } : {}),
       mergedIntoId: null,
+      managementOnly: false,
     },
     select: { id: true, name: true },
   });

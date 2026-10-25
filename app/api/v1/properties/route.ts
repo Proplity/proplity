@@ -140,6 +140,8 @@ const createPropertySchema = z.object({
   exteriorPhotoUrl: safeUrl.optional(),
   photoUrls: safeUrlList.optional(),
   isPublished: z.boolean().optional(),
+  // Kept for tenant management only: never listed and never sent to an admin for review.
+  managementOnly: z.boolean().optional(),
   managerId: z.string().optional(),
   landlordId: z.string().optional(),
 });
@@ -201,11 +203,13 @@ export const POST = withAuth(
       // still accepted, but its review notes point the moderator at the match.
       // Nothing is merged or rejected automatically.
       const hash = listingHash(data.address, data.city);
-      const duplicates = await findPossibleDuplicates(hash);
+      // A property kept for management only is not a listing, so there is nothing to compare or review.
+      const duplicates = data.managementOnly ? [] : await findPossibleDuplicates(hash);
       const property = await prisma.property.create({
         data: {
           ...data,
-          listingHash: hash,
+          // A property kept for management only is not a listing and has no fingerprint to match.
+          listingHash: data.managementOnly ? undefined : hash,
           ...(duplicates.length > 0
             ? {
                 moderationNotes: `Possible duplicate of: ${duplicates
@@ -219,6 +223,10 @@ export const POST = withAuth(
           ...(session.role === 'LANDLORD' && !data.landlordId ? { landlordId: session.sub } : {}),
         },
       });
+
+      if (property.managementOnly) {
+        return NextResponse.json({ data: property, possibleDuplicates: 0 }, { status: 201 });
+      }
 
       await notifyAdmins({
         title: 'Listing awaiting review',

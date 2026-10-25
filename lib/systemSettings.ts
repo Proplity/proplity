@@ -24,6 +24,7 @@ export async function getSystemSettings() {
     retentionAfterRejectionDays:
       settings?.retentionAfterRejectionDays ?? RETENTION_LIMITS.rejectionDays.default,
     tenantInvitesPerDay: settings?.tenantInvitesPerDay ?? INVITE_LIMITS.perDay.default,
+    inviteTenantsToManagementOnly: settings?.inviteTenantsToManagementOnly ?? true,
     enforcePlanLimits: settings?.enforcePlanLimits ?? false,
     unitBillingOwner: settings?.unitBillingOwner ?? 'MANAGER_ELSE_LANDLORD',
     overageMode: settings?.overageMode ?? 'ALLOW_AND_BILL',

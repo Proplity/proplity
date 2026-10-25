@@ -108,6 +108,7 @@ export async function createProperty(
     landlordId: string | null;
     createdById: string | null;
     isPublished: boolean;
+    managementOnly: boolean;
     moderationStatus: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
     metadata: any;
   }> = {},
@@ -122,6 +123,7 @@ export async function createProperty(
       landlordId: overrides.landlordId ?? null,
       createdById: overrides.createdById ?? null,
       isPublished: overrides.isPublished ?? false,
+      managementOnly: overrides.managementOnly ?? false,
       moderationStatus:
         overrides.moderationStatus ?? (overrides.isPublished ? 'APPROVED' : 'PENDING_REVIEW'),
       ...(overrides.metadata !== undefined ? { metadata: overrides.metadata } : {}),
