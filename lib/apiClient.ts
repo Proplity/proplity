@@ -21,6 +21,7 @@ import type {
   CreditShop,
   AgreementWitnessView,
   AdminStampDutyOrder,
+  StampDutyRefund,
   StampDutyOffer,
   StampDutyOrderView,
   WitnessAgreement,
@@ -647,6 +648,15 @@ export const api = {
         apiClient.post<{ data: { id: string; refundDue: boolean } }>(
           `/api/v1/admin/stamp-duty-orders/${id}/cancel`,
           { reason },
+        ),
+      refunds: (status: 'DUE' | 'REFUNDED' | 'ALL' = 'DUE') =>
+        apiClient.get<{ data: StampDutyRefund[] }>('/api/v1/admin/stamp-duty-refunds', {
+          params: { status },
+        }),
+      markRefunded: (orderId: string, reference: string) =>
+        apiClient.post<{ data: { orderId: string; amount: number; reference: string } }>(
+          `/api/v1/admin/stamp-duty-refunds/${orderId}/refunded`,
+          { reference },
         ),
     },
     creditPacks: {

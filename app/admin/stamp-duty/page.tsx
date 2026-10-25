@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
 import { naira } from '@/lib/planDisplay';
-import type { AdminStampDutyOrder } from '@/lib/api/types';
+import type { AdminStampDutyOrder, StampDutyRefund } from '@/lib/api/types';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none';
@@ -191,13 +191,85 @@ function OrderCard({ order, onDone }: { order: AdminStampDutyOrder; onDone: () =
   );
 }
 
+// Money owed back to buyers (a cancelled order, or an order stamped for less than quoted). It is
+// paid back by hand; here an admin records the reference once it has been.
+function RefundRow({ refund, onDone }: { refund: StampDutyRefund; onDone: () => void }) {
+  const [reference, setReference] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const record = async () => {
+    setBusy(true);
+    try {
+      await api.admin.stampDuty.markRefunded(refund.orderId, reference.trim());
+      toast.success('Recorded. The buyer has been told.');
+      onDone();
+    } catch (err) {
+      toast.error(messageOf(err, 'Could not record the refund.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <li className="rounded-lg border border-gray-200 bg-white p-4" data-testid="stamp-refund">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-medium text-gray-900">
+            {naira(refund.amount)} to {refund.buyer ? refund.buyer.name : 'the buyer'}
+          </p>
+          <p className="text-sm text-gray-600">
+            {refund.unit ?? 'An order'}
+            {refund.invoiceNumber ? `, invoice ${refund.invoiceNumber}` : ''}. {refund.reason}.
+          </p>
+          {refund.buyer && <p className="text-xs text-gray-500">{refund.buyer.email}</p>}
+        </div>
+        <p className="text-xs text-gray-500">Owed since {day(refund.dueAt)}</p>
+      </div>
+      {refund.refunded ? (
+        <p className="mt-3 text-sm text-green-700">
+          Paid back on {day(refund.refunded.at)}, reference {refund.refunded.reference}.
+        </p>
+      ) : (
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block w-64">
+            <span className="mb-1 block text-xs font-medium text-gray-700">
+              Transfer or Paystack reference
+            </span>
+            <input
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy || reference.trim().length < 3}
+            onClick={record}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            Mark as refunded
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 // The stamping queue: what people paid Proplity to stamp. Staff pay the authority, then record the
 // reference and the receipt here, which marks the agreement stamped for the tenant and the team.
 export default function AdminStampDutyPage() {
-  const [view, setView] = useState<'PAID' | 'COMPLETED' | 'CANCELLED'>('PAID');
+  const [view, setView] = useState<'PAID' | 'COMPLETED' | 'CANCELLED' | 'REFUNDS'>('PAID');
   const [orders, setOrders] = useState<AdminStampDutyOrder[] | null>(null);
+  const [refunds, setRefunds] = useState<StampDutyRefund[] | null>(null);
 
   const load = useCallback(() => {
+    if (view === 'REFUNDS') {
+      api.admin.stampDuty
+        .refunds('ALL')
+        .then((res) => setRefunds(res.data.data))
+        .catch(() => toast.error('Failed to load the refunds.'));
+      return;
+    }
     api.admin.stampDuty
       .list(view)
       .then((res) => setOrders(res.data.data))
@@ -222,7 +294,7 @@ export default function AdminStampDutyPage() {
         </p>
       </div>
       <div className="flex gap-2" role="tablist">
-        {(['PAID', 'COMPLETED', 'CANCELLED'] as const).map((v) => (
+        {(['PAID', 'COMPLETED', 'CANCELLED', 'REFUNDS'] as const).map((v) => (
           <button
             key={v}
             type="button"
@@ -230,6 +302,7 @@ export default function AdminStampDutyPage() {
             aria-selected={view === v}
             onClick={() => {
               setOrders(null);
+              setRefunds(null);
               setView(v);
             }}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${
@@ -238,11 +311,35 @@ export default function AdminStampDutyPage() {
                 : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            {v === 'PAID' ? 'To do' : v === 'COMPLETED' ? 'Done' : 'Cancelled'}
+            {v === 'PAID'
+              ? 'To do'
+              : v === 'COMPLETED'
+                ? 'Done'
+                : v === 'CANCELLED'
+                  ? 'Cancelled'
+                  : 'Refunds'}
           </button>
         ))}
       </div>
-      {!orders ? (
+      {view === 'REFUNDS' ? (
+        !refunds ? (
+          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        ) : refunds.length === 0 ? (
+          <p className="text-sm text-gray-600">No refunds are owed.</p>
+        ) : (
+          <ul className="space-y-3">
+            {[...refunds]
+              .sort((a, b) => Number(!!a.refunded) - Number(!!b.refunded))
+              .map((r) => (
+                <RefundRow
+                  key={`${r.orderId}-${r.refunded ? 'done' : 'due'}`}
+                  refund={r}
+                  onDone={load}
+                />
+              ))}
+          </ul>
+        )
+      ) : !orders ? (
         <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
       ) : orders.length === 0 ? (
         <p className="text-sm text-gray-600">Nothing here.</p>

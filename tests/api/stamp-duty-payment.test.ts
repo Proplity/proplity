@@ -517,6 +517,98 @@ describe('paying stamp duty through Proplity', () => {
     ).toBe('CANCELLED');
   });
 
+  it('lists the refunds owed, and records each once it is paid back by hand', async () => {
+    const w = await world();
+    await executed(w);
+    const res = await pay(w, w.m);
+    await webhookPay(res.body.data.invoiceId, 20_500);
+    const orderId = res.body.data.id as string;
+    await apiFetch(`/api/v1/admin/stamp-duty-orders/${orderId}/cancel`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { reason: 'The document was refused' },
+    });
+
+    const list = (status?: string) =>
+      apiFetch(`/api/v1/admin/stamp-duty-refunds${status ? `?status=${status}` : ''}`, {
+        cookie: adminCookie,
+      });
+    const owed = (await list()).body.data.find((r: { orderId: string }) => r.orderId === orderId);
+    expect(owed).toMatchObject({
+      amount: 20_500,
+      reason: 'The document was refused',
+      refunded: null,
+      buyer: { id: w.manager.id },
+    });
+    expect(owed.unit).toContain('Stamp Court');
+    expect((await list('BOGUS')).status).toBe(400);
+    expect((await apiFetch('/api/v1/admin/stamp-duty-refunds', { cookie: w.m })).status).toBe(403);
+
+    const record = (cookie: string, body: unknown = { reference: 'PSTK-REFUND-1' }, id = orderId) =>
+      apiFetch(`/api/v1/admin/stamp-duty-refunds/${id}/refunded`, {
+        method: 'POST',
+        cookie,
+        body,
+      });
+    expect((await record(w.m)).status).toBe(403);
+    expect((await record(adminCookie, { reference: 'x' })).status).toBe(400);
+    expect((await record(adminCookie, { reference: 'PSTK-REFUND-1', extra: 1 })).status).toBe(400);
+    expect((await record(adminCookie, undefined, crypto.randomUUID())).body.code).toBe(
+      'NO_REFUND_DUE',
+    );
+
+    const done = await record(adminCookie);
+    expect(done.status).toBe(200);
+    expect(done.body.data).toMatchObject({ amount: 20_500, reference: 'PSTK-REFUND-1' });
+    const told = await testPrisma.notification.findMany({
+      where: { recipientId: w.manager.id, title: 'Your stamp duty refund was sent' },
+    });
+    expect(told).toHaveLength(1);
+    expect(told[0].body).toContain('PSTK-REFUND-1');
+
+    // Once only, even when asked twice at the same moment.
+    const again = await record(adminCookie);
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe('ALREADY_REFUNDED');
+    expect(
+      await testPrisma.auditLog.count({
+        where: { entityId: orderId, action: 'STAMP_DUTY_REFUNDED' },
+      }),
+    ).toBe(1);
+
+    const stillDue = (await list()).body.data.map((r: { orderId: string }) => r.orderId);
+    expect(stillDue).not.toContain(orderId);
+    const paidBack = (await list('REFUNDED')).body.data.find(
+      (r: { orderId: string }) => r.orderId === orderId,
+    );
+    expect(paidBack.refunded).toMatchObject({ reference: 'PSTK-REFUND-1' });
+  });
+
+  it('records a refund only once when two admins click at the same moment', async () => {
+    const w = await world();
+    await executed(w);
+    const res = await pay(w, w.m);
+    await webhookPay(res.body.data.invoiceId, 20_500);
+    await apiFetch(`/api/v1/admin/stamp-duty-orders/${res.body.data.id}/cancel`, {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { reason: 'Refused' },
+    });
+    const go = () =>
+      apiFetch(`/api/v1/admin/stamp-duty-refunds/${res.body.data.id}/refunded`, {
+        method: 'POST',
+        cookie: adminCookie,
+        body: { reference: 'PSTK-RACE' },
+      });
+    const results = await Promise.all([go(), go()]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(
+      await testPrisma.auditLog.count({
+        where: { entityId: res.body.data.id, action: 'STAMP_DUTY_REFUNDED' },
+      }),
+    ).toBe(1);
+  });
+
   it('keeps the admin’s rates and switches in the settings and jurisdictions', async () => {
     const patch = (body: unknown) =>
       apiFetch('/api/v1/admin/settings', { method: 'PATCH', cookie: adminCookie, body });

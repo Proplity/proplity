@@ -1567,6 +1567,19 @@ export type StampDutyOrderView = {
   cancelReason: string | null;
 };
 
+/** One stamp duty refund owed (or already paid back) to a buyer. */
+export type StampDutyRefund = {
+  orderId: string;
+  amount: number;
+  reason: string;
+  dueAt: string;
+  invoiceNumber: string | null;
+  rentId: string | null;
+  unit: string | null;
+  buyer: { id: string; name: string; email: string } | null;
+  refunded: { at: string; reference: string } | null;
+};
+
 /** One row of the admin's stamping queue. */
 export type AdminStampDutyOrder = StampDutyOrderView & {
   reference: string | null;
