@@ -22,6 +22,10 @@ const nextConfig = {
   // @prisma/client-runtime-utils) which Turbopack then tries to read as a
   // file and panics on. `serverExternalPackages` above already keeps Prisma
   // unbundled and traced correctly.
+  // The agreement PDF reads its fonts from disk at run time; tracing cannot see that, so say so.
+  outputFileTracingIncludes: {
+    '/api/v1/rents/[id]/agreement/pdf': ['./lib/pdf/fonts/*.ttf'],
+  },
   images: {
     // Remote listing images are shown with plain <img>; the only next/image use is a
     // local file. A wildcard here made /_next/image an open proxy to any https host.

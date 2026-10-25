@@ -19,6 +19,19 @@ type Actor = {
   scope?: string[];
 };
 
+/** Whoever may see a rent's agreement: the tenant it is for, or the property team. */
+export async function accessibleRent(
+  session: Actor,
+  rentId: string,
+): Promise<{ rent: RentForAgreement; viewer: 'TEAM' | 'TENANT' } | 'NOT_FOUND' | 'FORBIDDEN'> {
+  const rent = await loadRentForAgreement(rentId);
+  if (!rent) return 'NOT_FOUND';
+  if (session.role === 'TENANT') {
+    return rent.tenantId === session.sub ? { rent, viewer: 'TENANT' } : 'FORBIDDEN';
+  }
+  return canManageProperty(session, rent.unit.property) ? { rent, viewer: 'TEAM' } : 'FORBIDDEN';
+}
+
 export type AgreementFailure = {
   ok: false;
   status: number;
