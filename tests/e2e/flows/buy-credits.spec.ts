@@ -22,7 +22,7 @@ test('a manager buys a credit pack through the mock checkout and the balance gro
 
   await page.getByTestId('buy-credits-open').click();
   const dialog = page.getByTestId('buy-credits-dialog');
-  await expect(dialog.getByText('20 credits')).toBeVisible();
+  await expect(dialog.getByTestId('buy-pack-credits-20')).toBeVisible();
   await page.getByTestId('buy-pack-credits-5').click();
 
   await expect(page).toHaveURL(/\/dev\/mock-checkout\?/);
