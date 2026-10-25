@@ -343,10 +343,12 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     }
 
     if (breakdownType === 'properties') {
+      // Listings only: a property kept for management only is never reviewed.
       const filtered = properties.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.city.toLowerCase().includes(searchQuery.toLowerCase()),
+          !p.managementOnly &&
+          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.city.toLowerCase().includes(searchQuery.toLowerCase())),
       );
       return (
         <table className="w-full text-sm">

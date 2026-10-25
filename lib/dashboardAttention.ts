@@ -501,7 +501,7 @@ async function vendorAttention(userId: string): Promise<AttentionItem[]> {
 async function adminAttention(userId: string): Promise<AttentionItem[]> {
   const [listings, vendors, overdue, transfers] = await Promise.all([
     prisma.property.findMany({
-      where: { moderationStatus: 'PENDING_REVIEW' },
+      where: { moderationStatus: 'PENDING_REVIEW', managementOnly: false },
       orderBy: { createdAt: 'asc' },
       select: { name: true },
     }),

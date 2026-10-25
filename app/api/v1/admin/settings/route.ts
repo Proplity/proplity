@@ -66,6 +66,7 @@ const updateSchema = z
       .min(INVITE_LIMITS.perDay.min, `At least ${INVITE_LIMITS.perDay.min}`)
       .max(INVITE_LIMITS.perDay.max, `At most ${INVITE_LIMITS.perDay.max} a day`)
       .optional(),
+    inviteTenantsToManagementOnly: z.boolean().optional(),
     enforcePlanLimits: z.boolean().optional(),
     unitBillingOwner: z.nativeEnum(UnitBillingOwner).optional(),
     overageMode: z.nativeEnum(OverageMode).optional(),

@@ -265,7 +265,8 @@ export async function adminDashboardSummary(now = new Date()) {
     prisma.payment.aggregate({ _sum: { amount: true } }),
     prisma.maintenanceRequest.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
     prisma.property.findMany({
-      where: { moderationStatus: 'PENDING_REVIEW' },
+      // A property kept for management only is never reviewed, so it is not waiting for anyone.
+      where: { moderationStatus: 'PENDING_REVIEW', managementOnly: false },
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { id: true, name: true, createdAt: true },
@@ -444,7 +445,7 @@ export async function adminReportsSummary(start: Date, end: Date) {
       SELECT pr."state" AS state,
         COUNT(DISTINCT pr."id")::int AS total,
         COUNT(DISTINCT pr."id") FILTER (WHERE pr."moderationStatus" = 'APPROVED')::int AS approved,
-        COUNT(DISTINCT pr."id") FILTER (WHERE pr."moderationStatus" = 'PENDING_REVIEW')::int AS pending,
+        COUNT(DISTINCT pr."id") FILTER (WHERE pr."moderationStatus" = 'PENDING_REVIEW' AND NOT pr."managementOnly")::int AS pending,
         COUNT(u."id")::int AS units,
         COUNT(u."id") FILTER (WHERE u."status" = 'OCCUPIED')::int AS occupied,
         AVG(u."rentAmount") AS "avgRent"

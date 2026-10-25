@@ -60,6 +60,10 @@ model SystemSettings {
   // How many new people one manager or landlord may start a tenancy for by email address in a day
   // (each sends an invitation email from Proplity). 0 stops them; admins are not limited (ISS-154).
   tenantInvitesPerDay                  Int              @default(10)
+  // A property kept for tenant management only is never reviewed by an admin, so the "approved
+  // listing" condition for inviting a new tenant by email cannot apply. When true (default) they may
+  // invite anyway, within the daily limit above; when false only an admin may.
+  inviteTenantsToManagementOnly        Boolean          @default(true)
   // Plans and limits (Admin > Plans & billing). Limits are off until billing is live: with them on
   // and nobody able to pay, a free account would be stuck at its included units.
   enforcePlanLimits                    Boolean          @default(false)

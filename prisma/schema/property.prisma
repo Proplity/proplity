@@ -72,6 +72,9 @@ model Property {
   // imageUrl / exteriorPhotoUrl stay as the cover and exterior picks.
   photoUrls             String[]
   isPublished           Boolean               @default(false)
+  // A property kept for tenant management only: never listed, never in the admin review queue.
+  // Its units still count towards the plan. Turning this off asks for the usual approval first.
+  managementOnly        Boolean               @default(false)
   moderationStatus      ModerationStatus      @default(PENDING_REVIEW)
   moderationNotes       String?
   metadata              Json?

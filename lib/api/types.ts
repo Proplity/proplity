@@ -85,6 +85,8 @@ export type Property = {
     role?: string;
   } | null;
   isPublished: boolean;
+  /** Kept for tenant management only: never listed, never in the admin review queue. */
+  managementOnly?: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
   floodRiskScore: number | null;
@@ -143,9 +145,13 @@ export type CreatePropertyInput = {
   video360Url?: string;
   exteriorPhotoUrl?: string;
   photoUrls?: string[];
+  /** Keep it for tenant management only: never listed, never reviewed by an admin. */
+  managementOnly?: boolean;
 };
 
 export type UpdatePropertyInput = {
+  /** false lists a management-only property publicly (it then waits for an admin's approval); true takes it off the market. */
+  managementOnly?: boolean;
   /** A company's managing partner can hand a property to someone on their team. */
   managerId?: string;
   name?: string;
@@ -351,6 +357,7 @@ export type PlatformSettings = {
   retentionAfterTenancyDays: number;
   retentionAfterRejectionDays: number;
   tenantInvitesPerDay: number;
+  inviteTenantsToManagementOnly: boolean;
   enforcePlanLimits: boolean;
   unitBillingOwner: 'MANAGER_ELSE_LANDLORD' | 'CREATOR' | 'BOTH';
   overageMode: 'ALLOW_AND_BILL' | 'HARD_STOP' | 'CONFIRM_EACH_TIME';
@@ -417,6 +424,9 @@ export type Note = {
   createdAt: string;
 };
 
+/** Where a tenant is in joining: signed in (JOINED), link sent (INVITED), link ran out (EXPIRED), or no invitation sent yet (NOT_SENT). */
+export type InvitationState = 'JOINED' | 'INVITED' | 'EXPIRED' | 'NOT_SENT';
+
 export type Rent = {
   id: string;
   unitId: string;
@@ -451,6 +461,7 @@ export type Rent = {
   notices?: Notice[];
   invoices?: Invoice[];
   tenantInvited?: boolean;
+  invitation?: InvitationState;
 };
 
 export type CreateRentInput = {
@@ -1253,4 +1264,61 @@ export type TeamOverview = {
   members: TeamMember[];
   seats: { used: number; included: number };
   limitsEnforced: boolean;
+};
+
+/** What a spreadsheet of properties, units and tenants would do (POST /properties/import?preview=true). */
+export type PortfolioSummary = {
+  properties: number;
+  newProperties: number;
+  existingProperties: number;
+  units: number;
+  tenancies: number;
+  activeTenancies: number;
+  newTenantAccounts: number;
+  linkedTenantAccounts: number;
+};
+
+export type PortfolioPreview = {
+  summary: PortfolioSummary;
+  properties: {
+    name: string;
+    address: string;
+    city: string;
+    /** The property already exists, so the file adds units to it. */
+    existing: boolean;
+    units: {
+      row: number;
+      unitNumber: string;
+      rentAmount: number;
+      paymentFrequency: string;
+      tenant: {
+        name: string;
+        email: string;
+        account: 'NEW' | 'EXISTING';
+        status: 'ACTIVE' | 'PENDING';
+      } | null;
+    }[];
+  }[];
+  issues: { row: number; error: string }[];
+  /** What the plan's unit limit says about adding all these units; null when it has no objection. */
+  capacity: {
+    blocking: boolean;
+    code: string;
+    message: string;
+    details: Record<string, unknown>;
+  } | null;
+  invitations: { toSend: number; dailyLimit: number; remainingToday: number | null };
+  canImport: boolean;
+};
+
+export type PortfolioImportResult = {
+  summary: PortfolioSummary;
+};
+
+export type InvitationBatchResult = {
+  sent: number;
+  stillWaiting: number;
+  notAllowed: number;
+  limitReached: boolean;
+  dailyLimit: number;
 };

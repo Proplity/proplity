@@ -29,6 +29,7 @@ export default function AdminSettingsPage() {
   const [tenancyDays, setTenancyDays] = useState('365');
   const [rejectionDays, setRejectionDays] = useState('90');
   const [invitesPerDay, setInvitesPerDay] = useState(String(INVITE_LIMITS.perDay.default));
+  const [inviteUnlisted, setInviteUnlisted] = useState(true);
   const [deploymentAllows, setDeploymentAllows] = useState({ autopay: false, retention: false });
   // Turning on a charge or a deletion asks once more before it saves.
   const [confirming, setConfirming] = useState<'autopay' | 'retention' | null>(null);
@@ -48,6 +49,7 @@ export default function AdminSettingsPage() {
         setTenancyDays(String(res.data.data.retentionAfterTenancyDays));
         setRejectionDays(String(res.data.data.retentionAfterRejectionDays));
         setInvitesPerDay(String(res.data.data.tenantInvitesPerDay));
+        setInviteUnlisted(res.data.data.inviteTenantsToManagementOnly);
         setDeploymentAllows(res.data.data.deploymentAllows);
       })
       .catch(() => {
@@ -96,7 +98,7 @@ export default function AdminSettingsPage() {
   };
 
   const saveSwitch = async (
-    key: 'autopayChargingEnabled' | 'retentionEnabled',
+    key: 'autopayChargingEnabled' | 'retentionEnabled' | 'inviteTenantsToManagementOnly',
     set: (value: boolean) => void,
     checked: boolean,
   ) => {
@@ -464,8 +466,8 @@ export default function AdminSettingsPage() {
             <p className="mt-1 max-w-xl text-sm text-gray-600">
               When a manager or landlord starts a rent for an email address with no account,
               Proplity emails that person an invitation. This is how many new people one manager or
-              landlord can invite in a day. They can only do it on a listing an admin has approved.
-              Admins are not limited. Set 0 to stop invitations.
+              landlord can invite in a day. On a public listing they can only do it once an admin
+              has approved it. Admins are not limited. Set 0 to stop invitations.
             </p>
             <div className="mt-3 flex flex-wrap items-end gap-4">
               <label className="text-sm text-gray-700">
@@ -487,6 +489,27 @@ export default function AdminSettingsPage() {
               >
                 Save limit
               </button>
+            </div>
+            <div className="mt-5 flex items-start justify-between gap-4 border-t border-gray-100 pt-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  Allow invitations on properties kept for management only
+                </p>
+                <p className="mt-1 max-w-xl text-sm text-gray-600">
+                  A property kept for tenant management only is never listed or reviewed by an
+                  admin, so the approval condition cannot apply. On (default): its manager or
+                  landlord can invite tenants anyway, within the daily limit above. Off: only an
+                  admin can.
+                </p>
+              </div>
+              <Switch
+                checked={inviteUnlisted}
+                disabled={saving}
+                onCheckedChange={(checked) =>
+                  saveSwitch('inviteTenantsToManagementOnly', setInviteUnlisted, checked)
+                }
+                aria-label="Allow tenant invitations on properties kept for management only"
+              />
             </div>
           </div>
         </div>

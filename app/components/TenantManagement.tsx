@@ -9,11 +9,14 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { useRents } from '@/hooks/useRents';
 import { useInvoices } from '@/hooks/useInvoices';
 import { toast } from 'sonner';
-import type { Invoice } from '@/lib/api/types';
+import { api } from '@/lib/apiClient';
+import type { Invoice, InvitationState } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
 import { perFrequency } from '@/lib/paymentFrequency';
 
@@ -42,13 +45,66 @@ function paymentInfo(rentId: string, invoices: Invoice[]) {
   return { status: (overdue ? 'overdue' : 'due') as 'overdue' | 'due', nextDue: unpaid[0].dueDate };
 }
 
+// Where a tenant is in joining. Only the states that still need something from the property team
+// are shown on a row; a tenant who has joined needs no badge.
+const INVITATION_BADGE: Record<
+  Exclude<InvitationState, 'JOINED'>,
+  { label: string; cls: string }
+> = {
+  NOT_SENT: { label: 'Not invited yet', cls: 'bg-gray-100 text-gray-700' },
+  INVITED: { label: 'Invited', cls: 'bg-blue-100 text-blue-700' },
+  EXPIRED: { label: 'Invitation expired', cls: 'bg-amber-100 text-amber-800' },
+};
+
 export function TenantManagement({ onNavigate }: TenantManagementProps) {
-  const { data: rents, loading, error } = useRents();
+  const { data: rents, loading, error, refetch } = useRents();
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const { data: invoices } = useInvoices({ type: 'RENT' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
   const rows = rents.map((rent) => ({ rent, payment: paymentInfo(rent.id, invoices) }));
+  // Tenants who still need an email (never sent, or the link ran out), one per person.
+  const needInvitation = new Set(
+    rents
+      .filter((r) => r.invitation === 'NOT_SENT' || r.invitation === 'EXPIRED')
+      .map((r) => r.tenantId),
+  ).size;
+
+  const apiMessage = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? fallback;
+
+  const sendOne = async (rentId: string) => {
+    setSendingId(rentId);
+    try {
+      await api.rents.invite(rentId);
+      toast.success('Invitation sent.');
+      await refetch();
+    } catch (err) {
+      toast.error(apiMessage(err, 'Could not send the invitation.'));
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const sendAll = async () => {
+    setSendingAll(true);
+    try {
+      const { sent, stillWaiting, limitReached, dailyLimit } = (await api.rents.inviteAll()).data
+        .data;
+      toast.success(
+        stillWaiting > 0
+          ? `Sent ${sent}. ${stillWaiting} still waiting${limitReached ? ` (today's limit is ${dailyLimit})` : ''}; try again tomorrow.`
+          : `Sent ${sent}. Everyone has been invited.`,
+      );
+      await refetch();
+    } catch (err) {
+      toast.error(apiMessage(err, 'Could not send the invitations.'));
+    } finally {
+      setSendingAll(false);
+    }
+  };
 
   const statusFilters = [
     { id: 'all', label: 'All Tenants', count: rows.length },
@@ -83,6 +139,29 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
           + Add Tenant
         </button>
       </div>
+
+      {needInvitation > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm text-blue-900">
+            {needInvitation} {needInvitation === 1 ? 'tenant has' : 'tenants have'} not been invited
+            yet or {needInvitation === 1 ? 'has' : 'have'} an expired invitation. An invitation lets
+            them set a password, sign in and complete their profile.
+          </p>
+          <button
+            type="button"
+            onClick={sendAll}
+            disabled={sendingAll}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {sendingAll ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Send invitations
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="flex gap-4">
@@ -167,6 +246,13 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                           <Mail className="h-3 w-3" />
                           {rent.tenant?.email ?? '—'}
                         </div>
+                        {rent.invitation && rent.invitation !== 'JOINED' && (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${INVITATION_BADGE[rent.invitation].cls}`}
+                          >
+                            {INVITATION_BADGE[rent.invitation].label}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -246,6 +332,26 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                       >
                         <Mail className="h-4 w-4 text-gray-600" />
                       </a>
+                      {rent.invitation && rent.invitation !== 'JOINED' && (
+                        <button
+                          type="button"
+                          onClick={() => sendOne(rent.id)}
+                          disabled={sendingId === rent.id}
+                          className="rounded p-2 hover:bg-gray-100 disabled:opacity-50 sm:p-1"
+                          title={
+                            rent.invitation === 'INVITED'
+                              ? 'Send the invitation again'
+                              : 'Send invitation'
+                          }
+                          aria-label={`${rent.invitation === 'INVITED' ? 'Resend' : 'Send'} invitation to ${rent.tenant?.name ?? 'tenant'}`}
+                        >
+                          {sendingId === rent.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+                          ) : (
+                            <Send className="h-4 w-4 text-gray-600" />
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => onNavigate({ type: 'tenant-detail', rentId: rent.id })}
                         className="rounded p-2 hover:bg-gray-100 sm:p-1"
