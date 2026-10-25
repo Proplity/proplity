@@ -14,6 +14,12 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+// What the rate is applied to: one year's rent, or all the rent for the whole term.
+enum StampDutyBasis {
+  ANNUAL_RENT
+  TERM_RENT
+}
+
 // A place with its own tenancy rules (Lagos State, the FCT, ...). The rules are data an admin
 // edits, not code, because they differ by state and change as bills pass; nothing seeded here has
 // been reviewed by a lawyer until `lawyerReviewed` says so.
@@ -37,6 +43,11 @@ model Jurisdiction {
   // A tenancy at least this many years long may need a registered deed. Null: no threshold.
   registrationThresholdYears Int?
   stampDutyNote              String?
+  // What stamp duty comes to on a tenancy here, so Proplity can quote it: the rate depends on how
+  // long the tenancy is. [{ upToYears, ratePercent }] in order, the first whose `upToYears` is
+  // above the term wins; the last has upToYears null (no limit). Empty: no quote can be made.
+  stampDutyTiers             Json                @default("[]")
+  stampDutyBasis             StampDutyBasis      @default(TERM_RENT)
   // Where the rules came from and what is unconfirmed, shown next to them.
   sourceNote                 String?
   rulesCheckedAt             DateTime?
@@ -154,6 +165,7 @@ model RentAgreement {
   voidedById          String?
   voidReason          String?
   witnessSignatures   AgreementWitness[]
+  stampDutyOrders     StampDutyOrder[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
@@ -198,4 +210,48 @@ model AgreementWitness {
   updatedAt      DateTime      @updatedAt
 
   @@unique([agreementId, side])
+}
+
+// AWAITING_PAYMENT: quoted, the invoice not yet paid. PAID: paid, waiting for Proplity to stamp it
+// and upload the receipt. COMPLETED: stamped. CANCELLED: withdrawn before payment, or Proplity could
+// not stamp it (the money is then flagged for refund).
+enum StampDutyOrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  COMPLETED
+  CANCELLED
+}
+
+// Stamp duty paid through Proplity: the person pays the quoted duty and a service fee by card, and
+// Proplity (an admin) pays the tax authority and uploads the receipt to the agreement. The quote is
+// copied here when it is made, so changing the rates later never changes what was agreed. Off unless
+// the admin switches stamp duty payments on.
+model StampDutyOrder {
+  id               String               @id @default(uuid())
+  agreementId      String
+  agreement        RentAgreement        @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  requestedById    String
+  invoiceId        String               @unique
+  invoice          Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  status           StampDutyOrderStatus @default(AWAITING_PAYMENT)
+  jurisdictionName String
+  termYears        Float
+  basis            StampDutyBasis
+  basisAmount      Float
+  ratePercent      Float
+  dutyAmount       Int
+  serviceFee       Int
+  total            Int
+  paidAt           DateTime?
+  // What Proplity actually paid the authority, the reference it gave, and who recorded it.
+  actualAmount     Float?
+  reference        String?
+  completedAt      DateTime?
+  completedById    String?
+  cancelReason     String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([agreementId])
 }

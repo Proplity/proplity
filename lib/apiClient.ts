@@ -20,6 +20,9 @@ import type {
   CreditPack,
   CreditShop,
   AgreementWitnessView,
+  AdminStampDutyOrder,
+  StampDutyOffer,
+  StampDutyOrderView,
   WitnessAgreement,
   WitnessSideKey,
   GeneratedAgreementInput,
@@ -444,6 +447,12 @@ export const api = {
           `/api/v1/rents/${rentId}/agreement/void`,
           { reason },
         ),
+      stampDutyOffer: (rentId: string) =>
+        apiClient.get<{ data: StampDutyOffer }>(`/api/v1/rents/${rentId}/agreement/stamp-duty/pay`),
+      startStampDutyPayment: (rentId: string) =>
+        apiClient.post<{ data: StampDutyOrderView }>(
+          `/api/v1/rents/${rentId}/agreement/stamp-duty/pay`,
+        ),
       witnesses: {
         invite: (
           rentId: string,
@@ -614,6 +623,25 @@ export const api = {
       update: (id: string, body: Partial<Omit<PaidService, 'id' | 'key'>>) =>
         apiClient.patch<{ data: PaidService }>(`/api/v1/admin/services/${id}`, body),
       remove: (id: string) => apiClient.delete(`/api/v1/admin/services/${id}`),
+    },
+    stampDuty: {
+      list: (status: 'PAID' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_PAYMENT' | 'ALL' = 'PAID') =>
+        apiClient.get<{ data: AdminStampDutyOrder[] }>('/api/v1/admin/stamp-duty-orders', {
+          params: { status },
+        }),
+      complete: (
+        id: string,
+        body: { reference: string; actualAmount: number; receiptUrl: string },
+      ) =>
+        apiClient.post<{ data: { id: string; refundDue: number } }>(
+          `/api/v1/admin/stamp-duty-orders/${id}/complete`,
+          body,
+        ),
+      cancel: (id: string, reason: string) =>
+        apiClient.post<{ data: { id: string; refundDue: boolean } }>(
+          `/api/v1/admin/stamp-duty-orders/${id}/cancel`,
+          { reason },
+        ),
     },
     creditPacks: {
       list: () => apiClient.get<{ data: CreditPack[] }>('/api/v1/admin/credit-packs'),

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { clauseProblems, clauseSchema, MAX_CLAUSES } from '@/lib/agreementFields';
+import { stampDutyTiersSchema } from '@/lib/stampDuty';
 
 const slug = z
   .string()
@@ -32,6 +33,8 @@ export const jurisdictionFields = {
   excludedAreasMode: ruleMode,
   registrationThresholdYears: z.number().int().min(1).max(99).nullable(),
   stampDutyNote: text(1000).nullable(),
+  stampDutyTiers: stampDutyTiersSchema,
+  stampDutyBasis: z.enum(['ANNUAL_RENT', 'TERM_RENT']),
   sourceNote: text(2000).nullable(),
   rulesCheckedAt: z.coerce.date().nullable(),
   lawyerReviewed: z.boolean(),

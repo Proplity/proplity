@@ -90,6 +90,13 @@ const updateSchema = z
     creditPurchaseEnabled: z.boolean().optional(),
     witnessEsignEnabled: z.boolean().optional(),
     witnessesMustSign: z.boolean().optional(),
+    stampDutyPaymentEnabled: z.boolean().optional(),
+    stampDutyServiceFee: z
+      .number()
+      .int('Enter whole naira')
+      .min(0, 'Cannot be negative')
+      .max(10_000_000, 'That is too large')
+      .optional(),
     witnessLinkDays: z
       .number()
       .int('Enter a whole number of days')

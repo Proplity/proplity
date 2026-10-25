@@ -8,11 +8,13 @@ import { assertOwnsFileUrls } from '@/lib/storage/service';
 import { parseFileUrl } from '@/lib/fileRef';
 import { currentAgreement, serializeAgreement } from '@/lib/rentAgreement';
 import { stampDutySchema } from '@/lib/rentAgreementSchema';
+import { liveOrder } from '@/lib/stampDutyOrder';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 // The property team's record of stamp duty: where it stands, the reference, the amount and the
-// receipt. Stamp duty is paid to the federal tax authority, not through Proplity; this only tracks it.
+// receipt. This only tracks what the team does themselves; paying through Proplity is
+// POST ./pay, and its progress is recorded by Proplity staff.
 export const PATCH = withAuth(
   async (req, { session }, ctx: RouteCtx) => {
     const { id } = await ctx.params;
@@ -43,6 +45,19 @@ export const PATCH = withAuth(
       if (!agreement || agreement.status === 'DRAFT') {
         return NextResponse.json(
           { error: 'Stamp duty is recorded once the agreement has been sent', code: 'NOT_SENT' },
+          { status: 409 },
+        );
+      }
+
+      // While Proplity is stamping an order the person paid for, the record is Proplity's to change.
+      const order = await liveOrder(agreement.id);
+      if (order && order.status === 'PAID') {
+        return NextResponse.json(
+          {
+            error:
+              'Proplity is processing the stamp duty you paid for. It will be recorded here when done.',
+            code: 'STAMP_DUTY_IN_PROCESS',
+          },
           { status: 409 },
         );
       }

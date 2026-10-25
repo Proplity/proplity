@@ -44,6 +44,8 @@ export async function getSystemSettings() {
     witnessEsignEnabled: settings?.witnessEsignEnabled ?? true,
     witnessLinkDays: settings?.witnessLinkDays ?? WITNESS_LINK_DAYS.default,
     witnessesMustSign: settings?.witnessesMustSign ?? false,
+    stampDutyPaymentEnabled: settings?.stampDutyPaymentEnabled ?? false,
+    stampDutyServiceFee: settings?.stampDutyServiceFee ?? 0,
   };
 }
 
