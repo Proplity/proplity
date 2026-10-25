@@ -2,7 +2,7 @@ import { Prisma, type Plan, type Subscription } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { accountMemberIds, billingAccountOf } from '@/lib/team';
 import type { getSystemSettings } from '@/lib/systemSettings';
-import { DEFAULT_PLANS, DEFAULT_SERVICES } from '@/lib/planDefaults';
+import { DEFAULT_CREDIT_PACKS, DEFAULT_PLANS, DEFAULT_SERVICES } from '@/lib/planDefaults';
 
 export { priceFor } from '@/lib/planPricing';
 
@@ -17,6 +17,11 @@ export async function ensureDefaultPlans(): Promise<void> {
 export async function ensureDefaultServices(): Promise<void> {
   if ((await prisma.paidService.count()) > 0) return;
   await prisma.paidService.createMany({ data: DEFAULT_SERVICES, skipDuplicates: true });
+}
+
+export async function ensureDefaultCreditPacks(): Promise<void> {
+  if ((await prisma.creditPack.count()) > 0) return;
+  await prisma.creditPack.createMany({ data: DEFAULT_CREDIT_PACKS, skipDuplicates: true });
 }
 
 export async function listPlans(opts: { onlyActive?: boolean } = {}): Promise<Plan[]> {

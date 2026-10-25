@@ -98,5 +98,8 @@ model SystemSettings {
   // Uploading an agreement you already have is free unless the second switch is on.
   chargeForAgreements                  Boolean            @default(false)
   chargeForUploads                     Boolean            @default(false)
+  // Whether managers and landlords can buy credit packs (Admin > Plans & billing). Off: the buy
+  // buttons disappear and a purchase already started can still be paid and credited.
+  creditPurchaseEnabled                Boolean            @default(true)
   updatedAt                            DateTime           @updatedAt
 }

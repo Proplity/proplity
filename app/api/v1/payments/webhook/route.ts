@@ -9,6 +9,7 @@ import { subscriptionsEnabled } from '@/lib/subscriptions';
 import { getSystemSettings } from '@/lib/systemSettings';
 import { countUnitsFor, graceEndsAtFrom } from '@/lib/plans';
 import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
+import { grantPurchasedCredits } from '@/lib/creditPacks';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -207,6 +208,20 @@ export async function POST(req: NextRequest) {
               title: `Payment received: ${invoice.invoiceNumber}`,
               body: `₦${amount.toLocaleString()} was paid on your invoice ${invoice.invoiceNumber}. Open the receipt to view or print it.`,
               link: `/receipts/${outcome.paymentId}`,
+            });
+          }
+        }
+
+        // A credit pack paid in full adds its credits, once (the claim and the ledger row share a
+        // transaction, so a redelivered or doubled payment cannot add them twice).
+        if (invoice.type === 'CREDIT_PURCHASE' && invoice.userId && outcome.status === 'PAID') {
+          const added = await prisma.$transaction((tx) => grantPurchasedCredits(tx, invoice.id));
+          if (added > 0) {
+            await notifyAndEmail(invoice.userId, {
+              type: 'SYSTEM',
+              title: 'Credits added',
+              body: `${added} credit${added === 1 ? '' : 's'} ${added === 1 ? 'was' : 'were'} added to your account. Thank you!`,
+              link: '/dashboard',
             });
           }
         }

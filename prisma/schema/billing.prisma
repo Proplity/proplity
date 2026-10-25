@@ -80,3 +80,40 @@ model CreditEntry {
   @@unique([userId, periodKey])
   @@index([userId, createdAt])
 }
+
+// A pack of credits an account can buy (for example "20 credits for N8,000"). Edited by an admin
+// like the plans; lib/plans.ts seeds placeholders while the table is empty. Prices are whole naira.
+model CreditPack {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  credits   Int
+  price     Int
+  // Inactive packs cannot be bought; purchases already made keep what they were sold as.
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One purchase of a pack. The pack's credits and price are copied here when the purchase is made,
+// so an admin changing the pack later never changes what a payment already started will give.
+// The invoice is paid through Paystack like any other; when the payment lands, `creditedAt` is set
+// in the same transaction that adds the credits, so a redelivered payment can never add them twice.
+model CreditPurchase {
+  id            String    @id @default(uuid())
+  // The person who bought it. The credits go to their billing account (a company's partner).
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceId     String    @unique
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  packKey       String
+  packName      String
+  credits       Int
+  price         Int
+  creditedAt    DateTime?
+  creditEntryId String?   @unique
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}

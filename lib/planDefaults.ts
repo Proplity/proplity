@@ -68,3 +68,11 @@ export const DEFAULT_SERVICES = [
     sortOrder: 1,
   },
 ] satisfies Prisma.PaidServiceCreateManyInput[];
+
+// Credit packs on sale while the CreditPack table is empty. Placeholders like the plans above:
+// an admin sets the real sizes and prices in Admin > Plans & billing.
+export const DEFAULT_CREDIT_PACKS = [
+  { key: 'credits-5', name: '5 credits', credits: 5, price: 2_500, sortOrder: 1 },
+  { key: 'credits-20', name: '20 credits', credits: 20, price: 8_000, sortOrder: 2 },
+  { key: 'credits-50', name: '50 credits', credits: 50, price: 17_500, sortOrder: 3 },
+] satisfies Prisma.CreditPackCreateManyInput[];

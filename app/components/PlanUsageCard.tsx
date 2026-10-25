@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Coins, Layers, Users } from 'lucide-react';
 import { useMySubscription } from '@/hooks/useSubscription';
+import { BuyCreditsButton } from './BuyCreditsButton';
 
 function Meter({
   label,
@@ -113,13 +114,16 @@ export function PlanUsageCard() {
         </p>
       )}
 
-      <div className="mt-4 flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs text-gray-600">
-        <Coins className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>
-          <strong className="text-gray-900">{credits.balance}</strong> credit
-          {credits.balance === 1 ? '' : 's'}
-          {plan.monthlyCredits > 0 ? `, ${plan.monthlyCredits} added each month` : ''}
-        </span>
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-3 text-xs text-gray-600">
+        <div className="flex items-center gap-1.5">
+          <Coins className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>
+            <strong className="text-gray-900">{credits.balance}</strong> credit
+            {credits.balance === 1 ? '' : 's'}
+            {plan.monthlyCredits > 0 ? `, ${plan.monthlyCredits} added each month` : ''}
+          </span>
+        </div>
+        <BuyCreditsButton />
       </div>
     </div>
   );

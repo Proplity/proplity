@@ -7,6 +7,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { useRentAgreement } from '@/hooks/useRentAgreement';
+import { BuyCreditsButton } from './BuyCreditsButton';
 import type {
   AgreementChoices,
   AgreementOptions,
@@ -488,7 +489,10 @@ function BuilderForm({
                 Saving this agreement takes {cost} credit{cost === 1 ? '' : 's'}
                 {options.credits.balance !== null && ` (you have ${options.credits.balance})`}.
                 Changing the draft afterwards is free, and withdrawing it before you send it gives
-                the credits back.
+                the credits back.{' '}
+                {options.credits.balance !== null && options.credits.balance < cost && (
+                  <BuyCreditsButton className="font-semibold text-blue-700 underline" />
+                )}
               </p>
             )}
             <Findings items={preview?.findings ?? []} />
