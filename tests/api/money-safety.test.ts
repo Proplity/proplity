@@ -6,7 +6,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createInvoice,
   createMaintenanceRequest,
   createBankAccount,
@@ -177,8 +177,8 @@ describe('bank transfer proofs: safety (ISS-066)', () => {
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ landlordId: landlord.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id);
-    const invoice = await createInvoice({ leaseId: lease.id, amount: invoiceAmount });
+    const rent = await createRent(unit.id, tenant.id);
+    const invoice = await createInvoice({ rentId: rent.id, amount: invoiceAmount });
     const sub = await testPrisma.bankTransferSubmission.create({
       data: {
         invoiceId: invoice.id,
@@ -262,13 +262,13 @@ describe('auto-pay charger: safety (ISS-065)', () => {
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ landlordId: landlord.id });
     const unit = await createUnit(property.id);
-    const lease = await createLease(unit.id, tenant.id);
-    await testPrisma.lease.update({ where: { id: lease.id }, data: { status: 'ACTIVE' } });
+    const rent = await createRent(unit.id, tenant.id);
+    await testPrisma.rent.update({ where: { id: rent.id }, data: { status: 'ACTIVE' } });
     const mandate = await testPrisma.autoPayMandate.create({
-      data: { leaseId: lease.id, paymentMethodToken: token },
+      data: { rentId: rent.id, paymentMethodToken: token },
     });
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       amount: 60_000,
       dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
     });

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Lock, AlertCircle } from 'lucide-react';
 import { LogoIcon } from '../components/Logo';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -30,8 +31,8 @@ function VerifyEmailContent() {
     // anything was typed, it has to be valid.
     const settingPassword = password.length > 0 || confirmPassword.length > 0;
     if (settingPassword) {
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters.');
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        setError(`${PASSWORD_TOO_SHORT}.`);
         return;
       }
       if (password !== confirmPassword) {

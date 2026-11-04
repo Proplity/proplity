@@ -93,8 +93,8 @@ export function useSendMessage(conversationId: string) {
 // Built for parity with the rest of this domain's hooks (create/list/detail)
 // -- not wired to a compose-new-conversation UI this phase. The mock never
 // had one either, and every real conversation type (MAINTENANCE_THREAD,
-// LEASE_THREAD, COMMUNITY_DISCUSSION) is meant to be started from its own
-// context (a maintenance request, a lease, a property), not a bare "new
+// RENT_THREAD, COMMUNITY_DISCUSSION) is meant to be started from its own
+// context (a maintenance request, a rent, a property), not a bare "new
 // message" button, so there's no obvious single entry point to wire yet.
 export function useCreateConversation() {
   return useApiSubmit((body: CreateConversationInput) =>

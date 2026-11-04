@@ -13,17 +13,16 @@ import {
   AlertCircle,
   MessageSquare,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import {
-  useLease,
-  useLeaseNotes,
-  useCreateLeaseNote,
-  useUpdateLeaseTerms,
-  useUpdateLeaseStatus,
-  useRenewLease,
+  useRent,
+  useRentNotes,
+  useCreateRentNote,
+  useUpdateRentTerms,
+  useUpdateRentStatus,
+  useRenewRent,
+  useStartRenewal,
   useCreateNotice,
-  useSignLease,
-} from '@/hooks/useLeases';
+} from '@/hooks/useRents';
 import { useCreateInvoice } from '@/hooks/useInvoices';
 import { usePaymentRules } from '@/hooks/usePaymentRules';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
@@ -33,95 +32,17 @@ import { useFileViewer } from '@/context/FileViewerContext';
 import { useConditionReports, useCreateConditionReport } from '@/hooks/useConditionReports';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PaidAnotherWayForm } from './PaidAnotherWayForm';
+import { RentAgreementCard } from './RentAgreementCard';
+import { RenewalCard } from './RenewalCard';
 import { toast } from 'sonner';
-import type { Lease, Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
+import type { Violation, Notice, CreateInvoiceInput } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
+
+// Re-exported: the tenant dashboard imports it from here.
+export { RentSignatureCard } from './RentSignatureCard';
 
 interface TenantDetailProps {
-  leaseId: string;
-}
-
-// Click-wrap e-signature: typed full legal name + timestamp + IP, not a
-// drawn/uploaded image (no file-storage endpoint exists anywhere in this
-// codebase). Fully executed once both a tenant-side and a landlord-side
-// signature exist -- lease.agreementSignedAt tracks that, computed
-// server-side in the sign route.
-export function LeaseSignatureCard({ lease, onSigned }: { lease: Lease; onSigned: () => void }) {
-  const auth = useAuth();
-  const { submit: sign, submitting, error } = useSignLease(lease.id);
-  const [fullName, setFullName] = useState('');
-
-  const signatures = lease.signatures ?? [];
-  const myUserId = auth.user?.id;
-  const alreadySigned = signatures.some((s) => s.signerId === myUserId);
-  const tenantSignature = signatures.find((s) => s.signerRole === 'TENANT');
-  const landlordSideSignature = signatures.find((s) =>
-    ['MANAGER', 'LANDLORD', 'ADMIN'].includes(s.signerRole),
-  );
-
-  const handleSign = async () => {
-    if (!fullName.trim()) return;
-    try {
-      await sign(fullName.trim());
-      setFullName('');
-      onSigned();
-    } catch {
-      // error surfaced below
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold">Lease Agreement Signature</h2>
-        {lease.agreementSignedAt && (
-          <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-            Fully Executed
-          </span>
-        )}
-      </div>
-
-      <div className="mb-4 space-y-2 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600">Tenant</span>
-          <span className={tenantSignature ? 'font-medium text-green-700' : 'text-gray-400'}>
-            {tenantSignature
-              ? `Signed by ${tenantSignature.fullNameTyped} on ${new Date(tenantSignature.signedAt).toLocaleDateString()}`
-              : 'Not yet signed'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600">Landlord/Manager</span>
-          <span className={landlordSideSignature ? 'font-medium text-green-700' : 'text-gray-400'}>
-            {landlordSideSignature
-              ? `Signed by ${landlordSideSignature.fullNameTyped} on ${new Date(landlordSideSignature.signedAt).toLocaleDateString()}`
-              : 'Not yet signed'}
-          </span>
-        </div>
-      </div>
-
-      {!alreadySigned && (
-        <div className="space-y-2 border-t border-gray-100 pt-4">
-          <label className="block text-sm text-gray-600">
-            Type your full legal name to sign this agreement
-          </label>
-          <input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Full name"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <button
-            onClick={handleSign}
-            disabled={submitting || !fullName.trim()}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? 'Signing…' : 'Sign Agreement'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  rentId: string;
 }
 
 const VIOLATION_BADGE: Record<Violation['status'], string> = {
@@ -306,25 +227,26 @@ function ConditionReportsCard({ propertyId, unitId }: { propertyId: string; unit
   );
 }
 
-export function TenantDetail({ leaseId }: TenantDetailProps) {
+export function TenantDetail({ rentId }: TenantDetailProps) {
   const router = useRouter();
   const { openFile } = useFileViewer();
-  const { data: lease, loading, refetch: refetchLease } = useLease(leaseId);
-  const { data: notes, refetch: refetchNotes } = useLeaseNotes(leaseId);
+  const { data: rent, loading, refetch: refetchRent } = useRent(rentId);
+  const { data: notes, refetch: refetchNotes } = useRentNotes(rentId);
   const { data: allRequests } = useMaintenanceRequests();
-  const { submit: submitNote, submitting: savingNote } = useCreateLeaseNote(leaseId);
-  const { submit: submitTerms, submitting: savingTerms } = useUpdateLeaseTerms(leaseId);
-  const { submit: submitStatus, submitting: savingStatus } = useUpdateLeaseStatus(leaseId);
+  const { submit: submitNote, submitting: savingNote } = useCreateRentNote(rentId);
+  const { submit: submitTerms, submitting: savingTerms } = useUpdateRentTerms(rentId);
+  const { submit: submitStatus, submitting: savingStatus } = useUpdateRentStatus(rentId);
+  const { submit: submitRenew, submitting: savingRenew, error: renewError } = useRenewRent(rentId);
   const {
-    submit: submitRenew,
-    submitting: savingRenew,
-    error: renewError,
-  } = useRenewLease(leaseId);
+    submit: submitStartRenewal,
+    submitting: savingStartRenewal,
+    error: startRenewalError,
+  } = useStartRenewal(rentId);
   const {
     submit: submitNotice,
     submitting: savingNotice,
     error: noticeError,
-  } = useCreateNotice(leaseId);
+  } = useCreateNotice(rentId);
   const {
     submit: submitInvoice,
     submitting: savingInvoice,
@@ -340,7 +262,8 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     lateFeePercentage: '0',
     lateFeeFlatAmount: '0',
   });
-  const [renewingLease, setRenewingLease] = useState(false);
+  const [renewingRent, setRenewingRent] = useState(false);
+  const [prepareAgreement, setPrepareAgreement] = useState(true);
   const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
   const [renewDraft, setRenewDraft] = useState({
     startDate: '',
@@ -371,7 +294,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     return <div className="p-6 text-gray-500">Loading tenant…</div>;
   }
 
-  if (!lease || !lease.tenant) {
+  if (!rent || !rent.tenant) {
     return (
       <div className="p-6">
         <Link
@@ -386,22 +309,22 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     );
   }
 
-  const tenant = lease.tenant;
-  const property = lease.unit?.property;
+  const tenant = rent.tenant;
+  const property = rent.unit?.property;
 
   // "Rent status" and "next due" derived the same way as TenantManagement's
-  // list -- no stored field, computed from this lease's RENT invoices.
-  const unpaidInvoices = (lease.invoices ?? [])
+  // list -- no stored field, computed from this rent's RENT invoices.
+  const unpaidInvoices = (rent.invoices ?? [])
     .filter((i) => i.status !== 'PAID' && i.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   const rentPaid = unpaidInvoices.length === 0;
   const nextDue = unpaidInvoices[0]?.dueDate ?? null;
 
-  const payments = (lease.invoices ?? [])
+  const payments = (rent.invoices ?? [])
     .flatMap((invoice) => invoice.payments.map((payment) => ({ invoice, payment })))
     .sort((a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime());
 
-  const maintenanceRequests = allRequests.filter((r) => r.unitId === lease.unitId);
+  const maintenanceRequests = allRequests.filter((r) => r.unitId === rent.unitId);
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
@@ -412,10 +335,10 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
 
   const openTermsEditor = () => {
     setTermsDraft({
-      gracePeriodDays: String(lease.gracePeriodDays),
-      lateFeeType: lease.lateFeeType,
-      lateFeePercentage: String(lease.lateFeePercentage),
-      lateFeeFlatAmount: String(lease.lateFeeFlatAmount),
+      gracePeriodDays: String(rent.gracePeriodDays),
+      lateFeeType: rent.lateFeeType,
+      lateFeePercentage: String(rent.lateFeePercentage),
+      lateFeeFlatAmount: String(rent.lateFeeFlatAmount),
     });
     setEditingTerms(true);
   };
@@ -428,14 +351,14 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       lateFeeFlatAmount: parseFloat(termsDraft.lateFeeFlatAmount) || 0,
     });
     setEditingTerms(false);
-    refetchLease();
+    refetchRent();
   };
 
   // Renewal term defaults to a same-length term starting the day after the
-  // current lease ends -- editable before submitting, not just a guess.
+  // current rent ends -- editable before submitting, not just a guess.
   const openRenewEditor = () => {
-    const currentEnd = new Date(lease.endDate);
-    const currentStart = new Date(lease.startDate);
+    const currentEnd = new Date(rent.endDate);
+    const currentStart = new Date(rent.startDate);
     const termMs = currentEnd.getTime() - currentStart.getTime();
     const nextStart = new Date(currentEnd.getTime() + 24 * 60 * 60 * 1000);
     const nextEnd = new Date(nextStart.getTime() + termMs);
@@ -443,27 +366,32 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
     setRenewDraft({
       startDate: toInputDate(nextStart),
       endDate: toInputDate(nextEnd),
-      rentAmount: String(lease.rentAmount),
-      deposit: String(lease.deposit),
+      rentAmount: String(rent.rentAmount),
+      deposit: String(rent.deposit),
     });
-    setRenewingLease(true);
+    setRenewingRent(true);
   };
 
   const handleRenew = async () => {
     try {
-      const newLease = await submitRenew({
+      const terms = {
         startDate: renewDraft.startDate,
         endDate: renewDraft.endDate,
         rentAmount: parseFloat(renewDraft.rentAmount) || 0,
         deposit: parseFloat(renewDraft.deposit) || 0,
-      });
-      setRenewingLease(false);
-      // Renewal creates a NEW lease row (old one flips to EXPIRED) -- follow
+      };
+      // With the admin's renewal switch on, the next term is a pending rent with its own
+      // agreement to sign; otherwise the older one-step renewal.
+      const newRent = rent?.renewal?.enabled
+        ? (await submitStartRenewal({ ...terms, copyAgreement: prepareAgreement }))?.rent
+        : await submitRenew(terms);
+      setRenewingRent(false);
+      // Renewal creates a NEW rent row (old one flips to EXPIRED) -- follow
       // onto its detail page rather than showing this now-expired one.
-      if (newLease?.id) {
-        router.push(`/dashboard/tenants/${newLease.id}`);
+      if (newRent?.id) {
+        router.push(`/dashboard/tenants/${newRent.id}`);
       } else {
-        refetchLease();
+        refetchRent();
       }
     } catch {
       // error surfaced below via renewError
@@ -479,7 +407,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       });
       setNoticeDraft({ type: 'PAYMENT_REMINDER', content: '' });
       setSendingNotice(false);
-      refetchLease();
+      refetchRent();
     } catch {
       // error surfaced below via noticeError
     }
@@ -491,7 +419,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
   const handleSendInvoice = async () => {
     try {
       await submitInvoice({
-        leaseId,
+        rentId,
         type: invoiceDraft.type,
         amount: parseFloat(invoiceDraft.amount) || 0,
         dueDate: invoiceDraft.dueDate,
@@ -499,7 +427,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       });
       setInvoiceDraft({ type: 'UTILITY', amount: '', dueDate: '', description: '' });
       setSendingInvoice(false);
-      refetchLease();
+      refetchRent();
     } catch {
       // error surfaced below via invoiceError
     }
@@ -536,9 +464,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               </div>
               <div className="mt-2 flex items-start gap-1 text-sm text-gray-600">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>
-                  {property ? `${property.name} · Unit ${lease.unit?.unitNumber}` : 'N/A'}
-                </span>
+                <span>{property ? `${property.name} · Unit ${rent.unit?.unitNumber}` : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -553,16 +479,16 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             </span>
             <span
               className={`rounded-full px-3 py-1 text-sm font-medium ${
-                lease.riskScore === 'LOW'
+                rent.riskScore === 'LOW'
                   ? 'bg-green-100 text-green-700'
-                  : lease.riskScore === 'MEDIUM'
+                  : rent.riskScore === 'MEDIUM'
                     ? 'bg-yellow-100 text-yellow-700'
-                    : lease.riskScore === 'HIGH'
+                    : rent.riskScore === 'HIGH'
                       ? 'bg-red-100 text-red-700'
                       : 'bg-gray-100 text-gray-500'
               }`}
             >
-              {lease.riskScore ? `${lease.riskScore} Risk` : 'Unscored'}
+              {rent.riskScore ? `${rent.riskScore} Risk` : 'Unscored'}
             </span>
           </div>
         </div>
@@ -571,35 +497,35 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Lease Information */}
+          {/* Rent Information */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold">Lease Information</h2>
+              <h2 className="font-semibold">Rent Information</h2>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  lease.status === 'ACTIVE'
+                  rent.status === 'ACTIVE'
                     ? 'bg-green-100 text-green-700'
-                    : lease.status === 'PENDING'
+                    : rent.status === 'PENDING'
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-gray-100 text-gray-500'
                 }`}
               >
-                {lease.status}
+                {rent.status}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="mb-1 text-sm text-gray-600">Lease Start</p>
+                <p className="mb-1 text-sm text-gray-600">Rent Start</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <p className="font-medium">{new Date(lease.startDate).toLocaleDateString()}</p>
+                  <p className="font-medium">{new Date(rent.startDate).toLocaleDateString()}</p>
                 </div>
               </div>
               <div>
-                <p className="mb-1 text-sm text-gray-600">Lease End</p>
+                <p className="mb-1 text-sm text-gray-600">Rent End</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <p className="font-medium">{new Date(lease.endDate).toLocaleDateString()}</p>
+                  <p className="font-medium">{new Date(rent.endDate).toLocaleDateString()}</p>
                 </div>
               </div>
               <div>
@@ -607,7 +533,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-green-600" />
                   <p className="font-semibold text-green-600">
-                    ₦{lease.rentAmount.toLocaleString()}/{lease.paymentFrequency.toLowerCase()}
+                    ₦{rent.rentAmount.toLocaleString()}/{perFrequency(rent.paymentFrequency)}
                   </p>
                 </div>
               </div>
@@ -623,33 +549,35 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             </div>
 
             <div className="mt-4 flex gap-2 border-t border-gray-200 pt-4">
-              {lease.status === 'PENDING' && (
+              {rent.status === 'PENDING' && (
                 <button
                   onClick={async () => {
                     await submitStatus('ACTIVE');
-                    refetchLease();
+                    refetchRent();
                   }}
                   disabled={savingStatus}
                   className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
-                  {savingStatus ? 'Activating…' : 'Activate Lease'}
+                  {savingStatus ? 'Activating…' : 'Activate Rent'}
                 </button>
               )}
-              {lease.status === 'ACTIVE' && (
+              {rent.status === 'ACTIVE' && (
                 <button
                   onClick={() => setShowTerminateConfirm(true)}
                   disabled={savingStatus}
                   className="flex-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
-                  {savingStatus ? 'Terminating…' : 'Terminate Lease'}
+                  {savingStatus ? 'Terminating…' : 'Terminate Rent'}
                 </button>
               )}
-              <button
-                onClick={openRenewEditor}
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Renew Lease
-              </button>
+              {!rent.renewedInto && (
+                <button
+                  onClick={openRenewEditor}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Renew Rent
+                </button>
+              )}
               <button
                 onClick={() => setSendingNotice(true)}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -658,12 +586,12 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               </button>
             </div>
 
-            {renewingLease && (
+            {renewingRent && (
               <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-semibold text-gray-800">Renew Lease</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Renew Rent</h3>
                 <p className="text-xs text-gray-500">
-                  Creates a new lease starting after the current one ends. The current lease is
-                  marked Expired once the new one is created.
+                  Creates a new rent starting after the current one ends. The current rent is marked
+                  Expired once the new one is created.
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -705,17 +633,29 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                     />
                   </div>
                 </div>
-                {renewError && <p className="text-sm text-red-600">{renewError}</p>}
+                {rent.renewal?.enabled && (
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={prepareAgreement}
+                      onChange={(e) => setPrepareAgreement(e.target.checked)}
+                    />
+                    Prepare the new agreement from this one
+                  </label>
+                )}
+                {(startRenewalError || renewError) && (
+                  <p className="text-sm text-red-600">{startRenewalError || renewError}</p>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleRenew}
-                    disabled={savingRenew}
+                    disabled={savingRenew || savingStartRenewal}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {savingRenew ? 'Renewing…' : 'Confirm Renewal'}
+                    {savingRenew || savingStartRenewal ? 'Renewing…' : 'Confirm Renewal'}
                   </button>
                   <button
-                    onClick={() => setRenewingLease(false)}
+                    onClick={() => setRenewingRent(false)}
                     className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
@@ -776,6 +716,8 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               </div>
             )}
           </div>
+
+          <RenewalCard key={rent.id + String(rent.autoRenew)} rent={rent} onChanged={refetchRent} />
 
           {/* Late Fee & Grace Period */}
           <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -840,7 +782,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                       <p className="mt-1 text-xs text-gray-400">
                         ≈ ₦
                         {(
-                          (lease.rentAmount * parseFloat(termsDraft.lateFeePercentage)) /
+                          (rent.rentAmount * parseFloat(termsDraft.lateFeePercentage)) /
                           100
                         ).toLocaleString()}{' '}
                         per overdue invoice
@@ -881,17 +823,17 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="mb-1 text-sm text-gray-600">Grace Period</p>
-                  <p className="font-medium">{lease.gracePeriodDays} days</p>
+                  <p className="font-medium">{rent.gracePeriodDays} days</p>
                 </div>
                 <div>
                   <p className="mb-1 text-sm text-gray-600">Late Fee</p>
                   <p className="font-medium">
-                    {lease.lateFeeType === 'FIXED'
-                      ? lease.lateFeeFlatAmount > 0
-                        ? `₦${lease.lateFeeFlatAmount.toLocaleString()} flat`
+                    {rent.lateFeeType === 'FIXED'
+                      ? rent.lateFeeFlatAmount > 0
+                        ? `₦${rent.lateFeeFlatAmount.toLocaleString()} flat`
                         : 'None'
-                      : lease.lateFeePercentage > 0
-                        ? `${lease.lateFeePercentage}% of rent`
+                      : rent.lateFeePercentage > 0
+                        ? `${rent.lateFeePercentage}% of rent`
                         : 'None'}
                   </p>
                 </div>
@@ -899,12 +841,12 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
             )}
           </div>
 
-          <LeaseSignatureCard lease={lease} onSigned={refetchLease} />
+          <RentAgreementCard rent={rent} onChanged={refetchRent} />
 
           {property && (
             <>
-              <ViolationsCard propertyId={property.id} unitId={lease.unitId} />
-              <ConditionReportsCard propertyId={property.id} unitId={lease.unitId} />
+              <ViolationsCard propertyId={property.id} unitId={rent.unitId} />
+              <ConditionReportsCard propertyId={property.id} unitId={rent.unitId} />
             </>
           )}
 
@@ -1052,7 +994,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 Call Tenant
               </a>
               <button
-                onClick={() => openConversation({ type: 'LEASE_THREAD', leaseId })}
+                onClick={() => openConversation({ type: 'RENT_THREAD', rentId })}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 <MessageSquare className="h-4 w-4" />
@@ -1094,7 +1036,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               <button
                 onClick={() => setRecordingOpen(true)}
                 disabled={unpaidInvoices.length === 0}
-                title={unpaidInvoices.length === 0 ? 'No unpaid invoices on this lease' : undefined}
+                title={unpaidInvoices.length === 0 ? 'No unpaid invoices on this rent' : undefined}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <DollarSign className="h-4 w-4" />
@@ -1115,7 +1057,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
                 onClose={() => setRecordingOpen(false)}
                 onDone={() => {
                   setRecordingOpen(false);
-                  refetchLease();
+                  refetchRent();
                 }}
               />
             )}
@@ -1223,19 +1165,19 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               <h2 className="font-semibold">Documents</h2>
             </div>
             <div className="p-4">
-              {lease.signedAgreementUrl ? (
+              {rent.signedAgreementUrl ? (
                 <button
                   type="button"
                   onClick={() =>
                     openFile({
-                      url: lease.signedAgreementUrl!,
-                      name: 'Signed Lease Agreement.pdf',
+                      url: rent.signedAgreementUrl!,
+                      name: 'Signed Rent Agreement.pdf',
                       type: 'application/pdf',
                     })
                   }
                   className="flex w-full items-center justify-between rounded-lg p-2 text-left transition-colors hover:bg-gray-50"
                 >
-                  <p className="text-sm font-medium text-gray-900">Signed Lease Agreement</p>
+                  <p className="text-sm font-medium text-gray-900">Signed Rent Agreement</p>
                   <FileText className="h-4 w-4 text-blue-600" />
                 </button>
               ) : (
@@ -1251,8 +1193,8 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
               <li className="flex items-start gap-2">
                 <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                 <span>
-                  {lease.paymentReliability
-                    ? `${lease.paymentReliability} payment history`
+                  {rent.paymentReliability
+                    ? `${rent.paymentReliability} payment history`
                     : 'No score yet'}
                 </span>
               </li>
@@ -1267,9 +1209,9 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
 
       <ConfirmDialog
         open={showTerminateConfirm}
-        title="Terminate Lease?"
-        description="Are you sure you want to terminate this lease? The unit will immediately be freed up and marked as vacant."
-        confirmLabel="Terminate Lease"
+        title="Terminate Rent?"
+        description="Are you sure you want to terminate this rent? The unit will immediately be freed up and marked as vacant."
+        confirmLabel="Terminate Rent"
         cancelLabel="Keep Active"
         variant="danger"
         isLoading={savingStatus}
@@ -1277,7 +1219,7 @@ export function TenantDetail({ leaseId }: TenantDetailProps) {
         onConfirm={async () => {
           await submitStatus('TERMINATED');
           setShowTerminateConfirm(false);
-          refetchLease();
+          refetchRent();
         }}
       />
     </div>

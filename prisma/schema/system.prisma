@@ -1,3 +1,31 @@
+enum UnitBillingOwner {
+  MANAGER_ELSE_LANDLORD
+  CREATOR
+  BOTH
+}
+
+enum OverageMode {
+  ALLOW_AND_BILL
+  HARD_STOP
+  CONFIRM_EACH_TIME
+}
+
+enum TeamMemberAccess {
+  ASSIGNED_ONLY
+  ALL_COMPANY
+}
+
+enum RentActivationRule {
+  INDEPENDENT
+  AFTER_BOTH_SIGN
+}
+
+enum DowngradeRule {
+  BLOCK
+  GRACE_PERIOD
+  ALLOW_AND_BILL
+}
+
 // Platform-wide singleton configuration. The single row (id = 'global') is
 // auto-created by the seed script or by the first-run setup wizard. Guards
 // the one-time superadmin bootstrap flow: once setupComplete flips to true,
@@ -6,33 +34,96 @@
 // simpler than a generic key/value settings table for the handful of
 // booleans this app actually needs.
 model SystemSettings {
-  id                               String   @id @default("global")
-  setupComplete                    Boolean  @default(false)
+  id                                   String             @id @default("global")
+  setupComplete                        Boolean            @default(false)
   // When true (default), submitting a vendor invoice against a maintenance
   // request also marks that request COMPLETED in the same transaction.
   // Admin-toggleable (Platform Settings) for operators who invoice interim
   // costs mid-job and don't want that to auto-close the request.
-  autoCompleteMaintenanceOnInvoice Boolean  @default(true)
+  autoCompleteMaintenanceOnInvoice     Boolean            @default(true)
   // When true (default), a job the vendor finishes asks the tenant to confirm it is fixed (or
   // report a problem). Turning it off stops new requests; ones already waiting stay answerable.
-  requireTenantRepairConfirmation  Boolean  @default(true)
+  requireTenantRepairConfirmation      Boolean            @default(true)
   // When true (default), a payment the property team records by hand (cash or a transfer, on the
   // tenant's record or a vendor's bill) is not counted until someone other than the person who
   // recorded it confirms it. Switched off, the recorder's own entry counts at once (still
   // audit-logged, with the receipt). Two switches because the two kinds of money differ: what a
   // tenant owes, and what the team owes a vendor. A tenant recording their own transfer always
   // waits for the team, whatever these say.
-  requireSecondPersonForTenantPayments Boolean @default(true)
-  requireSecondPersonForVendorPayments Boolean @default(true)
+  requireSecondPersonForTenantPayments Boolean            @default(true)
+  requireSecondPersonForVendorPayments Boolean            @default(true)
   // Automatic card charging (the auto-pay charger) and identity-document retention are both off
   // until an admin switches them on here AND the deployment allows them (AUTOPAY_WORKER_ENABLED /
   // RETENTION_ENABLED): the deploy flag is the lock, this is the day-to-day switch (ADR-0015).
-  autopayChargingEnabled           Boolean  @default(false)
-  retentionEnabled                 Boolean  @default(false)
+  autopayChargingEnabled               Boolean            @default(false)
+  retentionEnabled                     Boolean            @default(false)
   // How long identity documents are kept: after a tenancy ended with nothing pending or active,
   // and after the last rejected application. Defaults are ADR-0012's proposal (12 months, 90
   // days); the API refuses values below 30 and 7 days so a typo cannot delete everything.
-  retentionAfterTenancyDays        Int      @default(365)
-  retentionAfterRejectionDays      Int      @default(90)
-  updatedAt                        DateTime @updatedAt
+  retentionAfterTenancyDays            Int                @default(365)
+  retentionAfterRejectionDays          Int                @default(90)
+  // How many new people one manager or landlord may start a tenancy for by email address in a day
+  // (each sends an invitation email from Proplity). 0 stops them; admins are not limited (ISS-154).
+  tenantInvitesPerDay                  Int                @default(10)
+  // A property kept for tenant management only is never reviewed by an admin, so the "approved
+  // listing" condition for inviting a new tenant by email cannot apply. When true (default) they may
+  // invite anyway, within the daily limit above; when false only an admin may.
+  inviteTenantsToManagementOnly        Boolean            @default(true)
+  // Plans and limits (Admin > Plans & billing). Limits are off until billing is live: with them on
+  // and nobody able to pay, a free account would be stuck at its included units.
+  enforcePlanLimits                    Boolean            @default(false)
+  // Whose plan the units of a property count against.
+  unitBillingOwner                     UnitBillingOwner   @default(MANAGER_ELSE_LANDLORD)
+  // What happens when someone adds units beyond what their plan includes.
+  overageMode                          OverageMode        @default(ALLOW_AND_BILL)
+  // What happens when someone moves to a plan that includes fewer units than they have.
+  downgradeRule                        DowngradeRule      @default(BLOCK)
+  // What a team member sees of the company's properties: only the ones they manage, or all of them.
+  // The managing partner always sees every member's properties.
+  teamMemberAccess                     TeamMemberAccess   @default(ASSIGNED_ONLY)
+  downgradeGraceDays                   Int                @default(30)
+  // Rent agreements (Admin > Rent agreements). A template is usable only once an admin approves it
+  // (a lawyer reviewing it, in practice) unless this is switched off.
+  agreementTemplatesNeedApproval       Boolean            @default(true)
+  // When the property has no landlord account, the manager types the owner's name on the agreement
+  // (the agent is noted). Off: the agreement needs a landlord account on the property.
+  agreementLandlordNameByManager       Boolean            @default(true)
+  // Whether the agreement form offers these fees next to the caution deposit.
+  agreementAgencyFee                   Boolean            @default(true)
+  agreementLegalFee                    Boolean            @default(true)
+  agreementCautionFee                  Boolean            @default(true)
+  // When a rent starts: independent of the agreement (as today), or once both sides have signed.
+  rentActivationRule                   RentActivationRule @default(INDEPENDENT)
+  // Credits taken before an agreement is generated (the price is the `rent_agreement` service).
+  // Uploading an agreement you already have is free unless the second switch is on.
+  chargeForAgreements                  Boolean            @default(false)
+  chargeForUploads                     Boolean            @default(false)
+  // Whether managers and landlords can buy credit packs (Admin > Plans & billing). Off: the buy
+  // buttons disappear and a purchase already started can still be paid and credited.
+  creditPurchaseEnabled                Boolean            @default(true)
+  // Witnesses may sign a generated agreement through an emailed link. The link works for this many
+  // days after it is sent. Off: witnesses are typed names signed on paper, as before.
+  witnessEsignEnabled                  Boolean            @default(true)
+  witnessLinkDays                      Int                @default(14)
+  // On: an agreement that needs witnesses is not signed (executed) until a witness on each side has
+  // signed through a link, even if both parties have. Off: witnesses are recorded but never hold it up.
+  witnessesMustSign                    Boolean            @default(false)
+  // Stamp duty paid through Proplity: the person pays the quoted duty plus this flat service fee (whole
+  // naira) by card and Proplity staff pay the tax authority. Off until an admin has the people to do it.
+  stampDutyPaymentEnabled              Boolean            @default(false)
+  stampDutyServiceFee                  Int                @default(0)
+  // Renewing a rent with a new agreement (Renew on a rent). Off: the old one-step renewal remains.
+  agreementRenewalEnabled              Boolean            @default(true)
+  // Reminders about tenancies and agreements: tell the tenant and the property team as a tenancy
+  // nears its end, on each day in `renewalReminderDays` (days before the end date), and remind
+  // whoever has not signed an agreement every `agreementUnsignedReminderDays` days (0: never).
+  agreementRemindersEnabled            Boolean            @default(true)
+  renewalReminderDays                  Int[]              @default([90, 60, 30])
+  agreementUnsignedReminderDays        Int                @default(3)
+  // Automatic renewal: for rents the manager marked "renew automatically", prepare the renewal this
+  // many days before the rent ends. It is only ever prepared (a pending rent and a draft agreement);
+  // a person reviews and sends it.
+  autoRenewalEnabled                   Boolean            @default(false)
+  autoRenewalDaysBefore                Int                @default(60)
+  updatedAt                            DateTime           @updatedAt
 }

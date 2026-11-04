@@ -872,12 +872,12 @@ async function main() {
     await hud('📝 Create the tenancy: tenant details come from the application', '#3b82f6');
     await pause(1800);
     const isoIn = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
-    // From an application the form opens at Lease Details: tenant, property and unit are already set.
-    // Step 3: lease terms
-    await page.getByRole('heading', { name: 'Lease Details' }).waitFor();
+    // From an application the form opens at Rent Details: tenant, property and unit are already set.
+    // Step 3: rent terms
+    await page.getByRole('heading', { name: 'Rent Details' }).waitFor();
     await hud('🏠 The property, unit and tenant come from the application', '#3b82f6');
     await pause(1500);
-    await hud('📄 Lease terms: start and end dates, rent and service charge', '#3b82f6');
+    await hud('📄 Rent terms: start and end dates, rent and service charge', '#3b82f6');
     const dates = page.locator('input[type="date"]');
     await dates.nth(0).fill(isoIn(21));
     await pause(500);
@@ -895,8 +895,8 @@ async function main() {
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(9, 'The manager signs and activates the lease', async () => {
-    chapter('📄', 'The manager opens the new tenancy, signs the lease and activates it', '#3b82f6');
+  act(9, 'The manager signs and activates the rent', async () => {
+    chapter('📄', 'The manager opens the new tenancy, signs the rent and activates it', '#3b82f6');
     await signedInAs('manager@proplity.com');
     if (!page.url().endsWith('/dashboard/tenants')) {
       await click(page.getByRole('link', { name: 'Tenants' }).first(), { settle: 1200 });
@@ -906,11 +906,11 @@ async function main() {
     await pause(2200);
     await click(page.getByRole('row', { name: /Chioma Eze/ }), { settle: 1500 });
     await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
-    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
-    await hud('📄 The tenancy record: lease terms, signatures, payments and documents', '#3b82f6');
+    await page.getByText('Rent Agreement Signature').waitFor({ timeout: 40000 });
+    await hud('📄 The tenancy record: rent terms, signatures, payments and documents', '#3b82f6');
     await pause(2200);
     await scroll(500);
-    await hud('✍️ Both sides sign the lease: the manager types a full legal name', '#3b82f6');
+    await hud('✍️ Both sides sign the rent: the manager types a full legal name', '#3b82f6');
     await type(page.getByPlaceholder('Full name'), 'Alex Vance');
     await pause(800);
     await submit(page.getByRole('button', { name: 'Sign Agreement' }));
@@ -919,24 +919,24 @@ async function main() {
     await pause(2200);
     await toTop();
     await pause(800);
-    await hud('🟢 Activate the lease so the first rent invoice can be raised', '#3b82f6');
-    await submit(page.getByRole('button', { name: 'Activate Lease' }));
+    await hud('🟢 Activate the rent so the first rent invoice can be raised', '#3b82f6');
+    await submit(page.getByRole('button', { name: 'Activate Rent' }));
     await pause(2500);
   });
 
   // ---------------------------------------------------------------------------------------------
-  act(10, 'The tenant signs the lease and pays rent', async () => {
-    chapter('🏠', 'The tenant signs the lease and pays the first rent', '#10b981');
+  act(10, 'The tenant signs the rent and pays rent', async () => {
+    chapter('🏠', 'The tenant signs the rent and pays the first rent', '#10b981');
     if (page.url() === 'about:blank') await page.goto('/login');
     if (page.url().includes('/login')) await signIn(NEW_TENANT.email);
     else {
       await signOut();
       await signIn(NEW_TENANT.email);
     }
-    await hud('🏠 The tenant dashboard now shows a lease waiting to be signed', '#10b981');
-    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await hud('🏠 The tenant dashboard now shows a rent waiting to be signed', '#10b981');
+    await page.getByText('Rent Agreement Signature').waitFor({ timeout: 40000 });
     await page.getByRole('heading', { name: 'Needs your attention' }).waitFor();
-    await page.getByText('Lease to sign').waitFor();
+    await page.getByText('Rent to sign').waitFor();
     await hud('📌 Needs your attention: everything waiting on the tenant, in one list', '#10b981');
     await pause(3000);
     await scroll(250);
@@ -945,14 +945,14 @@ async function main() {
     await pause(800);
     await submit(page.getByRole('button', { name: 'Sign Agreement' }));
     await page.getByText('Fully Executed').waitFor();
-    await hud('✅ Fully Executed: both parties have signed the lease', '#10b981');
+    await hud('✅ Fully Executed: both parties have signed the rent', '#10b981');
     await pause(2500);
     await toTop();
     await hud('🏠 My Rental Dashboard: property, balance, payments and maintenance', '#10b981');
     await pause(2200);
     await scroll(500);
     await pause(1800);
-    await hud('💳 Rent and the service charge were invoiced when the lease started', '#10b981');
+    await hud('💳 Rent and the service charge were invoiced when the rent started', '#10b981');
     await pause(2000);
     await click(page.getByRole('button', { name: 'Pay Rent Online' }), { settle: 1500 });
     await page.waitForURL('**/dev/mock-checkout**', { timeout: 40000 });
@@ -1618,7 +1618,7 @@ async function main() {
     await page.waitForURL('**/dashboard/tenants');
     await click(page.getByRole('row', { name: /Chioma Eze/ }), { settle: 1500 });
     await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
-    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await page.getByText('Rent Agreement Signature').waitFor({ timeout: 40000 });
     await scroll(400);
     await hud('📨 The manager bills the tenant for a utility from the tenancy record', '#3b82f6');
     await click(page.getByRole('button', { name: 'Send Invoice' }).first(), { settle: 800 });
@@ -1716,7 +1716,7 @@ async function main() {
     await page.waitForURL('**/dashboard/tenants');
     await click(page.getByRole('row', { name: /Chioma Eze/ }), { settle: 1500 });
     await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
-    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await page.getByText('Rent Agreement Signature').waitFor({ timeout: 40000 });
     await scroll(400);
     await click(page.getByRole('button', { name: 'Send Invoice' }).first(), { settle: 800 });
     const levyForm = page.getByRole('heading', { name: 'Send Invoice' }).locator('xpath=..');
@@ -1917,7 +1917,7 @@ async function main() {
     await click(page.getByRole('button', { name: /Message Manager/ }), { settle: 1500 });
     await page.getByPlaceholder('Type your message...').waitFor({ timeout: 40000 });
     await hud(
-      '💬 A private thread tied to the lease: messages, attachments and read receipts',
+      '💬 A private thread tied to the rent: messages, attachments and read receipts',
       '#06b6d4',
     );
     await pause(1800);
@@ -2058,11 +2058,11 @@ async function main() {
     await hud('👤 Each occupied unit links to its tenant record', '#3b82f6');
     await click(page.getByRole('button', { name: 'View Tenant' }).first(), { settle: 1500 });
     await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
-    await page.getByText('Lease Agreement Signature').waitFor({ timeout: 40000 });
+    await page.getByText('Rent Agreement Signature').waitFor({ timeout: 40000 });
     await pause(1800);
     await scroll(500);
     await hud(
-      '📑 The tenant record: lease terms, signatures, late fees, violations and notes',
+      '📑 The tenant record: rent terms, signatures, late fees, violations and notes',
       '#3b82f6',
     );
     await pause(2500);
@@ -2343,7 +2343,7 @@ async function main() {
     await pause(1200);
     await toTop();
     await hud(
-      '🎉 That was the whole journey: list, approve, publish, apply, lease, pay, repair, review',
+      '🎉 That was the whole journey: list, approve, publish, apply, rent, pay, repair, review',
       '#10b981',
     );
     await pause(6000);

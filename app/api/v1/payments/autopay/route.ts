@@ -10,11 +10,11 @@ import { findReusableAuthorization } from '@/lib/payments/authorization';
 export const GET = withAuth(
   async (req, { session }) => {
     try {
-      const leaseId = req.nextUrl.searchParams.get('leaseId');
+      const rentId = req.nextUrl.searchParams.get('rentId');
       const where: Prisma.AutoPayMandateWhereInput = {
-        lease: { tenantId: session.sub },
+        rent: { tenantId: session.sub },
         status: 'ACTIVE',
-        ...(leaseId ? { leaseId } : {}),
+        ...(rentId ? { rentId } : {}),
       };
 
       const mandates = await prisma.autoPayMandate.findMany({
@@ -30,7 +30,7 @@ export const GET = withAuth(
 );
 
 const createMandateSchema = z.object({
-  leaseId: z.string(),
+  rentId: z.string(),
   // Provider-side token only -- schema comment is explicit that raw card/
   // account data is never stored here.
   paymentMethodToken: z.string().min(1),
@@ -43,41 +43,41 @@ export const POST = withAuth(
     try {
       const validated = await validateBody(req, createMandateSchema);
       if (!validated.success) return validated.response;
-      const { leaseId, ...rest } = validated.data;
+      const { rentId, ...rest } = validated.data;
 
-      const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
-      if (lease.tenantId !== session.sub) {
+      const rent = await prisma.rent.findUnique({ where: { id: rentId } });
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
+      if (rent.tenantId !== session.sub) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      if (lease.status !== 'ACTIVE') {
+      if (rent.status !== 'ACTIVE') {
         return NextResponse.json(
-          { error: 'Auto-pay can only be set up on an active lease' },
+          { error: 'Auto-pay can only be set up on an active rent' },
           { status: 409 },
         );
       }
 
       // The token must be one Paystack itself gave us for a card payment on this
-      // lease -- never a value the client made up or took from someone else.
-      const known = await findReusableAuthorization(leaseId);
+      // rent -- never a value the client made up or took from someone else.
+      const known = await findReusableAuthorization(rentId);
       if (!known || known.authorizationCode !== rest.paymentMethodToken) {
         return NextResponse.json(
           {
             error:
-              'That card is not saved for this lease. Pay one invoice by card first, then set up auto-pay with that card.',
+              'That card is not saved for this rent. Pay one invoice by card first, then set up auto-pay with that card.',
           },
           { status: 400 },
         );
       }
 
-      // One active mandate per lease: a new one replaces the old.
+      // One active mandate per rent: a new one replaces the old.
       const mandate = await prisma.$transaction(async (tx) => {
         await tx.autoPayMandate.updateMany({
-          where: { leaseId, status: 'ACTIVE' },
+          where: { rentId, status: 'ACTIVE' },
           data: { status: 'CANCELLED' },
         });
-        return tx.autoPayMandate.create({ data: { leaseId, ...rest } });
+        return tx.autoPayMandate.create({ data: { rentId, ...rest } });
       });
       return NextResponse.json({ data: mandate }, { status: 201 });
     } catch (err) {
@@ -95,10 +95,10 @@ export const DELETE = withAuth(
 
       const mandate = await prisma.autoPayMandate.findUnique({
         where: { id },
-        include: { lease: true },
+        include: { rent: true },
       });
       if (!mandate) return NextResponse.json({ error: 'Mandate not found' }, { status: 404 });
-      if (mandate.lease.tenantId !== session.sub) {
+      if (mandate.rent.tenantId !== session.sub) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 

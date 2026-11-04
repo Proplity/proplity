@@ -6,7 +6,11 @@ import { handleApiError } from '@/lib/api/errors';
 import { notifyAndEmail, notifyUser, notifyUsers } from '@/lib/notifications';
 import { MOCK_PAYSTACK_SECRET, paymentsMockEnabled } from '@/lib/payments/mockGateway';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { getSystemSettings } from '@/lib/systemSettings';
+import { countUnitsFor, graceEndsAtFrom } from '@/lib/plans';
 import { settleTransferFromWebhook } from '@/lib/payments/payoutService';
+import { grantPurchasedCredits } from '@/lib/creditPacks';
+import { receiveStampDutyPayment } from '@/lib/stampDutyPayment';
 
 // Reached by Paystack's own servers, not a browser -- no session, no CSRF.
 // The HMAC signature over the raw body IS the security boundary here, so it
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest) {
       const invoice = await prisma.invoice.findUnique({
         where: { id: invoiceId },
         include: {
-          lease: {
+          rent: {
             include: {
               unit: {
                 include: {
@@ -169,8 +173,8 @@ export async function POST(req: NextRequest) {
       }
 
       {
-        if (invoice.type === 'RENT' && invoice.lease) {
-          const property = invoice.lease.unit?.property;
+        if (invoice.type === 'RENT' && invoice.rent) {
+          const property = invoice.rent.unit?.property;
           const managersToNotify = [property?.landlordId, property?.managerId].filter(
             (id): id is string => Boolean(id),
           );
@@ -182,8 +186,8 @@ export async function POST(req: NextRequest) {
               link: '/dashboard',
             });
           }
-          if (invoice.lease.tenantId) {
-            await notifyUser(invoice.lease.tenantId, {
+          if (invoice.rent.tenantId) {
+            await notifyUser(invoice.rent.tenantId, {
               type: 'SYSTEM',
               title: 'Rent Payment Confirmed',
               body: `Your rent payment of ₦${amount.toLocaleString()} has been received. Thank you!`,
@@ -209,9 +213,28 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // A subscription invoice paying activates the subscription itself --
-        // tier/cycle have no dedicated column, encoded into the description
-        // at checkout time (see subscriptions/checkout/route.ts).
+        // A credit pack paid in full adds its credits, once (the claim and the ledger row share a
+        // transaction, so a redelivered or doubled payment cannot add them twice).
+        if (invoice.type === 'CREDIT_PURCHASE' && invoice.userId && outcome.status === 'PAID') {
+          const added = await prisma.$transaction((tx) => grantPurchasedCredits(tx, invoice.id));
+          if (added > 0) {
+            await notifyAndEmail(invoice.userId, {
+              type: 'SYSTEM',
+              title: 'Credits added',
+              body: `${added} credit${added === 1 ? '' : 's'} ${added === 1 ? 'was' : 'were'} added to your account. Thank you!`,
+              link: '/dashboard',
+            });
+          }
+        }
+
+        // Stamp duty paid in full: the order goes to Proplity staff to stamp, once.
+        if (invoice.type === 'STAMP_DUTY' && outcome.status === 'PAID') {
+          await receiveStampDutyPayment(invoice.id);
+        }
+
+        // A subscription invoice paying activates the subscription itself -- plan/cycle have no
+        // dedicated column, encoded into the description at checkout time (see
+        // subscriptions/checkout/route.ts).
         if (
           subscriptionsEnabled() &&
           invoice.type === 'SUBSCRIPTION' &&
@@ -219,33 +242,52 @@ export async function POST(req: NextRequest) {
           outcome.status === 'PAID' &&
           !outcome.wasPaid
         ) {
-          const match = invoice.description?.match(/tier=(\w+) cycle=(\w+)/);
-          const tier = (match?.[1] as 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE' | undefined) ?? 'PRO';
-          const cycle = match?.[2] === 'yearly' ? 'yearly' : 'monthly';
-          const now = new Date();
-          const periodEnd = new Date(now);
-          if (cycle === 'yearly') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-          else periodEnd.setMonth(periodEnd.getMonth() + 1);
+          const match = invoice.description?.match(/plan=([a-z0-9-]+) cycle=(\w+)/);
+          const plan = match ? await prisma.plan.findUnique({ where: { key: match[1] } }) : null;
+          if (!plan) {
+            console.error('Paid subscription invoice names no known plan', invoice.id);
+          } else {
+            const cycle = match?.[2] === 'yearly' ? 'YEARLY' : 'MONTHLY';
+            const now = new Date();
+            const periodEnd = new Date(now);
+            if (cycle === 'YEARLY') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+            else periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-          await prisma.subscription.upsert({
-            where: { userId: invoice.userId },
-            create: {
-              userId: invoice.userId,
-              tier,
-              status: 'ACTIVE',
-              providerSubscriptionId: data.reference,
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-            },
-            update: {
-              tier,
-              status: 'ACTIVE',
-              providerSubscriptionId: data.reference,
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-              cancelAtPeriodEnd: false,
-            },
-          });
+            // Moving to a plan that includes fewer units than the account has opens the admin's
+            // grace period, when that is the rule.
+            const settings = await getSystemSettings();
+            const units = await countUnitsFor(settings.unitBillingOwner, invoice.userId);
+            const graceEndsAt =
+              settings.enforcePlanLimits &&
+              settings.downgradeRule === 'GRACE_PERIOD' &&
+              units > plan.unitsIncluded
+                ? graceEndsAtFrom(settings.downgradeGraceDays)
+                : null;
+
+            await prisma.subscription.upsert({
+              where: { userId: invoice.userId },
+              create: {
+                userId: invoice.userId,
+                planId: plan.id,
+                billingCycle: cycle,
+                status: 'ACTIVE',
+                providerSubscriptionId: data.reference,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                graceEndsAt,
+              },
+              update: {
+                planId: plan.id,
+                billingCycle: cycle,
+                status: 'ACTIVE',
+                providerSubscriptionId: data.reference,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                cancelAtPeriodEnd: false,
+                graceEndsAt,
+              },
+            });
+          }
         }
       }
     }

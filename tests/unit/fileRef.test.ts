@@ -8,7 +8,7 @@ describe('fileRef utility', () => {
     expect(accessForFolder('profile')).toBe('private');
     expect(accessForFolder('properties')).toBe('public');
     expect(accessForFolder('notices')).toBe('private');
-    expect(accessForFolder('leases')).toBe('private');
+    expect(accessForFolder('rents')).toBe('private');
     expect(accessForFolder('communications')).toBe('private');
     expect(FOLDER_ACCESS.properties).toBe('public');
   });

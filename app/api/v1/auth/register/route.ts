@@ -15,10 +15,11 @@ import {
 import { sendEmail } from '@/lib/email';
 import { notifyAdmins } from '@/lib/notifications';
 import { Role, UserStatus } from '@prisma/client';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 const registerSchema = z.object({
   email: emailSchema,
-  password: z.string().min(6),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT),
   name: z.string().min(1),
   role: z.string().optional(),
   // Only meaningful when role resolves to MANAGER -- checked for real here

@@ -37,9 +37,9 @@ export function TenantFeaturePage() {
     },
     {
       icon: FileText,
-      title: 'Lease Management',
+      title: 'Rent Management',
       description:
-        'Access your lease agreement anytime, get notified before renewal, and sign digitally without visiting an office.',
+        'Access your rent agreement anytime, get notified before renewal, and sign digitally without visiting an office.',
     },
     {
       icon: Star,
@@ -64,7 +64,7 @@ export function TenantFeaturePage() {
     {
       step: '2',
       title: 'Apply & Move In',
-      desc: 'Submit your application online, upload documents, and sign your lease digitally. Get responses within 24-48 hours.',
+      desc: 'Submit your application online, upload documents, and sign your rent digitally. Get responses within 24-48 hours.',
     },
     {
       step: '3',
@@ -134,7 +134,7 @@ export function TenantFeaturePage() {
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Welcome back, Blessing</h3>
                   <p className="text-sm text-gray-500">
-                    Flat 3B, Lekki Phase 1 Complex · Lease active until Dec 2026
+                    Flat 3B, Lekki Phase 1 Complex · Rent active until Dec 2026
                   </p>
                 </div>
                 <div className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">

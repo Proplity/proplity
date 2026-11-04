@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceCategory,
   createMaintenanceRequest,
   createMaintenanceSchedule,
@@ -79,7 +79,7 @@ describe('maintenance: requests, create', () => {
     expect(res.status).toBe(403);
   });
 
-  it('requires an ACTIVE lease on the unit for the requesting tenant', async () => {
+  it('requires an ACTIVE rent on the unit for the requesting tenant', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
@@ -97,7 +97,7 @@ describe('maintenance: requests, create', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    await createLease(unit.id, tenant.id);
+    await createRent(unit.id, tenant.id);
     const cookie = await authCookie(tenant.id, tenant.role);
 
     const res = await apiFetch('/api/v1/maintenance/requests', {

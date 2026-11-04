@@ -41,7 +41,7 @@ export const PATCH = withAuth(
             select: {
               managedProperties: true,
               ownedProperties: true,
-              leases: true,
+              rents: true,
               maintenanceRequests: true,
               assignedJobs: true,
             },
@@ -73,7 +73,7 @@ export const PATCH = withAuth(
         const inUse =
           c.managedProperties +
           c.ownedProperties +
-          c.leases +
+          c.rents +
           c.maintenanceRequests +
           c.assignedJobs;
         if (inUse > 0) {

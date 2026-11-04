@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApplicationStatus, Prisma } from '@prisma/client';
 import { notifyByEmail, notifyUsers } from '@/lib/notifications';
+import { listingOpenTo } from '@/lib/api/listingAccess';
 import { prisma } from '@/lib/db';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
@@ -25,7 +27,7 @@ export const GET = withAuth(async (req, { session }) => {
       filters.push({ applicantId: session.sub });
     } else if (session.role === 'MANAGER' || session.role === 'LANDLORD') {
       filters.push({
-        unit: { property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] } },
+        unit: { property: { ...propertyScopeWhere(session.scope) } },
       });
     }
     // ADMIN and VENDOR: no extra scoping needed for ADMIN (sees all);
@@ -71,8 +73,14 @@ export const POST = withAuth(
       if (!validated.success) return validated.response;
       const { unitId, details } = validated.data;
 
-      const unit = await prisma.unit.findUnique({ where: { id: unitId } });
-      if (!unit) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        include: { property: true },
+      });
+      // Only a unit someone can see in the listings can be applied for (ISS-143).
+      if (!unit || !(await listingOpenTo(session, unit.property, unit))) {
+        return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+      }
 
       // One pending application per applicant per unit at a time -- same
       // app-level duplicate-prevention shape as access-codes/route.ts's

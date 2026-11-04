@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Lock, AlertCircle } from 'lucide-react';
 import { LogoIcon } from '../components/Logo';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -24,8 +25,8 @@ function ResetPasswordContent() {
       setError('This reset link is missing its token.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`${PASSWORD_TOO_SHORT}.`);
       return;
     }
     if (password !== confirmPassword) {
@@ -111,7 +112,7 @@ function ResetPasswordContent() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
                   required
                   className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />

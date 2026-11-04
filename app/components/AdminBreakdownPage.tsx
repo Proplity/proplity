@@ -343,10 +343,12 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     }
 
     if (breakdownType === 'properties') {
+      // Listings only: a property kept for management only is never reviewed.
       const filtered = properties.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.city.toLowerCase().includes(searchQuery.toLowerCase()),
+          !p.managementOnly &&
+          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.city.toLowerCase().includes(searchQuery.toLowerCase())),
       );
       return (
         <table className="w-full text-sm">
@@ -405,7 +407,7 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
     if (breakdownType === 'transactions') {
       const filtered = allPayments
         .filter((p) =>
-          (p.invoice.lease?.tenant.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+          (p.invoice.rent?.tenant.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
         )
         .sort(
           (a, b) => new Date(b.payment.paidAt).getTime() - new Date(a.payment.paidAt).getTime(),
@@ -420,10 +422,10 @@ export function AdminBreakdownPage({ breakdownType }: AdminBreakdownPageProps) {
                   {payment.transactionRef ?? '—'}
                 </td>
                 <td className="px-4 py-3.5 font-medium whitespace-nowrap text-gray-800">
-                  {invoice.lease?.tenant.name ?? 'Unknown'}
+                  {invoice.rent?.tenant.name ?? 'Unknown'}
                 </td>
                 <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">
-                  {invoice.lease?.unit.property.name ?? '—'}
+                  {invoice.rent?.unit.property.name ?? '—'}
                 </td>
                 <td className="px-4 py-3.5 font-semibold whitespace-nowrap text-gray-900">
                   ₦{payment.amount.toLocaleString()}

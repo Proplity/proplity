@@ -12,41 +12,41 @@ function addCycle(date: Date, frequency: PaymentFrequency): Date {
 // Idempotent by construction: always checks for an existing RENT invoice at
 // the computed dueDate before creating one, so re-running (daily, or twice
 // by accident) never double-bills a cycle.
-export async function runRentInvoicer(): Promise<{ created: number; leasesChecked: number }> {
-  const activeLeases = await prisma.lease.findMany({ where: { status: 'ACTIVE' } });
+export async function runRentInvoicer(): Promise<{ created: number; rentsChecked: number }> {
+  const activeRents = await prisma.rent.findMany({ where: { status: 'ACTIVE' } });
   let created = 0;
 
-  for (const lease of activeLeases) {
+  for (const rent of activeRents) {
     const latestInvoice = await prisma.invoice.findFirst({
-      where: { leaseId: lease.id, type: 'RENT' },
+      where: { rentId: rent.id, type: 'RENT' },
       orderBy: { dueDate: 'desc' },
     });
 
-    // Every lease gets an initial RENT invoice at creation (see
-    // app/api/v1/leases/route.ts), so this should always exist -- but a
-    // lease somehow missing one is skipped rather than guessed at.
+    // Every rent gets an initial RENT invoice at creation (see
+    // app/api/v1/rents/route.ts), so this should always exist -- but a
+    // rent somehow missing one is skipped rather than guessed at.
     if (!latestInvoice) continue;
 
-    const nextDueDate = addCycle(latestInvoice.dueDate, lease.paymentFrequency);
+    const nextDueDate = addCycle(latestInvoice.dueDate, rent.paymentFrequency);
     const now = new Date();
-    if (nextDueDate > now || nextDueDate > lease.endDate) continue;
+    if (nextDueDate > now || nextDueDate > rent.endDate) continue;
 
     const existing = await prisma.invoice.findFirst({
-      where: { leaseId: lease.id, type: 'RENT', dueDate: nextDueDate },
+      where: { rentId: rent.id, type: 'RENT', dueDate: nextDueDate },
     });
     if (existing) continue;
 
     const rentInvoice = await prisma.invoice.create({
       data: {
-        leaseId: lease.id,
+        rentId: rent.id,
         type: 'RENT',
-        amount: lease.rentAmount,
+        amount: rent.rentAmount,
         dueDate: nextDueDate,
         description: 'Recurring rent invoice',
       },
     });
     created += 1;
-    await notifyAndEmail(lease.tenantId, {
+    await notifyAndEmail(rent.tenantId, {
       title: `Rent invoice ${rentInvoice.invoiceNumber} issued`,
       body: `Your next rent invoice is ₦${rentInvoice.amount.toLocaleString()}, due ${nextDueDate.toDateString()}.`,
       link: '/dashboard',
@@ -54,16 +54,16 @@ export async function runRentInvoicer(): Promise<{ created: number; leasesChecke
 
     // Same cycle as rent, billed as its own line (see CLAUDE.md) -- guarded
     // by the same idempotency check pattern as RENT above, on its own type.
-    if (lease.serviceCharge > 0) {
+    if (rent.serviceCharge > 0) {
       const existingServiceCharge = await prisma.invoice.findFirst({
-        where: { leaseId: lease.id, type: 'SERVICE_CHARGE', dueDate: nextDueDate },
+        where: { rentId: rent.id, type: 'SERVICE_CHARGE', dueDate: nextDueDate },
       });
       if (!existingServiceCharge) {
         await prisma.invoice.create({
           data: {
-            leaseId: lease.id,
+            rentId: rent.id,
             type: 'SERVICE_CHARGE',
-            amount: lease.serviceCharge,
+            amount: rent.serviceCharge,
             dueDate: nextDueDate,
             description: 'Recurring service charge invoice',
           },
@@ -72,5 +72,5 @@ export async function runRentInvoicer(): Promise<{ created: number; leasesChecke
     }
   }
 
-  return { created, leasesChecked: activeLeases.length };
+  return { created, rentsChecked: activeRents.length };
 }

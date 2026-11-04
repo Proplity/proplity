@@ -52,7 +52,7 @@ const send = (page, method, path, data, origin = BASE) =>
     '/api/v1/properties?scope=mine',
     '/api/v1/admin/users',
     '/api/v1/admin/audit-logs',
-    '/api/v1/leases',
+    '/api/v1/rents',
     '/api/v1/invoices',
     '/api/v1/notifications',
     '/api/v1/auth/me',
@@ -244,16 +244,16 @@ const tenant = await login('tenant@proplity.com');
 {
   const vendor = await login('vendor@proplity.com');
   const landlord = await login('landlord@proplity.com');
-  const tenantLeases = (await (await tenant.page.request.get('/api/v1/leases')).json()).data ?? [];
+  const tenantRents = (await (await tenant.page.request.get('/api/v1/rents')).json()).data ?? [];
   const tenantInvoices =
     (await (await tenant.page.request.get('/api/v1/invoices')).json()).data ?? [];
-  if (tenantLeases[0]) {
-    const res = await vendor.page.request.get(`/api/v1/leases/${tenantLeases[0].id}`, {
+  if (tenantRents[0]) {
+    const res = await vendor.page.request.get(`/api/v1/rents/${tenantRents[0].id}`, {
       failOnStatusCode: false,
     });
     check(
       [403, 404].includes(res.status()),
-      "a vendor cannot read a tenant's lease",
+      "a vendor cannot read a tenant's rent",
       `got ${res.status()}`,
     );
   }

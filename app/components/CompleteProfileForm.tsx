@@ -149,7 +149,7 @@ export function CompleteProfileForm({
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Tenant Profile Readiness</h2>
               <p className="text-xs text-gray-500">
-                Required once for all property applications and digital lease agreements
+                Required once for all property applications and digital rent agreements
               </p>
             </div>
             <div>

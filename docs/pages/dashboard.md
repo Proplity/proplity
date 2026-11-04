@@ -8,12 +8,12 @@ in [`../components/dashboard.md`](../components/dashboard.md).
 
 Tabs by role (from `getTabsForRole` in `DashboardChrome.tsx`):
 
-| Role     | Tabs                                                                                                     |
-| :------- | :------------------------------------------------------------------------------------------------------- |
-| Tenant   | Dashboard, Browse Properties, Payment History, My Rentals, Messages                                      |
-| Manager  | Dashboard, My Properties, Discover Properties, Tenants, Maintenance, Messages, Bank Transfers, Schedules |
-| Landlord | Portfolio, Tenants, Maintenance, Messages, Bank Transfers, Schedules                                     |
-| Vendor   | My Jobs, Invoices, Messages                                                                              |
+| Role     | Tabs                                                                                                           |
+| :------- | :------------------------------------------------------------------------------------------------------------- |
+| Tenant   | Dashboard, Browse Properties, Payment History, My Rentals, Messages                                            |
+| Manager  | Dashboard, My Properties, Discover Properties, Tenants, Maintenance, Messages, Bank Transfers, Schedules, Team |
+| Landlord | Portfolio, Tenants, Maintenance, Messages, Bank Transfers, Schedules                                           |
+| Vendor   | My Jobs, Invoices, Messages                                                                                    |
 
 ## Home and shared pages
 
@@ -36,17 +36,17 @@ Tabs by role (from `getTabsForRole` in `DashboardChrome.tsx`):
 | `/dashboard/properties/[id]/schedule-viewing` | `dashboard/properties/[id]/schedule-viewing/page.tsx` | tenant                    | Book a viewing: a date (Mon to Sat) and a half-hour start time, 9:00 to 17:00 Lagos. Times another person already holds at this property are marked booked and cannot be chosen (ISS-104)            |
 | `/dashboard/properties/[id]/neighbourhood`    | `dashboard/properties/[id]/neighbourhood/page.tsx`    | manager, landlord         | Edit the neighbourhood report that the property page shows (`NeighbourhoodReportEditor`)                                                                                                             |
 | `/dashboard/discover`                         | `dashboard/discover/page.tsx`                         | tenant, manager           | Browse or discover published properties with filters and trust scores; the property's own team also sees the ad-campaign buttons                                                                     |
-| `/dashboard/neighbourhood-report`             | `dashboard/neighbourhood-report/page.tsx`             | tenant                    | The neighbourhood report for the tenant's current home (from their active lease)                                                                                                                     |
-| `/dashboard/rentals`                          | `dashboard/rentals/page.tsx`                          | tenant                    | "My Rentals": the tenant's leases, each opening its property page                                                                                                                                    |
+| `/dashboard/neighbourhood-report`             | `dashboard/neighbourhood-report/page.tsx`             | tenant                    | The neighbourhood report for the tenant's current home (from their active rent)                                                                                                                      |
+| `/dashboard/rentals`                          | `dashboard/rentals/page.tsx`                          | tenant                    | "My Rentals": the tenant's rents, each opening its property page                                                                                                                                     |
 | `/dashboard/profile/complete`                 | `dashboard/profile/complete/page.tsx`                 | tenant                    | Fill in the tenant profile once (identity, emergency contact, previous landlord, ID); an application needs it                                                                                        |
 
-## Tenants and leases (property team)
+## Tenants and rents (property team)
 
-| Route                     | File                              | Roles             | Description                                                                                                                                                                            |
-| :------------------------ | :-------------------------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard/tenants`      | `dashboard/tenants/page.tsx`      | manager, landlord | Every tenant with a lease on the person's properties; rent status (paid, due, overdue) is derived from the lease's rent invoices                                                       |
-| `/dashboard/tenants/add`  | `dashboard/tenants/add/page.tsx`  | manager, landlord | Add a tenant and a lease on one of the person's units (multi-step form)                                                                                                                |
-| `/dashboard/tenants/[id]` | `dashboard/tenants/[id]/page.tsx` | manager, landlord | The tenancy record. `[id]` is the **lease** id: signature, terms, renew, send notice, invoices, **Record cash or transfer payment**, violations, condition reports, notes, maintenance |
+| Route                     | File                              | Roles             | Description                                                                                                                                                                           |
+| :------------------------ | :-------------------------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/dashboard/tenants`      | `dashboard/tenants/page.tsx`      | manager, landlord | Every tenant with a rent on the person's properties; rent status (paid, due, overdue) is derived from the rent's rent invoices                                                        |
+| `/dashboard/tenants/add`  | `dashboard/tenants/add/page.tsx`  | manager, landlord | Add a tenant and a rent on one of the person's units (multi-step form)                                                                                                                |
+| `/dashboard/tenants/[id]` | `dashboard/tenants/[id]/page.tsx` | manager, landlord | The tenancy record. `[id]` is the **rent** id: signature, terms, renew, send notice, invoices, **Record cash or transfer payment**, violations, condition reports, notes, maintenance |
 
 ## Repairs and schedules
 
@@ -60,10 +60,13 @@ Tabs by role (from `getTabsForRole` in `DashboardChrome.tsx`):
 
 ## Money
 
-| Route                        | File                                 | Roles             | Description                                                                                                                        |
-| :--------------------------- | :----------------------------------- | :---------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard/payment-history` | `dashboard/payment-history/page.tsx` | tenant            | Invoices and payments, pay by card, **Paid another way** (bank transfer or cash), receipts, auto-pay                               |
-| `/dashboard/reconciliation`  | `dashboard/reconciliation/page.tsx`  | manager, landlord | Bank transfers recorded by tenants or the team; someone other than the recorder confirms or rejects (admins use `/admin/payments`) |
+| Route                               | File                                        | Roles             | Description                                                                                                                                                                                                                                                                                               |
+| :---------------------------------- | :------------------------------------------ | :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard/payment-history`        | `dashboard/payment-history/page.tsx`        | tenant            | Invoices and payments, pay by card, **Paid another way** (bank transfer or cash), receipts, auto-pay                                                                                                                                                                                                      |
+| `/dashboard/reconciliation`         | `dashboard/reconciliation/page.tsx`         | manager, landlord | Bank transfers recorded by tenants or the team; someone other than the recorder confirms or rejects (admins use `/admin/payments`)                                                                                                                                                                        |
+| `/dashboard/team`                   | `dashboard/team/page.tsx`                   | manager           | The company: create it, see the seats the plan includes, add a person (they get an email to set a password), remove one, and choose who manages which property (`TeamPanel`). Shown to a company's members read-only                                                                                      |
+| `/dashboard/properties/import`      | `dashboard/properties/import/page.tsx`      | manager, landlord | Import properties, units and tenants from a CSV or Excel file (`PortfolioImport`): download the template, upload, see a preview of everything it will do and every problem, then import. The result is kept for management only; a button sends the tenants' invitations, as many as today's limit allows |
+| `/dashboard/tenants/[id]/agreement` | `dashboard/tenants/[id]/agreement/page.tsx` | manager, landlord | The form that makes a rent agreement from a template (`AgreementBuilder`): the landlord, optional fees, which optional clauses to keep, rewording editable ones, special conditions, witnesses, and a live preview. Save as a draft, or save and send to the tenant                                       |
 
 ## Vendor
 

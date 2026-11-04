@@ -1,5 +1,7 @@
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { managedIdsOf } from '@/lib/team';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 
 // Who may start a free-form (DIRECT / SUPPORT) conversation with whom. Property staff
 // and admins are reachable by any signed-in user (a tenant contacts a manager about a
@@ -9,12 +11,12 @@ import { prisma } from '@/lib/db';
 export const MAX_FREEFORM_PARTICIPANTS = 10;
 
 async function propertyIdsFor(userId: string): Promise<Set<string>> {
-  const [owned, leases, jobs] = await Promise.all([
+  const [owned, rents, jobs] = await Promise.all([
     prisma.property.findMany({
-      where: { OR: [{ managerId: userId }, { landlordId: userId }] },
+      where: propertyScopeWhere(await managedIdsOf(userId)),
       select: { id: true },
     }),
-    prisma.lease.findMany({
+    prisma.rent.findMany({
       where: { tenantId: userId },
       select: { unit: { select: { propertyId: true } } },
     }),
@@ -25,7 +27,7 @@ async function propertyIdsFor(userId: string): Promise<Set<string>> {
   ]);
   return new Set([
     ...owned.map((p) => p.id),
-    ...leases.map((l) => l.unit.propertyId),
+    ...rents.map((l) => l.unit.propertyId),
     ...jobs.map((j) => j.unit.propertyId),
   ]);
 }

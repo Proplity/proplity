@@ -20,7 +20,7 @@ const AVATAR_COLORS = [
 const TYPE_LABEL: Record<Conversation['type'], string> = {
   DIRECT: 'Direct message',
   MAINTENANCE_THREAD: 'Maintenance',
-  LEASE_THREAD: 'Lease',
+  RENT_THREAD: 'Rent',
   COMMUNITY_DISCUSSION: 'Community board',
   SUPPORT: 'Support',
 };
@@ -43,7 +43,7 @@ function describe(conv: Conversation, selfId: string | undefined) {
   const name = conv.title || others.map((p) => p.user.name).join(', ') || 'Conversation';
   const subtitle =
     conv.maintenanceRequest?.title ??
-    conv.lease?.unit.property.name ??
+    conv.rent?.unit.property.name ??
     conv.property?.name ??
     TYPE_LABEL[conv.type];
   return { name, subtitle, others };
@@ -241,6 +241,7 @@ export function MessagingPortal() {
                 const senderLabel = isMe
                   ? null
                   : (sender?.name ??
+                    message.sender?.name ??
                     (message.senderType === 'AI_ASSISTANT' ? 'AI Assistant' : 'System'));
                 return (
                   <div
@@ -267,30 +268,37 @@ export function MessagingPortal() {
             </div>
 
             {/* Message Input */}
-            <div className="border-t border-gray-200 bg-white p-4">
-              <div className="flex items-center gap-2">
-                <button className="rounded-lg p-2 hover:bg-gray-100" title="Attach file">
-                  <Paperclip className="h-5 w-5 text-gray-600" />
-                </button>
-                <input
-                  type="text"
-                  placeholder="Type your message..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={submitting || !messageText.trim()}
-                  className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
-                  title="Send message"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
+            {selectedConv.leftAt ? (
+              <div className="border-t border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                Your tenancy has ended, so this conversation is read-only. You can still read what
+                was said until {new Date(selectedConv.leftAt).toLocaleDateString()}.
               </div>
-              <p className="mt-2 text-xs text-gray-500">Press Enter to send</p>
-            </div>
+            ) : (
+              <div className="border-t border-gray-200 bg-white p-4">
+                <div className="flex items-center gap-2">
+                  <button className="rounded-lg p-2 hover:bg-gray-100" title="Attach file">
+                    <Paperclip className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="Type your message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={submitting || !messageText.trim()}
+                    className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                    title="Send message"
+                  >
+                    <Send className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">Press Enter to send</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="hidden flex-1 items-center justify-center bg-gray-50 md:flex">

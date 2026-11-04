@@ -4,20 +4,19 @@ import { LogoIcon } from './Logo';
 import { useCheckoutSubscription } from '@/hooks/useSubscription';
 import { useCardPayments, usePayInvoice } from '@/hooks/useInvoices';
 import { useMySubscription } from '@/hooks/useSubscription';
+import type { Plan } from '@/lib/api/types';
+import { priceFor } from '@/lib/planPricing';
+import { naira, planBullets } from '@/lib/planDisplay';
 
 interface CheckoutProps {
-  plan: {
-    tier: 'FREE' | 'PRO';
-    name: string;
-    price: string;
-    units: string;
-    features: string[];
-  };
+  plan: Plan;
+  initialCycle?: 'monthly' | 'yearly';
   onBack: () => void;
   onComplete: () => void;
 }
 
 interface DowngradeConfirmModalProps {
+  planName: string;
   paidUntil: Date;
   onConfirm: () => void;
   onCancel: () => void;
@@ -25,6 +24,7 @@ interface DowngradeConfirmModalProps {
 }
 
 function DowngradeConfirmModal({
+  planName,
   paidUntil,
   onConfirm,
   onCancel,
@@ -61,11 +61,11 @@ function DowngradeConfirmModal({
         </p>
         <div className="mb-6 space-y-1 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
           <p>
-            • Switching to <strong>Free</strong> keeps your current plan active until the end of
-            your billing period.
+            • Switching to <strong>{planName}</strong> keeps your current plan active until the end
+            of your billing period.
           </p>
           <p>
-            • Your account will not be billed again, and will transition to Free on{' '}
+            • Your account will not be billed again, and will move to {planName} on{' '}
             {paidUntil.toLocaleDateString(undefined, { dateStyle: 'medium' })}.
           </p>
         </div>
@@ -93,9 +93,9 @@ function DowngradeConfirmModal({
   );
 }
 
-export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
+export function Checkout({ plan, initialCycle = 'monthly', onBack, onComplete }: CheckoutProps) {
   const [step, setStep] = useState(1);
-  const [billingCycle, setBillingCycle] = useState('monthly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(initialCycle);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -116,14 +116,20 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
   } = useCheckoutSubscription();
   const { submit: payInvoice, submitting: paying, error: payError } = usePayInvoice();
   const { available: cardsAvailable } = useCardPayments();
-  const paidPlan = (parseInt(plan.price.replace(/[^0-9]/g, '')) || 0) > 0;
   const { data: currentPlan } = useMySubscription();
+  // The same sum the server does when it creates the invoice, so the figure shown is the figure charged.
+  const quote = priceFor(
+    plan,
+    billingCycle === 'yearly' ? 'YEARLY' : 'MONTHLY',
+    currentPlan?.usage.units ?? 0,
+  );
+  const paidPlan = (quote?.total ?? 0) > 0;
 
   const executeCheckout = async (confirmedDowngrade = false) => {
     try {
       const result = await checkoutSubscription({
-        tier: plan.tier,
-        billingCycle: billingCycle === 'yearly' ? 'yearly' : 'monthly',
+        planKey: plan.key,
+        billingCycle,
         ...(confirmedDowngrade ? { confirmDowngrade: true } : {}),
       });
 
@@ -151,20 +157,16 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
     // until that period ends; ask first so nobody thinks it stops today.
     const paidUntil = currentPlan?.currentPeriodEnd ? new Date(currentPlan.currentPeriodEnd) : null;
     const downgrading =
-      plan.tier === 'FREE' && currentPlan?.tier !== 'FREE' && !!paidUntil && paidUntil > new Date();
+      !paidPlan &&
+      currentPlan?.plan.isDefault === false &&
+      !currentPlan.lapsed &&
+      !!paidUntil &&
+      paidUntil > new Date();
     if (downgrading) {
       setShowDowngradeModal(true);
       return;
     }
     await executeCheckout(false);
-  };
-
-  const calculatePrice = () => {
-    const monthlyPrice = parseInt(plan.price.replace(/[^0-9]/g, '')) || 0;
-    if (billingCycle === 'yearly') {
-      return monthlyPrice * 12 * 0.85; // 15% discount for yearly
-    }
-    return monthlyPrice;
   };
 
   if (step === 2) {
@@ -447,8 +449,8 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
               <h2 className="mb-4 text-lg font-semibold">Order Summary</h2>
 
               <div className="mb-4">
-                <p className="text-lg font-medium">{plan.name} Plan</p>
-                <p className="text-sm text-gray-600">{plan.units}</p>
+                <p className="text-lg font-medium">{plan.name} plan</p>
+                <p className="text-sm text-gray-600">{plan.unitsIncluded} units included</p>
               </div>
 
               {/* Billing Cycle Toggle */}
@@ -476,7 +478,11 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
                     }`}
                   >
                     Yearly
-                    <span className="mt-0.5 block text-xs opacity-80">Save 15%</span>
+                    {plan.yearlyPrice !== null && plan.monthlyPrice > 0 && (
+                      <span className="mt-0.5 block text-xs opacity-80">
+                        Save {naira(plan.monthlyPrice * 12 - plan.yearlyPrice)}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -485,7 +491,7 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
               <div className="mb-4 border-b border-gray-200 pb-4">
                 <p className="mb-2 text-sm font-medium">Included Features:</p>
                 <ul className="space-y-2">
-                  {plan.features.map((feature, index) => (
+                  {planBullets(plan).map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm text-gray-600">
                       <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
                       {feature}
@@ -495,45 +501,42 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
               </div>
 
               {/* Price Breakdown */}
-              <div className="mb-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">₦{calculatePrice().toLocaleString()}</span>
-                </div>
-                {billingCycle === 'yearly' && (
-                  <div className="flex items-center justify-between text-green-600">
-                    <span>Yearly Discount (15%)</span>
-                    <span>
-                      -₦
-                      {(parseInt(plan.price.replace(/[^0-9]/g, '')) * 12 * 0.15).toLocaleString()}
-                    </span>
+              {quote ? (
+                <>
+                  <div className="mb-4 space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">
+                        {plan.name} plan, {billingCycle === 'yearly' ? 'a year' : 'a month'}
+                      </span>
+                      <span className="font-medium">{naira(quote.base)}</span>
+                    </div>
+                    {quote.extraUnits > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          {quote.extraUnits} extra unit{quote.extraUnits === 1 ? '' : 's'}
+                        </span>
+                        <span className="font-medium">{naira(quote.overage)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">VAT (7.5%)</span>
-                  <span className="font-medium">
-                    ₦{(calculatePrice() * 0.075).toLocaleString()}
-                  </span>
-                </div>
-              </div>
 
-              <div className="border-t-2 border-gray-300 pt-4">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="font-semibold">Total Due Today</span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    ₦{(calculatePrice() * 1.075).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Billed {billingCycle === 'yearly' ? 'annually' : 'monthly'}
+                  <div className="border-t-2 border-gray-300 pt-4">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="font-semibold">Total due today</span>
+                      <span className="text-2xl font-bold text-blue-600">{naira(quote.total)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {quote.total === 0
+                        ? 'Nothing to pay'
+                        : `Billed ${billingCycle === 'yearly' ? 'yearly' : 'monthly'}`}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-red-600">
+                  This plan cannot be paid for by the year. Choose monthly.
                 </p>
-              </div>
-
-              {/* Money-back Guarantee */}
-              <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
-                <p className="text-xs font-medium text-green-800">✓ 14-day money-back guarantee</p>
-                <p className="mt-1 text-xs text-green-700">Cancel anytime. No questions asked.</p>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -541,6 +544,7 @@ export function Checkout({ plan, onBack, onComplete }: CheckoutProps) {
 
       {showDowngradeModal && currentPlan?.currentPeriodEnd && (
         <DowngradeConfirmModal
+          planName={plan.name}
           paidUntil={new Date(currentPlan.currentPeriodEnd)}
           onConfirm={async () => {
             setShowDowngradeModal(false);

@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { InvoiceStatus, LeaseStatus, Role } from '@prisma/client';
+import { InvoiceStatus, RentStatus, Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createInvoice,
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
@@ -27,29 +27,29 @@ describe('GET /dashboard/summary (owner totals, past one page)', () => {
     const occupied = await createUnit(property.id, { rentAmount: 1_000_000 });
     await createUnit(property.id, { rentAmount: 500_000 });
     await testPrisma.unit.update({ where: { id: occupied.id }, data: { status: 'OCCUPIED' } });
-    const lease = await createLease(occupied.id, tenant.id, { status: LeaseStatus.ACTIVE });
+    const rent = await createRent(occupied.id, tenant.id, { status: RentStatus.ACTIVE });
 
     // 30 paid invoices of 100k each (30 payments), 1 half-paid, 1 unpaid.
     for (let i = 0; i < 30; i++) {
-      const inv = await createInvoice({ leaseId: lease.id, amount: 100_000, status: 'PAID' });
+      const inv = await createInvoice({ rentId: rent.id, amount: 100_000, status: 'PAID' });
       await testPrisma.payment.create({ data: { invoiceId: inv.id, amount: 100_000 } });
     }
-    const half = await createInvoice({ leaseId: lease.id, amount: 200_000 });
+    const half = await createInvoice({ rentId: rent.id, amount: 200_000 });
     await testPrisma.payment.create({ data: { invoiceId: half.id, amount: 50_000 } });
-    await createInvoice({ leaseId: lease.id, amount: 70_000 });
+    await createInvoice({ rentId: rent.id, amount: 70_000 });
     await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       amount: 999_999,
       status: InvoiceStatus.CANCELLED,
     });
 
     // Another manager's data must not leak in.
     const otherProp = await createProperty({ managerId: other.id });
-    const otherLease = await createLease(
+    const otherRent = await createRent(
       (await createUnit(otherProp.id)).id,
       (await createUser(Role.TENANT)).id,
     );
-    const otherInv = await createInvoice({ leaseId: otherLease.id, amount: 123_456 });
+    const otherInv = await createInvoice({ rentId: otherRent.id, amount: 123_456 });
     await testPrisma.payment.create({ data: { invoiceId: otherInv.id, amount: 123_456 } });
 
     const res = await apiFetch('/api/v1/dashboard/summary', {
@@ -63,7 +63,7 @@ describe('GET /dashboard/summary (owner totals, past one page)', () => {
     expect(s.money.collectedThisMonth).toBe(3_050_000); // all paid just now
     expect(s.units).toMatchObject({ total: 2, occupied: 1, occupancyRate: 50 });
     expect(s.units.totalListedRent).toBe(1_500_000);
-    expect(s.leases.active).toBe(1);
+    expect(s.rents.active).toBe(1);
     expect(s.properties.count).toBe(1);
     expect(s.recentPayments).toHaveLength(5);
     expect(s.properties.rows[0]).toMatchObject({
@@ -111,9 +111,9 @@ describe('GET /admin/summary (platform totals)', () => {
       data: { moderationStatus: 'PENDING_REVIEW' },
     });
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease((await createUnit(property.id)).id, tenant.id);
+    const rent = await createRent((await createUnit(property.id)).id, tenant.id);
     for (let i = 0; i < 22; i++) {
-      const inv = await createInvoice({ leaseId: lease.id, amount: 10_000, status: 'PAID' });
+      const inv = await createInvoice({ rentId: rent.id, amount: 10_000, status: 'PAID' });
       await testPrisma.payment.create({ data: { invoiceId: inv.id, amount: 10_000 } });
     }
 
@@ -157,12 +157,12 @@ describe('GET /admin/reports (period charts, past one page)', () => {
     const unit = await createUnit(property.id, { rentAmount: 400_000 });
     await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id);
+    const rent = await createRent(unit.id, tenant.id);
     for (let i = 0; i < 55; i++) {
-      const inv = await createInvoice({ leaseId: lease.id, amount: 10_000, status: 'PAID' });
+      const inv = await createInvoice({ rentId: rent.id, amount: 10_000, status: 'PAID' });
       await testPrisma.payment.create({ data: { invoiceId: inv.id, amount: 10_000 } });
     }
-    await createInvoice({ leaseId: lease.id, amount: 30_000 });
+    await createInvoice({ rentId: rent.id, amount: 30_000 });
 
     const res = await apiFetch(`/api/v1/admin/reports?from=${thisMonth}&to=${thisMonth}`, {
       cookie: await authCookie(admin.id, admin.role),
@@ -216,35 +216,35 @@ describe('GET /dashboard/breakdown and /admin/breakdown (card pages, past one pa
     await resetDb();
   });
 
-  it('buckets owner leases, properties, payments and maintenance beyond 20 rows', async () => {
+  it('buckets owner rents, properties, payments and maintenance beyond 20 rows', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, name: 'Palm Court' });
     const empty = await createProperty({ managerId: manager.id, name: 'Empty Court' });
     expect(empty.id).toBeTruthy();
     const unit = await createUnit(property.id, { rentAmount: 100_000 });
     await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
-    // 25 active leases: first has an overdue invoice, second a future-due one, rest are paid up.
+    // 25 active rents: first has an overdue invoice, second a future-due one, rest are paid up.
     let first: { id: string } | null = null;
     let second: { id: string } | null = null;
     for (let i = 0; i < 25; i++) {
       const u = i === 0 ? unit : await createUnit(property.id);
-      const lease = await createLease(u.id, (await createUser(Role.TENANT)).id, {
-        status: LeaseStatus.ACTIVE,
+      const rent = await createRent(u.id, (await createUser(Role.TENANT)).id, {
+        status: RentStatus.ACTIVE,
       });
-      if (i === 0) first = lease;
-      if (i === 1) second = lease;
+      if (i === 0) first = rent;
+      if (i === 1) second = rent;
     }
     await createInvoice({
-      leaseId: first!.id,
+      rentId: first!.id,
       amount: 50_000,
       dueDate: new Date(Date.now() - 3 * 86_400_000),
     });
     await createInvoice({
-      leaseId: second!.id,
+      rentId: second!.id,
       amount: 60_000,
       dueDate: new Date(Date.now() + 5 * 86_400_000),
     });
-    const paid = await createInvoice({ leaseId: first!.id, amount: 20_000, status: 'PAID' });
+    const paid = await createInvoice({ rentId: first!.id, amount: 20_000, status: 'PAID' });
     for (let i = 0; i < 22; i++) {
       await testPrisma.payment.create({ data: { invoiceId: paid.id, amount: 1_000 } });
     }
@@ -256,11 +256,11 @@ describe('GET /dashboard/breakdown and /admin/breakdown (card pages, past one pa
     const b = res.body.data;
     expect(b.properties.count).toBe(2);
     expect(b.properties.vacant).toBe(1);
-    expect(b.leases.active).toBe(25);
-    expect(b.leases.overdue).toBe(1);
-    expect(b.leases.due).toBe(1);
-    expect(b.leases.paid).toBe(23);
-    expect(b.leases.rentStatusByLease[first!.id]).toBe('overdue');
+    expect(b.rents.active).toBe(25);
+    expect(b.rents.overdue).toBe(1);
+    expect(b.rents.due).toBe(1);
+    expect(b.rents.paid).toBe(23);
+    expect(b.rents.rentStatusByRent[first!.id]).toBe('overdue');
     expect(b.money.collected).toBe(22_000);
     expect(b.money.paymentCount).toBe(22);
     expect(b.money.pending).toBe(110_000);
@@ -303,24 +303,24 @@ describe('GET /dashboard/mine (tenant and vendor totals)', () => {
     const manager = await createUser(Role.MANAGER);
     const tenant = await createUser(Role.TENANT);
     const property = await createProperty({ managerId: manager.id });
-    const lease = await createLease((await createUnit(property.id)).id, tenant.id, {
-      status: LeaseStatus.ACTIVE,
+    const rent = await createRent((await createUnit(property.id)).id, tenant.id, {
+      status: RentStatus.ACTIVE,
     });
     // 25 unpaid invoices of 10k, the oldest due first; one half paid; one cancelled.
     for (let i = 0; i < 25; i++) {
       await createInvoice({
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 10_000,
         dueDate: new Date(Date.now() + (i + 1) * 86_400_000),
       });
     }
     const half = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       amount: 40_000,
       status: 'PARTIALLY_PAID',
     });
     await testPrisma.payment.create({ data: { invoiceId: half.id, amount: 15_000 } });
-    await createInvoice({ leaseId: lease.id, amount: 999_999, status: InvoiceStatus.CANCELLED });
+    await createInvoice({ rentId: rent.id, amount: 999_999, status: InvoiceStatus.CANCELLED });
 
     const res = await apiFetch('/api/v1/dashboard/mine', {
       cookie: await authCookie(tenant.id, tenant.role),

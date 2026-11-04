@@ -9,7 +9,7 @@ const BASE = process.env.E2E_BASE_URL || 'http://localhost:3022';
 const OUT = process.argv[2] || '/tmp/mobile-audit';
 mkdirSync(OUT, { recursive: true });
 const PW = 'Password123!';
-const IDS = JSON.parse(process.env.AUDIT_IDS || '{}'); // { propertyId, leaseId, requestId }
+const IDS = JSON.parse(process.env.AUDIT_IDS || '{}'); // { propertyId, rentId, requestId }
 
 const ROLES = {
   tenant: {
@@ -46,7 +46,7 @@ const ROLES = {
       '/dashboard/breakdown/maintenance',
       '/dashboard/breakdown/renewals',
       ...(IDS.propertyId ? [`/dashboard/properties/${IDS.propertyId}`] : []),
-      ...(IDS.leaseId ? [`/dashboard/tenants/${IDS.leaseId}`] : []),
+      ...(IDS.rentId ? [`/dashboard/tenants/${IDS.rentId}`] : []),
       ...(IDS.requestId ? [`/dashboard/maintenance/${IDS.requestId}`] : []),
     ],
   },

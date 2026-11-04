@@ -118,13 +118,14 @@ users for a database-heavy app like this one.
 
 ## 4. Background workers (cron)
 
-Ten workers exist in `lib/workers/`, dispatched by
+Eleven workers exist in `lib/workers/`, dispatched by
 `POST|GET /api/v1/cron/[job]`:
 
 - `rent-invoicer` (tells the tenant about each new rent invoice)
 - `autopay-charger` (disabled until `AUTOPAY_WORKER_ENABLED=true` **and** an admin switches it on in Platform Settings, ADR-0015)
 - `overdue-flagger` (flags invoices, adds late fees, tells the tenant and the property team)
-- `reminders` (rent due in 3 days; lease ending within 60 days; one reminder each)
+- `reminders` (rent due in 3 days; rent ending, at the admin's days before the end, default 90, 60 and 30; once per step, off with the admin's reminders switch)
+- `renewals` (starts signed renewals whose day has come; with the admin's switches on, prepares automatic renewals, reminds about rents running past their end and about agreements nobody has signed)
 - `maintenance-schedule-dispatcher` (tells the property team and the tenant)
 - `access-code-expiry-janitor`
 - `payment-reliability-scorer`
@@ -134,8 +135,8 @@ Ten workers exist in `lib/workers/`, dispatched by
 - `all` — runs every job above in dependency order
 
 **The Hobby plan allows 2 cron jobs at once-a-day granularity**, which is fewer
-than the ten workers need. So `vercel.json` schedules a single daily job
-against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
+than the eleven workers need. So `vercel.json` schedules a single daily job
+against `/api/v1/cron/all`, which fans out internally (order: rent-invoicer, autopay-charger, overdue-flagger, reminders, renewals, maintenance-schedule-dispatcher, access-code-expiry-janitor, payment-reliability-scorer, property-trust-scorer, storage-janitor, retention):
 
 ```json
 "crons": [{ "path": "/api/v1/cron/all", "schedule": "0 2 * * *" }]
@@ -176,7 +177,7 @@ Give each worker its own schedule and drop the fan-out:
 ```
 
 Note that **the rent invoicer advances only one billing cycle per run** by
-design, so a lease several cycles behind catches up over several days on a
+design, so a rent several cycles behind catches up over several days on a
 daily schedule.
 
 ---
@@ -305,10 +306,15 @@ should expect from a live system.
   upload UI shows "not available" and nothing is stored.
 - **Rate limiting is DB-backed** (`LoginAttempt`) and atomic (a Postgres
   advisory lock per identifier), so it is correct across serverless
-  instances — no action needed. `getClientIp()` takes the **last**
-  `x-forwarded-for` hop, which is correct behind exactly one trusted proxy
-  (Vercel's edge). If you ever put another proxy/CDN in front, revisit it, or
-  use `x-vercel-forwarded-for`.
+  instances — no action needed. `getClientIp()` reads Vercel's own `x-vercel-forwarded-for` first (only when
+  `VERCEL` is set, so a client cannot supply it elsewhere) and otherwise the
+  **last** `x-forwarded-for` hop, which is correct behind exactly one trusted
+  proxy. **Before go-live, check that the production domain points straight at
+  Vercel** (DNS not proxied through Cloudflare or another CDN). If a CDN is
+  put in front, Vercel sees the CDN's address as the client: every user then
+  shares a few addresses (shared lockouts) and `signedIp` on signatures is
+  wrong. In that case read the CDN's own header (Cloudflare:
+  `cf-connecting-ip`), trusted only when the CDN is really there.
 - **Formatting is a hard CI gate.** The tree was formatted in one pass, so
   `pnpm format:check` now passes and blocks a PR that regresses it. Run
   `pnpm format` before pushing. Note `prettier-plugin-tailwindcss` reorders

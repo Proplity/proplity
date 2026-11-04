@@ -48,12 +48,15 @@ test.describe('dashboard bottom tab bar (needs a reachable, seeded database)', (
   test('mobile shows a floating bottom tab bar instead of the sidebar', async ({ page }) => {
     await loginAs(page, 'tenant');
     await expect(page.locator('aside')).toBeHidden();
-    await expect(page.getByRole('navigation', { name: 'Dashboard navigation' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Browse' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Payments' })).toBeVisible();
+    const tabBar = page.getByRole('navigation', { name: 'Dashboard navigation' });
+    await expect(tabBar).toBeVisible();
+    // Look inside the tab bar: the "Needs your attention" card can hold a link with "Payments"
+    // in its name once it has loaded, and a page-wide match then fails on two elements.
+    await expect(tabBar.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+    await expect(tabBar.getByRole('link', { name: 'Browse' })).toBeVisible();
+    await expect(tabBar.getByRole('link', { name: 'Payments' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Payments' }).click();
+    await tabBar.getByRole('link', { name: 'Payments' }).click();
     await expect(page).toHaveURL(/\/dashboard\/payment-history/);
   });
 

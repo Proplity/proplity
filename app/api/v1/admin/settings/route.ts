@@ -6,6 +6,17 @@ import { validateBody } from '@/lib/api/validate';
 import { handleApiError } from '@/lib/api/errors';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { RETENTION_LIMITS, deploymentAllows, getSystemSettings } from '@/lib/systemSettings';
+import { INVITE_LIMITS } from '@/lib/inviteLimits';
+import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
+import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
+import { AUTO_RENEWAL_DAYS, REMINDER_DAYS, UNSIGNED_REMINDER_DAYS } from '@/lib/renewalOptions';
+import {
+  DowngradeRule,
+  OverageMode,
+  RentActivationRule,
+  TeamMemberAccess,
+  UnitBillingOwner,
+} from '@prisma/client';
 
 // Admin-only platform toggles, backed by the same SystemSettings singleton
 // row the /setup wizard uses. GET never writes (findUnique + defaults, via
@@ -57,6 +68,74 @@ const updateSchema = z
       )
       .max(rejectionDays.max, `At most ${rejectionDays.max} days`)
       .optional(),
+    tenantInvitesPerDay: z
+      .number()
+      .int('Enter a whole number')
+      .min(INVITE_LIMITS.perDay.min, `At least ${INVITE_LIMITS.perDay.min}`)
+      .max(INVITE_LIMITS.perDay.max, `At most ${INVITE_LIMITS.perDay.max} a day`)
+      .optional(),
+    inviteTenantsToManagementOnly: z.boolean().optional(),
+    enforcePlanLimits: z.boolean().optional(),
+    unitBillingOwner: z.nativeEnum(UnitBillingOwner).optional(),
+    overageMode: z.nativeEnum(OverageMode).optional(),
+    downgradeRule: z.nativeEnum(DowngradeRule).optional(),
+    teamMemberAccess: z.nativeEnum(TeamMemberAccess).optional(),
+    agreementTemplatesNeedApproval: z.boolean().optional(),
+    agreementLandlordNameByManager: z.boolean().optional(),
+    agreementAgencyFee: z.boolean().optional(),
+    agreementLegalFee: z.boolean().optional(),
+    agreementCautionFee: z.boolean().optional(),
+    rentActivationRule: z.nativeEnum(RentActivationRule).optional(),
+    chargeForAgreements: z.boolean().optional(),
+    chargeForUploads: z.boolean().optional(),
+    creditPurchaseEnabled: z.boolean().optional(),
+    witnessEsignEnabled: z.boolean().optional(),
+    witnessesMustSign: z.boolean().optional(),
+    stampDutyPaymentEnabled: z.boolean().optional(),
+    agreementRenewalEnabled: z.boolean().optional(),
+    agreementRemindersEnabled: z.boolean().optional(),
+    autoRenewalEnabled: z.boolean().optional(),
+    renewalReminderDays: z
+      .array(
+        z
+          .number()
+          .int('Enter whole days')
+          .min(REMINDER_DAYS.min, `At least ${REMINDER_DAYS.min} day`)
+          .max(REMINDER_DAYS.max, `At most ${REMINDER_DAYS.max} days`),
+      )
+      .max(REMINDER_DAYS.maxCount, `At most ${REMINDER_DAYS.maxCount} reminders`)
+      .refine((d) => new Set(d).size === d.length, 'Each day can only be listed once')
+      .optional(),
+    agreementUnsignedReminderDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(UNSIGNED_REMINDER_DAYS.min, 'Cannot be negative')
+      .max(UNSIGNED_REMINDER_DAYS.max, `At most ${UNSIGNED_REMINDER_DAYS.max} days`)
+      .optional(),
+    autoRenewalDaysBefore: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(AUTO_RENEWAL_DAYS.min, `At least ${AUTO_RENEWAL_DAYS.min} days`)
+      .max(AUTO_RENEWAL_DAYS.max, `At most ${AUTO_RENEWAL_DAYS.max} days`)
+      .optional(),
+    stampDutyServiceFee: z
+      .number()
+      .int('Enter whole naira')
+      .min(0, 'Cannot be negative')
+      .max(10_000_000, 'That is too large')
+      .optional(),
+    witnessLinkDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(WITNESS_LINK_DAYS.min, `At least ${WITNESS_LINK_DAYS.min} day`)
+      .max(WITNESS_LINK_DAYS.max, `At most ${WITNESS_LINK_DAYS.max} days`)
+      .optional(),
+    downgradeGraceDays: z
+      .number()
+      .int('Enter a whole number of days')
+      .min(DOWNGRADE_GRACE_DAYS.min, `At least ${DOWNGRADE_GRACE_DAYS.min} day`)
+      .max(DOWNGRADE_GRACE_DAYS.max, `At most ${DOWNGRADE_GRACE_DAYS.max} days`)
+      .optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), {
     message: 'Send at least one setting to change',
@@ -82,7 +161,8 @@ export const PATCH = withAuth(
       const changes: Record<string, { from: unknown; to: unknown }> = {};
       for (const [key, to] of Object.entries(validated.data)) {
         const from = before[key as keyof typeof before];
-        if (to !== undefined && from !== to) changes[key] = { from, to };
+        if (to !== undefined && JSON.stringify(from) !== JSON.stringify(to))
+          changes[key] = { from, to };
       }
       if (Object.keys(changes).length > 0) {
         await prisma.auditLog.create({

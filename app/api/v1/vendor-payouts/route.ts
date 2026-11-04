@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PayoutMethod, Prisma, VendorPayoutStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { withAuth } from '@/lib/api/withAuth';
 import { parsePagination, buildMeta } from '@/lib/api/pagination';
 import { handleApiError } from '@/lib/api/errors';
@@ -42,7 +43,7 @@ export const GET = withAuth(async (req, { session }) => {
               maintenanceRequest: {
                 unit: {
                   property: {
-                    OR: [{ managerId: session.sub }, { landlordId: session.sub }],
+                    ...propertyScopeWhere(session.scope),
                   },
                 },
               },
@@ -52,7 +53,7 @@ export const GET = withAuth(async (req, { session }) => {
             maintenanceRequest: {
               unit: {
                 property: {
-                  OR: [{ managerId: session.sub }, { landlordId: session.sub }],
+                  ...propertyScopeWhere(session.scope),
                 },
               },
             },

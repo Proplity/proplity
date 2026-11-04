@@ -4,7 +4,7 @@ import {
   Role,
   UserStatus,
   PaymentFrequency,
-  LeaseStatus,
+  RentStatus,
   LateFeeType,
   MaintenancePriority,
   MaintenanceStatus,
@@ -19,6 +19,7 @@ import {
 } from '@prisma/client';
 import { testPrisma } from './db';
 import { toLocalDateKey, viewingInstant } from '../../lib/viewingSlots';
+import { DEFAULT_PLANS } from '../../lib/planDefaults';
 
 let counter = 0;
 function unique(prefix: string) {
@@ -41,10 +42,12 @@ export async function createUser(
     name: string;
     status: UserStatus;
     phoneNumber: string | null;
+    organisationId: string | null;
   }> = {},
 ) {
   return testPrisma.user.create({
     data: {
+      organisationId: overrides.organisationId ?? null,
       email: overrides.email ?? `${unique(role.toLowerCase())}@test.local`,
       name: overrides.name ?? `Test ${role}`,
       passwordHash: await passwordHash(),
@@ -103,7 +106,9 @@ export async function createProperty(
     state: string;
     managerId: string | null;
     landlordId: string | null;
+    createdById: string | null;
     isPublished: boolean;
+    managementOnly: boolean;
     moderationStatus: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
     metadata: any;
   }> = {},
@@ -116,7 +121,9 @@ export async function createProperty(
       state: overrides.state ?? 'Lagos',
       managerId: overrides.managerId ?? null,
       landlordId: overrides.landlordId ?? null,
+      createdById: overrides.createdById ?? null,
       isPublished: overrides.isPublished ?? false,
+      managementOnly: overrides.managementOnly ?? false,
       moderationStatus:
         overrides.moderationStatus ?? (overrides.isPublished ? 'APPROVED' : 'PENDING_REVIEW'),
       ...(overrides.metadata !== undefined ? { metadata: overrides.metadata } : {}),
@@ -146,7 +153,7 @@ export async function createUnit(
   });
 }
 
-export async function createLease(
+export async function createRent(
   unitId: string,
   tenantId: string,
   overrides: Partial<{
@@ -155,14 +162,14 @@ export async function createLease(
     rentAmount: number;
     paymentFrequency: PaymentFrequency;
     deposit: number;
-    status: LeaseStatus;
+    status: RentStatus;
     gracePeriodDays: number;
     lateFeeType: LateFeeType;
     lateFeePercentage: number;
     lateFeeFlatAmount: number;
   }> = {},
 ) {
-  return testPrisma.lease.create({
+  return testPrisma.rent.create({
     data: {
       unitId,
       tenantId,
@@ -171,7 +178,7 @@ export async function createLease(
       rentAmount: overrides.rentAmount ?? 1_000_000,
       paymentFrequency: overrides.paymentFrequency ?? PaymentFrequency.ANNUAL,
       deposit: overrides.deposit ?? 200_000,
-      status: overrides.status ?? LeaseStatus.ACTIVE,
+      status: overrides.status ?? RentStatus.ACTIVE,
       ...(overrides.gracePeriodDays !== undefined
         ? { gracePeriodDays: overrides.gracePeriodDays }
         : {}),
@@ -258,7 +265,7 @@ export async function createMaintenanceSchedule(
 
 export async function createInvoice(
   overrides: Partial<{
-    leaseId: string | null;
+    rentId: string | null;
     maintenanceRequestId: string | null;
     userId: string | null;
     type: InvoiceType;
@@ -270,7 +277,7 @@ export async function createInvoice(
 ) {
   return testPrisma.invoice.create({
     data: {
-      leaseId: overrides.leaseId ?? null,
+      rentId: overrides.rentId ?? null,
       maintenanceRequestId: overrides.maintenanceRequestId ?? null,
       userId: overrides.userId ?? null,
       type: overrides.type ?? InvoiceType.RENT,
@@ -338,7 +345,7 @@ export async function createConversation(
   overrides: Partial<{
     title: string;
     propertyId: string;
-    leaseId: string;
+    rentId: string;
     maintenanceRequestId: string;
   }> = {},
 ) {
@@ -347,7 +354,7 @@ export async function createConversation(
       type,
       title: overrides.title,
       propertyId: overrides.propertyId,
-      leaseId: overrides.leaseId,
+      rentId: overrides.rentId,
       maintenanceRequestId: overrides.maintenanceRequestId,
       participants: { create: participantIds.map((userId) => ({ userId })) },
     },
@@ -391,4 +398,12 @@ export async function setSystemSettings(data: Prisma.SystemSettingsUncheckedUpda
     update: data,
     create: { id: 'global', ...(data as Prisma.SystemSettingsUncheckedCreateInput) },
   });
+}
+
+/** Puts the default plans in the table (the app seeds them itself on first use; tests that write
+ *  a Subscription directly need the rows first). Returns them by key. */
+export async function seedPlans() {
+  await testPrisma.plan.createMany({ data: DEFAULT_PLANS, skipDuplicates: true });
+  const plans = await testPrisma.plan.findMany();
+  return Object.fromEntries(plans.map((p) => [p.key, p])) as Record<string, (typeof plans)[number]>;
 }

@@ -20,7 +20,7 @@ export const GET = withAuth(async (_req, { session }) => {
               include: { user: { select: { id: true, name: true, avatarUrl: true, role: true } } },
             },
             property: { select: { id: true, name: true } },
-            lease: {
+            rent: {
               select: {
                 unit: {
                   select: { unitNumber: true, property: { select: { id: true, name: true } } },
@@ -35,20 +35,28 @@ export const GET = withAuth(async (_req, { session }) => {
 
     const data = await Promise.all(
       participantRows.map(async (p) => {
+        // Someone whose tenancy ended sees the thread as it stood when they left (ISS-142).
+        const visible = p.leftAt ? { lte: p.leftAt } : undefined;
         const [lastMessage, unreadCount] = await Promise.all([
           prisma.message.findFirst({
-            where: { conversationId: p.conversationId },
+            where: { conversationId: p.conversationId, createdAt: visible },
             orderBy: { createdAt: 'desc' },
           }),
           prisma.message.count({
             where: {
               conversationId: p.conversationId,
-              createdAt: { gt: p.lastReadAt ?? new Date(0) },
+              createdAt: { gt: p.lastReadAt ?? new Date(0), ...visible },
               senderId: { not: session.sub },
             },
           }),
         ]);
-        return { ...p.conversation, lastMessage, lastReadAt: p.lastReadAt, unreadCount };
+        return {
+          ...p.conversation,
+          lastMessage,
+          lastReadAt: p.lastReadAt,
+          leftAt: p.leftAt,
+          unreadCount,
+        };
       }),
     );
 
@@ -69,7 +77,7 @@ const createConversationSchema = z.object({
   title: z.string().optional(),
   participantIds: z.array(z.string()).optional(),
   maintenanceRequestId: z.string().optional(),
-  leaseId: z.string().optional(),
+  rentId: z.string().optional(),
   propertyId: z.string().optional(),
 });
 
@@ -82,7 +90,7 @@ export const POST = withAuth(async (req, { session }) => {
       title,
       participantIds = [],
       maintenanceRequestId,
-      leaseId,
+      rentId,
       propertyId,
     } = validated.data;
 
@@ -135,36 +143,33 @@ export const POST = withAuth(async (req, { session }) => {
       return NextResponse.json({ data: conversation }, { status: 201 });
     }
 
-    // LEASE_THREAD: participants derived from the lease's tenant + property staff.
-    if (type === 'LEASE_THREAD') {
-      if (!leaseId)
-        return NextResponse.json(
-          { error: 'leaseId is required for LEASE_THREAD' },
-          { status: 400 },
-        );
+    // RENT_THREAD: participants derived from the rent's tenant + property staff.
+    if (type === 'RENT_THREAD') {
+      if (!rentId)
+        return NextResponse.json({ error: 'rentId is required for RENT_THREAD' }, { status: 400 });
 
-      const lease = await prisma.lease.findUnique({
-        where: { id: leaseId },
+      const rent = await prisma.rent.findUnique({
+        where: { id: rentId },
         include: { unit: { include: { property: true } } },
       });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
 
       const isParty =
-        lease.tenantId === session.sub || canManageProperty(session, lease.unit.property);
+        rent.tenantId === session.sub || canManageProperty(session, rent.unit.property);
       if (!isParty) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-      const existing = await prisma.conversation.findFirst({ where: { leaseId } });
+      const existing = await prisma.conversation.findFirst({ where: { rentId } });
       if (existing) return NextResponse.json({ data: existing });
 
-      const participantUserIds = new Set<string>([lease.tenantId]);
-      if (lease.unit.property.managerId) participantUserIds.add(lease.unit.property.managerId);
-      if (lease.unit.property.landlordId) participantUserIds.add(lease.unit.property.landlordId);
+      const participantUserIds = new Set<string>([rent.tenantId]);
+      if (rent.unit.property.managerId) participantUserIds.add(rent.unit.property.managerId);
+      if (rent.unit.property.landlordId) participantUserIds.add(rent.unit.property.landlordId);
 
       const conversation = await prisma.conversation.create({
         data: {
           type,
           title,
-          leaseId,
+          rentId,
           participants: { create: [...participantUserIds].map((userId) => ({ userId })) },
         },
       });
@@ -186,13 +191,12 @@ export const POST = withAuth(async (req, { session }) => {
       if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
       const isManager = canManageProperty(session, property);
-      const hasLease = await prisma.lease.findFirst({
+      const hasRent = await prisma.rent.findFirst({
         where: { tenantId: session.sub, unit: { propertyId }, status: 'ACTIVE' },
       });
-      if (!isManager && !hasLease)
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!isManager && !hasRent) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-      const tenants = await prisma.lease.findMany({
+      const tenants = await prisma.rent.findMany({
         where: { unit: { propertyId }, status: 'ACTIVE' },
         select: { tenantId: true },
         distinct: ['tenantId'],

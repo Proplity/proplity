@@ -29,7 +29,7 @@ import { api } from '@/lib/apiClient';
 import { formatViewingTime } from '@/lib/viewingSlots';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/hooks/useProperties';
-import { useLeases } from '@/hooks/useLeases';
+import { useRents } from '@/hooks/useRents';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useMaintenanceRequests } from '@/hooks/useMaintenanceRequests';
 import { useApplications, useReviewApplication } from '@/hooks/useApplications';
@@ -47,6 +47,7 @@ import { PropertyPhotoManager } from './PropertyPhotoManager';
 import { GateCheckCard } from './GateCheckCard';
 import type { Page } from '../dashboard/navigateToPage';
 import type { Application, Equipment, PropertyDetail as PropertyDetailData } from '@/lib/api/types';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -348,6 +349,8 @@ function ListingStatusCard({
   const [cancellingEdits, setCancellingEdits] = useState(false);
   const [deletingDraft, setDeletingDraft] = useState(false);
   const [submittingDraft, setSubmittingDraft] = useState(false);
+  const [changingListing, setChangingListing] = useState(false);
+  const [confirmListing, setConfirmListing] = useState<'list' | 'hide' | null>(null);
 
   const pendingChanges = property.metadata?.pendingChanges;
   const isUnderReview = pendingChanges?.status === 'PENDING_REVIEW';
@@ -428,7 +431,71 @@ function ListingStatusCard({
     }
   };
 
+  // Moving between "kept for management only" and "listed" is its own step: listing it sends it to
+  // an admin for review like any new listing; keeping it private takes it off the market.
+  const handleChangeListing = async (managementOnly: boolean) => {
+    setChangingListing(true);
+    try {
+      await api.properties.update(property.id, { managementOnly });
+      toast.success(
+        managementOnly
+          ? 'This property is now kept for management only.'
+          : 'Submitted to an admin for review. It is listed once they approve it.',
+      );
+      onRefetch();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg || 'Could not change this. Please try again.');
+    } finally {
+      setChangingListing(false);
+      setConfirmListing(null);
+    }
+  };
+
   const isEdited = property.moderationNotes?.includes('[EDITED]');
+
+  if (property.managementOnly) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900">Listing Status</h2>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+            Management only
+          </span>
+        </div>
+        <p className="text-sm text-gray-600">
+          This property is kept for tenant management. It is not listed, the public cannot see it,
+          and no admin reviews it. Its units still count towards your plan.
+        </p>
+        {isLandlordOrManager && (
+          <>
+            <button
+              type="button"
+              onClick={() => setConfirmListing('list')}
+              disabled={changingListing}
+              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+            >
+              List this property publicly
+            </button>
+            <p className="mt-1 text-center text-[11px] text-gray-400">
+              It goes to an admin for approval first, like any new listing
+            </p>
+          </>
+        )}
+        <ConfirmDialog
+          open={confirmListing === 'list'}
+          title="List this property publicly?"
+          description={`"${property.name}" will be sent to an admin for review. Once approved you can publish it so people can find it and apply.`}
+          confirmLabel="Send for review"
+          cancelLabel="Not now"
+          variant="warning"
+          isLoading={changingListing}
+          onCancel={() => setConfirmListing(null)}
+          onConfirm={() => handleChangeListing(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-xs">
@@ -610,6 +677,29 @@ function ListingStatusCard({
       </button>
       {(publishError || moderateError) && (
         <p className="mt-2 text-xs text-red-600">{publishError || moderateError}</p>
+      )}
+      {isLandlordOrManager && (
+        <>
+          <button
+            type="button"
+            onClick={() => setConfirmListing('hide')}
+            disabled={changingListing}
+            className="mt-3 w-full text-center text-xs font-medium text-gray-500 underline hover:text-gray-800 disabled:opacity-50"
+          >
+            Keep for management only (take off the market)
+          </button>
+          <ConfirmDialog
+            open={confirmListing === 'hide'}
+            title="Keep this property for management only?"
+            description={`"${property.name}" will be unpublished and removed from search. Your tenants, rents and invoices are not affected.`}
+            confirmLabel="Take off the market"
+            cancelLabel="Keep listed"
+            variant="warning"
+            isLoading={changingListing}
+            onCancel={() => setConfirmListing(null)}
+            onConfirm={() => handleChangeListing(true)}
+          />
+        </>
       )}
     </div>
   );
@@ -1017,7 +1107,7 @@ function ApplicationRow({
 export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) {
   const auth = useAuth();
   const { data: property, loading, refetch: refetchProperty } = useProperty(propertyId);
-  const { data: leases } = useLeases();
+  const { data: rents } = useRents();
   const { data: invoices } = useInvoices();
   const { data: maintenanceRequests } = useMaintenanceRequests();
   const { data: pendingApplications, refetch: refetchApplications } = useApplications({
@@ -1060,7 +1150,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
     );
   }
 
-  // Role + ownership gate: the underlying leases/invoices/maintenance hooks
+  // Role + ownership gate: the underlying rents/invoices/maintenance hooks
   // are already server-scoped to the caller's own data, so a tenant Browse
   // this page never actually receives another tenant's records -- this gate
   // is what decides whether to *render* the manager-only sections at all.
@@ -1071,15 +1161,15 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
       auth.user.id === property.managerId ||
       auth.user.id === property.landlordId);
 
-  const propertyLeases = leases.filter((l) => l.unit?.propertyId === propertyId);
+  const propertyRents = rents.filter((l) => l.unit?.propertyId === propertyId);
   const propertyApplications = pendingApplications.filter(
     (a) => a.unit?.property.id === propertyId,
   );
   // Approved but no tenancy yet: the manager's next step (ISS-046).
   const awaitingTenancy = approvedApplications.filter(
-    (a) => a.unit?.property.id === propertyId && !a.leaseId,
+    (a) => a.unit?.property.id === propertyId && !a.rentId,
   );
-  const propertyInvoices = invoices.filter((i) => i.lease?.unit.property.id === propertyId);
+  const propertyInvoices = invoices.filter((i) => i.rent?.unit.property.id === propertyId);
   const propertyMaintenance = maintenanceRequests
     .filter((r) => r.unit?.propertyId === propertyId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1262,7 +1352,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
             <DollarSign className="h-5 w-5 text-green-600" />
             <span className="font-semibold text-green-600">
               ₦{(cheapestUnit?.rentAmount ?? 0).toLocaleString()}/
-              {(cheapestUnit?.listedPaymentFrequency ?? 'year').toLowerCase()}
+              {perFrequency(cheapestUnit?.listedPaymentFrequency)}
             </span>
           </div>
         </div>
@@ -1328,7 +1418,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
               </div>
               <div className="divide-y divide-gray-200">
                 {property.units.map((unit) => {
-                  const lease = propertyLeases.find(
+                  const rent = propertyRents.find(
                     (l) => l.unitId === unit.id && l.status === 'ACTIVE',
                   );
                   return (
@@ -1358,7 +1448,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                           <span className="text-xs text-gray-500">
                             {unit.bedrooms} bed · {unit.bathrooms} bath · ₦
                             {unit.rentAmount.toLocaleString()}/
-                            {unit.listedPaymentFrequency.toLowerCase()}
+                            {perFrequency(unit.listedPaymentFrequency)}
                           </span>
                           {canManage && (
                             <button
@@ -1439,21 +1529,21 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                             </div>
                           );
                         })()}
-                      {lease && lease.tenant ? (
+                      {rent && rent.tenant ? (
                         <>
                           <div className="mb-3 flex items-start justify-between">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold text-white">
-                                {lease.tenant.name.charAt(0)}
+                                {rent.tenant.name.charAt(0)}
                               </div>
                               <div>
-                                <p className="font-medium">{lease.tenant.name}</p>
-                                <p className="text-sm text-gray-600">{lease.tenant.email}</p>
+                                <p className="font-medium">{rent.tenant.name}</p>
+                                <p className="text-sm text-gray-600">{rent.tenant.email}</p>
                               </div>
                             </div>
                             <button
                               onClick={() =>
-                                onNavigate?.({ type: 'tenant-detail', leaseId: lease.id })
+                                onNavigate?.({ type: 'tenant-detail', rentId: rent.id })
                               }
                               className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
                             >
@@ -1463,12 +1553,12 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <p className="text-gray-600">Phone</p>
-                              <p className="font-medium">{lease.tenant.phoneNumber ?? 'N/A'}</p>
+                              <p className="font-medium">{rent.tenant.phoneNumber ?? 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Lease End</p>
+                              <p className="text-gray-600">Rent End</p>
                               <p className="font-medium">
-                                {new Date(lease.endDate).toLocaleDateString()}
+                                {new Date(rent.endDate).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -1477,7 +1567,7 @@ export function PropertyDetail({ propertyId, onNavigate }: PropertyDetailProps) 
                         <p className="text-sm text-gray-400">
                           {unit.status === 'VACANT'
                             ? 'Vacant'
-                            : `No active lease (${unit.status.toLowerCase()})`}
+                            : `No active rent (${unit.status.toLowerCase()})`}
                         </p>
                       )}
                     </div>

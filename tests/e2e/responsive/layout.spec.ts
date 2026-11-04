@@ -97,7 +97,7 @@ test.describe('signed-in pages on a phone (needs a seeded database)', () => {
 
     await page.getByRole('row').nth(1).click();
     await page.waitForURL(/\/dashboard\/tenants\/[^/]+$/);
-    await expect(page.getByText('Lease Agreement Signature')).toBeVisible();
+    await expect(page.getByText('Rent Agreement Signature')).toBeVisible();
     await expectFits(page, 'the tenant record');
 
     const record = page.getByRole('button', { name: 'Record cash or transfer payment' });

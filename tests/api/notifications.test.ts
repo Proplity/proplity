@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createMaintenanceRequest,
   createNotification,
 } from '../helpers/fixtures';
@@ -178,7 +178,7 @@ describe('notifications: announcement trigger', () => {
     await resetDb();
   });
 
-  it('notifies every tenant with an ACTIVE lease on the property, and nobody else', async () => {
+  it('notifies every tenant with an ACTIVE rent on the property, and nobody else', async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, name: 'Sunset Court' });
     const unit1 = await createUnit(property.id);
@@ -188,9 +188,9 @@ describe('notifications: announcement trigger', () => {
     const anotherActiveTenant = await createUser(Role.TENANT);
     const formerTenant = await createUser(Role.TENANT);
     const unrelatedUser = await createUser(Role.TENANT);
-    await createLease(unit1.id, activeTenant.id, { status: 'ACTIVE' });
-    await createLease(unit2.id, anotherActiveTenant.id, { status: 'ACTIVE' });
-    await createLease(unit3.id, formerTenant.id, { status: 'TERMINATED' });
+    await createRent(unit1.id, activeTenant.id, { status: 'ACTIVE' });
+    await createRent(unit2.id, anotherActiveTenant.id, { status: 'ACTIVE' });
+    await createRent(unit3.id, formerTenant.id, { status: 'TERMINATED' });
 
     const managerCookie = await authCookie(manager.id, manager.role);
     const res = await apiFetch(`/api/v1/properties/${property.id}/announcements`, {

@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PROPERTY_OMIT_INTERNAL } from '@/lib/api/propertyAccess';
 import { notifyUser, notifyUsers } from '@/lib/notifications';
 import { safeUrl } from '@/lib/api/urlField';
 import { getSystemSettings } from '@/lib/systemSettings';
@@ -39,6 +39,7 @@ function loadRequest(id: string) {
       unit: {
         include: {
           property: {
+            omit: PROPERTY_OMIT_INTERNAL,
             include: {
               manager: { select: { id: true, name: true, phoneNumber: true, email: true } },
             },
@@ -322,7 +323,7 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           });
           if (!alreadyInvoiced && cost > 0) {
             // maintenanceRequestId satisfies Invoice's "at least one of
-            // leaseId/maintenanceRequestId/userId" rule.
+            // rentId/maintenanceRequestId/userId" rule.
             await tx.invoice.create({
               data: {
                 maintenanceRequestId: id,

@@ -7,7 +7,7 @@ import {
   useMaintenanceCategories,
   useCreateMaintenanceRequest,
 } from '@/hooks/useMaintenanceRequests';
-import { useActiveLease } from '@/hooks/useLeases';
+import { useActiveRent } from '@/hooks/useRents';
 import { uploadFile, uploadsEnabled } from '@/lib/uploadClient';
 
 // Maps the form's fixed category buttons to a real MaintenanceCategory by
@@ -36,7 +36,7 @@ interface FormImage {
 export function MaintenanceRequestForm() {
   const router = useRouter();
   const { data: categories } = useMaintenanceCategories();
-  const { data: activeLease } = useActiveLease();
+  const { data: activeRent } = useActiveRent();
   const { submit, submitting, error } = useCreateMaintenanceRequest();
 
   const [formData, setFormData] = useState({
@@ -60,8 +60,8 @@ export function MaintenanceRequestForm() {
       setFormError('Please fill in all required fields');
       return;
     }
-    if (!activeLease) {
-      setFormError('No active lease found on your account -- unable to submit a request.');
+    if (!activeRent) {
+      setFormError('No active rent found on your account -- unable to submit a request.');
       return;
     }
 
@@ -72,7 +72,7 @@ export function MaintenanceRequestForm() {
 
     try {
       await submit({
-        unitId: activeLease.unitId,
+        unitId: activeRent.unitId,
         title: formData.title,
         description,
         categoryId: category?.id,
@@ -140,11 +140,11 @@ export function MaintenanceRequestForm() {
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm font-medium">Your Unit</p>
               <p className="text-sm text-gray-600">
-                {activeLease
-                  ? activeLease.unit?.property?.name
-                    ? `${activeLease.unit.property.name} · Unit ${activeLease.unit.unitNumber}`
-                    : `Unit ${activeLease.unit?.unitNumber ?? activeLease.unitId.slice(0, 8)}`
-                  : 'Loading your active lease…'}
+                {activeRent
+                  ? activeRent.unit?.property?.name
+                    ? `${activeRent.unit.property.name} · Unit ${activeRent.unit.unitNumber}`
+                    : `Unit ${activeRent.unit?.unitNumber ?? activeRent.unitId.slice(0, 8)}`
+                  : 'Loading your active rent…'}
               </p>
             </div>
           </div>

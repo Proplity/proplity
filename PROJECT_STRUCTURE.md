@@ -15,11 +15,11 @@ graph TD
     Hooks["🪝 Domain hooks (hooks/use*.ts) — 27 files"]
     ApiClient["🌐 lib/apiClient.ts — Axios + silent JWT refresh (a failed refresh redirects only the page that asked) + typed api.* client"]
     Proxy["🚧 proxy.ts — edge guard for /dashboard/* and /admin/*"]
-    NextApi["🛡️ App Router API routes (/api/v1/*, 103 routes)"]
+    NextApi["🛡️ App Router API routes (/api/v1/*, 147 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 43 models, 11 schema files, 32 migrations")]
-    Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 10 workers"]
+    Postgres[("🐘 PostgreSQL — 55 models, 13 schema files, 44 migrations")]
+    Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 11 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
     Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
 
@@ -61,7 +61,7 @@ proplity/
 │   │   ├── 📁 maintenance/ (+[id]), maintenance-request/new/, tenant-maintenance/
 │   │   ├── 📁 tenants/ (+add, +[id])
 │   │   ├── 📁 properties/ (+new, +[id], +[id]/apply, +[id]/schedule-viewing)   # "Properties" nav = manager "My Properties"
-│   │   ├── 📁 rentals/                      # Tenant "My Rentals" (current + past leases)
+│   │   ├── 📁 rentals/                      # Tenant "My Rentals" (current + past rents)
 │   │   ├── 📁 profile/complete/             # One-time tenant profile gate
 │   │   ├── 📁 vendor/jobs/[id]/ (+invoice)
 │   │   └── 📁 breakdown/[type]/
@@ -71,7 +71,7 @@ proplity/
 │   │   ├── 📁 users/ (cards/table switcher, sticky toolbar), properties/ (moderation queue, PropertyReviewDrawer slide-over, MergeDuplicateModal), reports/, security/ (audit log), settings/ (platform settings), notifications/
 │   │   └── 📁 breakdown/[type]/
 │   │
-│   ├── 📁 api/v1/                           # REST API — 103 route.ts files (grouped below)
+│   ├── 📁 api/v1/                           # REST API — 147 route.ts files (grouped below)
 │   │   ├── 📁 auth/                         # login, logout, me, refresh, register, verify-email, resend-verification, forgot-password, reset-password, change-password (10)
 │   │   ├── 📁 setup/, health/               # First-run bootstrap; liveness probe
 │   ├── 📁 contact/                      # POST: the contact page's message, emailed to CONTACT_EMAIL (public, rate-limited, honeypot)
@@ -79,7 +79,7 @@ proplity/
 │   │   │                                    #   neighbourhood-report, ads, announcements, equipment
 │   │   ├── 📁 applications/, manager-codes/ # Rental applications; landlord→manager invite codes (+check, +redeem)
 │   │   ├── 📁 maintenance/                  # categories, requests (+[id], +rating), schedules
-│   │   ├── 📁 leases/                       # +[id], notes, notices, sign
+│   │   ├── 📁 rents/                       # +[id], notes, notices, sign
 │   │   ├── 📁 invoices/, payments/          # payments: initialize, availability, webhook, autopay, authorization
 │   │   ├── 📁 bank-accounts/, subscriptions/ (checkout, me)
 │   │   ├── 📁 access-codes/                 # +[id], verify
@@ -109,7 +109,7 @@ proplity/
 │
 ├── 📁 context/AuthContext.tsx               # Session context; silent refresh on reload, exposes the extended User profile
 │
-├── 📁 hooks/                                # 27 files. Reads: useProperties, useLeases, useInvoices, useMaintenanceRequests, useConversations,
+├── 📁 hooks/                                # 27 files. Reads: useProperties, useRents, useInvoices, useMaintenanceRequests, useConversations,
 │   │                                        #   useVendors, useAdminUsers, useAuditLogs, useAnnouncements, useEquipment, useViolations, …
 │   │                                        # Writes go through useApiSubmit (plain per-render submit — never wrap in useCallback([]))
 │   ├── 📄 useApiSubmit.ts, useAuthRefresh.ts (13-min proactive refresh)
@@ -134,7 +134,7 @@ proplity/
 ├── 📁 tests/
 │   ├── 📁 setup/                            # globalSetup (recreate proplity_test_db, migrate, spawn next dev), loadEnv, constants
 │   ├── 📁 helpers/                          # db, fixtures, auth (mint JWTs, incl. expired), client
-│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 106 tests, mocked Prisma, no server (pnpm test:unit)
+│   ├── 📁 unit/ fuzz/ security/ anomaly/    # 18 Vitest files — 110 tests, mocked Prisma, no server (pnpm test:unit)
 │   ├── 📁 api/                              # 34 Vitest files — 508 tests, real HTTP against the spawned server (pnpm test)
 │   └── 📁 e2e/                              # Playwright, 71 tests in 18 files (pnpm test:e2e)
 │       ├── 📁 smoke/                        # marketing, auth forms
@@ -144,8 +144,8 @@ proplity/
 │       └── 📁 helpers/auth.ts
 │
 ├── 📁 prisma/
-│   ├── 📁 schema/                           # 11 modular files (base, auth, property, lease, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 32 migrations, latest: 20261020143935_admin_switches_autopay_retention
+│   ├── 📁 schema/                           # 12 modular files (base, billing, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
+│   ├── 📁 migrations/                       # 44 migrations, latest: 20261025120000_rent_agreements
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below

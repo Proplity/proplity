@@ -5,7 +5,13 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, serializeUnit } from '@/lib/api/propertyAccess';
+import {
+  PENDING_UNIT_FLAG,
+  canManageProperty,
+  isPublicUnit,
+  serializeUnit,
+} from '@/lib/api/propertyAccess';
+import { listingViewer, sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrlList } from '@/lib/api/urlField';
 import { sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/appUrl';
@@ -25,6 +31,10 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     const { id, unitId } = await params;
     const found = await loadUnitWithProperty(id, unitId);
     if (!found) return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+    const viewer = await listingViewer(await sessionOrNull(), found.property);
+    if (!viewer.visible || (!viewer.seesAll && !isPublicUnit(found.unit))) {
+      return NextResponse.json({ error: 'Unit not found' }, { status: 404 });
+    }
     return NextResponse.json({ data: serializeUnit(found.unit) });
   } catch (err) {
     return handleApiError(err);
@@ -211,10 +221,10 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           });
         }
 
-        // If unit was purely a pending unit without leases, delete it
+        // If unit was purely a pending unit without rents, delete it
         if (found.unit.amenities.includes('approval:pending')) {
-          const leaseCount = await prisma.lease.count({ where: { unitId } });
-          if (leaseCount === 0) {
+          const rentCount = await prisma.rent.count({ where: { unitId } });
+          if (rentCount === 0) {
             await prisma.unit.delete({ where: { id: unitId } });
             return NextResponse.json({ data: { id: unitId, rejected: true, deleted: true } });
           }
@@ -224,6 +234,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     }
 
     const { sqft, action: _act, saveAsDraft, ...data } = validated.data;
+    // The "awaiting approval" marker belongs to the server: only an admin's approval clears it, and
+    // a manager or landlord cannot add it back or drop it by sending their own amenities (ISS-153).
+    if (data.amenities && session.role !== 'ADMIN') {
+      const others = data.amenities.filter((a) => a !== PENDING_UNIT_FLAG);
+      data.amenities = found.unit.amenities.includes(PENDING_UNIT_FLAG)
+        ? [...others, PENDING_UNIT_FLAG]
+        : others;
+    }
     const isLandlordOrManager = session.role === 'LANDLORD' || session.role === 'MANAGER';
     const isEditingCritical =
       data.rentAmount !== undefined ||
@@ -318,13 +336,13 @@ export const DELETE = withAuth(async (_req, { session }, ctx: RouteCtx) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Lease.unit has onDelete: Cascade -- a hard delete here would silently
-    // wipe lease/tenancy history for the unit. Refuse rather than cascade;
+    // Rent.unit has onDelete: Cascade -- a hard delete here would silently
+    // wipe rent/tenancy history for the unit. Refuse rather than cascade;
     // there's no ARCHIVED UnitStatus to soft-delete into instead.
-    const leaseCount = await prisma.lease.count({ where: { unitId } });
-    if (leaseCount > 0) {
+    const rentCount = await prisma.rent.count({ where: { unitId } });
+    if (rentCount > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete a unit with lease history', code: 'HAS_LEASES' },
+        { error: 'Cannot delete a unit with rent history', code: 'HAS_RENTS' },
         { status: 409 },
       );
     }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { runOverdueFlagger } from '@/lib/workers/overdueFlagger';
 import { runAutopayCharger } from '@/lib/workers/autopayCharger';
 import { prisma } from '@/lib/db';
@@ -47,9 +47,9 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
     vi.clearAllMocks();
   });
 
-  it('respects lease grace period: does not flag invoice before grace period expires', async () => {
+  it('respects rent grace period: does not flag invoice before grace period expires', async () => {
     const now = new Date();
-    // Due 2 days ago, but lease has 7 days grace period -> 5 days remaining in grace
+    // Due 2 days ago, but rent has 7 days grace period -> 5 days remaining in grace
     const candidateInvoice = {
       id: 'inv-grace',
       invoiceNumber: 'INV-1001',
@@ -57,8 +57,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 2 * MS_PER_DAY),
       amount: 150_000,
-      leaseId: 'lease-1',
-      lease: {
+      rentId: 'rent-1',
+      rent: {
         gracePeriodDays: 7,
         lateFeeType: 'PERCENTAGE',
         lateFeePercentage: 5,
@@ -86,8 +86,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 10 * MS_PER_DAY),
       amount: 200_000,
-      leaseId: 'lease-2',
-      lease: {
+      rentId: 'rent-2',
+      rent: {
         gracePeriodDays: 7,
         lateFeeType: 'PERCENTAGE',
         lateFeePercentage: 5, // 5% of 200,000 = 10,000
@@ -115,7 +115,7 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       data: expect.objectContaining({
         type: 'LATE_FEE',
         amount: 10_000,
-        leaseId: 'lease-2',
+        rentId: 'rent-2',
         description: expect.stringContaining('[late-fee-for:inv-overdue]'),
       }),
     });
@@ -130,8 +130,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'OVERDUE',
       dueDate: new Date(now.getTime() - 15 * MS_PER_DAY),
       amount: 500_000,
-      leaseId: 'lease-3',
-      lease: {
+      rentId: 'rent-3',
+      rent: {
         gracePeriodDays: 5,
         lateFeeType: 'FIXED',
         lateFeePercentage: 0,
@@ -155,6 +155,91 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
     });
   });
 
+  describe('a no-grace invoice is overdue only after its Lagos due day ends (ISS-141)', () => {
+    const noGraceInvoice = () => ({
+      id: 'inv-lagos-day',
+      invoiceNumber: 'INV-1010',
+      type: 'RENT',
+      status: 'UNPAID',
+      // Stored as midnight UTC, which is 01:00 on the 10th in Lagos.
+      dueDate: new Date('2026-03-10T00:00:00Z'),
+      amount: 100_000,
+      rentId: 'rent-lagos',
+      rent: {
+        gracePeriodDays: 0,
+        lateFeeType: 'FIXED',
+        lateFeeFlatAmount: 5000,
+      },
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('does not flag it, or charge a late fee, at the 02:00 UTC run on the due date', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-10T02:00:00Z')); // 03:00 in Lagos, still the 10th
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runOverdueFlagger();
+
+      expect(result).toEqual({ flagged: 0, remindersSent: 0, lateFeesCreated: 0 });
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+      expect(prisma.invoice.create).not.toHaveBeenCalled();
+    });
+
+    it('still holds it one minute before the Lagos day ends', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-10T22:59:00Z')); // 23:59 in Lagos
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+
+      const result = await runOverdueFlagger();
+
+      expect(result.flagged).toBe(0);
+    });
+
+    it('flags it and charges the late fee at the next 02:00 UTC run', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-11T02:00:00Z')); // 03:00 on the 11th in Lagos
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        noGraceInvoice(),
+      ] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
+      vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
+
+      const result = await runOverdueFlagger();
+
+      expect(result.flagged).toBe(1);
+      expect(result.lateFeesCreated).toBe(1);
+    });
+
+    it('counts the grace days from the Lagos due day, not from midnight UTC', async () => {
+      vi.useFakeTimers();
+      const invoice = {
+        ...noGraceInvoice(),
+        rent: { ...noGraceInvoice().rent, gracePeriodDays: 7 },
+      };
+      // Grace ends on the 17th, so the 17th itself is still on time.
+      vi.setSystemTime(new Date('2026-03-17T12:00:00Z'));
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        invoice,
+      ] as unknown as InvoicesFindMany);
+      expect((await runOverdueFlagger()).flagged).toBe(0);
+
+      vi.setSystemTime(new Date('2026-03-18T02:00:00Z'));
+      vi.mocked(prisma.invoice.findMany).mockResolvedValueOnce([
+        invoice,
+      ] as unknown as InvoicesFindMany);
+      vi.mocked(prisma.notice.findFirst).mockResolvedValueOnce(null);
+      vi.mocked(prisma.invoice.findFirst).mockResolvedValueOnce(null);
+      expect((await runOverdueFlagger()).flagged).toBe(1);
+    });
+  });
+
   it('never assesses late fees on MAINTENANCE or SECURITY_DEPOSIT invoices', async () => {
     const now = new Date();
     const candidateMaintenance = {
@@ -164,8 +249,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'UNPAID',
       dueDate: new Date(now.getTime() - 5 * MS_PER_DAY),
       amount: 45_000,
-      leaseId: 'lease-4',
-      lease: {
+      rentId: 'rent-4',
+      rent: {
         gracePeriodDays: 0,
         lateFeeType: 'FIXED',
         lateFeeFlatAmount: 5000,
@@ -191,8 +276,8 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       status: 'OVERDUE',
       dueDate: new Date(now.getTime() - 20 * MS_PER_DAY),
       amount: 100_000,
-      leaseId: 'lease-5',
-      lease: {
+      rentId: 'rent-5',
+      rent: {
         gracePeriodDays: 5,
         lateFeeType: 'FIXED',
         lateFeeFlatAmount: 5000,
@@ -221,12 +306,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       const dueInvoice = {
         id: 'inv-due-1',
         amount: 250_000,
-        leaseId: 'lease-autopay-1',
+        rentId: 'rent-autopay-1',
         status: 'UNPAID',
         dueDate: new Date(Date.now() - MS_PER_DAY),
         payments: [],
-        lease: {
-          id: 'lease-autopay-1',
+        rent: {
+          id: 'rent-autopay-1',
           status: 'ACTIVE',
           tenantId: 'tenant-123',
           tenant: { id: 'tenant-123', email: 'tenant@example.com', name: 'Test Tenant' },
@@ -270,12 +355,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
       const dueInvoice = {
         id: 'inv-due-2',
         amount: 300_000,
-        leaseId: 'lease-autopay-2',
+        rentId: 'rent-autopay-2',
         status: 'OVERDUE',
         dueDate: new Date(Date.now() - 3 * MS_PER_DAY),
         payments: [],
-        lease: {
-          id: 'lease-autopay-2',
+        rent: {
+          id: 'rent-autopay-2',
           status: 'ACTIVE',
           tenantId: 'tenant-456',
           tenant: { id: 'tenant-456', email: 'autopay@example.com', name: 'Autopay User' },
@@ -324,12 +409,12 @@ describe('Anomaly Testing: Financial Invariants and Overdue Calculations', () =>
         {
           id: 'inv-gate',
           amount: 100_000,
-          leaseId: 'lease-gate',
+          rentId: 'rent-gate',
           status: 'UNPAID',
           dueDate: new Date(Date.now() - MS_PER_DAY),
           payments: [],
-          lease: {
-            id: 'lease-gate',
+          rent: {
+            id: 'rent-gate',
             status: 'ACTIVE',
             tenantId: 'tenant-gate',
             tenant: { id: 'tenant-gate', email: 'gate@example.com', name: 'Gate' },
