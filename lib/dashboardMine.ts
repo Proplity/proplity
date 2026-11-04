@@ -10,7 +10,7 @@ const num = (v: unknown) => Number(v ?? 0);
 
 export async function tenantDashboardSummary(userId: string) {
   const mine: Prisma.InvoiceWhereInput = {
-    OR: [{ lease: { tenantId: userId } }, { maintenanceRequest: { tenantId: userId } }, { userId }],
+    OR: [{ rent: { tenantId: userId } }, { maintenanceRequest: { tenantId: userId } }, { userId }],
   };
 
   const [balanceRows, nextDue, payments] = await Promise.all([
@@ -21,7 +21,7 @@ export async function tenantDashboardSummary(userId: string) {
       FROM "Invoice" i
       LEFT JOIN (SELECT "invoiceId", SUM("amount") AS paid FROM "Payment" GROUP BY "invoiceId") p
         ON p."invoiceId" = i."id"
-      LEFT JOIN "Lease" l ON l."id" = i."leaseId"
+      LEFT JOIN "Rent" l ON l."id" = i."rentId"
       LEFT JOIN "MaintenanceRequest" m ON m."id" = i."maintenanceRequestId"
       WHERE i."status" <> 'CANCELLED'
         AND (l."tenantId" = ${userId} OR m."tenantId" = ${userId} OR i."userId" = ${userId})`),

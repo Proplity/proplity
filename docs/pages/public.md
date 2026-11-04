@@ -11,8 +11,8 @@ needs a session (`proxy.ts`). The components behind them are in
 | `/`               | `page.tsx`                | Home page (`HomeLanding` → `LandingPage`). If proxy sent a signed-in visitor here with `?from=`, sends them back to where they were going once the silent refresh finishes |
 | `/about`          | `about/page.tsx`          | About Proplity                                                                                                                                                             |
 | `/contact`        | `contact/page.tsx`        | Contact form; its message is emailed to the team (`POST /api/v1/contact`, ISS-133)                                                                                         |
-| `/pricing`        | `pricing/page.tsx`        | Plans. Redirects to `/` unless `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED=true`                                                                                                    |
-| `/checkout`       | `checkout/page.tsx`       | Subscription checkout for a chosen plan (`?plan=`). Same flag as pricing                                                                                                   |
+| `/pricing`        | `pricing/page.tsx`        | Plans, read from the admin-edited plan table (price, units, users, extra-unit price, credits). Redirects to `/` unless `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED=true`            |
+| `/checkout`       | `checkout/page.tsx`       | Subscription checkout for a chosen plan (`?plan=<key>&cycle=yearly`); shows the same price the server charges, extra units included. Same flag as pricing                  |
 | `/for-tenants`    | `for-tenants/page.tsx`    | Landing page for tenants                                                                                                                                                   |
 | `/for-landlords`  | `for-landlords/page.tsx`  | Landing page for landlords                                                                                                                                                 |
 | `/for-vendors`    | `for-vendors/page.tsx`    | Landing page for service providers                                                                                                                                         |
@@ -31,10 +31,11 @@ needs a session (`proxy.ts`). The components behind them are in
 
 ## Properties and receipts
 
-| Route              | File                       | Description                                                                                                                                                                                                                   |
-| :----------------- | :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/properties/[id]` | `properties/[id]/page.tsx` | The public listing page: photos, units, amenities, the neighbourhood, reviews, and the sign-in-aware buttons for applying or scheduling a viewing (`PublicPropertyDetail`)                                                    |
-| `/receipts/[id]`   | `receipts/[id]/page.tsx`   | A payment receipt that prints cleanly or saves as a PDF. `[id]` is the **payment** id. Open to every signed-in role at the edge; the API answers 404 unless the person is the payer, the payee, the property team or an admin |
+| Route              | File                       | Description                                                                                                                                                                                                                                                   |
+| :----------------- | :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/properties/[id]` | `properties/[id]/page.tsx` | The public listing page: photos, units, amenities, the neighbourhood, reviews, and the sign-in-aware buttons for applying or scheduling a viewing (`PublicPropertyDetail`)                                                                                    |
+| `/witness/[token]` | `witness/[token]/page.tsx` | The page a witness reaches from the emailed link: the agreement to read, a box for their full name and a tick, then a thank-you. No account and no app chrome; the token in the address is the only credential. An unknown, expired or withdrawn link says so |
+| `/receipts/[id]`   | `receipts/[id]/page.tsx`   | A payment receipt that prints cleanly or saves as a PDF. `[id]` is the **payment** id. Open to every signed-in role at the edge; the API answers 404 unless the person is the payer, the payee, the property team or an admin                                 |
 
 ## Utility pages
 

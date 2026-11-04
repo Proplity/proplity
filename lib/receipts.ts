@@ -34,7 +34,7 @@ export async function buildReceipt(
         include: {
           payments: { select: { amount: true } },
           user: { select: { name: true } },
-          lease: {
+          rent: {
             include: {
               tenant: { select: { id: true, name: true } },
               unit: {
@@ -73,16 +73,16 @@ export async function buildReceipt(
   if (!payment) return null;
 
   const invoice = payment.invoice;
-  const lease = invoice.lease;
+  const rent = invoice.rent;
   const job = invoice.maintenanceRequest;
-  const unit = lease?.unit ?? job?.unit ?? null;
+  const unit = rent?.unit ?? job?.unit ?? null;
   const property = unit?.property ?? null;
 
   // Who may open it: the payer, the one paid, the property team and admins. A tenant is not a party
   // to a vendor's invoice, so they cannot open that receipt.
   const allowed =
     actor.role === 'ADMIN' ||
-    lease?.tenantId === actor.sub ||
+    rent?.tenantId === actor.sub ||
     invoice.userId === actor.sub ||
     job?.vendorId === actor.sub ||
     (property !== null && canManageProperty(actor, property));
@@ -91,8 +91,8 @@ export async function buildReceipt(
   const owner = property?.landlord?.name ?? property?.manager?.name ?? property?.name ?? 'Property';
   let payer: string;
   let payee: string;
-  if (lease) {
-    payer = lease.tenant.name;
+  if (rent) {
+    payer = rent.tenant.name;
     payee = owner;
   } else if (job) {
     payer = owner;

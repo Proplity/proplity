@@ -5,113 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from './Logo';
 import { MarketingNav } from './MarketingNav';
-import { CheckCircle, Minus, Star } from 'lucide-react';
+import { CheckCircle, Star } from 'lucide-react';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
-
-export const PLANS = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    tag: 'Best for solo landlords',
-    monthlyPrice: null,
-    annualPrice: null,
-    priceLabel: 'NO',
-    priceSub: '/month',
-    popular: false,
-    cta: 'Get Started',
-    ctaStyle: 'outline',
-    features: [
-      'Up to 2 units',
-      '5 Tenants max',
-      'Manual Rent Collection',
-      'Basic Maintenance',
-      'Email Support',
-    ],
-    units: '2',
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    tag: 'Most popular for growing portfolios',
-    monthlyPrice: 29999,
-    annualPrice: 23999,
-    priceLabel: null,
-    priceSub: '/month',
-    popular: true,
-    cta: 'Get Started',
-    ctaStyle: 'solid',
-    features: [
-      'Up to 50 units',
-      'AI WhatsApp Assistant',
-      'Automated Rent Collection',
-      'Advanced Analytics',
-      'Priority Support',
-    ],
-    units: '50',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    tag: 'Built for estate managers',
-    monthlyPrice: null,
-    annualPrice: null,
-    priceLabel: 'Custom',
-    priceSub: '',
-    popular: false,
-    cta: 'Get Started',
-    ctaStyle: 'outline',
-    features: [
-      'Unlimited units',
-      'Custom AI Workflows',
-      'Vendor Management',
-      'Multi-user roles',
-      'Dedicated Account Manager',
-    ],
-    units: 'Unlimited',
-  },
-];
-
-const COMPARISON = [
-  {
-    feature: 'Property Units',
-    starter: '2',
-    pro: '50',
-    enterprise: 'Unlimited',
-  },
-  { feature: 'Tenant Management', starter: true, pro: true, enterprise: true },
-  {
-    feature: 'AI Verified Listings',
-    starter: false,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: 'WhatsApp Assistant',
-    starter: false,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: 'Payment Predictions',
-    starter: false,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: '360° Virtual Tours',
-    starter: false,
-    pro: true,
-    enterprise: true,
-  },
-  { feature: 'Custom Reports', starter: false, pro: false, enterprise: true },
-  { feature: 'API Access', starter: false, pro: false, enterprise: true },
-  {
-    feature: 'Support Response',
-    starter: '48 hours',
-    pro: '2 hours',
-    enterprise: 'Instant',
-  },
-];
+import { usePlans } from '@/hooks/usePlans';
+import { bestYearlySavingPct, naira, planBullets, planPriceLabel } from '@/lib/planDisplay';
 
 const TESTIMONIALS = [
   {
@@ -140,12 +37,6 @@ const TESTIMONIALS = [
   },
 ];
 
-function CellValue({ val }: { val: string | boolean }) {
-  if (val === true) return <CheckCircle className="mx-auto h-5 w-5 text-blue-500" />;
-  if (val === false) return <Minus className="mx-auto h-4 w-4 text-gray-300" />;
-  return <span className="text-sm font-medium text-gray-700">{val}</span>;
-}
-
 function Stars({ n }: { n: number }) {
   return (
     <div className="flex gap-0.5">
@@ -159,6 +50,9 @@ function Stars({ n }: { n: number }) {
 export function PricingPage() {
   const router = useRouter();
   const [annual, setAnnual] = useState(false);
+  const { data: plans, loading: plansLoading, error: plansError } = usePlans();
+  const savingPct = bestYearlySavingPct(plans);
+  const hasYearly = plans.some((p) => p.yearlyPrice !== null);
 
   useEffect(() => {
     if (!subscriptionsEnabled()) {
@@ -167,12 +61,6 @@ export function PricingPage() {
   }, [router]);
 
   if (!subscriptionsEnabled()) return null;
-
-  const getPrice = (plan: (typeof PLANS)[0]) => {
-    if (plan.priceLabel) return plan.priceLabel;
-    const price = annual ? plan.annualPrice! : plan.monthlyPrice!;
-    return `₦${price.toLocaleString()}`;
-  };
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -200,7 +88,7 @@ export function PricingPage() {
       </section>
 
       {/* ── Billing toggle ── */}
-      <div className="mt-10 mb-8 flex justify-center">
+      <div className={`mt-10 mb-8 flex justify-center ${hasYearly ? '' : 'hidden'}`}>
         <div className="inline-flex items-center gap-3 rounded-full bg-gray-100 px-5 py-2">
           <span className={`text-sm font-medium ${!annual ? 'text-gray-900' : 'text-gray-500'}`}>
             Monthly
@@ -214,122 +102,176 @@ export function PricingPage() {
             />
           </button>
           <span className={`text-sm font-medium ${annual ? 'text-gray-900' : 'text-gray-500'}`}>
-            Annual
+            Yearly
           </span>
-          <span className="ml-0.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
-            Save 20%
-          </span>
+          {savingPct > 0 && (
+            <span className="ml-0.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+              Save up to {savingPct}%
+            </span>
+          )}
         </div>
       </div>
 
       {/* ── Pricing cards ── */}
       <section className="mx-auto max-w-5xl px-6 pb-16">
+        {plansError && (
+          <p className="py-10 text-center text-sm text-red-600">
+            We could not load the plans. Please try again in a moment.
+          </p>
+        )}
+        {plansLoading && !plansError && (
+          <p className="py-10 text-center text-sm text-gray-500">Loading plans…</p>
+        )}
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative flex flex-col rounded-2xl border p-7 ${
-                plan.popular
-                  ? 'border-blue-500 bg-white shadow-xl ring-2 shadow-blue-100 ring-blue-500'
-                  : 'border-gray-200 bg-white'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold tracking-wide text-white shadow">
-                    MOST POPULAR
-                  </span>
-                </div>
-              )}
-
-              <p className="mt-2 mb-1 text-xs text-gray-400">{plan.tag}</p>
-              <h3 className="mb-4 text-xl font-bold text-gray-900">{plan.name}</h3>
-
-              <div className="mb-6">
-                <span className="text-4xl font-extrabold text-gray-900">{getPrice(plan)}</span>
-                {plan.priceSub && (
-                  <span className="ml-1 text-sm text-gray-500">{plan.priceSub}</span>
-                )}
-                {annual && plan.monthlyPrice && (
-                  <p className="mt-1 text-xs font-medium text-green-600">
-                    Save ₦{((plan.monthlyPrice - plan.annualPrice!) * 12).toLocaleString()} per year
-                  </p>
-                )}
-              </div>
-
-              <ul className="mb-8 flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => {
-                  if (plan.id === 'enterprise') {
-                    router.push('/login');
-                    return;
-                  }
-                  if (!subscriptionsEnabled()) return;
-                  router.push(`/register?plan=${plan.name.toLowerCase()}`);
-                }}
-                disabled={plan.id !== 'enterprise' && !subscriptionsEnabled()}
-                className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                  plan.popular
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-600'
+          {plans.map((plan) => {
+            const price = planPriceLabel(plan, annual);
+            const free = plan.monthlyPrice === 0;
+            return (
+              <div
+                key={plan.id}
+                className={`relative flex flex-col rounded-2xl border p-7 ${
+                  plan.isPopular
+                    ? 'border-blue-500 bg-white shadow-xl ring-2 shadow-blue-100 ring-blue-500'
+                    : 'border-gray-200 bg-white'
                 }`}
               >
-                {plan.id !== 'enterprise' && !subscriptionsEnabled() ? 'Coming Soon' : plan.cta}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+                {plan.isPopular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold tracking-wide text-white shadow">
+                      MOST POPULAR
+                    </span>
+                  </div>
+                )}
 
-      {/* ── Feature comparison ── */}
-      <section className="bg-gray-50 px-6 py-16">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="mb-10 text-center text-2xl font-bold text-gray-900">
-            Detailed Feature Comparison
-          </h2>
+                <p className="mt-2 mb-1 text-xs text-gray-400">{plan.tagline}</p>
+                <h3 className="mb-4 text-xl font-bold text-gray-900">{plan.name}</h3>
 
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* Header */}
-            <div className="grid grid-cols-4 border-b border-gray-200 bg-white">
-              <div className="p-4 text-sm font-semibold text-gray-600">Features</div>
-              {['Starter', 'Professional', 'Enterprise'].map((h, i) => (
-                <div
-                  key={h}
-                  className={`p-4 text-center text-sm font-semibold ${i === 1 ? 'text-blue-600' : 'text-gray-700'}`}
+                <div className="mb-6">
+                  <span className="text-4xl font-extrabold text-gray-900">{price.amount}</span>
+                  {price.per && <span className="ml-1 text-sm text-gray-500">{price.per}</span>}
+                  {annual && plan.yearlyPrice !== null && plan.monthlyPrice > 0 && (
+                    <p className="mt-1 text-xs font-medium text-green-600">
+                      {naira(plan.yearlyPrice)} a year; saves{' '}
+                      {naira(plan.monthlyPrice * 12 - plan.yearlyPrice)} against paying monthly
+                    </p>
+                  )}
+                </div>
+
+                <ul className="mb-8 flex-1 space-y-3">
+                  {planBullets(plan).map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
+                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => {
+                    if (!subscriptionsEnabled()) return;
+                    router.push(`/register?plan=${plan.key}${annual ? '&cycle=yearly' : ''}`);
+                  }}
+                  disabled={!subscriptionsEnabled()}
+                  className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                    plan.isPopular
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-600'
+                  }`}
                 >
-                  {h}
-                </div>
-              ))}
-            </div>
-
-            {COMPARISON.map((row, i) => (
-              <div
-                key={row.feature}
-                className={`grid grid-cols-4 border-b border-gray-100 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-              >
-                <div className="p-4 text-sm font-medium text-gray-700">{row.feature}</div>
-                <div className="p-4 text-center">
-                  <CellValue val={row.starter} />
-                </div>
-                <div className="p-4 text-center">
-                  <CellValue val={row.pro} />
-                </div>
-                <div className="p-4 text-center">
-                  <CellValue val={row.enterprise} />
-                </div>
+                  {!subscriptionsEnabled()
+                    ? 'Coming Soon'
+                    : free
+                      ? 'Get started free'
+                      : 'Get started'}
+                </button>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </section>
+
+      {/* ── What each plan includes ── */}
+      {plans.length > 0 && (
+        <section className="bg-gray-50 px-6 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-10 text-center text-2xl font-bold text-gray-900">
+              What each plan includes
+            </h2>
+
+            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="p-4 text-left font-semibold text-gray-600">&nbsp;</th>
+                    {plans.map((p) => (
+                      <th
+                        key={p.id}
+                        className={`p-4 text-center font-semibold ${p.isPopular ? 'text-blue-600' : 'text-gray-700'}`}
+                      >
+                        {p.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      label: 'Units included',
+                      value: (p: (typeof plans)[number]) => String(p.unitsIncluded),
+                    },
+                    {
+                      label: 'Users',
+                      value: (p: (typeof plans)[number]) => String(p.usersIncluded),
+                    },
+                    {
+                      label: 'Each extra unit',
+                      value: (p: (typeof plans)[number]) =>
+                        p.overagePerUnit === null
+                          ? 'Not available'
+                          : `${naira(p.overagePerUnit)}/month`,
+                    },
+                    {
+                      label: 'Credits every month',
+                      value: (p: (typeof plans)[number]) => String(p.monthlyCredits),
+                    },
+                    {
+                      label: 'Price per month',
+                      value: (p: (typeof plans)[number]) =>
+                        p.monthlyPrice === 0 ? 'Free' : naira(p.monthlyPrice),
+                    },
+                    {
+                      label: 'Price per year',
+                      value: (p: (typeof plans)[number]) =>
+                        p.yearlyPrice === null
+                          ? '—'
+                          : p.monthlyPrice === 0
+                            ? 'Free'
+                            : naira(p.yearlyPrice),
+                    },
+                  ].map((row, i) => (
+                    <tr
+                      key={row.label}
+                      className={`border-b border-gray-100 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                    >
+                      <th scope="row" className="p-4 text-left font-medium text-gray-700">
+                        {row.label}
+                      </th>
+                      {plans.map((p) => (
+                        <td
+                          key={p.id}
+                          className="p-4 text-center font-medium text-gray-700 tabular-nums"
+                        >
+                          {row.value(p)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Testimonials ── */}
       <section className="bg-white px-6 py-16">

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
 import { apiFetch } from '../helpers/client';
 
@@ -37,7 +37,7 @@ describe('properties: export (GET /properties/export)', () => {
     expect(text).not.toContain('Other Place');
   });
 
-  it("an ADMIN sees every property's units, including tenant info from the active lease", async () => {
+  it("an ADMIN sees every property's units, including tenant info from the active rent", async () => {
     const manager = await createUser(Role.MANAGER);
     const property = await createProperty({ managerId: manager.id, name: 'Admin View Court' });
     const unit = await createUnit(property.id, { unitNumber: '3A' });
@@ -45,7 +45,7 @@ describe('properties: export (GET /properties/export)', () => {
       name: 'Test Tenant',
       email: 'exporttest@test.local',
     });
-    await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
     const admin = await createUser(Role.ADMIN);
     const cookie = await authCookie(admin.id, admin.role);
 

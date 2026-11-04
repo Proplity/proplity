@@ -57,6 +57,7 @@ describe('propertyFingerprint - findPossibleDuplicates', () => {
       where: {
         listingHash: 'hash-12345',
         mergedIntoId: null,
+        managementOnly: false,
       },
       select: { id: true, name: true },
     });
@@ -72,6 +73,7 @@ describe('propertyFingerprint - findPossibleDuplicates', () => {
         listingHash: 'hash-12345',
         id: { not: 'prop-current' },
         mergedIntoId: null,
+        managementOnly: false,
       },
       select: { id: true, name: true },
     });

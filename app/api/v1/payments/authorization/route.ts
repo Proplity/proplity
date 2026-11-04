@@ -17,18 +17,18 @@ import { findReusableAuthorization } from '@/lib/payments/authorization';
 export const GET = withAuth(
   async (req, { session }) => {
     try {
-      const leaseId = req.nextUrl.searchParams.get('leaseId');
-      if (!leaseId) {
-        return NextResponse.json({ error: 'leaseId query param is required' }, { status: 400 });
+      const rentId = req.nextUrl.searchParams.get('rentId');
+      if (!rentId) {
+        return NextResponse.json({ error: 'rentId query param is required' }, { status: 400 });
       }
 
-      const lease = await prisma.lease.findUnique({ where: { id: leaseId } });
-      if (!lease) return NextResponse.json({ error: 'Lease not found' }, { status: 404 });
-      if (lease.tenantId !== session.sub) {
+      const rent = await prisma.rent.findUnique({ where: { id: rentId } });
+      if (!rent) return NextResponse.json({ error: 'Rent not found' }, { status: 404 });
+      if (rent.tenantId !== session.sub) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      return NextResponse.json({ data: await findReusableAuthorization(leaseId) });
+      return NextResponse.json({ data: await findReusableAuthorization(rentId) });
     } catch (err) {
       return handleApiError(err);
     }

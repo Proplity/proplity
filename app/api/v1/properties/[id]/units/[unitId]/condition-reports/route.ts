@@ -27,10 +27,10 @@ export const GET = withAuth(
 
       const isManager = canManageProperty(session, found.property);
       if (!isManager) {
-        const activeLease = await prisma.lease.findFirst({
+        const activeRent = await prisma.rent.findFirst({
           where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
         });
-        if (!activeLease) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!activeRent) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
       const reports = await prisma.conditionReport.findMany({

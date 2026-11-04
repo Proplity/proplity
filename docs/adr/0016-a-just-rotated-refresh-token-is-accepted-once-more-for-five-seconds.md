@@ -1,8 +1,9 @@
 # 0016 — A just-rotated refresh token is accepted once more for five seconds
 
-Status: Proposed
-Decided by: pending (the owner accepts) · Date: pending
+Status: Accepted
+Decided by: the owner · Date: 2026-10-21
 Recorded: 2026-10-20
+Shipped: live on `prod` since 2026-10-21 (PRs #138 and #139 into `dev`, #140 into `main`, #137 into `prod`). The owner accepted it, with the 5-second window, on 2026-10-21.
 
 ## Context
 

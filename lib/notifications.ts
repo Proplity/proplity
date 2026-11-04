@@ -110,18 +110,18 @@ export async function notifyAdmins(input: PersonInput, opts: PersonOptions = { e
   }
 }
 
-/** Tell whoever holds the active lease on a unit, in the app and by email. */
+/** Tell whoever holds the active rent on a unit, in the app and by email. */
 export async function tellUnitTenant(
   unitId: string,
   input: Omit<PersonInput, 'link'> & { link?: string },
   opts: PersonOptions = {},
 ) {
   try {
-    const lease = await prisma.lease.findFirst({
+    const rent = await prisma.rent.findFirst({
       where: { unitId, status: 'ACTIVE' },
       select: { tenantId: true },
     });
-    if (lease) await notifyAndEmail(lease.tenantId, { link: '/dashboard', ...input }, opts);
+    if (rent) await notifyAndEmail(rent.tenantId, { link: '/dashboard', ...input }, opts);
   } catch (err) {
     console.error('tellUnitTenant failed', err);
   }

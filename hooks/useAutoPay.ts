@@ -7,27 +7,27 @@ import type {
   PaymentAuthorization,
 } from '@/lib/api/types';
 
-export function useAutoPayMandates(leaseId: string | null) {
+export function useAutoPayMandates(rentId: string | null) {
   const [data, setData] = useState<AutoPayMandate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
-    if (!leaseId) {
+    if (!rentId) {
       setData([]);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await api.payments.autopay.list(leaseId);
+      const res = await api.payments.autopay.list(rentId);
       setData(res.data.data);
     } catch {
       setError('Failed to load auto-pay status');
     } finally {
       setLoading(false);
     }
-  }, [leaseId]);
+  }, [rentId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -40,30 +40,30 @@ export function useAutoPayMandates(leaseId: string | null) {
 }
 
 // Looks up whether the tenant has a reusable card authorization from a past
-// Paystack payment on this lease -- auto-pay can only be set up from that,
+// Paystack payment on this rent -- auto-pay can only be set up from that,
 // since there's no card-entry UI in this codebase (see payments/authorization
 // route.ts for why). null means "none found yet", not "still loading".
-export function usePaymentAuthorization(leaseId: string | null) {
+export function usePaymentAuthorization(rentId: string | null) {
   const [data, setData] = useState<PaymentAuthorization | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
-    if (!leaseId) {
+    if (!rentId) {
       setData(null);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await api.payments.authorization(leaseId);
+      const res = await api.payments.authorization(rentId);
       setData(res.data.data);
     } catch {
       setError('Failed to check for a saved payment method');
     } finally {
       setLoading(false);
     }
-  }, [leaseId]);
+  }, [rentId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

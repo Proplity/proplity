@@ -85,6 +85,8 @@ export type Property = {
     role?: string;
   } | null;
   isPublished: boolean;
+  /** Kept for tenant management only: never listed, never in the admin review queue. */
+  managementOnly?: boolean;
   trustScore: number | null;
   powerReliabilityScore: number | null;
   floodRiskScore: number | null;
@@ -112,6 +114,7 @@ export type PropertyReview = {
   rating: number;
   comment: string | null;
   verified: boolean;
+  kind: 'TENANT' | 'VISITOR';
   createdAt: string;
 };
 
@@ -142,9 +145,15 @@ export type CreatePropertyInput = {
   video360Url?: string;
   exteriorPhotoUrl?: string;
   photoUrls?: string[];
+  /** Keep it for tenant management only: never listed, never reviewed by an admin. */
+  managementOnly?: boolean;
 };
 
 export type UpdatePropertyInput = {
+  /** false lists a management-only property publicly (it then waits for an admin's approval); true takes it off the market. */
+  managementOnly?: boolean;
+  /** A company's managing partner can hand a property to someone on their team. */
+  managerId?: string;
   name?: string;
   address?: string;
   city?: string;
@@ -188,6 +197,8 @@ export type CreateUnitInput = {
   depositAmount?: number;
   sqft?: number;
   amenities?: string[];
+  /** Sent again after the person has seen what units over their plan cost (OVERAGE_NEEDS_CONFIRMATION). */
+  confirmOverage?: boolean;
 };
 
 export type PropertyViewing = {
@@ -345,6 +356,34 @@ export type PlatformSettings = {
   retentionEnabled: boolean;
   retentionAfterTenancyDays: number;
   retentionAfterRejectionDays: number;
+  tenantInvitesPerDay: number;
+  inviteTenantsToManagementOnly: boolean;
+  enforcePlanLimits: boolean;
+  unitBillingOwner: 'MANAGER_ELSE_LANDLORD' | 'CREATOR' | 'BOTH';
+  overageMode: 'ALLOW_AND_BILL' | 'HARD_STOP' | 'CONFIRM_EACH_TIME';
+  downgradeRule: 'BLOCK' | 'GRACE_PERIOD' | 'ALLOW_AND_BILL';
+  downgradeGraceDays: number;
+  teamMemberAccess: 'ASSIGNED_ONLY' | 'ALL_COMPANY';
+  agreementTemplatesNeedApproval: boolean;
+  agreementLandlordNameByManager: boolean;
+  agreementAgencyFee: boolean;
+  agreementLegalFee: boolean;
+  agreementCautionFee: boolean;
+  rentActivationRule: 'INDEPENDENT' | 'AFTER_BOTH_SIGN';
+  chargeForAgreements: boolean;
+  chargeForUploads: boolean;
+  creditPurchaseEnabled: boolean;
+  witnessEsignEnabled: boolean;
+  witnessLinkDays: number;
+  witnessesMustSign: boolean;
+  stampDutyPaymentEnabled: boolean;
+  stampDutyServiceFee: number;
+  agreementRenewalEnabled: boolean;
+  agreementRemindersEnabled: boolean;
+  renewalReminderDays: number[];
+  agreementUnsignedReminderDays: number;
+  autoRenewalEnabled: boolean;
+  autoRenewalDaysBefore: number;
 };
 
 /** Platform Settings as the admin screen reads them: the settings plus what the deployment allows. */
@@ -373,7 +412,7 @@ export type Vendor = {
 
 export type Notice = {
   id: string;
-  leaseId: string;
+  rentId: string;
   invoiceId: string | null;
   type:
     | 'RENEWAL_OFFER'
@@ -399,13 +438,16 @@ export type CreateNoticeInput = {
 
 export type Note = {
   id: string;
-  leaseId: string | null;
+  rentId: string | null;
   authorId: string;
   body: string;
   createdAt: string;
 };
 
-export type Lease = {
+/** Where a tenant is in joining: signed in (JOINED), link sent (INVITED), link ran out (EXPIRED), or no invitation sent yet (NOT_SENT). */
+export type InvitationState = 'JOINED' | 'INVITED' | 'EXPIRED' | 'NOT_SENT';
+
+export type Rent = {
   id: string;
   unitId: string;
   unit?: Unit & { property?: Property };
@@ -435,13 +477,25 @@ export type Lease = {
   paymentReliability?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | null;
   signedAgreementUrl?: string | null;
   agreementSignedAt?: string | null;
-  signatures?: LeaseSignature[];
+  signatures?: RentSignature[];
   notices?: Notice[];
   invoices?: Invoice[];
+  /** Renew automatically (only runs while the admin has automatic renewal on). */
+  autoRenew?: boolean;
+  autoRenewIncreasePercent?: number;
+  autoRenewTermMonths?: number | null;
+  /** The rent this one renews, and the one that renews it (when there is one). */
+  renewedFromId?: string | null;
+  renewedInto?: { id: string; status: string; startDate: string } | null;
+  /** What the admin's switches allow for renewing this rent (on a single rent's GET). */
+  renewal?: { enabled: boolean; autoEnabled: boolean; autoDaysBefore: number };
   tenantInvited?: boolean;
+  invitation?: InvitationState;
+  /** Legal warnings for the tenancy just created (the place's rules; a blocking one refuses the rent instead). */
+  warnings?: { rule: string; mode: 'WARN' | 'BLOCK'; message: string }[];
 };
 
-export type CreateLeaseInput = {
+export type CreateRentInput = {
   unitId: string;
   tenantId?: string;
   tenantEmail?: string;
@@ -460,14 +514,29 @@ export type CreateLeaseInput = {
   lateFeeFlatAmount?: number;
 };
 
-export type UpdateLeaseTermsInput = {
+export type UpdateRentTermsInput = {
   gracePeriodDays?: number;
   lateFeeType?: 'PERCENTAGE' | 'FIXED';
   lateFeePercentage?: number;
   lateFeeFlatAmount?: number;
+  autoRenew?: boolean;
+  autoRenewIncreasePercent?: number;
+  autoRenewTermMonths?: number;
 };
 
-export type RenewLeaseInput = {
+/** Renewing with a new agreement: every field is optional, the rest follows this rent's terms. */
+export type StartRenewalInput = {
+  startDate?: string;
+  endDate?: string;
+  termMonths?: number;
+  rentAmount?: number;
+  increasePercent?: number;
+  deposit?: number;
+  paymentFrequency?: string;
+  copyAgreement?: boolean;
+};
+
+export type RenewRentInput = {
   startDate: string;
   endDate: string;
   rentAmount: number;
@@ -490,7 +559,7 @@ export type Payment = {
 
 export type AutoPayMandate = {
   id: string;
-  leaseId: string;
+  rentId: string;
   provider: 'PAYSTACK' | 'FLUTTERWAVE' | 'BANK_TRANSFER' | 'CASH' | 'CHECK';
   paymentMethodToken: string;
   status: 'ACTIVE' | 'PAUSED' | 'CANCELLED';
@@ -500,7 +569,7 @@ export type AutoPayMandate = {
 };
 
 export type CreateAutoPayMandateInput = {
-  leaseId: string;
+  rentId: string;
   paymentMethodToken: string;
   provider?: string;
   nextChargeDate?: string;
@@ -516,8 +585,8 @@ export type PaymentAuthorization = {
 export type Invoice = {
   id: string;
   invoiceNumber: string;
-  leaseId: string | null;
-  lease?: {
+  rentId: string | null;
+  rent?: {
     id: string;
     tenant: { id: string; name: string };
     unit: { unitNumber: string; property: { id: string; name: string } };
@@ -531,7 +600,10 @@ export type Invoice = {
     | 'UTILITY'
     | 'LATE_FEE'
     | 'ASSOCIATION_FEE'
-    | 'SUBSCRIPTION';
+    | 'SUBSCRIPTION'
+    | 'SERVICE_CHARGE'
+    | 'CREDIT_PURCHASE'
+    | 'STAMP_DUTY';
   amount: number;
   dueDate: string;
   status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
@@ -542,7 +614,7 @@ export type Invoice = {
 
 export type CreateInvoiceInput = {
   maintenanceRequestId?: string;
-  leaseId?: string;
+  rentId?: string;
   userId?: string;
   type:
     | 'RENT'
@@ -602,39 +674,44 @@ export type Message = {
   channel: 'IN_APP' | 'WHATSAPP' | 'EMAIL' | 'SMS';
   body: string;
   attachmentUrls: string[];
+  /** Who wrote it, kept even after they left the thread. */
+  sender?: { id: string; name: string } | null;
   createdAt: string;
 };
 
 export type ConversationParticipant = {
   userId: string;
   lastReadAt: string | null;
+  leftAt: string | null;
   user: { id: string; name: string; avatarUrl: string | null; role: string };
 };
 
 export type Conversation = {
   id: string;
-  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'RENT_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
   title: string | null;
   maintenanceRequestId: string | null;
-  leaseId: string | null;
+  rentId: string | null;
   propertyId: string | null;
   property?: { id: string; name: string } | null;
-  lease?: { unit: { unitNumber: string; property: { id: string; name: string } } } | null;
+  rent?: { unit: { unitNumber: string; property: { id: string; name: string } } } | null;
   maintenanceRequest?: { title: string } | null;
   participants: ConversationParticipant[];
   lastMessage: Message | null;
   lastReadAt: string | null;
+  /** Set when the caller's tenancy ended: the thread is read-only up to this moment. */
+  leftAt: string | null;
   unreadCount: number;
   createdAt: string;
   updatedAt: string;
 };
 
 export type CreateConversationInput = {
-  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'LEASE_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
+  type: 'DIRECT' | 'MAINTENANCE_THREAD' | 'RENT_THREAD' | 'COMMUNITY_DISCUSSION' | 'SUPPORT';
   title?: string;
   participantIds?: string[];
   maintenanceRequestId?: string;
-  leaseId?: string;
+  rentId?: string;
   propertyId?: string;
 };
 
@@ -673,17 +750,98 @@ export type AuditLog = {
   createdAt: string;
 };
 
+/** A plan an admin has set up (Admin > Plans & billing). Prices are whole naira. */
+export type Plan = {
+  id: string;
+  key: string;
+  name: string;
+  tagline: string | null;
+  monthlyPrice: number;
+  yearlyPrice: number | null;
+  unitsIncluded: number;
+  usersIncluded: number;
+  overagePerUnit: number | null;
+  monthlyCredits: number;
+  features: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  isPopular: boolean;
+  sortOrder: number;
+};
+
+export type PlanInput = Partial<Omit<Plan, 'id'>> &
+  Pick<Plan, 'key' | 'name' | 'monthlyPrice' | 'unitsIncluded'>;
+
+export type PaidService = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  creditCost: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+/** A credit pack as the admin edits it. */
+export type CreditPack = {
+  id: string;
+  key: string;
+  name: string;
+  credits: number;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+/** What a manager or landlord sees of the credit shop (GET /credits/packs). */
+export type CreditShop = {
+  enabled: boolean;
+  cardsAvailable: boolean;
+  balance: number;
+  packs: { key: string; name: string; credits: number; price: number }[];
+};
+
+export type PlanUsage = {
+  units: number;
+  unitsIncluded: number;
+  extraUnits: number;
+  overageMonthly: number;
+  users: number;
+  usersIncluded: number;
+};
+
+/** The signed-in account's plan, what it uses against it, and its credits (GET /subscriptions/me). */
 export type Subscription = {
   userId: string;
-  tier: 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE';
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'TRIALING';
+  billingCycle: 'MONTHLY' | 'YEARLY';
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  graceEndsAt: string | null;
+  /** A paid plan whose period ended: the account is back on the default plan. */
+  lapsed: boolean;
+  plan: Plan;
+  usage: PlanUsage;
+  credits: { balance: number };
+  limitsEnforced: boolean;
+  subscriptionsEnabled: boolean;
+  canChangePlan: boolean;
+  company: { isPartner: boolean } | null;
 };
 
 export type CheckoutSubscriptionInput = {
-  tier: 'FREE' | 'PRO';
+  planKey: string;
   billingCycle?: 'monthly' | 'yearly';
   confirmDowngrade?: boolean;
+};
+
+export type CreditEntry = {
+  id: string;
+  delta: number;
+  reason: 'MONTHLY_ALLOWANCE' | 'ADMIN_GRANT' | 'PURCHASE' | 'SPEND' | 'REFUND';
+  serviceKey: string | null;
+  note: string | null;
+  createdAt: string;
 };
 
 export type Application = {
@@ -695,7 +853,7 @@ export type Application = {
   reviewedById: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
-  leaseId?: string | null;
+  rentId?: string | null;
   createdAt: string;
   applicant?: { id: string; name: string; email: string; phoneNumber: string | null };
   unit?: { id: string; unitNumber: string; property: { id: string; name: string } };
@@ -835,9 +993,9 @@ export type CreateBankAccountInput = {
   isDefault?: boolean;
 };
 
-export type LeaseSignature = {
+export type RentSignature = {
   id: string;
-  leaseId: string;
+  rentId: string;
   signerId: string;
   signer?: { id: string; name: string; role: string };
   signerRole: string;
@@ -863,7 +1021,7 @@ export type OwnerDashboardSummary = {
   };
   managers: { id: string; name: string }[];
   units: { total: number; occupied: number; occupancyRate: number; totalListedRent: number };
-  leases: { active: number; upcomingRenewalCount: number };
+  rents: { active: number; upcomingRenewalCount: number };
   money: {
     collected: number;
     collectedThisMonth: number;
@@ -883,7 +1041,7 @@ export type OwnerDashboardSummary = {
     paidAt: string;
     invoiceNumber: string;
     type: string;
-    leaseId: string | null;
+    rentId: string | null;
     tenant: string | null;
     property: string | null;
   }[];
@@ -893,7 +1051,7 @@ export type OwnerDashboardSummary = {
     finalCost: number | null;
     unit: { property: { name: string } } | null;
   }[];
-  recentLeases: {
+  recentRents: {
     id: string;
     startDate: string;
     tenant: { name: string } | null;
@@ -974,13 +1132,13 @@ export type AdminReportsSummary = {
 // opened from a dashboard card.
 export type OwnerBreakdownSummary = {
   properties: { count: number; fully: number; partial: number; vacant: number };
-  leases: {
+  rents: {
     active: number;
     terminated: number;
     paid: number;
     due: number;
     overdue: number;
-    rentStatusByLease: Record<string, 'due' | 'overdue'>;
+    rentStatusByRent: Record<string, 'due' | 'overdue'>;
   };
   money: {
     collected: number;
@@ -1155,4 +1313,359 @@ export type InitiateVendorPayoutInput = {
   bankAccountId?: string;
   payoutMethod?: PayoutMethod;
   notes?: string;
+};
+
+/** A person in a company (GET /team). */
+export type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  isPartner: boolean;
+  /** Properties they are the manager of. */
+  properties: number;
+};
+
+export type TeamOverview = {
+  organisation: { id: string; name: string } | null;
+  isPartner: boolean;
+  members: TeamMember[];
+  seats: { used: number; included: number };
+  limitsEnforced: boolean;
+};
+
+/** What a spreadsheet of properties, units and tenants would do (POST /properties/import?preview=true). */
+export type PortfolioSummary = {
+  properties: number;
+  newProperties: number;
+  existingProperties: number;
+  units: number;
+  tenancies: number;
+  activeTenancies: number;
+  newTenantAccounts: number;
+  linkedTenantAccounts: number;
+};
+
+export type PortfolioPreview = {
+  summary: PortfolioSummary;
+  properties: {
+    name: string;
+    address: string;
+    city: string;
+    /** The property already exists, so the file adds units to it. */
+    existing: boolean;
+    units: {
+      row: number;
+      unitNumber: string;
+      rentAmount: number;
+      paymentFrequency: string;
+      tenant: {
+        name: string;
+        email: string;
+        account: 'NEW' | 'EXISTING';
+        status: 'ACTIVE' | 'PENDING';
+      } | null;
+    }[];
+  }[];
+  issues: { row: number; error: string }[];
+  /** What the plan's unit limit says about adding all these units; null when it has no objection. */
+  capacity: {
+    blocking: boolean;
+    code: string;
+    message: string;
+    details: Record<string, unknown>;
+  } | null;
+  invitations: { toSend: number; dailyLimit: number; remainingToday: number | null };
+  canImport: boolean;
+};
+
+export type PortfolioImportResult = {
+  summary: PortfolioSummary;
+};
+
+export type InvitationBatchResult = {
+  sent: number;
+  stillWaiting: number;
+  notAllowed: number;
+  limitReached: boolean;
+  dailyLimit: number;
+};
+
+// ── Rent agreement rules and templates ──────────────────────────────────────────────────────────
+
+export type RuleMode = 'OFF' | 'WARN' | 'BLOCK';
+
+export type Jurisdiction = {
+  id: string;
+  key: string;
+  name: string;
+  states: string[];
+  isDefault: boolean;
+  isActive: boolean;
+  advanceRentMaxMonths: number | null;
+  advanceRentMode: RuleMode;
+  /** Days of notice to quit by payment frequency. */
+  noticeDays: Partial<Record<'MONTHLY' | 'QUARTERLY' | 'BI_ANNUAL' | 'ANNUAL', number>>;
+  excludedAreas: string[];
+  excludedAreasMode: RuleMode;
+  registrationThresholdYears: number | null;
+  stampDutyNote: string | null;
+  /** What stamp duty comes to by tenancy length: shorter than `upToYears` pays `ratePercent`; the last has no limit. */
+  stampDutyTiers: { upToYears: number | null; ratePercent: number }[];
+  stampDutyBasis: 'ANNUAL_RENT' | 'TERM_RENT';
+  sourceNote: string | null;
+  rulesCheckedAt: string | null;
+  lawyerReviewed: boolean;
+  sortOrder: number;
+};
+
+export type JurisdictionInput = Partial<Omit<Jurisdiction, 'id' | 'rulesCheckedAt'>> & {
+  rulesCheckedAt?: string | null;
+};
+
+export type TemplateClauseData = {
+  id: string;
+  title: string;
+  body: string;
+  mode: 'LOCKED' | 'EDITABLE' | 'OPTIONAL';
+  defaultOn?: boolean;
+};
+
+export type AgreementTemplate = {
+  id: string;
+  key: string;
+  name: string;
+  version: number;
+  jurisdictionId: string;
+  jurisdiction?: { id: string; name: string };
+  status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
+  clauses: TemplateClauseData[];
+  witnessRequired: boolean;
+  notes: string | null;
+  approvedAt: string | null;
+  updatedAt: string;
+};
+
+export type AgreementTemplateInput = {
+  key?: string;
+  name?: string;
+  jurisdictionId?: string;
+  clauses?: TemplateClauseData[];
+  witnessRequired?: boolean;
+  notes?: string | null;
+};
+
+// ── Rent agreements ─────────────────────────────────────────────────────────────────────────────
+
+export type AgreementStatus = 'DRAFT' | 'ISSUED' | 'EXECUTED' | 'VOID';
+export type StampDutyStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'STAMPED';
+
+export type AgreementClause = { id: string; title: string; body: string };
+
+export type AgreementParty = { name: string; address: string };
+export type AgreementWitnesses = { landlord?: AgreementParty; tenant?: AgreementParty };
+
+export type WitnessSideKey = 'LANDLORD' | 'TENANT';
+
+/** A witness who signs through an emailed link (never carries the link itself). */
+export type AgreementWitnessView = {
+  id: string;
+  side: WitnessSideKey;
+  name: string;
+  email: string | null;
+  address: string | null;
+  status: 'INVITED' | 'SIGNED';
+  lastSentAt: string;
+  sendCount: number;
+  expiresAt: string;
+  signedAt: string | null;
+  signedName: string | null;
+};
+
+/** What a witness sees through their link: the agreement to read, or that they already signed. */
+export type WitnessAgreement = {
+  state: 'READY' | 'SIGNED';
+  side: WitnessSideKey;
+  witnessName: string;
+  unit: string;
+  property: string;
+  signedAt?: string | null;
+  address?: string;
+  landlordName?: string | null;
+  agentName?: string | null;
+  tenantName?: string;
+  clauses?: AgreementClause[] | null;
+  specialConditions?: string | null;
+  expiresAt?: string;
+};
+
+/** A rent's agreement as the screens read it. The property team sees more than the tenant. */
+export type RentAgreementView = {
+  id: string;
+  rentId: string;
+  source: 'GENERATED' | 'UPLOADED';
+  status: AgreementStatus;
+  templateKey: string | null;
+  templateVersion: number | null;
+  clauses: AgreementClause[] | null;
+  specialConditions: string | null;
+  landlordName: string | null;
+  agentName: string | null;
+  witnesses: AgreementWitnesses | null;
+  witnessRequired: boolean;
+  fileUrl: string | null;
+  confirmedAt: string | null;
+  confirmedName: string | null;
+  stampDutyStatus: StampDutyStatus;
+  stampDutyReference: string | null;
+  stampDutyAmount: number | null;
+  stampDutyReceiptUrl: string | null;
+  stampedAt: string | null;
+  issuedAt: string | null;
+  executedAt: string | null;
+  createdAt: string;
+  // Present when the agreement is read on its own (GET), not on the answers to changes.
+  witnessSignatures?: AgreementWitnessView[];
+  witnessEsign?: { enabled: boolean; mustSign: boolean; linkDays: number };
+  // The property team only.
+  choices?: { omit?: string[]; include?: string[]; edits?: Record<string, string> } | null;
+  agencyFee?: number | null;
+  legalFee?: number | null;
+  creditsCharged?: number;
+  confirmedIp?: string | null;
+};
+
+/** What paying stamp duty through Proplity would cost, and the order if one was started. */
+export type StampDutyOffer = {
+  enabled: boolean;
+  cardsAvailable?: boolean;
+  canPay?: boolean;
+  reason?: string | null;
+  quote?: {
+    termYears: number;
+    basis: 'ANNUAL_RENT' | 'TERM_RENT';
+    basisAmount: number;
+    ratePercent: number;
+    dutyAmount: number;
+    serviceFee: number;
+    total: number;
+  } | null;
+  order?: StampDutyOrderView | null;
+};
+
+export type StampDutyOrderView = {
+  id: string;
+  status: 'AWAITING_PAYMENT' | 'PAID' | 'COMPLETED' | 'CANCELLED';
+  dutyAmount: number;
+  serviceFee: number;
+  total: number;
+  ratePercent: number;
+  termYears: number;
+  invoiceId: string;
+  paidAt: string | null;
+  completedAt: string | null;
+  cancelReason: string | null;
+};
+
+/** One stamp duty refund owed (or already paid back) to a buyer. */
+export type StampDutyRefund = {
+  orderId: string;
+  amount: number;
+  reason: string;
+  dueAt: string;
+  invoiceNumber: string | null;
+  rentId: string | null;
+  unit: string | null;
+  buyer: { id: string; name: string; email: string } | null;
+  refunded: { at: string; reference: string } | null;
+};
+
+/** One row of the admin's stamping queue. */
+export type AdminStampDutyOrder = StampDutyOrderView & {
+  reference: string | null;
+  actualAmount: number | null;
+  jurisdictionName: string;
+  basisAmount: number;
+  createdAt: string;
+  invoice: { invoiceNumber: string };
+  agreement: {
+    id: string;
+    rentId: string;
+    landlordName: string | null;
+    rent: {
+      startDate: string;
+      endDate: string;
+      rentAmount: number;
+      paymentFrequency: string;
+      tenant: { name: string; email: string };
+      unit: {
+        unitNumber: string;
+        property: { name: string; address: string; city: string; state: string | null };
+      };
+    };
+  };
+};
+
+export type RuleFindingView = { rule: string; mode: 'WARN' | 'BLOCK'; message: string };
+
+export type AgreementOptions = {
+  jurisdiction: {
+    id: string;
+    name: string;
+    lawyerReviewed: boolean;
+    stampDutyNote: string | null;
+  } | null;
+  templates: {
+    id: string;
+    key: string;
+    name: string;
+    version: number;
+    status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
+    witnessRequired: boolean;
+    clauses: TemplateClauseData[];
+  }[];
+  landlord: { hasAccount: boolean; name: string | null; canTypeName: boolean };
+  offers: { caution: boolean; agency: boolean; legal: boolean };
+  credits: { generateCost: number; uploadCost: number; balance: number | null };
+  findings: RuleFindingView[];
+  rent: {
+    rentAmount: number;
+    paymentFrequency: string;
+    startDate: string;
+    endDate: string;
+    deposit: number;
+  };
+};
+
+export type AgreementChoices = {
+  omit?: string[];
+  include?: string[];
+  edits?: Record<string, string>;
+};
+
+/** What the manager decides about a generated agreement (the same for previewing, making and editing). */
+export type GeneratedAgreementInput = {
+  templateId: string;
+  landlordName?: string;
+  agencyFee?: number | null;
+  legalFee?: number | null;
+  choices?: AgreementChoices;
+  specialConditions?: string | null;
+  witnesses?: AgreementWitnesses;
+};
+
+export type AgreementPreview = {
+  clauses: AgreementClause[];
+  specialConditions: string | null;
+  landlordName: string;
+  agentName: string | null;
+  findings: RuleFindingView[];
+};
+
+export type StampDutyInput = {
+  status?: StampDutyStatus;
+  reference?: string | null;
+  amount?: number | null;
+  receiptUrl?: string | null;
+  stampedAt?: string | null;
 };

@@ -5,7 +5,7 @@ import {
   createUser,
   createProperty,
   createUnit,
-  createLease,
+  createRent,
   createInvoice,
   createMaintenanceRequest,
   createBankAccount,
@@ -30,9 +30,9 @@ describe('ISS-012: Bank-Transfer Reconciliation & Vendor Payouts', () => {
         managerId: manager.id,
       });
       const unit = await createUnit(property.id);
-      const lease = await createLease(unit.id, tenant.id);
+      const rent = await createRent(unit.id, tenant.id);
       const invoice = await createInvoice({
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 50_000,
         type: InvoiceType.RENT,
         status: InvoiceStatus.UNPAID,
@@ -130,9 +130,9 @@ describe('ISS-012: Bank-Transfer Reconciliation & Vendor Payouts', () => {
         managerId: manager.id,
       });
       const unit = await createUnit(property.id);
-      const lease = await createLease(unit.id, tenant.id);
+      const rent = await createRent(unit.id, tenant.id);
       const invoice = await createInvoice({
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 120_000,
         type: InvoiceType.RENT,
         status: InvoiceStatus.UNPAID,
@@ -207,9 +207,9 @@ describe('ISS-012: Bank-Transfer Reconciliation & Vendor Payouts', () => {
 
       const property = await createProperty({ landlordId: landlord.id });
       const unit = await createUnit(property.id);
-      const lease = await createLease(unit.id, tenant.id);
+      const rent = await createRent(unit.id, tenant.id);
       const invoice = await createInvoice({
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 80_000,
         type: InvoiceType.RENT,
         status: InvoiceStatus.UNPAID,

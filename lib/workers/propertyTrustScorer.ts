@@ -10,8 +10,8 @@ import { prisma } from '@/lib/db';
 //       KYC-verified manager (a property with only one of them can reach 10)
 //   15  maintenance follow-through: completed / (all non-cancelled) requests;
 //       needs at least 3 requests, otherwise a neutral 7
-//   15  rent reliability: share of scored leases rated GOOD or EXCELLENT;
-//       needs at least 1 scored lease, otherwise a neutral 7
+//   15  rent reliability: share of scored rents rated GOOD or EXCELLENT;
+//       needs at least 1 scored rent, otherwise a neutral 7
 //   10  occupancy: occupied units / all units (0 with no units)
 export const TRUST_WEIGHTS = {
   base: 40,
@@ -28,7 +28,7 @@ export function computeTrustScore(input: {
   landlordVerified: boolean;
   managerVerified: boolean;
   requests: { completed: number; total: number };
-  leases: { reliable: number; scored: number };
+  rents: { reliable: number; scored: number };
   units: { occupied: number; total: number };
 }): number {
   const w = TRUST_WEIGHTS;
@@ -40,7 +40,7 @@ export function computeTrustScore(input: {
       ? (input.requests.completed / input.requests.total) * w.maintenance
       : w.neutral;
   score +=
-    input.leases.scored >= 1 ? (input.leases.reliable / input.leases.scored) * w.rent : w.neutral;
+    input.rents.scored >= 1 ? (input.rents.reliable / input.rents.scored) * w.rent : w.neutral;
   score += input.units.total > 0 ? (input.units.occupied / input.units.total) * w.occupancy : 0;
   return Math.round(Math.min(100, Math.max(0, score)));
 }
@@ -56,7 +56,7 @@ export async function runPropertyTrustScorer(): Promise<{ scored: number; change
         select: {
           status: true,
           maintenanceRequests: { select: { status: true } },
-          leases: { select: { paymentReliability: true } },
+          rents: { select: { paymentReliability: true } },
         },
       },
     },
@@ -67,7 +67,7 @@ export async function runPropertyTrustScorer(): Promise<{ scored: number; change
     const requests = p.units
       .flatMap((u) => u.maintenanceRequests)
       .filter((r) => r.status !== 'CANCELLED');
-    const scoredLeases = p.units.flatMap((u) => u.leases).filter((l) => l.paymentReliability);
+    const scoredRents = p.units.flatMap((u) => u.rents).filter((l) => l.paymentReliability);
     const score = computeTrustScore({
       landlordVerified: p.landlord?.kycStatus === 'VERIFIED',
       managerVerified: p.manager?.kycStatus === 'VERIFIED',
@@ -75,11 +75,11 @@ export async function runPropertyTrustScorer(): Promise<{ scored: number; change
         completed: requests.filter((r) => r.status === 'COMPLETED').length,
         total: requests.length,
       },
-      leases: {
-        reliable: scoredLeases.filter(
+      rents: {
+        reliable: scoredRents.filter(
           (l) => l.paymentReliability === 'EXCELLENT' || l.paymentReliability === 'GOOD',
         ).length,
-        scored: scoredLeases.length,
+        scored: scoredRents.length,
       },
       units: {
         occupied: p.units.filter((u) => u.status === 'OCCUPIED').length,

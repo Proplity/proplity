@@ -61,23 +61,23 @@ async function main() {
   console.log(`======================================================\n`);
 
   // 1. Fetch current database counts
-  const [propertyCount, unitCount, leaseCount, invoiceCount] = await Promise.all([
+  const [propertyCount, unitCount, rentCount, invoiceCount] = await Promise.all([
     prisma.property.count(),
     prisma.unit.count(),
-    prisma.lease.count(),
+    prisma.rent.count(),
     prisma.invoice.count(),
   ]);
 
   console.log(`Current Database Volume:`);
   console.log(`  - Properties: ${propertyCount.toLocaleString()}`);
   console.log(`  - Units:      ${unitCount.toLocaleString()}`);
-  console.log(`  - Leases:     ${leaseCount.toLocaleString()}`);
+  console.log(`  - Rents:     ${rentCount.toLocaleString()}`);
   console.log(`  - Invoices:   ${invoiceCount.toLocaleString()}\n`);
 
   // 2. Inspect Existing PostgreSQL Indexes
   const indexes = await getExistingIndexes();
   console.log(`Configured Schema Indexes (${indexes.length} total):`);
-  const coreTables = ['Property', 'Unit', 'Lease', 'Invoice', 'Payment'];
+  const coreTables = ['Property', 'Unit', 'Rent', 'Invoice', 'Payment'];
   for (const table of coreTables) {
     const tableIndexes = indexes.filter(
       (idx) => idx.tablename.toLowerCase() === table.toLowerCase(),
@@ -103,8 +103,8 @@ async function main() {
       sql: `SELECT id, "propertyId", "unitNumber", "rentAmount", status FROM "Unit" WHERE status = 'VACANT' LIMIT 50;`,
     },
     {
-      label: 'Active Lease Expiration Window Query',
-      sql: `SELECT id, "unitId", "startDate", "endDate", status FROM "Lease" WHERE status = 'ACTIVE' LIMIT 20;`,
+      label: 'Active Rent Expiration Window Query',
+      sql: `SELECT id, "unitId", "startDate", "endDate", status FROM "Rent" WHERE status = 'ACTIVE' LIMIT 20;`,
     },
     {
       label: 'Dashboard Financial Aggregations',

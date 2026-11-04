@@ -15,10 +15,10 @@ async function canAccessUnit(session: { sub: string; role: Role }, unitId: strin
   if (!unit) return { unit: null, allowed: false };
   if (canManageProperty(session, unit.property)) return { unit, allowed: true };
 
-  const activeLease = await prisma.lease.findFirst({
+  const activeRent = await prisma.rent.findFirst({
     where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
   });
-  return { unit, allowed: !!activeLease };
+  return { unit, allowed: !!activeRent };
 }
 
 export const GET = withAuth(async (req, { session }) => {
@@ -63,12 +63,12 @@ export const POST = withAuth(
       if (!validated.success) return validated.response;
       const { unitId, code, guestName, validFrom, validUntil, singleUse } = validated.data;
 
-      const activeLease = await prisma.lease.findFirst({
+      const activeRent = await prisma.rent.findFirst({
         where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
       });
-      if (!activeLease) {
+      if (!activeRent) {
         return NextResponse.json(
-          { error: 'You must have an active lease on this unit to create an access code' },
+          { error: 'You must have an active rent on this unit to create an access code' },
           { status: 403 },
         );
       }

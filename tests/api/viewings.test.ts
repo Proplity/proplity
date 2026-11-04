@@ -75,7 +75,7 @@ describe('viewings: POST', () => {
 
   it('rejects a time in the past', async () => {
     const tenant = await createUser(Role.TENANT);
-    const property = await createProperty();
+    const property = await createProperty({ isPublished: true });
     const cookie = await authCookie(tenant.id, tenant.role);
     const res = await apiFetch(`/api/v1/properties/${property.id}/viewings`, {
       method: 'POST',
@@ -88,7 +88,7 @@ describe('viewings: POST', () => {
 
   it('books a future slot', async () => {
     const tenant = await createUser(Role.TENANT);
-    const property = await createProperty();
+    const property = await createProperty({ isPublished: true });
     const cookie = await authCookie(tenant.id, tenant.role);
     const res = await apiFetch(`/api/v1/properties/${property.id}/viewings`, {
       method: 'POST',
@@ -100,7 +100,7 @@ describe('viewings: POST', () => {
 
   it('rejects a time outside viewing hours or on a Sunday', async () => {
     const tenant = await createUser(Role.TENANT);
-    const property = await createProperty();
+    const property = await createProperty({ isPublished: true });
     const cookie = await authCookie(tenant.id, tenant.role);
     const day = new Date();
     day.setDate(day.getDate() + 10);
@@ -139,7 +139,7 @@ describe('viewings: who is coming', () => {
       where: { id: tenant.id },
       data: { phoneNumber: '+2348035551234', idDocumentUrl: 'https://files.test/id.pdf' },
     });
-    const property = await createProperty({ managerId: manager.id });
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
     const tCookie = await authCookie(tenant.id, tenant.role);
     const mCookie = await authCookie(manager.id, manager.role);
     await apiFetch(`/api/v1/properties/${property.id}/viewings`, {
@@ -169,7 +169,7 @@ describe('viewings: one booking per property and start time (ISS-104)', () => {
   async function setup() {
     const manager = await createUser(Role.MANAGER);
     const [first, second] = await Promise.all([createUser(Role.TENANT), createUser(Role.TENANT)]);
-    const property = await createProperty({ managerId: manager.id });
+    const property = await createProperty({ managerId: manager.id, isPublished: true });
     return {
       manager,
       property,
@@ -205,7 +205,7 @@ describe('viewings: one booking per property and start time (ISS-104)', () => {
 
   it('still allows another time at the same property and the same time at another property', async () => {
     const { property, aCookie, bCookie } = await setup();
-    const other = await createProperty();
+    const other = await createProperty({ isPublished: true });
     const when = bookableViewingTime();
     const later = viewingInstant(viewingDateKey(new Date(when)), '11:00').toISOString();
 

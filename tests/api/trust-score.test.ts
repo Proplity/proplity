@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { LeaseStatus, Role } from '@prisma/client';
+import { RentStatus, Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
-import { createUser, createProperty, createUnit, createLease } from '../helpers/fixtures';
+import { createUser, createProperty, createUnit, createRent } from '../helpers/fixtures';
 import { apiFetch } from '../helpers/client';
 import { computeTrustScore } from '../../lib/workers/propertyTrustScorer';
 
@@ -12,7 +12,7 @@ describe('computeTrustScore (ISS-013 formula)', () => {
     landlordVerified: false,
     managerVerified: false,
     requests: { completed: 0, total: 0 },
-    leases: { reliable: 0, scored: 0 },
+    rents: { reliable: 0, scored: 0 },
     units: { occupied: 0, total: 0 },
   };
 
@@ -26,7 +26,7 @@ describe('computeTrustScore (ISS-013 formula)', () => {
         landlordVerified: true,
         managerVerified: true,
         requests: { completed: 10, total: 10 },
-        leases: { reliable: 4, scored: 4 },
+        rents: { reliable: 4, scored: 4 },
         units: { occupied: 5, total: 5 },
       }),
     ).toBe(100);
@@ -38,7 +38,7 @@ describe('computeTrustScore (ISS-013 formula)', () => {
     const poor = computeTrustScore({
       ...none,
       requests: { completed: 0, total: 6 },
-      leases: { reliable: 0, scored: 3 },
+      rents: { reliable: 0, scored: 3 },
     });
     expect(poor).toBe(40); // 40 base + 0 maintenance + 0 rent
   });
@@ -61,9 +61,9 @@ describe('property-trust-scorer worker', () => {
     const unit = await createUnit(property.id);
     await testPrisma.unit.update({ where: { id: unit.id }, data: { status: 'OCCUPIED' } });
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { status: LeaseStatus.ACTIVE });
-    await testPrisma.lease.update({
-      where: { id: lease.id },
+    const rent = await createRent(unit.id, tenant.id, { status: RentStatus.ACTIVE });
+    await testPrisma.rent.update({
+      where: { id: rent.id },
       data: { paymentReliability: 'EXCELLENT' },
     });
     await testPrisma.property.update({ where: { id: property.id }, data: { trustScore: null } });

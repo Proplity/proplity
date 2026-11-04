@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { Role } from '@prisma/client';
 import { resetDb, testPrisma } from '../helpers/db';
 import {
-  createLease,
+  createRent,
   createProperty,
   createUnit,
   createUser,
@@ -56,7 +56,7 @@ async function world(overrides: { vendorId?: null; status?: 'SCHEDULED' | 'IN_PR
   const property = await createProperty({ managerId: manager.id, landlordId: landlord.id });
   const unit = await createUnit(property.id);
   const tenant = await createUser(Role.TENANT);
-  await createLease(unit.id, tenant.id);
+  await createRent(unit.id, tenant.id);
   const vendor = await createUser(Role.VENDOR);
   const request = await createMaintenanceRequest(unit.id, tenant.id, {
     vendorId: overrides.vendorId === null ? null : vendor.id,

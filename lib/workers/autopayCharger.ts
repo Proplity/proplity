@@ -6,7 +6,7 @@ import { autopayChargingOn, getSystemSettings } from '@/lib/systemSettings';
 
 export type AutopayChargeDetail = {
   invoiceId: string;
-  leaseId: string;
+  rentId: string;
   amount: number;
   status: 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'DISABLED';
   error?: string;
@@ -26,7 +26,7 @@ export type AutopayChargerResult = {
 /**
  * Auto-Pay Mandate Recurring Charging Worker (ISS-011).
  *
- * Scans for open invoices (UNPAID, OVERDUE, PARTIALLY_PAID) on active leases
+ * Scans for open invoices (UNPAID, OVERDUE, PARTIALLY_PAID) on active rents
  * with an ACTIVE AutoPayMandate whose due date has arrived.
  *
  * A run claims each mandate before charging it (lastAttemptAt), uses a stable per-invoice
@@ -61,13 +61,13 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
   const useMock = chargesAreMocked();
   const now = new Date();
 
-  // Find active leases with active auto-pay mandates and due/overdue invoices
+  // Find active rents with active auto-pay mandates and due/overdue invoices
   const openInvoices = await prisma.invoice.findMany({
     where: {
       status: { in: ['UNPAID', 'OVERDUE', 'PARTIALLY_PAID'] },
       dueDate: { lte: now },
-      leaseId: { not: null },
-      lease: {
+      rentId: { not: null },
+      rent: {
         status: 'ACTIVE',
         autoPayMandates: {
           some: {
@@ -77,7 +77,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
       },
     },
     include: {
-      lease: {
+      rent: {
         include: {
           tenant: { select: { id: true, email: true, name: true } },
           autoPayMandates: {
@@ -100,17 +100,17 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
   let processedCount = 0;
 
   for (const invoice of openInvoices) {
-    const lease = invoice.lease;
-    const mandate = lease?.autoPayMandates[0];
+    const rent = invoice.rent;
+    const mandate = rent?.autoPayMandates[0];
 
-    if (!lease || !mandate || !lease.tenant?.email) {
+    if (!rent || !mandate || !rent.tenant?.email) {
       skippedCount++;
       details.push({
         invoiceId: invoice.id,
-        leaseId: invoice.leaseId ?? '',
+        rentId: invoice.rentId ?? '',
         amount: invoice.amount,
         status: 'SKIPPED',
-        error: 'Missing active lease, mandate, or tenant email',
+        error: 'Missing active rent, mandate, or tenant email',
       });
       continue;
     }
@@ -128,7 +128,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
       skippedCount++;
       details.push({
         invoiceId: invoice.id,
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: 0,
         status: 'SKIPPED',
         error: 'Invoice is already fully satisfied by existing payments',
@@ -140,7 +140,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
       // Disabled mode: report eligible invoice without executing charges
       details.push({
         invoiceId: invoice.id,
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: balanceDue,
         status: 'DISABLED',
       });
@@ -164,7 +164,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
       skippedCount++;
       details.push({
         invoiceId: invoice.id,
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: balanceDue,
         status: 'SKIPPED',
         error: 'Another run is already charging this mandate',
@@ -209,12 +209,12 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
           signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
           body: JSON.stringify({
             authorization_code: mandate.paymentMethodToken,
-            email: lease.tenant.email,
+            email: rent.tenant.email,
             amount: Math.round(balanceDue * 100), // Kobo conversion
             reference,
             metadata: {
               invoiceId: invoice.id,
-              leaseId: lease.id,
+              rentId: rent.id,
               mandateId: mandate.id,
             },
           }),
@@ -246,7 +246,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
             });
             await tx.auditLog.create({
               data: {
-                actorId: lease.tenantId,
+                actorId: rent.tenantId,
                 action: 'AUTOPAY_CHARGED',
                 entityType: 'Invoice',
                 entityId: invoice.id,
@@ -263,7 +263,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
             await prisma.auditLog
               .create({
                 data: {
-                  actorId: lease.tenantId,
+                  actorId: rent.tenantId,
                   action: 'AUTOPAY_CHARGED_UNRECORDED',
                   entityType: 'Invoice',
                   entityId: invoice.id,
@@ -278,16 +278,16 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
         successfulCount++;
         details.push({
           invoiceId: invoice.id,
-          leaseId: lease.id,
+          rentId: rent.id,
           amount: balanceDue,
           status: 'SUCCESS',
         });
       } else {
         failedCount++;
-        await recordFailure(mandate.id, lease.tenantId, invoice.id, balanceDue);
+        await recordFailure(mandate.id, rent.tenantId, invoice.id, balanceDue);
         await prisma.auditLog.create({
           data: {
-            actorId: lease.tenantId,
+            actorId: rent.tenantId,
             action: 'AUTOPAY_CHARGE_FAILED',
             entityType: 'Invoice',
             entityId: invoice.id,
@@ -305,7 +305,7 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
 
         details.push({
           invoiceId: invoice.id,
-          leaseId: lease.id,
+          rentId: rent.id,
           amount: balanceDue,
           status: 'FAILED',
           error: 'Charge authorization declined by gateway',
@@ -313,13 +313,11 @@ export async function runAutopayCharger(): Promise<AutopayChargerResult> {
       }
     } catch (err) {
       failedCount++;
-      await recordFailure(mandate.id, lease.tenantId, invoice.id, balanceDue).catch(
-        () => undefined,
-      );
+      await recordFailure(mandate.id, rent.tenantId, invoice.id, balanceDue).catch(() => undefined);
       const errorMessage = err instanceof Error ? err.message : String(err);
       details.push({
         invoiceId: invoice.id,
-        leaseId: lease.id,
+        rentId: rent.id,
         amount: balanceDue,
         status: 'FAILED',
         error: errorMessage,

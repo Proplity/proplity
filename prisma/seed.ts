@@ -6,7 +6,7 @@ import {
   KycStatus,
   PropertyType,
   UnitStatus,
-  LeaseStatus,
+  RentStatus,
   PaymentFrequency,
   WaterSupplyType,
   ElectricalSetup,
@@ -65,7 +65,7 @@ async function main() {
   await prisma.neighbourhoodReport.deleteMany();
   await prisma.accessLog.deleteMany();
   await prisma.accessCode.deleteMany();
-  await prisma.lease.deleteMany();
+  await prisma.rent.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.property.deleteMany();
   await prisma.managerInviteCode.deleteMany();
@@ -233,8 +233,8 @@ async function main() {
 
   const occupiedUnit = property.units.find((u) => u.unitNumber === '4B')!;
 
-  // 4. Create Lease (Annual Rent in Nigeria)
-  const lease = await prisma.lease.create({
+  // 4. Create Rent (Annual Rent in Nigeria)
+  const rent = await prisma.rent.create({
     data: {
       unitId: occupiedUnit.id,
       tenantId: tenant.id,
@@ -245,7 +245,7 @@ async function main() {
       deposit: 350000.0,
       gracePeriodDays: 7,
       lateFeePercentage: 5.0,
-      status: LeaseStatus.ACTIVE,
+      status: RentStatus.ACTIVE,
     },
   });
 
@@ -281,7 +281,7 @@ async function main() {
   const invoice = await prisma.invoice.create({
     data: {
       invoiceNumber: 'INV-2026-0001',
-      leaseId: lease.id,
+      rentId: rent.id,
       type: InvoiceType.RENT,
       amount: 3500000.0,
       dueDate: new Date('2026-01-01'),

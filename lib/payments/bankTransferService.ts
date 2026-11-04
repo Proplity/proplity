@@ -35,12 +35,12 @@ export class BankTransferError extends Error {
  * never covered: the team always confirms that.
  */
 export async function teamEntryNeedsSecondPerson(invoice: {
-  leaseId: string | null;
+  rentId: string | null;
   maintenanceRequestId: string | null;
 }): Promise<boolean> {
   const settings = await getSystemSettings();
   if (invoice.maintenanceRequestId) return settings.requireSecondPersonForVendorPayments;
-  if (invoice.leaseId) return settings.requireSecondPersonForTenantPayments;
+  if (invoice.rentId) return settings.requireSecondPersonForTenantPayments;
   return true;
 }
 
@@ -76,7 +76,7 @@ export async function submitBankTransferProof(
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
-      lease: {
+      rent: {
         include: {
           unit: { include: { property: true } },
         },
@@ -102,13 +102,13 @@ export async function submitBankTransferProof(
     throw new BankTransferError('Invoice is already paid in full', 409);
   }
 
-  // Access check: Tenant on the lease, direct user on the invoice, property manager/landlord, or ADMIN
-  const isTenantOfLease = invoice.lease?.tenantId === actor.sub;
+  // Access check: Tenant on the rent, direct user on the invoice, property manager/landlord, or ADMIN
+  const isTenantOfRent = invoice.rent?.tenantId === actor.sub;
   const isDirectUser = invoice.userId === actor.sub;
-  const property = invoice.lease?.unit.property ?? invoice.maintenanceRequest?.unit.property;
+  const property = invoice.rent?.unit.property ?? invoice.maintenanceRequest?.unit.property;
   const canManage = property ? canManageProperty(actor, property) : actor.role === 'ADMIN';
 
-  if (!isTenantOfLease && !isDirectUser && !canManage) {
+  if (!isTenantOfRent && !isDirectUser && !canManage) {
     throw new BankTransferError('You are not authorized to submit payments for this invoice', 403);
   }
 
@@ -166,7 +166,7 @@ export async function submitBankTransferProof(
   // The property team recording a payment (not the tenant recording their own): when the admin has
   // switched the two-person rule off for this kind of money, the entry counts at once. It still
   // creates the receipt and the audit row, which says the recorder confirmed it themselves.
-  const teamEntry = !isTenantOfLease && !isDirectUser;
+  const teamEntry = !isTenantOfRent && !isDirectUser;
   if (teamEntry && !(await teamEntryNeedsSecondPerson(invoice))) {
     try {
       await reconcileBankTransfer(actor, submission.id, 'APPROVE');
@@ -220,7 +220,7 @@ export async function reconcileBankTransfer(
     include: {
       invoice: {
         include: {
-          lease: {
+          rent: {
             include: {
               unit: { include: { property: true } },
             },
@@ -255,7 +255,7 @@ export async function reconcileBankTransfer(
 
   // Authorization check: Only ADMIN, or LANDLORD/MANAGER of the property can reconcile
   const property =
-    submission.invoice.lease?.unit.property ?? submission.invoice.maintenanceRequest?.unit.property;
+    submission.invoice.rent?.unit.property ?? submission.invoice.maintenanceRequest?.unit.property;
 
   const canManage = property ? canManageProperty(actor, property) : actor.role === 'ADMIN';
   if (!canManage) {
@@ -434,9 +434,9 @@ export async function reconcileBankTransfer(
       link: receipt,
     });
   }
-  const leaseTenantId = submission.invoice.lease?.tenantId;
-  if (leaseTenantId && leaseTenantId !== submission.submittedById) {
-    await notifyUser(leaseTenantId, {
+  const rentTenantId = submission.invoice.rent?.tenantId;
+  if (rentTenantId && rentTenantId !== submission.submittedById) {
+    await notifyUser(rentTenantId, {
       type: 'SYSTEM',
       title: 'Payment recorded',
       body: `A payment of ${money} was recorded on invoice ${submission.invoice.invoiceNumber}.`,

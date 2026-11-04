@@ -14,12 +14,12 @@ erDiagram
     PROPERTY ||--o{ EQUIPMENT : "contains (shared)"
     
     %% LEASING & TENANCY
-    UNIT ||--o{ LEASE : houses
-    USER ||--o{ LEASE : "signs (Tenant)"
-    LEASE ||--o| LEASE : "renews from"
-    LEASE ||--o{ NOTICE : receives
-    LEASE ||--o{ AUTO-PAY-MANDATE : authorizes
-    LEASE ||--o{ PROPERTY-REVIEW : "verifies (optional)"
+    UNIT ||--o{ RENT : houses
+    USER ||--o{ RENT : "signs (Tenant)"
+    RENT ||--o| RENT : "renews from"
+    RENT ||--o{ NOTICE : receives
+    RENT ||--o{ AUTO-PAY-MANDATE : authorizes
+    RENT ||--o{ PROPERTY-REVIEW : "verifies (optional)"
 
     %% MAINTENANCE 
     UNIT ||--o{ MAINTENANCE-REQUEST : requires
@@ -30,7 +30,7 @@ erDiagram
     EQUIPMENT ||--o{ MAINTENANCE-SCHEDULE : "requires (optional)"
 
     %% FINANCE & BILLING
-    LEASE ||--o{ INVOICE : generates
+    RENT ||--o{ INVOICE : generates
     MAINTENANCE-REQUEST ||--o{ INVOICE : generates
     USER ||--o{ INVOICE : "generates (direct charge)"
     INVOICE ||--o{ PAYMENT : receives
@@ -45,5 +45,5 @@ erDiagram
     CONVERSATION ||--o{ CONVERSATION-PARTICIPANT : includes
     USER ||--o{ CONVERSATION-PARTICIPANT : joins
     CONVERSATION ||--o{ MESSAGE : contains
-    LEASE ||--o| CONVERSATION : "has thread (optional)"
+    RENT ||--o| CONVERSATION : "has thread (optional)"
     MAINTENANCE-REQUEST ||--o| CONVERSATION : "has thread (optional)"

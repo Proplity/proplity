@@ -17,7 +17,7 @@ import {
 } from '@/lib/notifications';
 import { safeUrlList } from '@/lib/api/urlField';
 import { appUrl } from '@/lib/appUrl';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY, propertyScopeWhere } from '@/lib/api/propertyAccess';
 import { vendorProblem } from '@/lib/maintenanceFlow';
 
 export const GET = withAuth(async (req, { session }) => {
@@ -40,7 +40,7 @@ export const GET = withAuth(async (req, { session }) => {
       // property access, and a landlord with zero visibility into
       // maintenance on their own property would be a gap, not a feature.
       where.unit = {
-        property: { OR: [{ managerId: session.sub }, { landlordId: session.sub }] },
+        property: { ...propertyScopeWhere(session.scope) },
       };
     }
     // ADMIN: no extra scoping, sees everything.
@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, { session }) => {
         skip,
         take,
         include: {
-          unit: { include: { property: true } },
+          unit: { include: { property: PUBLIC_PROPERTY } },
           category: true,
           vendor: { select: { id: true, name: true } },
           tenant: { select: { id: true, name: true } },
@@ -79,7 +79,7 @@ const createRequestSchema = z.object({
 });
 
 // A work order: a repair the property team raises itself, on any unit it manages (occupied, vacant,
-// not yet leased or listed). It has no tenant, so there is nobody to confirm it or rate the vendor.
+// not yet rented or listed). It has no tenant, so there is nobody to confirm it or rate the vendor.
 // The property team still pays the vendor, exactly as for a tenant's repair.
 const workOrderSchema = createRequestSchema.extend({ vendorId: z.string().optional() });
 
@@ -113,7 +113,7 @@ export const POST = withAuth(
             ...(vendorId ? { vendorId, status: 'SCHEDULED' as const } : {}),
             ...rest,
           },
-          include: { unit: { include: { property: true } } },
+          include: { unit: { include: { property: PUBLIC_PROPERTY } } },
         });
 
         // The rest of the property team, the vendor (if one was chosen) and whoever lives in the
@@ -159,19 +159,19 @@ export const POST = withAuth(
       const { unitId, ...rest } = validated.data;
       await assertOwnsFileUrls(rest.mediaUrls ?? [], session.sub, 'maintenance-requests');
 
-      const activeLease = await prisma.lease.findFirst({
+      const activeRent = await prisma.rent.findFirst({
         where: { unitId, tenantId: session.sub, status: 'ACTIVE' },
       });
-      if (!activeLease) {
+      if (!activeRent) {
         return NextResponse.json(
-          { error: 'You must have an active lease on this unit to submit a request' },
+          { error: 'You must have an active rent on this unit to submit a request' },
           { status: 403 },
         );
       }
 
       const request = await prisma.maintenanceRequest.create({
         data: { unitId, tenantId: session.sub, ...rest },
-        include: { unit: { include: { property: true } } },
+        include: { unit: { include: { property: PUBLIC_PROPERTY } } },
       });
 
       const recipients = [

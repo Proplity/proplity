@@ -51,7 +51,7 @@ For every review pass, look in each of these for the app's own failure modes:
 - **Auth & sessions** — rotation, logout, rate limits, enumeration, email normalisation
 - **Email & links** — origin trust, dead links, wrong environment, deliverability
 - **Payments** — webhook idempotency, amount/currency, mock gateway leaking into prod
-- **Data integrity** — missing transactions, unit/lease status drift, orphan rows, unique-key edge cases
+- **Data integrity** — missing transactions, unit/rent status drift, orphan rows, unique-key edge cases
 - **Uploads** — signing scope, size/type limits, public URLs
 - **Next.js 16 specifics** — `proxy.ts`, caching of dynamic routes, `NEXT_PUBLIC_*` inlined at build
 - **Background jobs** — idempotency, timezone, partial failure

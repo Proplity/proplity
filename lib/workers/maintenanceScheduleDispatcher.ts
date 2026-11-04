@@ -18,13 +18,13 @@ export async function runMaintenanceScheduleDispatcher(): Promise<{
   for (const schedule of due) {
     // A schedule-generated request is staff-initiated preventive maintenance with no natural
     // reporter. On an occupied unit it is attributed to whoever lives there (it is their unit being
-    // serviced, so they are told and can say whether it is fixed). On a vacant or unleased unit
+    // serviced, so they are told and can say whether it is fixed). On a vacant or unrented unit
     // there is nobody to attribute it to: it becomes a work order with no tenant (it used to be
     // skipped silently, so a vacant unit's servicing never happened).
-    const activeLease = await prisma.lease.findFirst({
+    const activeRent = await prisma.rent.findFirst({
       where: { unitId: schedule.unitId, status: 'ACTIVE' },
     });
-    const tenantId = activeLease?.tenantId ?? null;
+    const tenantId = activeRent?.tenantId ?? null;
 
     const [request] = await prisma.$transaction([
       prisma.maintenanceRequest.create({

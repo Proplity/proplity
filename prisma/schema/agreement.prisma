@@ -1,0 +1,257 @@
+// How strictly a legal rule is applied when someone sets up a tenancy.
+enum RuleMode {
+  OFF
+  WARN
+  BLOCK
+}
+
+// DRAFT: written, not yet approved for use (unless the admin has switched the approval
+// requirement off). APPROVED: the version managers generate agreements from. ARCHIVED: replaced by
+// a newer approved version, or retired; agreements already made from it keep their own snapshot.
+enum TemplateStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+// What the rate is applied to: one year's rent, or all the rent for the whole term.
+enum StampDutyBasis {
+  ANNUAL_RENT
+  TERM_RENT
+}
+
+// A place with its own tenancy rules (Lagos State, the FCT, ...). The rules are data an admin
+// edits, not code, because they differ by state and change as bills pass; nothing seeded here has
+// been reviewed by a lawyer until `lawyerReviewed` says so.
+model Jurisdiction {
+  id                         String              @id @default(uuid())
+  key                        String              @unique
+  name                       String
+  // The Property.state values this covers, compared ignoring case.
+  states                     String[]
+  // Used for a property whose state matches no jurisdiction.
+  isDefault                  Boolean             @default(false)
+  isActive                   Boolean             @default(true)
+  // The most months of rent one payment may collect in advance. Null: no cap.
+  advanceRentMaxMonths       Int?
+  advanceRentMode            RuleMode            @default(WARN)
+  // Days of notice to quit, by payment frequency: { "MONTHLY": 30, "ANNUAL": 180, ... }.
+  noticeDays                 Json                @default("{}")
+  // Areas the state's tenancy law does not cover; matched against a property's address and city.
+  excludedAreas              String[]
+  excludedAreasMode          RuleMode            @default(WARN)
+  // A tenancy at least this many years long may need a registered deed. Null: no threshold.
+  registrationThresholdYears Int?
+  stampDutyNote              String?
+  // What stamp duty comes to on a tenancy here, so Proplity can quote it: the rate depends on how
+  // long the tenancy is. [{ upToYears, ratePercent }] in order, the first whose `upToYears` is
+  // above the term wins; the last has upToYears null (no limit). Empty: no quote can be made.
+  stampDutyTiers             Json                @default("[]")
+  stampDutyBasis             StampDutyBasis      @default(TERM_RENT)
+  // Where the rules came from and what is unconfirmed, shown next to them.
+  sourceNote                 String?
+  rulesCheckedAt             DateTime?
+  lawyerReviewed             Boolean             @default(false)
+  sortOrder                  Int                 @default(0)
+  templates                  AgreementTemplate[]
+  agreements                 RentAgreement[]
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+}
+
+// A rent agreement wording for one jurisdiction. `key` groups the versions of one wording; editing
+// an approved version makes a new draft version, so an agreement can always say which text it used.
+// `clauses` is a list of { id, title, body, mode: LOCKED | EDITABLE | OPTIONAL, defaultOn }: LOCKED
+// clauses are the same in every agreement, EDITABLE ones the manager may reword, OPTIONAL ones the
+// manager may leave out. `body` may use {{fields}} (see lib/agreementFields.ts).
+model AgreementTemplate {
+  id              String          @id @default(uuid())
+  key             String
+  name            String
+  version         Int             @default(1)
+  jurisdictionId  String
+  jurisdiction    Jurisdiction    @relation(fields: [jurisdictionId], references: [id])
+  status          TemplateStatus  @default(DRAFT)
+  clauses         Json
+  // Whether the agreement has lines for a witness on each side.
+  witnessRequired Boolean         @default(true)
+  notes           String?
+  approvedAt      DateTime?
+  approvedById    String?
+  approvedBy      User?           @relation("ApprovedAgreementTemplates", fields: [approvedById], references: [id])
+  createdById     String?
+  createdBy       User?           @relation("CreatedAgreementTemplates", fields: [createdById], references: [id])
+  agreements      RentAgreement[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([key, version])
+  @@index([jurisdictionId, status])
+}
+
+// GENERATED: made from a template. UPLOADED: an agreement the landlord already has, uploaded as a file.
+enum AgreementSource {
+  GENERATED
+  UPLOADED
+}
+
+// DRAFT: the property team is still preparing it (the tenant cannot see it). ISSUED: sent to the
+// tenant, waiting for signatures (generated) or for the tenant to confirm it (uploaded). EXECUTED:
+// signed by both sides. VOID: withdrawn before anyone signed.
+enum AgreementStatus {
+  DRAFT
+  ISSUED
+  EXECUTED
+  VOID
+}
+
+// Stamp duty is paid to the federal tax authority after signing. Proplity only records progress and
+// the receipt; it does not pay it.
+enum StampDutyStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  STAMPED
+}
+
+// The rent agreement of one rent. A rent has at most one agreement that is not void (the routes
+// hold a lock on the rent while they check). A generated agreement keeps a text snapshot of the
+// clauses it was made from, so later changes to the template never reach a signed agreement.
+model RentAgreement {
+  id                  String             @id @default(uuid())
+  rentId              String
+  rent                Rent               @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  source              AgreementSource
+  status              AgreementStatus    @default(DRAFT)
+  // Generated agreements.
+  templateId          String?
+  template            AgreementTemplate? @relation(fields: [templateId], references: [id])
+  templateKey         String?
+  templateVersion     Int?
+  jurisdictionId      String?
+  jurisdiction        Jurisdiction?      @relation(fields: [jurisdictionId], references: [id])
+  // What the manager chose: { omit, include, edits } (see ClauseChoices).
+  choices             Json?
+  // The rendered clauses: [{ id, title, body }]. This is the agreement's text.
+  clauses             Json?
+  specialConditions   String?
+  landlordName        String?
+  // The manager acting for an owner who has no account, noted on the agreement.
+  agentName           String?
+  agencyFee           Float?
+  legalFee            Float?
+  // { landlord: { name, address }, tenant: { name, address } }
+  witnesses           Json?
+  witnessRequired     Boolean            @default(true)
+  // Uploaded agreements.
+  fileUrl             String?
+  // The tenant confirming an uploaded agreement: a typed name, with the time and address.
+  confirmedAt         DateTime?
+  confirmedName       String?
+  confirmedIp         String?
+  stampDutyStatus     StampDutyStatus    @default(NOT_STARTED)
+  stampDutyReference  String?
+  stampDutyAmount     Float?
+  stampDutyReceiptUrl String?
+  stampedAt           DateTime?
+  // What it cost to make, in credits, and the ledger row that took it (refunded if it is voided
+  // before it was issued).
+  creditsCharged      Int                @default(0)
+  creditEntryId       String?
+  createdById         String?
+  createdBy           User?              @relation("CreatedRentAgreements", fields: [createdById], references: [id])
+  issuedAt            DateTime?
+  executedAt          DateTime?
+  voidedAt            DateTime?
+  voidedById          String?
+  voidReason          String?
+  witnessSignatures   AgreementWitness[]
+  stampDutyOrders     StampDutyOrder[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([rentId, status])
+}
+
+enum WitnessSide {
+  LANDLORD
+  TENANT
+}
+
+// INVITED: the witness has been emailed a link. SIGNED: they added their name through it.
+enum WitnessStatus {
+  INVITED
+  SIGNED
+}
+
+// A witness to one side's signature who signs through an emailed link instead of on paper. One per
+// side per agreement. The link carries a random token; only its SHA-256 is stored, so the table
+// cannot be used to sign. Sending again replaces the token, which ends the old link. A witness
+// signs the same way the parties do: a typed name recorded with the time and address.
+model AgreementWitness {
+  id             String        @id @default(uuid())
+  agreementId    String
+  agreement      RentAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  side           WitnessSide
+  name           String
+  email          String
+  address        String?
+  tokenHash      String        @unique
+  tokenExpiresAt DateTime
+  status         WitnessStatus @default(INVITED)
+  invitedById    String?
+  // How many emails have gone out for this witness (capped, so the feature cannot be used to
+  // send a stranger mail over and over).
+  sendCount      Int           @default(1)
+  lastSentAt     DateTime      @default(now())
+  signedAt       DateTime?
+  signedName     String?
+  signedIp       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([agreementId, side])
+}
+
+// AWAITING_PAYMENT: quoted, the invoice not yet paid. PAID: paid, waiting for Proplity to stamp it
+// and upload the receipt. COMPLETED: stamped. CANCELLED: withdrawn before payment, or Proplity could
+// not stamp it (the money is then flagged for refund).
+enum StampDutyOrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  COMPLETED
+  CANCELLED
+}
+
+// Stamp duty paid through Proplity: the person pays the quoted duty and a service fee by card, and
+// Proplity (an admin) pays the tax authority and uploads the receipt to the agreement. The quote is
+// copied here when it is made, so changing the rates later never changes what was agreed. Off unless
+// the admin switches stamp duty payments on.
+model StampDutyOrder {
+  id               String               @id @default(uuid())
+  agreementId      String
+  agreement        RentAgreement        @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  requestedById    String
+  invoiceId        String               @unique
+  invoice          Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  status           StampDutyOrderStatus @default(AWAITING_PAYMENT)
+  jurisdictionName String
+  termYears        Float
+  basis            StampDutyBasis
+  basisAmount      Float
+  ratePercent      Float
+  dutyAmount       Int
+  serviceFee       Int
+  total            Int
+  paidAt           DateTime?
+  // What Proplity actually paid the authority, the reference it gave, and who recorded it.
+  actualAmount     Float?
+  reference        String?
+  completedAt      DateTime?
+  completedById    String?
+  cancelReason     String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([agreementId])
+}

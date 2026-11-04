@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PropertyType, Role, Prisma } from '@prisma/client';
+import { PropertyType, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty, isPrivateUnit, serializeUnit } from '@/lib/api/propertyAccess';
-import { getServerSession } from '@/lib/auth/session';
+import { canManageProperty, isPublicUnit, serializeUnit } from '@/lib/api/propertyAccess';
+import { sessionOrNull } from '@/lib/api/listingAccess';
 import { safeUrl, safeUrlList } from '@/lib/api/urlField';
-import { listingHash } from '@/lib/propertyFingerprint';
+import { listingHash, findPossibleDuplicates } from '@/lib/propertyFingerprint';
 import { sendEmail } from '@/lib/email';
 import { notifyAdmins as notifyAdminsInApp } from '@/lib/notifications';
 import { appUrl } from '@/lib/appUrl';
+import { moveStaffInPropertyThreads } from '@/lib/conversationAccess';
+import { reviewerKind } from '@/lib/reviewEligibility';
 import {
   STAGED_PROPERTY_FIELDS,
   pickStaged,
@@ -60,15 +62,14 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     });
     if (!property) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
-    const jwtSession = await getServerSession();
-    const session = jwtSession ? { sub: jwtSession.sub, role: jwtSession.role as Role } : null;
+    const session = await sessionOrNull();
     const manages = !!session && canManageProperty(session, property);
-    // Any lease at all, not just ACTIVE: a tenant mid-renewal or just past
+    // Any rent at all, not just ACTIVE: a tenant mid-renewal or just past
     // their end date still needs the property's announcements and their own
     // unit's history.
     const occupancy =
       session && !manages
-        ? await prisma.lease.findFirst({
+        ? await prisma.rent.findFirst({
             where: { tenantId: session.sub, unit: { propertyId: id } },
             select: { id: true },
           })
@@ -83,9 +84,7 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
     // A unit marked private is for the owner's side and the people living in the
     // building only; everyone else gets the public units (ISS-084).
     const seesPrivate = manages || occupancy !== null;
-    const visibleUnits = seesPrivate
-      ? property.units
-      : property.units.filter((u) => !isPrivateUnit(u));
+    const visibleUnits = seesPrivate ? property.units : property.units.filter(isPublicUnit);
     if (!seesPrivate && property.units.length > 0 && visibleUnits.length === 0) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
@@ -101,7 +100,11 @@ export async function GET(_req: NextRequest, { params }: RouteCtx) {
       data: {
         ...rest,
         units: units.map(serializeUnit),
-        reviews: reviews.map((r) => ({ ...r, verified: r.leaseId !== null })),
+        reviews: reviews.map((r) => ({
+          ...r,
+          verified: r.rentId !== null,
+          kind: reviewerKind(r),
+        })),
         reviewStats: { count: reviews.length, averageRating },
       },
     });
@@ -129,6 +132,9 @@ const updatePropertySchema = z.object({
   // /moderation route). Gated below: can only ever flip true once ADMIN has
   // approved the listing; false (unpublish) is always allowed.
   isPublished: z.boolean().optional(),
+  // Whether the property is kept for tenant management only (never listed, never reviewed). Sent
+  // on its own: false lists it (it then waits for an admin's approval), true takes it off the market.
+  managementOnly: z.boolean().optional(),
   saveAsDraft: z.boolean().optional(),
   submitForReview: z.boolean().optional(),
   cancelPendingEdits: z.boolean().optional(),
@@ -152,7 +158,14 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
     // ordinary listing edit -- restrict it to ADMIN, and require the target
     // id to actually be a user with the matching role.
     if (validated.data.managerId !== undefined || validated.data.landlordId !== undefined) {
-      if (session.role !== 'ADMIN') {
+      // A company's managing partner may hand a property they run to someone on their own team.
+      const partnerHandover =
+        session.role === 'MANAGER' &&
+        !!session.org?.isOwner &&
+        validated.data.landlordId === undefined &&
+        !!validated.data.managerId &&
+        session.org.memberIds.includes(validated.data.managerId);
+      if (session.role !== 'ADMIN' && !partnerHandover) {
         return NextResponse.json(
           { error: "Only an admin may reassign a property's manager or landlord" },
           { status: 403 },
@@ -176,6 +189,65 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
           );
         }
       }
+    }
+
+    // Moving between "management only" and "listed" is its own step, so it never mixes with an
+    // ordinary edit that might need the review rules below.
+    if (validated.data.managementOnly !== undefined) {
+      const { managementOnly, ...others } = validated.data;
+      if (Object.values(others).some((v) => v !== undefined)) {
+        return NextResponse.json(
+          { error: 'Change whether a property is listed on its own, without other edits' },
+          { status: 400 },
+        );
+      }
+      if (managementOnly === property.managementOnly) {
+        return NextResponse.json({ data: property });
+      }
+      if (managementOnly) {
+        // Off the market: it stops being a listing, so it also stops waiting for or being shown.
+        const updated = await prisma.property.update({
+          where: { id },
+          data: { managementOnly: true, isPublished: false },
+        });
+        return NextResponse.json({ data: updated });
+      }
+      // Onto the market: it is compared with the existing listings and sent for review like any
+      // new listing, and its units are only shown once an admin approves.
+      const hash = listingHash(property.address, property.city);
+      const duplicates = await findPossibleDuplicates(hash, property.id);
+      const updated = await prisma.property.update({
+        where: { id },
+        data: {
+          managementOnly: false,
+          listingHash: hash,
+          ...(duplicates.length > 0
+            ? {
+                moderationNotes: `Possible duplicate of: ${duplicates
+                  .map((d) => `${d.name} (${d.id})`)
+                  .join(', ')}`,
+              }
+            : {}),
+        },
+      });
+      if (updated.moderationStatus === 'PENDING_REVIEW') {
+        await notifyAdminsInApp({
+          title: 'Listing awaiting review',
+          body: `"${updated.name}" (${updated.address}, ${updated.city}) was submitted for review.`,
+          link: '/admin/properties',
+        });
+      }
+      return NextResponse.json({ data: updated, possibleDuplicates: duplicates.length });
+    }
+
+    if (validated.data.isPublished === true && property.managementOnly) {
+      return NextResponse.json(
+        {
+          error: 'This property is kept for management only. List it publicly before publishing it',
+          code: 'MANAGEMENT_ONLY',
+        },
+        { status: 409 },
+      );
     }
 
     if (validated.data.isPublished === true && property.moderationStatus !== 'APPROVED') {
@@ -435,22 +507,95 @@ export const PATCH = withAuth(async (req, { session }, ctx: RouteCtx) => {
 
     const addressChanged =
       !stageForReview && (cleanData.address !== undefined || cleanData.city !== undefined);
-    const updated = await prisma.property.update({
-      where: { id },
-      data: {
-        ...liveData,
-        ...(managerId ? { managerId } : {}),
-        ...(landlordId ? { landlordId } : {}),
-        ...reviewData,
-        ...(addressChanged
-          ? {
-              listingHash: listingHash(
-                cleanData.address ?? property.address,
-                cleanData.city ?? property.city,
-              ),
-            }
-          : {}),
-      },
+
+    // Moving a property to another manager or landlord changes who can see its tenants and
+    // money, so it is audit-logged (ISS-135): who did it, and from whom to whom. Naming the same
+    // person again is not a transfer.
+    const managerMoved = !!managerId && managerId !== property.managerId;
+    const landlordMoved = !!landlordId && landlordId !== property.landlordId;
+    const people =
+      managerMoved || landlordMoved
+        ? await prisma.user.findMany({
+            where: {
+              id: {
+                in: [property.managerId, managerId, property.landlordId, landlordId].filter(
+                  (v): v is string => !!v,
+                ),
+              },
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const nameOf = (userId: string | null | undefined) =>
+      userId ? (people.find((p) => p.id === userId)?.name ?? null) : null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.property.update({
+        where: { id },
+        data: {
+          ...liveData,
+          ...(managerId ? { managerId } : {}),
+          ...(landlordId ? { landlordId } : {}),
+          ...reviewData,
+          ...(addressChanged
+            ? {
+                listingHash: listingHash(
+                  cleanData.address ?? property.address,
+                  cleanData.city ?? property.city,
+                ),
+              }
+            : {}),
+        },
+      });
+      if (managerMoved || landlordMoved) {
+        await tx.auditLog.create({
+          data: {
+            actorId: session.sub,
+            action: 'PROPERTY_TRANSFERRED',
+            entityType: 'Property',
+            entityId: id,
+            metadata: {
+              propertyName: property.name,
+              ...(managerMoved
+                ? {
+                    manager: {
+                      from: property.managerId,
+                      fromName: nameOf(property.managerId),
+                      to: managerId,
+                      toName: nameOf(managerId),
+                    },
+                  }
+                : {}),
+              ...(landlordMoved
+                ? {
+                    landlord: {
+                      from: property.landlordId,
+                      fromName: nameOf(property.landlordId),
+                      to: landlordId,
+                      toName: nameOf(landlordId),
+                    },
+                  }
+                : {}),
+            },
+          },
+        });
+      }
+      // The people who lost the property leave its message threads and the new ones join (ISS-142).
+      if (managerMoved || landlordMoved) {
+        await moveStaffInPropertyThreads(tx, {
+          propertyId: id,
+          removed: [
+            ...(managerMoved ? [property.managerId] : []),
+            ...(landlordMoved ? [property.landlordId] : []),
+          ].filter((v): v is string => !!v),
+          added: [
+            ...(managerMoved ? [managerId] : []),
+            ...(landlordMoved ? [landlordId] : []),
+          ].filter((v): v is string => !!v),
+          current: [row.managerId, row.landlordId],
+        });
+      }
+      return row;
     });
 
     if (stageForReview || resubmit) {

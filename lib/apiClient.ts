@@ -2,6 +2,10 @@ import axios from 'axios';
 import type { AttentionItem } from '@/lib/dashboardAttention';
 import type {
   AccessCode,
+  AgreementOptions,
+  AgreementPreview,
+  AgreementTemplate,
+  AgreementTemplateInput,
   AccessCodeDetail,
   AccessVerifyResult,
   AdCampaign,
@@ -12,6 +16,29 @@ import type {
   AutoPayMandate,
   BankAccount,
   CheckoutSubscriptionInput,
+  CreditEntry,
+  CreditPack,
+  CreditShop,
+  AgreementWitnessView,
+  AdminStampDutyOrder,
+  StampDutyRefund,
+  StampDutyOffer,
+  StampDutyOrderView,
+  WitnessAgreement,
+  WitnessSideKey,
+  GeneratedAgreementInput,
+  InvitationBatchResult,
+  Jurisdiction,
+  JurisdictionInput,
+  PaidService,
+  PortfolioImportResult,
+  PortfolioPreview,
+  RentAgreementView,
+  RuleFindingView,
+  StampDutyInput,
+  Plan,
+  PlanInput,
+  TeamOverview,
   CreateAutoPayMandateInput,
   ConditionReport,
   Conversation,
@@ -23,9 +50,10 @@ import type {
   CreateConversationInput,
   CreateEquipmentInput,
   CreateInvoiceInput,
-  CreateLeaseInput,
-  UpdateLeaseTermsInput,
-  RenewLeaseInput,
+  CreateRentInput,
+  UpdateRentTermsInput,
+  RenewRentInput,
+  StartRenewalInput,
   CreateMaintenanceRequestInput,
   CreateMessageInput,
   CreatePropertyInput,
@@ -46,8 +74,8 @@ import type {
   CreateViolationInput,
   Equipment,
   Invoice,
-  Lease,
-  LeaseSignature,
+  Rent,
+  RentSignature,
   CreateScheduleInput,
   MaintenanceCategory,
   MaintenanceRequest,
@@ -218,6 +246,18 @@ export const api = {
         { headers: { 'Content-Type': undefined } },
       );
     },
+    /** A file of properties, units and tenants: preview first (saves nothing), then import it. */
+    importPortfolio: (file: File, opts: { preview?: boolean; confirmOverage?: boolean } = {}) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (opts.preview) formData.append('preview', 'true');
+      if (opts.confirmOverage) formData.append('confirmOverage', 'true');
+      return apiClient.post<{ data: PortfolioPreview & PortfolioImportResult }>(
+        '/api/v1/properties/import',
+        formData,
+        { headers: { 'Content-Type': undefined } },
+      );
+    },
     createViewing: (propertyId: string, body: CreateViewingInput) =>
       apiClient.post<{ data: unknown }>(`/api/v1/properties/${propertyId}/viewings`, body),
     viewingAvailability: (propertyId: string, date: string) =>
@@ -360,29 +400,101 @@ export const api = {
   vendors: {
     list: () => apiClient.get<{ data: Vendor[] }>('/api/v1/vendors'),
   },
-  leases: {
+  rents: {
     list: (params?: { status?: string; page?: number; limit?: number }) =>
-      apiClient.get<Paginated<Lease>>('/api/v1/leases', { params }),
-    get: (id: string) => apiClient.get<{ data: Lease }>(`/api/v1/leases/${id}`),
-    create: (body: CreateLeaseInput) => apiClient.post<{ data: Lease }>('/api/v1/leases', body),
-    updateTerms: (id: string, body: UpdateLeaseTermsInput) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, body),
+      apiClient.get<Paginated<Rent>>('/api/v1/rents', { params }),
+    get: (id: string) => apiClient.get<{ data: Rent }>(`/api/v1/rents/${id}`),
+    create: (body: CreateRentInput) => apiClient.post<{ data: Rent }>('/api/v1/rents', body),
+    updateTerms: (id: string, body: UpdateRentTermsInput) =>
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, body),
     updateStatus: (id: string, status: string) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { status }),
-    renew: (id: string, body: RenewLeaseInput) =>
-      apiClient.patch<{ data: Lease }>(`/api/v1/leases/${id}`, { renew: body }),
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { status }),
+    startRenewal: (id: string, body: StartRenewalInput) =>
+      apiClient.post<{ data: { rent: Rent; warnings?: RuleFindingView[] } }>(
+        `/api/v1/rents/${id}/renew`,
+        body,
+      ),
+    renew: (id: string, body: RenewRentInput) =>
+      apiClient.patch<{ data: Rent }>(`/api/v1/rents/${id}`, { renew: body }),
+    agreement: {
+      get: (rentId: string) =>
+        apiClient.get<{ data: RentAgreementView | null; findings?: RuleFindingView[] }>(
+          `/api/v1/rents/${rentId}/agreement`,
+        ),
+      options: (rentId: string) =>
+        apiClient.get<{ data: AgreementOptions }>(`/api/v1/rents/${rentId}/agreement/options`),
+      preview: (rentId: string, body: GeneratedAgreementInput) =>
+        apiClient.post<{ data: AgreementPreview }>(
+          `/api/v1/rents/${rentId}/agreement/preview`,
+          body,
+        ),
+      create: (
+        rentId: string,
+        body:
+          | ({ source: 'GENERATED' } & GeneratedAgreementInput)
+          | { source: 'UPLOADED'; fileUrl: string },
+      ) =>
+        apiClient.post<{ data: RentAgreementView; findings?: RuleFindingView[] }>(
+          `/api/v1/rents/${rentId}/agreement`,
+          body,
+        ),
+      update: (rentId: string, body: Partial<Omit<GeneratedAgreementInput, 'templateId'>>) =>
+        apiClient.patch<{ data: RentAgreementView }>(`/api/v1/rents/${rentId}/agreement`, body),
+      issue: (rentId: string) =>
+        apiClient.post<{ data: { id: string; status: string } }>(
+          `/api/v1/rents/${rentId}/agreement/issue`,
+        ),
+      confirm: (rentId: string, fullName: string) =>
+        apiClient.post<{ data: { id: string; status: string } }>(
+          `/api/v1/rents/${rentId}/agreement/confirm`,
+          { fullName },
+        ),
+      void: (rentId: string, reason?: string) =>
+        apiClient.post<{ data: { id: string; refunded: number } }>(
+          `/api/v1/rents/${rentId}/agreement/void`,
+          { reason },
+        ),
+      stampDutyOffer: (rentId: string) =>
+        apiClient.get<{ data: StampDutyOffer }>(`/api/v1/rents/${rentId}/agreement/stamp-duty/pay`),
+      startStampDutyPayment: (rentId: string) =>
+        apiClient.post<{ data: StampDutyOrderView }>(
+          `/api/v1/rents/${rentId}/agreement/stamp-duty/pay`,
+        ),
+      witnesses: {
+        invite: (
+          rentId: string,
+          body: { side: WitnessSideKey; name: string; email: string; address?: string },
+        ) =>
+          apiClient.post<{ data: AgreementWitnessView & { emailed: boolean } }>(
+            `/api/v1/rents/${rentId}/agreement/witnesses`,
+            body,
+          ),
+        remove: (rentId: string, side: WitnessSideKey) =>
+          apiClient.delete(`/api/v1/rents/${rentId}/agreement/witnesses/${side.toLowerCase()}`),
+      },
+      stampDuty: (rentId: string, body: StampDutyInput) =>
+        apiClient.patch<{ data: RentAgreementView }>(
+          `/api/v1/rents/${rentId}/agreement/stamp-duty`,
+          body,
+        ),
+    },
+    /** Send (or send again) the invitation email to a tenant who has not signed in yet. */
+    invite: (id: string) =>
+      apiClient.post<{ data: { invitation: 'INVITED' } }>(`/api/v1/rents/${id}/invite`),
+    /** Send every waiting invitation that today's limit allows. */
+    inviteAll: () => apiClient.post<{ data: InvitationBatchResult }>('/api/v1/rents/invitations'),
     sign: (id: string, fullName: string) =>
-      apiClient.post<{ data: LeaseSignature }>(`/api/v1/leases/${id}/sign`, { fullName }),
+      apiClient.post<{ data: RentSignature }>(`/api/v1/rents/${id}/sign`, { fullName }),
     notes: {
-      list: (leaseId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/leases/${leaseId}/notes`),
-      create: (leaseId: string, body: string) =>
-        apiClient.post<{ data: Note }>(`/api/v1/leases/${leaseId}/notes`, { body }),
+      list: (rentId: string) => apiClient.get<{ data: Note[] }>(`/api/v1/rents/${rentId}/notes`),
+      create: (rentId: string, body: string) =>
+        apiClient.post<{ data: Note }>(`/api/v1/rents/${rentId}/notes`, { body }),
     },
     notices: {
-      list: (leaseId: string) =>
-        apiClient.get<{ data: Notice[] }>(`/api/v1/leases/${leaseId}/notices`),
-      create: (leaseId: string, body: CreateNoticeInput) =>
-        apiClient.post<{ data: Notice }>(`/api/v1/leases/${leaseId}/notices`, body),
+      list: (rentId: string) =>
+        apiClient.get<{ data: Notice[] }>(`/api/v1/rents/${rentId}/notices`),
+      create: (rentId: string, body: CreateNoticeInput) =>
+        apiClient.post<{ data: Notice }>(`/api/v1/rents/${rentId}/notices`, body),
     },
   },
   dashboard: {
@@ -462,6 +574,111 @@ export const api = {
           Paginated<AuditLog> & { facets?: { actions: string[]; entityTypes: string[] } }
         >('/api/v1/admin/audit-logs', { params }),
     },
+    plans: {
+      list: () => apiClient.get<{ data: Plan[] }>('/api/v1/admin/plans'),
+      create: (body: PlanInput) => apiClient.post<{ data: Plan }>('/api/v1/admin/plans', body),
+      update: (id: string, body: Partial<Omit<Plan, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: Plan }>(`/api/v1/admin/plans/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/plans/${id}`),
+    },
+    jurisdictions: {
+      list: () => apiClient.get<{ data: Jurisdiction[] }>('/api/v1/admin/jurisdictions'),
+      create: (body: JurisdictionInput & { key: string; name: string }) =>
+        apiClient.post<{ data: Jurisdiction }>('/api/v1/admin/jurisdictions', body),
+      update: (id: string, body: Omit<JurisdictionInput, 'key'>) =>
+        apiClient.patch<{ data: Jurisdiction }>(`/api/v1/admin/jurisdictions/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/jurisdictions/${id}`),
+    },
+    agreementTemplates: {
+      list: () => apiClient.get<{ data: AgreementTemplate[] }>('/api/v1/admin/agreement-templates'),
+      create: (
+        body: AgreementTemplateInput & {
+          key: string;
+          name: string;
+          jurisdictionId: string;
+          clauses: NonNullable<AgreementTemplateInput['clauses']>;
+        },
+      ) => apiClient.post<{ data: AgreementTemplate }>('/api/v1/admin/agreement-templates', body),
+      update: (id: string, body: Omit<AgreementTemplateInput, 'key' | 'jurisdictionId'>) =>
+        apiClient.patch<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}`,
+          body,
+        ),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/agreement-templates/${id}`),
+      approve: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/approve`,
+        ),
+      newVersion: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/new-version`,
+        ),
+      archive: (id: string) =>
+        apiClient.post<{ data: AgreementTemplate }>(
+          `/api/v1/admin/agreement-templates/${id}/archive`,
+        ),
+    },
+    services: {
+      list: () => apiClient.get<{ data: PaidService[] }>('/api/v1/admin/services'),
+      create: (body: {
+        key: string;
+        name: string;
+        description?: string | null;
+        creditCost: number;
+        isActive?: boolean;
+      }) => apiClient.post<{ data: PaidService }>('/api/v1/admin/services', body),
+      update: (id: string, body: Partial<Omit<PaidService, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: PaidService }>(`/api/v1/admin/services/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/services/${id}`),
+    },
+    stampDuty: {
+      list: (status: 'PAID' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_PAYMENT' | 'ALL' = 'PAID') =>
+        apiClient.get<{ data: AdminStampDutyOrder[] }>('/api/v1/admin/stamp-duty-orders', {
+          params: { status },
+        }),
+      complete: (
+        id: string,
+        body: { reference: string; actualAmount: number; receiptUrl: string },
+      ) =>
+        apiClient.post<{ data: { id: string; refundDue: number } }>(
+          `/api/v1/admin/stamp-duty-orders/${id}/complete`,
+          body,
+        ),
+      cancel: (id: string, reason: string) =>
+        apiClient.post<{ data: { id: string; refundDue: boolean } }>(
+          `/api/v1/admin/stamp-duty-orders/${id}/cancel`,
+          { reason },
+        ),
+      refunds: (status: 'DUE' | 'REFUNDED' | 'ALL' = 'DUE') =>
+        apiClient.get<{ data: StampDutyRefund[] }>('/api/v1/admin/stamp-duty-refunds', {
+          params: { status },
+        }),
+      markRefunded: (orderId: string, reference: string) =>
+        apiClient.post<{ data: { orderId: string; amount: number; reference: string } }>(
+          `/api/v1/admin/stamp-duty-refunds/${orderId}/refunded`,
+          { reference },
+        ),
+    },
+    creditPacks: {
+      list: () => apiClient.get<{ data: CreditPack[] }>('/api/v1/admin/credit-packs'),
+      create: (body: {
+        key: string;
+        name: string;
+        credits: number;
+        price: number;
+        isActive?: boolean;
+      }) => apiClient.post<{ data: CreditPack }>('/api/v1/admin/credit-packs', body),
+      update: (id: string, body: Partial<Omit<CreditPack, 'id' | 'key'>>) =>
+        apiClient.patch<{ data: CreditPack }>(`/api/v1/admin/credit-packs/${id}`, body),
+      remove: (id: string) => apiClient.delete(`/api/v1/admin/credit-packs/${id}`),
+    },
+    credits: {
+      grant: (body: { email: string; amount: number; note?: string }) =>
+        apiClient.post<{ data: { userId: string; name: string | null; balance: number } }>(
+          '/api/v1/admin/credits',
+          body,
+        ),
+    },
     settings: {
       get: () => apiClient.get<{ data: AdminPlatformSettings }>('/api/v1/admin/settings'),
       update: (data: Partial<Omit<PlatformSettings, 'setupComplete'>>) =>
@@ -495,14 +712,14 @@ export const api = {
       ),
     receipt: (paymentId: string) =>
       apiClient.get<{ data: Receipt }>(`/api/v1/payments/${paymentId}/receipt`),
-    authorization: (leaseId: string) =>
+    authorization: (rentId: string) =>
       apiClient.get<{ data: PaymentAuthorization | null }>('/api/v1/payments/authorization', {
-        params: { leaseId },
+        params: { rentId },
       }),
     autopay: {
-      list: (leaseId: string) =>
+      list: (rentId: string) =>
         apiClient.get<{ data: AutoPayMandate[] }>('/api/v1/payments/autopay', {
-          params: { leaseId },
+          params: { rentId },
         }),
       create: (body: CreateAutoPayMandateInput) =>
         apiClient.post<{ data: AutoPayMandate }>('/api/v1/payments/autopay', body),
@@ -522,14 +739,64 @@ export const api = {
         body,
       ),
   },
+  jurisdictions: {
+    list: () => apiClient.get<{ data: Jurisdiction[] }>('/api/v1/jurisdictions'),
+  },
+  plans: {
+    list: () => apiClient.get<{ data: Plan[] }>('/api/v1/plans'),
+  },
+  team: {
+    get: () => apiClient.get<{ data: TeamOverview }>('/api/v1/team'),
+    create: (name: string) =>
+      apiClient.post<{ data: { id: string; name: string } }>('/api/v1/team', { name }),
+    rename: (name: string) =>
+      apiClient.patch<{ data: { id: string; name: string } }>('/api/v1/team', { name }),
+    addMember: (body: { name: string; email: string; phoneNumber?: string }) =>
+      apiClient.post<{ data: { id: string; name: string; email: string } }>(
+        '/api/v1/team/members',
+        body,
+      ),
+    removeMember: (id: string) =>
+      apiClient.delete<{ data: { id: string; propertiesReassigned: number } }>(
+        `/api/v1/team/members/${id}`,
+      ),
+  },
+  services: {
+    list: () =>
+      apiClient.get<{
+        data: { key: string; name: string; description: string | null; creditCost: number }[];
+      }>('/api/v1/services'),
+  },
+  /** The witness's own page: reached by the emailed link, with no account. */
+  witness: {
+    get: (token: string) => apiClient.get<{ data: WitnessAgreement }>(`/api/v1/witness/${token}`),
+    sign: (token: string, fullName: string) =>
+      apiClient.post<{ data: { signed: true } }>(`/api/v1/witness/${token}`, {
+        fullName,
+        confirm: true,
+      }),
+  },
+  credits: {
+    me: () =>
+      apiClient.get<{ data: { balance: number; entries: CreditEntry[] } }>('/api/v1/credits/me'),
+    packs: () => apiClient.get<{ data: CreditShop }>('/api/v1/credits/packs'),
+    checkout: (packKey: string) =>
+      apiClient.post<{
+        data: { invoiceId: string; amount: number; credits: number; packName: string };
+      }>('/api/v1/credits/checkout', { packKey }),
+  },
   subscriptions: {
     me: () => apiClient.get<{ data: Subscription }>('/api/v1/subscriptions/me'),
     checkout: (body: CheckoutSubscriptionInput) =>
       apiClient.post<{
         data:
-          | { activated: true; subscription: Subscription }
-          | { activated: false; scheduled: true; endsAt: string; subscription: Subscription }
-          | { invoiceId: string; amount: number };
+          | { activated: true; subscription: unknown }
+          | { activated: false; scheduled: true; endsAt: string; subscription: unknown }
+          | {
+              invoiceId: string;
+              amount: number;
+              breakdown: { base: number; overage: number; extraUnits: number };
+            };
       }>('/api/v1/subscriptions/checkout', body),
   },
   applications: {

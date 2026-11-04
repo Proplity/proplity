@@ -42,7 +42,17 @@ export async function parseXlsx(buffer: Buffer): Promise<Record<string, string>[
     const record: Record<string, string> = {};
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       const header = headers[colNumber];
-      if (header) record[header] = cell.value == null ? '' : String(cell.value);
+      if (!header) return;
+      // A date cell would otherwise become "Mon Sep 01 2025 ...", which no import can read.
+      const value = cell.value;
+      record[header] =
+        value == null
+          ? ''
+          : value instanceof Date
+            ? value.toISOString().slice(0, 10)
+            : typeof value === 'object'
+              ? cell.text
+              : String(value);
     });
     if (Object.keys(record).length > 0) rows.push(record);
   });

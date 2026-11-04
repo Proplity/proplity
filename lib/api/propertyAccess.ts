@@ -1,4 +1,4 @@
-import { Property, Role } from '@prisma/client';
+import { Prisma, Property, Role } from '@prisma/client';
 
 /**
  * True if the session belongs to the property's own manager/landlord, or an
@@ -7,14 +7,21 @@ import { Property, Role } from '@prisma/client';
  * own listing rather than just any authenticated user of the right role.
  */
 export function canManageProperty(
-  session: { sub: string; role: Role },
+  session: { sub: string; role: Role; scope?: string[] },
   property: Pick<Property, 'managerId' | 'landlordId'>,
 ) {
+  if (session.role === 'ADMIN') return true;
+  // `scope` is the person plus, for a company, the people whose properties they may manage.
+  const ids = session.scope ?? [session.sub];
   return (
-    session.role === 'ADMIN' ||
-    property.managerId === session.sub ||
-    property.landlordId === session.sub
+    (!!property.managerId && ids.includes(property.managerId)) ||
+    (!!property.landlordId && ids.includes(property.landlordId))
   );
+}
+
+/** Prisma filter for the properties managed or owned by any of these users. */
+export function propertyScopeWhere(ids: string[]): Prisma.PropertyWhereInput {
+  return { OR: [{ managerId: { in: ids } }, { landlordId: { in: ids } }] };
 }
 
 export function serializeUnit<T extends { squareFeet: number | null }>(unit: T) {
@@ -29,3 +36,26 @@ export const PRIVATE_UNIT_FLAG = 'visibility:private';
 export function isPrivateUnit(unit: { amenities?: string[] | null }) {
   return !!unit.amenities?.includes(PRIVATE_UNIT_FLAG);
 }
+
+// A unit added or changed by a manager or landlord carries this flag until an admin approves it
+// (ISS-153). It is set and cleared by the server only.
+export const PENDING_UNIT_FLAG = 'approval:pending';
+
+export function isPendingUnit(unit: { amenities?: string[] | null }) {
+  return !!unit.amenities?.includes(PENDING_UNIT_FLAG);
+}
+
+/** A unit the public may see: not marked private and not waiting for an admin's approval. */
+export function isPublicUnit(unit: { amenities?: string[] | null }) {
+  return !isPrivateUnit(unit) && !isPendingUnit(unit);
+}
+
+/**
+ * Fields of a property that only the property team and admins read: the moderator's notes (which
+ * can name other listings) and the staged edits. A tenant, vendor or applicant who gets the
+ * property inside a rent, repair, invoice or application never needs them (ISS-148).
+ */
+export const PROPERTY_OMIT_INTERNAL = { moderationNotes: true, metadata: true } as const;
+
+/** `include: { property: PUBLIC_PROPERTY }` -- the whole property row without its internal fields. */
+export const PUBLIC_PROPERTY = { omit: PROPERTY_OMIT_INTERNAL } as const;

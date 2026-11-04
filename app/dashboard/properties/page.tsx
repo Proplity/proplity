@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Building2,
@@ -15,6 +16,8 @@ import {
   Users,
   ArrowRight,
   ExternalLink,
+  EyeOff,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useMyProperties } from '@/hooks/useProperties';
 import type { Property } from '@/lib/api/types';
@@ -33,7 +36,17 @@ const STATUS_META: Record<
   FLAGGED: { label: 'Flagged', icon: Flag, className: 'bg-orange-100 text-orange-800' },
 };
 
-const ALL_STATUSES = ['ALL', 'PENDING_REVIEW', 'APPROVED', 'REJECTED'] as const;
+const ALL_STATUSES = ['ALL', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'MANAGEMENT_ONLY'] as const;
+
+// A property kept for management only has no review status: it is not listed and no admin sees it.
+const MANAGEMENT_ONLY_META = {
+  label: 'Management only',
+  icon: EyeOff,
+  className: 'bg-slate-100 text-slate-700',
+};
+
+const metaFor = (p: Property) =>
+  p.managementOnly ? MANAGEMENT_ONLY_META : STATUS_META[p.moderationStatus];
 
 export default function MyPropertiesPage() {
   const router = useRouter();
@@ -43,7 +56,11 @@ export default function MyPropertiesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const filtered = properties.filter((p) => {
-    const matchesStatus = statusFilter === 'ALL' || p.moderationStatus === statusFilter;
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'MANAGEMENT_ONLY'
+        ? !!p.managementOnly
+        : !p.managementOnly && p.moderationStatus === statusFilter);
     const term = search.toLowerCase();
     const matchesSearch =
       !term ||
@@ -57,13 +74,22 @@ export default function MyPropertiesPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">My Properties</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {loading
-            ? 'Loading…'
-            : `${properties.length} propert${properties.length === 1 ? 'y' : 'ies'} under your management`}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">My Properties</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {loading
+              ? 'Loading…'
+              : `${properties.length} propert${properties.length === 1 ? 'y' : 'ies'} under your management`}
+          </p>
+        </div>
+        <Link
+          href="/dashboard/properties/import"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Import from a file
+        </Link>
       </div>
 
       {/* Sticky Compact Filter Toolbar */}
@@ -75,7 +101,9 @@ export default function MyPropertiesPage() {
               const isAll = status === 'ALL';
               const label = isAll
                 ? `All (${properties.length})`
-                : STATUS_META[status as Property['moderationStatus']].label;
+                : status === 'MANAGEMENT_ONLY'
+                  ? MANAGEMENT_ONLY_META.label
+                  : STATUS_META[status as Property['moderationStatus']].label;
 
               return (
                 <button
@@ -177,7 +205,7 @@ export default function MyPropertiesPage() {
           {!loading && filtered.length > 0 && (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((property) => {
-                const meta = STATUS_META[property.moderationStatus];
+                const meta = metaFor(property);
                 const StatusIcon = meta.icon;
                 const occupied = property.units.filter((u) => u.status === 'OCCUPIED').length;
 
@@ -196,15 +224,17 @@ export default function MyPropertiesPage() {
                           {meta.label}
                         </span>
 
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            property.isPublished
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {property.isPublished ? 'Published' : 'Unpublished'}
-                        </span>
+                        {!property.managementOnly && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              property.isPublished
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {property.isPublished ? 'Published' : 'Unpublished'}
+                          </span>
+                        )}
                       </div>
 
                       {/* Property Identity */}
@@ -296,7 +326,7 @@ export default function MyPropertiesPage() {
 
               {!loading &&
                 filtered.map((property) => {
-                  const meta = STATUS_META[property.moderationStatus];
+                  const meta = metaFor(property);
                   const StatusIcon = meta.icon;
                   const occupied = property.units.filter((u) => u.status === 'OCCUPIED').length;
                   return (

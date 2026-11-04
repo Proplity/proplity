@@ -26,7 +26,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 | Role                 | Email                   | Password       | What They Do                          |
 | :------------------- | :---------------------- | :------------- | :------------------------------------ |
 | **Visitor (Public)** | _(no login needed)_     | N/A            | Browse listings, view properties      |
-| **Tenant**           | `tenant@proplity.com`   | `Password123!` | Pay rent, report repairs, view lease  |
+| **Tenant**           | `tenant@proplity.com`   | `Password123!` | Pay rent, report repairs, view rent   |
 | **Landlord**         | `landlord@proplity.com` | `Password123!` | Manage portfolio, track revenue       |
 | **Property Manager** | `manager@proplity.com`  | `Password123!` | Run daily operations for landlords    |
 | **Vendor**           | `vendor@proplity.com`   | `Password123!` | Complete repair jobs, submit invoices |
@@ -78,7 +78,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 10. **Dynamic Property Trust Score Badge**: Algorithmic trust rating badge computed daily by background workers (\`Property.trustScore\`, ISS-013).
 11. **Inspection Viewing Booking**: Date field and half-hour start-time dropdown (Mon-Sat, 9:00 AM-5:00 PM Lagos time) for on-site property visits (\`ScheduleViewing.tsx\`).
 12. **Dedicated Role Landing Pages**: Informational landing pages for Landlords (\`/for-landlords\`), Tenants (\`/for-tenants\`), and Service Providers (\`/for-vendors\`).
-13. **Tiered Subscription Pricing Matrix**: Transparent plan comparison table for Free, Starter, Pro, and Enterprise tiers (\`/pricing\`).
+13. **Plans and Pricing**: The plans an admin has set up (a free plan and paid plans, with the units, users, extra-unit price and monthly credits each includes), with a monthly or yearly price (\`/pricing\`).
 14. **Platform Inquiries & Contact Form**: Contact and support form (\`/contact\`, \`ContactPage.tsx\`) that emails the Proplity team; the visitor sees "Message sent!" only when the email went out, otherwise an error with their text kept.
 15. **Interactive Platform Guide**: Visual role-by-role guide with 100+ interactive fullscreen screenshots (\`/proplity-guide\`).
 
@@ -111,7 +111,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ### Domain 3: Tenant Operations & Tenancy Experience (18 Features)
 
-36. **Tenant Dashboard Command Center**: Unified overview displaying active lease terms, current unit, pending bills, and quick action shortcuts.
+36. **Tenant Dashboard Command Center**: Unified overview displaying active rent terms, current unit, pending bills, and quick action shortcuts.
 37. **Rent Payment Countdown & Due Alert**: Visual banner showing upcoming rent, overdue days, late fees, and direct Pay Now trigger.
 38. **Online Rent Checkout**: Card, USSD, and bank transfer payment via Paystack checkout with real-time balance recalculation.
 39. **Card Tokenization & Reusable Mandates**: Secure storage of payment authorization tokens (\`AutoPayMandate\`) for recurring rent charging (ISS-056).
@@ -119,8 +119,8 @@ Every action — from paying rent to submitting a repair request to approving a 
 41. **Offline Bank Transfer Proof Submission**: The "Paid another way" form records a bank transfer or cash payment with its reference and an optional receipt file; it counts once someone else confirms it (\`PaidAnotherWayForm.tsx\`, ISS-103).
 42. **Bank Transfer Duplicate Reference Guard**: Prevents re-submitting previously registered transfer references (\`bankTransferService.ts\`, ISS-012).
 43. **Transfer Reconciliation Status Tracker**: Real-time visibility into whether transfer proof is PENDING, APPROVED, or REJECTED with notes.
-44. **Digital Lease Agreement Console**: View active and historical tenancy agreements, clauses, rent cycles, and deposit terms (\`/dashboard/rentals\`).
-45. **In-Browser Digital E-Signature Execution**: Sign binding lease agreements online with digital signature image, timestamp, and IP logging.
+44. **Digital Rent Agreement Console**: View active and historical tenancy agreements, clauses, rent cycles, and deposit terms (\`/dashboard/rentals\`).
+45. **In-Browser Digital E-Signature Execution**: Sign binding rent agreements online with digital signature image, timestamp, and IP logging.
 46. **Itemized Payment Ledger & Digital Receipts**: Payment history with transaction references, method badges, and a receipt for every payment (receipt number, who paid whom, what is still owing; print or save as PDF; ISS-103).
 47. **3-Step Structured Tenancy Application**: Form capturing personal identity, employer info, monthly income, and references (\`PropertyApplicationForm.tsx\`).
 48. **Mandatory Profile Completion Verification Gate**: Enforced profile completion screen (\`/dashboard/profile/complete\`) before application submission.
@@ -141,35 +141,41 @@ Every action — from paying rent to submitting a repair request to approving a 
 58. **Service Charge Rate Configuration**: Configure recurring building service charges as a fixed Naira fee or percentage of annual rent.
 59. **Property Photo Manager for Existing Listings**: Interactive modal to add, reorder, delete, and set cover photos on live listings (ISS-014).
 60. **Address Duplicate Fingerprint Detection**: Computes SHA-256 address hash to warn landlords against accidental duplicate listings (ISS-025).
-61. **Portfolio-Wide Tenant Directory**: Roster of all tenants living across owned buildings with lease dates, unit numbers, and payment status badges.
+61. **Portfolio-Wide Tenant Directory**: Roster of all tenants living across owned buildings with rent dates, unit numbers, and payment status badges.
 62. **Tenant Applicant Screening & Approvals**: Review employment verification, salaries, and references; approve or reject applicants with notifications.
-63. **One-Click Lease Generation from Application**: Instantly convert an approved applicant into a binding tenancy agreement with pre-filled profile details.
+63. **One-Click Rent Generation from Application**: Instantly convert an approved applicant into a binding tenancy agreement with pre-filled profile details.
 64. **Server-Side Financial Breakdown Pages**: Detailed breakdown views (\`/dashboard/breakdown/[type]\`) totaling revenue and paging full data (ISS-049).
 65. **Manager Invitation Code Dispatch**: Send customized email invitations to property managers; monitor active codes and deactivate anytime.
 66. **Disbursement Bank Account Management**: Register and manage verified Nigerian bank accounts (NUBAN) for receiving rental payouts.
 67. **Vendor Maintenance Payout Approvals**: Review and approve vendor repair invoices before disbursements are processed (ISS-012).
-68. **Subscription Plan Management & Upgrades**: Manage platform tier subscriptions (Free, Starter, Pro), switch billing tiers with safe downgrade confirmations.
+68. **Plan Management, Usage and Credits**: A manager or landlord sees their plan, how many units and users they are using, any extra units and what they cost, and their credits on the dashboard (with **Buy credits** to buy a pack by card, when the admin has it on); they switch plans with safe downgrade confirmations. An admin edits plans, the limit rules, paid services, credit packs (and whether they can be bought) and credits at Admin > Plans & billing. A manager can also start a company at **Team**: add people (each gets an email to set a password and signs in as a manager), remove them and choose who manages which property. The company shares one plan, one unit allowance and one credit balance, and only the managing partner changes the plan. A member sees their own properties, or the whole company's if an admin set it that way.
 
 ---
 
 ### Domain 5: Property Manager Operations & Tenancy Administration (18 Features)
 
-69. **Manager Operations Command Center**: The **Needs your attention** list at the top of the dashboard: applications and viewing requests to answer, repairs with no vendor, finished repairs with a vendor invoice to pay, overdue rent, leases waiting for signatures or ending within 60 days, listings that need changes, and unread messages. Each row opens the place that handles it. Every dashboard (tenant, landlord, vendor, admin) has the same list with that role's tasks.
+69. **Manager Operations Command Center**: The **Needs your attention** list at the top of the dashboard: applications and viewing requests to answer, repairs with no vendor, finished repairs with a vendor invoice to pay, overdue rent, rents waiting for signatures or ending within 60 days, listings that need changes, and unread messages. Each row opens the place that handles it. Every dashboard (tenant, landlord, vendor, admin) has the same list with that role's tasks.
 70. **Role-Scoped Assigned Properties Directory**: Property catalog strictly isolated to buildings where the manager is designated as Property.managerId.
 71. **Property Detail Management Console**: In-depth console displaying all constituent units, condition reports, and equipment inventory.
-72. **Direct Tenant Onboarding / Lease Invite**: Invite tenants by email (\`/dashboard/tenants/add\`); system creates lease and emails activation link.
-73. **Tenant Detail & Tenancy Management**: Console per tenant displaying active lease, ledger, notices, and lease action tools.
+72. **Direct Tenant Onboarding / Rent Invite**: Invite tenants by email (\`/dashboard/tenants/add\`); system creates rent and emails activation link. The invited tenant sets a password, signs in and is asked to finish their profile. On the Tenants page a tenant who has not joined shows **Not invited yet**, **Invited** or **Invitation expired**, with a button to send or resend.
+    - **Rent agreement**: on a tenant's page, **Rent Agreement** > **Create from a template** (choose the template, type the owner's name if the property has no landlord account, add fees, keep or drop optional clauses, reword editable ones, add special conditions and witness details; a preview shows the finished text and any legal warning for the place), then **Send to the tenant**; or **Upload one I already have**, which the tenant confirms with their name. The tenant reads and prints it and signs. The page also tracks witness details and stamp duty (status, reference, amount, receipt). If an admin has switched it on, making an agreement takes credits and the rent starts once both sides have signed.
+    - **Pay stamp duty**: when an admin has switched it on, a signed agreement shows **Pay stamp duty through Proplity** with the duty, Proplity's fee and the total; pay by card and Proplity pays the tax authority and adds the receipt to the agreement. An admin works the queue at **Stamp duty**; its **Refunds** tab lists money owed back to buyers, and **Mark as refunded** records the reference once it has been paid.
+    - **Renew a rent**: **Renew Rent** on the rent's page makes the next rent (pending, with its first invoice) and, if you leave **Prepare the new agreement from this one** ticked, a draft agreement copied from the last. Review and send it as before; the new rent starts when both have signed and its start date arrives, and the old one ends then. When an admin has switched on automatic renewal, tick **Renew automatically** on the rent's page (with an increase and a term): about 60 days before it ends the next rent and draft are prepared for you, and nothing reaches the tenant until you send it. Reminders come as a rent nears its end (at 90, 60 and 30 days unless the admin changed them), if it runs past its end, and when an agreement waits for a signature.
+    - **Download the agreement**: **Download PDF** on the agreement card (and on the agreement page) gives a PDF with the signatures and the witnesses; **Print** is still there.
+    - **Witnesses by email**: once an agreement is sent, **Witnesses sign by email** on the same card lets you type a witness's name and email for each side; they get a link (no account), read the agreement and sign with their name. The tenant can do the same for their own witness. An admin can switch this off, or make the agreement wait for its witnesses.
+    - **Import your portfolio** (My Properties > Import from a file): upload a spreadsheet of properties, units and the tenant in each. A preview shows everything first; the result is kept for management only (not listed, not reviewed by an admin) and counts towards the plan. Tenant accounts are set up without an email; **Send invitations** emails as many as the daily limit allows. **List this property publicly** on a property sends it for admin review like a new listing.
+73. **Tenant Detail & Tenancy Management**: Console per tenant displaying active rent, ledger, notices, and rent action tools.
 74. **Official Legal Tenancy Notices**: Issue legal notices (Payment Reminders, Maintenance Alerts, Evictions, Policy Updates) with attachments.
-75. **Internal Private Lease Notes**: Private chronological notes attached to leases for internal conduct and dispute records.
-76. **Lease Renewal & Rent Terms Review**: Adjust rent amounts and renewal terms, dispatching renewal contracts to tenants for digital execution.
+75. **Internal Private Rent Notes**: Private chronological notes attached to rents for internal conduct and dispute records.
+76. **Rent Renewal & Rent Terms Review**: Adjust rent amounts and renewal terms, dispatching renewal contracts to tenants for digital execution.
 77. **Visual Kanban Maintenance Board**: Multi-column board organizing repairs into Submitted, Assigned, In Progress, and Completed stages.
 78. **Vendor Job Assignment with Email Alerts**: Assign maintenance tickets to verified vendors with automated email dispatch and direct ticket linkage.
-79. **Manager-Scoped Invoice Creation**: Generates rent or utility invoices strictly scoped to managed leases, preventing out-of-portfolio billing (ISS-050).
+79. **Manager-Scoped Invoice Creation**: Generates rent or utility invoices strictly scoped to managed rents, preventing out-of-portfolio billing (ISS-050).
 80. **Bank Transfer Statement Reconciliation**: The Bank Transfers page lists recorded transfers and their receipt files; someone other than the person who recorded one confirms or rejects it, and confirming marks the invoice paid and creates the receipt (ISS-012, ISS-103).
 81. **Vendor Maintenance Payout Processing**: Initiate vendor payouts for completed jobs and execute disbursement via Paystack Transfer API or manual log (ISS-012).
 82. **Neighborhood Report Metric Editor**: Custom editor screen allowing managers to update area safety and infrastructure scores (ISS-016).
 83. **Unit Move-In / Move-Out Condition Reports**: Create detailed room-by-room condition checklists with rating scores, notes, and inspection photos.
-84. **Unit Lease Violation Tracking**: Log lease violations (noise complaints, property damage, unauthorized pets) with attached photographic evidence.
+84. **Unit Rent Violation Tracking**: Log rent violations (noise complaints, property damage, unauthorized pets) with attached photographic evidence.
 85. **Property Equipment & Appliance Inventory**: Track building appliances, generators, water pumps, and elevators with serial numbers and service schedules.
 86. **Property-Wide Broadcast Announcements**: Publish announcements displayed on all active tenant dashboards in a building.
 
@@ -194,7 +200,7 @@ Every action — from paying rent to submitting a repair request to approving a 
 
 ### Domain 7: Platform Administration, Governance & Compliance (14 Features)
 
-99. **Super Admin Overview Command Center**: Executive platform overview (\`/admin\`) featuring global counts for properties, units, users, revenue, and active leases.
+99. **Super Admin Overview Command Center**: Executive platform overview (\`/admin\`) featuring global counts for properties, units, users, revenue, and active rents.
 100. **Server-Side Platform Aggregates**: High-performance SQL aggregates calculating accurate numbers without page-1 query truncation (ISS-049).
 101. **Searchable & Paged User Management Table**: Complete user roster (\`/admin/users\`) with live search, role filters, status filters, and pagination (ISS-054).
 102. **Audited User Account Suspension**: Locks bad actors out immediately; enforces a mandatory documented reason recorded in the security audit log (ISS-054).
@@ -219,8 +225,8 @@ Every action — from paying rent to submitting a repair request to approving a 
 116. **Unique Transaction Reference Enforced**: \`Payment.transactionRef\` @unique index guarantees identical webhook retries can never credit twice (ISS-052).
 117. **Partial Payment Running Balance Accounting**: Invoices track cumulative payments, marking status PARTIALLY_PAID until full balance reaches zero (ISS-052).
 118. **Automated Overdue Flagger Worker**: Scheduled worker identifying UNPAID invoices past due, updating status to OVERDUE, and sending reminders.
-119. **Configurable Late Fee Calculation**: Computes either fixed Naira late fees or daily percentage penalties applied to delinquent leases.
-120. **Tenant Security Deposit Escrow Accounting**: Dedicated balance tracking for security deposits with refund calculation during lease termination.
+119. **Configurable Late Fee Calculation**: Computes either fixed Naira late fees or daily percentage penalties applied to delinquent rents.
+120. **Tenant Security Deposit Escrow Accounting**: Dedicated balance tracking for security deposits with refund calculation during rent termination.
 121. **Automated Rent Cycle Invoicer Worker**: Generates next rent billing invoice and recurring service charge invoice in advance of upcoming cycle.
 122. **Auto-Pay Mandate Storage & Charger Daemon**: Recurring charging worker (\`autopayCharger.ts\`) charging due invoices via Paystack recurring authorization (ISS-011).
 123. **Bank Transfer Submission Workflow**: API endpoint (\`/api/v1/bank-transfers\`) for submitting receipt proofs into private reconciliation storage (ISS-012).
@@ -233,9 +239,9 @@ Every action — from paying rent to submitting a repair request to approving a 
 ### Domain 9: Secure File Gateway & Media Architecture (12 Features)
 
 127. **Multi-Provider Storage Driver Abstraction**: Pluggable StorageDriver supporting Cloudinary, AWS S3-compatible, Vercel Blob, ImageKit, and Local Disk (ADR-0008, 0009).
-128. **Private File Gateway (8 Protected Folders)**: Controlled file proxy covering maintenance-requests, applications, profile, properties, notices, leases, communications, and reconciliation (ISS-038).
+128. **Private File Gateway (8 Protected Folders)**: Controlled file proxy covering maintenance-requests, applications, profile, properties, notices, rents, communications, and reconciliation (ISS-038).
 129. **Contextual File Read Authorization**: \`canReadFile\` evaluates permissions dynamically so tenants only view their own files, and managers see their properties.
-130. **Strict File Ownership Assertion**: \`assertOwnsFileUrls\` ensures file references linked in notices, leases, messages, violations, and avatars belong to the caller (ISS-034, ISS-038).
+130. **Strict File Ownership Assertion**: \`assertOwnsFileUrls\` ensures file references linked in notices, rents, messages, violations, and avatars belong to the caller (ISS-034, ISS-038).
 131. **App-Wide Responsive File Viewer Modal**: Global modal (\`FileViewerModal.tsx\`) previewing images, PDFs, videos, audio, and documents across the app.
 132. **Image Pan, Zoom (400%) & 90° Rotation**: Interactive inspection tools with zoom scaling from 50% to 400%, 90-degree rotation, and reset controls.
 133. **In-Browser Scrollable PDF Viewer**: Direct iframe PDF rendering enabling users to review signed agreements without downloading external apps.
@@ -698,13 +704,13 @@ After logging in, you land on your personal dashboard — the command centre sho
 
 **What you see:**
 
-- **Current Property card** — your unit address, floor, lease link
+- **Current Property card** — your unit address, floor, rent link
 - **Payment panel** — outstanding rent invoice with "Pay Now" button
 - **Quick Actions** — 3 shortcut buttons:
   - 🗓 **Generate Report** — download a printable tenancy summary
   - 💬 **Message Manager** — opens a direct chat with your manager
   - 🔧 **Request Repair** — submit a maintenance/repair request
-- **Active Lease tracker** — start date, end date, signing status
+- **Active Rent tracker** — start date, end date, signing status
 - **Maintenance tracker** — all your open and resolved repair tickets
 - **AI Assistant** — a chat widget for property questions
 
@@ -728,23 +734,23 @@ After logging in, you land on your personal dashboard — the command centre sho
 
 ---
 
-## Step 2.2 — My Lease / Rentals
+## Step 2.2 — My Rent / Rentals
 
 **What this is:**
-Shows all lease agreements on your account — current and past.
+Shows all rent agreements on your account — current and past.
 
 **What you see:**
 
-- Active lease card: property name, unit, monthly rent, lease dates
-- Lease status badge: ACTIVE / EXPIRED / PENDING SIGNATURE
-- **Sign Lease** button (if awaiting your digital signature)
-- Past lease history
+- Active rent card: property name, unit, monthly rent, rent dates
+- Rent status badge: ACTIVE / EXPIRED / PENDING SIGNATURE
+- **Sign Rent** button (if awaiting your digital signature)
+- Past rent history
 
-**Screenshot:** `docs/screenshots/tenant_02_my_lease_desktop.png`
+**Screenshot:** `docs/screenshots/tenant_02_my_rent_desktop.png`
 
-![Tenant 02 My Lease Desktop](screenshots/tenant_02_my_lease_desktop.png)
+![Tenant 02 My Rent Desktop](screenshots/tenant_02_my_rent_desktop.png)
 
-> 💡 **Tip:** "PENDING SIGNATURE" means a lease is ready for you but you haven't signed yet. Click the card, review the terms, and sign digitally — no printing needed!
+> 💡 **Tip:** "PENDING SIGNATURE" means a rent is ready for you but you haven't signed yet. Click the card, review the terms, and sign digitally — no printing needed!
 
 ---
 
@@ -994,6 +1000,7 @@ A built-in messaging system connecting you directly with your property manager (
 3. Type your message at the bottom
 4. Press **Enter** or click ➤ to send
 5. Manager sees your message in real time
+6. When your tenancy ends, the rent and building conversations stay in your list so you can read what was said up to then; the message box is replaced by a note that they are read-only
 
 **Screenshots:**
 
@@ -1014,7 +1021,7 @@ A built-in messaging system connecting you directly with your property manager (
 ## Step 2.10 — Notifications
 
 **What this is:**
-A notification centre — keeps you informed about new invoices, maintenance updates, lease changes, and application status.
+A notification centre — keeps you informed about new invoices, maintenance updates, rent changes, and application status.
 
 **How to access:** Click the 🔔 bell icon (top-right) or navigate from sidebar.
 
@@ -1022,7 +1029,7 @@ A notification centre — keeps you informed about new invoices, maintenance upd
 
 - 💰 "Your rent invoice for November is ready"
 - ✅ "Your maintenance request has been assigned"
-- 📄 "Your lease renewal is ready for signing"
+- 📄 "Your rent renewal is ready for signing"
 - 🏠 "Your application has been approved"
 
 **Screenshot:** `docs/screenshots/tenant_08_notifications.png`
@@ -1031,20 +1038,20 @@ A notification centre — keeps you informed about new invoices, maintenance upd
 
 ---
 
-## Step 2.11 — Lease Documents
+## Step 2.11 — Rent Documents
 
 **What this is:**
-View your lease agreements, digital signatures, addenda, and notices from your landlord or property manager.
+View your rent agreements, digital signatures, addenda, and notices from your landlord or property manager.
 
 **Screenshots:**
 
-- Lease documents: `docs/screenshots/tenant_08_lease_documents_desktop.png`
+- Rent documents: `docs/screenshots/tenant_08_rent_documents_desktop.png`
 
-![Tenant 08 Lease Documents Desktop](screenshots/tenant_08_lease_documents_desktop.png)
+![Tenant 08 Rent Documents Desktop](screenshots/tenant_08_rent_documents_desktop.png)
 
-- Active lease breakdown: `docs/screenshots/tenant_07_lease_details_desktop.png`
+- Active rent breakdown: `docs/screenshots/tenant_07_rent_details_desktop.png`
 
-![Tenant 07 Lease Details Desktop](screenshots/tenant_07_lease_details_desktop.png)
+![Tenant 07 Rent Details Desktop](screenshots/tenant_07_rent_details_desktop.png)
 
 ---
 
@@ -1093,15 +1100,15 @@ A tenant can let Proplity pay each rent invoice automatically. Auto-pay reuses t
 ## Step 2.14 — Access Codes and the Full Dashboard
 
 **What this is:**
-The Access Codes card lists the codes issued for the tenant unit, such as a guest or delivery code. Each shows the guest name, the code and when it expires.
+The Access Codes card lists the codes issued for the tenant unit, such as a guest or delivery code. Each shows the guest name, the code and when it expires. A code stops working when your tenancy ends (the rent is terminated or expires).
 
 **Key points:**
 
-- Codes belong to a unit and need an active lease. They are single use by default; a code can be made reusable for a regular visitor.
+- Codes belong to a unit and need an active rent. They are single use by default; a code can be made reusable for a regular visitor.
 - Two active codes for the same unit cannot share a value.
 - **+ New Guest Code** on the card opens a short form: guest name (optional), the gate code (a six-digit one is suggested), an optional expiry date and a One-time use box. The new code appears in the list straight away. Each code shows its state (Active, Used, Expired or Revoked); **Revoke** cancels an active code so the gate refuses it, and **Activity** lists every time the gate checked it.
 - **Gate Check (manager or landlord):** on the property page, the Gate Check card is for the person at the gate. Pick the unit being visited, type the code the guest gives and press Check: it says whether to let them in or why not (already used, expired, cancelled, or no such code). A one-time code is used up the first time it lets someone in. The unit's codes are listed below with Revoke and Activity. Nothing here opens a physical gate; the guard decides.
-- The full-page view shows everything on the tenant home: lease summary, balance and auto-pay, maintenance, access codes and documents.
+- The full-page view shows everything on the tenant home: rent summary, balance and auto-pay, maintenance, access codes and documents.
 
 **Screenshots:**
 
@@ -1264,7 +1271,7 @@ How to add a new rental property to the platform so tenants can find and apply f
 **What this is:**
 A page showing all tenants currently renting across all your properties.
 
-**What you see:** Tenant name, unit, lease dates, payment status. Click any row for full details.
+**What you see:** Tenant name, unit, rent dates, payment status. Click any row for full details.
 
 **Screenshots:**
 
@@ -1333,7 +1340,7 @@ Each tile on the landlord dashboard opens a breakdown page with the detail behin
 - Tenants: every tenant across the portfolio with unit, rent and status.
 - Rent collected: this month collected, total collected, pending and collection rate, with a six-month trend, rent by property, payment methods and a searchable transaction table.
 - Maintenance: open and recent repair requests across properties.
-- Renewals: leases ending soon, so renewals can be started early.
+- Renewals: rents ending soon, so renewals can be started early.
 
 **Screenshots:**
 
@@ -1358,12 +1365,12 @@ Each tile on the landlord dashboard opens a breakdown page with the detail behin
 ## Step 3.9 — Property Page and My Rentals
 
 **What this is:**
-A landlord opens any property to see photos, units and tenants, ownership and management contacts, equipment, the neighbourhood report, financials, applications, viewings and announcements. My Rentals lists every lease on record.
+A landlord opens any property to see photos, units and tenants, ownership and management contacts, equipment, the neighbourhood report, financials, applications, viewings and announcements. My Rentals lists every rent on record.
 
 **Key points:**
 
 - Edits to a published listing are sent to the admin as proposed changes; the live listing is untouched until approved.
-- My Rentals shows each lease with property, unit, dates, annual rent and status.
+- My Rentals shows each rent with property, unit, dates, annual rent and status.
 
 **Screenshots:**
 
@@ -1371,7 +1378,7 @@ A landlord opens any property to see photos, units and tenants, ownership and ma
 
 ![Landlord property page](screenshots/feat_landlord_property_detail.png)
 
-- My Rentals: every lease on record: `docs/screenshots/feat_landlord_rentals.png`
+- My Rentals: every rent on record: `docs/screenshots/feat_landlord_rentals.png`
 
 ![My Rentals](screenshots/feat_landlord_rentals.png)
 
@@ -1474,7 +1481,7 @@ When a unit is ready, the manager can directly invite a tenant via email, bypass
 
 ![Manager 03 Add Tenant Step1](screenshots/manager_03_add_tenant_step1.png)
 
-**Step 2 — Configure the Lease:**
+**Step 2 — Configure the Rent:**
 
 - Set start and end dates
 - Payment schedule (monthly, quarterly)
@@ -1504,10 +1511,10 @@ Full list of all current and past tenants. Where daily tenant management happens
 
 **What you can do:**
 
-- View profiles, payment history, lease details
+- View profiles, payment history, rent details
 - Send invoices manually
 - Record payments: **Record cash or transfer payment** opens the same **Paid another way** form the tenant uses (the tenant's name is filled in). It does not mark rent paid: it waits on the **Bank Transfers** tab until someone other than you confirms it, and then the tenant gets a receipt. (An admin can switch this check off in Platform Settings; the form then says the entry counts straight away)
-- Issue lease renewal or termination notices
+- Issue rent renewal or termination notices
 
 **Screenshots:**
 
@@ -1524,7 +1531,7 @@ Full list of all current and past tenants. Where daily tenant management happens
 ## Step 4.6 — Reviewing Tenant Applications (4-Stage Approval)
 
 **What this is:**
-When a tenant applies online, it lands in the manager's queue. The manager reviews, approves or rejects, creates the lease, and activates it.
+When a tenant applies online, it lands in the manager's queue. The manager reviews, approves or rejects, creates the rent, and activates it.
 
 **Stage 1 — Review Pending Applications:**
 
@@ -1542,19 +1549,19 @@ When a tenant applies online, it lands in the manager's queue. The manager revie
 
 **Stage 3 — Create the Tenancy:**
 
-- Set lease dates, rent, service charge
+- Set rent dates, rent, service charge
 - Screenshot: `docs/screenshots/manager_review_03_create_tenancy.png`
 
 ![Manager Review 03 Create Tenancy](screenshots/manager_review_03_create_tenancy.png)
 
-**Stage 4 — Activate the Lease:**
+**Stage 4 — Activate the Rent:**
 
-- Each side signs by typing a full legal name on the tenancy record (manager) and on the tenant dashboard (tenant). The lease is Fully Executed once both have signed. **Activate Lease** starts the tenancy; the tenant can still sign after activation, and the signature card stays on their dashboard until they do.
-- Screenshot: `docs/screenshots/manager_review_04_activate_lease.png`
+- Each side signs by typing a full legal name on the tenancy record (manager) and on the tenant dashboard (tenant). The rent is Fully Executed once both have signed. **Activate Rent** starts the tenancy; the tenant can still sign after activation, and the signature card stays on their dashboard until they do.
+- Screenshot: `docs/screenshots/manager_review_04_activate_rent.png`
 
-![Manager Review 04 Activate Lease](screenshots/manager_review_04_activate_lease.png)
+![Manager Review 04 Activate Rent](screenshots/manager_review_04_activate_rent.png)
 
-> **Cross-reference:** Tenant signs the lease → Section 2, Step 2.2
+> **Cross-reference:** Tenant signs the rent → Section 2, Step 2.2
 
 ---
 
@@ -1718,12 +1725,12 @@ Three more tools on the property page keep day-to-day records in one place.
 ## Step 4.13 — The Tenant Record
 
 **What this is:**
-View Tenant on a unit opens the full record for that tenant and lease.
+View Tenant on a unit opens the full record for that tenant and rent.
 
 **Key points:**
 
-- Lease information with Terminate, Renew and Send Notice, plus late fee and grace period settings.
-- Lease agreement signature: the tenant and the manager each sign by typing their full legal name.
+- Rent information with Terminate, Renew and Send Notice, plus late fee and grace period settings.
+- Rent agreement signature: the tenant and the manager each sign by typing their full legal name.
 - Violations and condition reports (move-in and move-out), payment history, maintenance requests and manager notes.
 - Quick actions: call, message, email, WhatsApp, send an invoice or record a cash or transfer payment. Payment Reliability summarises how the tenant pays.
 
@@ -1973,7 +1980,7 @@ A listing at the same address and city as another live listing shows a **Possibl
 
 - **Automated Fingerprinting:** Each listing gets an automatic `listingHash` (SHA-256 of lowercase address & city, punctuation and spaces stripped; `lib/propertyFingerprint.ts`), recomputed whenever the address changes.
 - **Duplicate Badge:** If a new or updated listing matches an existing property, a **Possible duplicate** badge appears in the table.
-- **Merge Duplicates Dialog:** Admins can click **Merge** on flagged listings to open `MergeDuplicateModal.tsx`. The admin confirms the primary listing and the duplicate to merge. When merged (`POST /api/v1/properties/[id]/merge`), units, active leases, and applications are consolidated into the primary listing, `Property.mergedIntoId` is set, the duplicate is hidden from public browse listings, and an audited event (`PROPERTY_MERGE`) is written to the Security Audit Log.
+- **Merge Duplicates Dialog:** Admins can click **Merge** on flagged listings to open `MergeDuplicateModal.tsx`. The admin confirms the primary listing and the duplicate to merge. When merged (`POST /api/v1/properties/[id]/merge`), units, active rents, and applications are consolidated into the primary listing, `Property.mergedIntoId` is set, the duplicate is hidden from public browse listings, and an audited event (`PROPERTY_MERGE`) is written to the Security Audit Log.
 - **Merged Tab & Undo Merge:** A dedicated **Merged** filter tab on `/admin/properties` lists all merged properties. Admins can click **Undo Merge** (`POST /api/v1/properties/[id]/unmerge`) at any time to restore the listing, clearing `mergedIntoId` and logging a `PROPERTY_UNMERGE` audit event.
 
 ---
@@ -2016,7 +2023,7 @@ A chronological log of significant actions on the platform — used for security
 **What this is:**
 System-wide configuration — feature toggles, payment settings, email template configuration.
 
-It has six settings (four switches, then two for charging and deletion):
+It has seven settings (four switches, two for charging and deletion, then a daily limit on invitations):
 
 - **Auto-complete maintenance jobs on invoice** — a vendor's invoice closes the job.
 - **Ask tenants to confirm finished repairs** — on by default. Turning it off stops new questions; repairs already waiting for an answer can still be answered.
@@ -2024,6 +2031,7 @@ It has six settings (four switches, then two for charging and deletion):
 - **Second person confirms what is paid to a vendor** — the same rule for a payment to a vendor that the team records by hand from the repair's Cost Tracking card. Paying a vendor by card is not affected.
 - **Charge auto-pay tenants automatically** — off by default. It charges real cards on the daily run, so it asks once more before turning on, and the deployment must also allow it (the screen says when it does not).
 - **Delete identity documents when kept long enough** — off by default, and permanent. Two periods sit beside it: days after a tenancy ends (365 unless changed) and days after a rejected application (90); the shortest accepted are 30 and 7 days. Also asks once more, and needs the deployment to allow it.
+- **Tenant invitations per day** — how many people with no account one manager or landlord may invite by starting a rent for their email address (10 unless changed; 0 stops them; 200 at most). It also needs an admin-approved listing. Admins are not limited. Someone who already has an account is not counted.
 
 **Screenshot:** `docs/screenshots/admin_04_settings.png`
 
@@ -2041,6 +2049,7 @@ Properties and Moderation is where every listing is reviewed before it goes publ
 - Filter chips: All, Pending Review, Approved, Rejected, Flagged and Merged, plus search by name, address or owner.
 - Switch between Cards and Table. Each listing carries badges for status, visibility and Possible duplicate.
 - Review opens a side drawer with owner and manager contacts, units, a moderation notes box and the approve, reject, flag or unpublish actions.
+- Units a manager or landlord adds wait for you: the public cannot see, apply for or book a viewing of a unit until you approve it (approve the listing, or approve the unit in the drawer). They cannot clear the waiting marker themselves.
 - Staged edits from managers appear under Pending Review too, marked as edited. Open the drawer to see the proposed changes and press Approve Edits to apply them to the live listing.
 
 **Screenshots:**
@@ -2109,7 +2118,7 @@ Tiles on the admin overview open breakdown pages for users, properties, transact
 
 ---
 
-# 🔀 CROSS-ROLE LIFECYCLE: FULL TENANT APPLICATION → ACTIVE LEASE
+# 🔀 CROSS-ROLE LIFECYCLE: FULL TENANT APPLICATION → ACTIVE RENT
 
 This shows how all roles work together in sequence for the platform's most important workflow.
 
@@ -2123,10 +2132,10 @@ TENANT                          MANAGER                         SYSTEM
   ├─ Submits application ────────► ├─ Reviews application          │
   │                                ├─ Approves / Rejects           │
   │  ◄── Notification ────────────┤                               │
-  │                                ├─ Creates lease agreement      │
+  │                                ├─ Creates rent agreement      │
   │                                │                               ├─ Sends e-sign to both
-  ├─ Signs lease digitally         │                               │
-  │ ──────────────────────────────►│                               ├─ Lease → ACTIVE
+  ├─ Signs rent digitally         │                               │
+  │ ──────────────────────────────►│                               ├─ Rent → ACTIVE
   │                                │                               │
   │  ◄── Rent invoice ─────────────┼───────────────────────────────┤ (monthly auto-generated)
   ├─ Pays rent via Paystack        │                               │

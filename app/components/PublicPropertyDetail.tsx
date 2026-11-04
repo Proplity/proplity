@@ -21,6 +21,7 @@ import {
 import { useProperty, useProperties } from '@/hooks/useProperties';
 import { useAuth } from '@/context/AuthContext';
 import { subscriptionsEnabled } from '@/lib/subscriptions';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface PublicPropertyDetailProps {
   propertyId: string;
@@ -459,7 +460,7 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
                 <span className="text-2xl font-extrabold text-gray-900">{monthly}</span>
                 <span className="text-sm text-gray-500"> /month</span>
                 <p className="mt-0.5 text-xs text-gray-400">
-                  {priceLabel}/{freq.toLowerCase()}
+                  {priceLabel}/{perFrequency(freq)}
                 </p>
               </div>
 
@@ -495,7 +496,7 @@ export function PublicPropertyDetail({ propertyId, hideNav = false }: PublicProp
               <div className="mb-4 rounded-xl bg-gray-50 p-3 text-center text-xs text-gray-500">
                 {checkIn && checkOut ? (
                   <span className="font-semibold text-gray-800">
-                    Estimated: {priceLabel}/{freq.toLowerCase()}
+                    Estimated: {priceLabel}/{perFrequency(freq)}
                   </span>
                 ) : (
                   'Select dates to calculate total'

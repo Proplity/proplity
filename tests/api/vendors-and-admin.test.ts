@@ -7,7 +7,7 @@ import {
   createUnit,
   createMaintenanceRequest,
   createAccessCode,
-  createLease,
+  createRent,
   createInvoice,
 } from '../helpers/fixtures';
 import { authCookie } from '../helpers/auth';
@@ -194,10 +194,10 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, { status: 'ACTIVE' });
+    const rent = await createRent(unit.id, tenant.id, { status: 'ACTIVE' });
 
     const dueDate = new Date(Date.now() - 10 * 86400000);
-    const invoice = await createInvoice({ leaseId: lease.id, dueDate, status: 'PAID' });
+    const invoice = await createInvoice({ rentId: rent.id, dueDate, status: 'PAID' });
 
     // Inserted deliberately out of chronological order: the LATE payment
     // first, the genuinely-on-time one second. Without an explicit
@@ -225,25 +225,25 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     });
     expect(res.status).toBe(200);
 
-    const updated = await testPrisma.lease.findUnique({ where: { id: lease.id } });
+    const updated = await testPrisma.rent.findUnique({ where: { id: rent.id } });
     // The chronologically-first payment (paidAt before dueDate) was on time,
-    // so this lease's only invoice counts as on-time -> EXCELLENT/LOW, not
+    // so this rent's only invoice counts as on-time -> EXCELLENT/LOW, not
     // FAIR/MEDIUM-or-worse as a late-counted misread would produce.
     expect(updated?.paymentReliability).toBe('EXCELLENT');
     expect(updated?.riskScore).toBe('LOW');
   });
 
-  it('overdue-flagger respects Lease.gracePeriodDays -- not overdue, no reminder, no late fee, while still within grace', async () => {
+  it('overdue-flagger respects Rent.gracePeriodDays -- not overdue, no reminder, no late fee, while still within grace', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, {
+    const rent = await createRent(unit.id, tenant.id, {
       gracePeriodDays: 10,
       lateFeePercentage: 5,
     });
     // Due 3 days ago -- past dueDate, but well within a 10-day grace period.
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       type: 'RENT',
       amount: 100_000,
       dueDate: new Date(Date.now() - 3 * 86400000),
@@ -262,7 +262,7 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(stillUnpaid?.status).toBe('UNPAID');
 
     const lateFee = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     expect(lateFee).toBeNull();
   });
@@ -271,13 +271,13 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, {
+    const rent = await createRent(unit.id, tenant.id, {
       gracePeriodDays: 2,
       lateFeePercentage: 5,
     });
     // Due 5 days ago, 2-day grace -- 3 days genuinely overdue.
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       type: 'RENT',
       amount: 200_000,
       dueDate: new Date(Date.now() - 5 * 86400000),
@@ -302,7 +302,7 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(reminder).not.toBeNull();
 
     const lateFee = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     expect(lateFee).not.toBeNull();
     expect(lateFee?.amount).toBe(10_000); // 5% of 200,000
@@ -321,13 +321,13 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     });
     expect(reminderCount).toBe(1);
     const lateFeeCount = await testPrisma.invoice.count({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     expect(lateFeeCount).toBe(1);
 
     // The late fee invoice itself must never compound into a second late fee.
     const lateFeeInvoice = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     const lateFeeOfLateFee = await testPrisma.invoice.findFirst({
       where: {
@@ -338,16 +338,16 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(lateFeeOfLateFee).toBeNull();
   });
 
-  it('overdue-flagger never charges a late fee on a non-RENT invoice, even when lease-tied and past grace', async () => {
+  it('overdue-flagger never charges a late fee on a non-RENT invoice, even when rent-tied and past grace', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
-    const lease = await createLease(unit.id, tenant.id, {
+    const rent = await createRent(unit.id, tenant.id, {
       gracePeriodDays: 0,
       lateFeePercentage: 5,
     });
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       type: 'SECURITY_DEPOSIT',
       amount: 500_000,
       dueDate: new Date(Date.now() - 86400000),
@@ -364,25 +364,25 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(flagged?.status).toBe('OVERDUE');
 
     const lateFee = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     expect(lateFee).toBeNull();
   });
 
-  it('overdue-flagger uses the exact flat amount for a FIXED-type lease, ignoring lateFeePercentage entirely', async () => {
+  it('overdue-flagger uses the exact flat amount for a FIXED-type rent, ignoring lateFeePercentage entirely', async () => {
     const property = await createProperty();
     const unit = await createUnit(property.id);
     const tenant = await createUser(Role.TENANT);
     // lateFeePercentage is set too, to prove FIXED mode ignores it rather
     // than stacking both -- landlord/manager picks exactly one mode.
-    const lease = await createLease(unit.id, tenant.id, {
+    const rent = await createRent(unit.id, tenant.id, {
       gracePeriodDays: 0,
       lateFeeType: 'FIXED',
       lateFeeFlatAmount: 15_000,
       lateFeePercentage: 50,
     });
     const invoice = await createInvoice({
-      leaseId: lease.id,
+      rentId: rent.id,
       type: 'RENT',
       amount: 200_000,
       dueDate: new Date(Date.now() - 86400000),
@@ -397,7 +397,7 @@ describe('cron: POST /cron/[job] (CRON_SECRET guard)', () => {
     expect(res.body.result.lateFeesCreated).toBe(1);
 
     const lateFee = await testPrisma.invoice.findFirst({
-      where: { type: 'LATE_FEE', leaseId: lease.id },
+      where: { type: 'LATE_FEE', rentId: rent.id },
     });
     expect(lateFee).not.toBeNull();
     expect(lateFee?.amount).toBe(15_000);
@@ -427,7 +427,7 @@ describe('admin: suspend, reactivate and change role (ISS-054)', () => {
       },
     });
 
-    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+    expect((await apiFetch('/api/v1/rents', { cookie: tenantCookie })).status).toBe(200);
 
     const res = await patch(adminCookie, tenant.id, {
       status: 'SUSPENDED',
@@ -437,7 +437,7 @@ describe('admin: suspend, reactivate and change role (ISS-054)', () => {
     expect(res.body.data.status).toBe('SUSPENDED');
 
     // The still-valid access token stops working immediately.
-    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(403);
+    expect((await apiFetch('/api/v1/rents', { cookie: tenantCookie })).status).toBe(403);
     const token = await testPrisma.refreshToken.findUnique({
       where: { tokenHash: `h-${tenant.id}` },
     });
@@ -449,7 +449,7 @@ describe('admin: suspend, reactivate and change role (ISS-054)', () => {
 
     const back = await patch(adminCookie, tenant.id, { status: 'ACTIVE', reason: 'Resolved' });
     expect(back.status).toBe(200);
-    expect((await apiFetch('/api/v1/leases', { cookie: tenantCookie })).status).toBe(200);
+    expect((await apiFetch('/api/v1/rents', { cookie: tenantCookie })).status).toBe(200);
   });
 
   it('protects admins and the caller, and needs a reason', async () => {

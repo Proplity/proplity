@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/db';
 import { RETENTION_LIMITS } from '@/lib/retentionLimits';
+import { INVITE_LIMITS } from '@/lib/inviteLimits';
+import { DOWNGRADE_GRACE_DAYS } from '@/lib/billingOptions';
+import { WITNESS_LINK_DAYS } from '@/lib/agreementWitness';
+import { AUTO_RENEWAL_DAYS, REMINDER_DAYS, UNSIGNED_REMINDER_DAYS } from '@/lib/renewalOptions';
 
 export { RETENTION_LIMITS };
 
@@ -21,6 +25,35 @@ export async function getSystemSettings() {
       settings?.retentionAfterTenancyDays ?? RETENTION_LIMITS.tenancyDays.default,
     retentionAfterRejectionDays:
       settings?.retentionAfterRejectionDays ?? RETENTION_LIMITS.rejectionDays.default,
+    tenantInvitesPerDay: settings?.tenantInvitesPerDay ?? INVITE_LIMITS.perDay.default,
+    inviteTenantsToManagementOnly: settings?.inviteTenantsToManagementOnly ?? true,
+    enforcePlanLimits: settings?.enforcePlanLimits ?? false,
+    unitBillingOwner: settings?.unitBillingOwner ?? 'MANAGER_ELSE_LANDLORD',
+    overageMode: settings?.overageMode ?? 'ALLOW_AND_BILL',
+    downgradeRule: settings?.downgradeRule ?? 'BLOCK',
+    downgradeGraceDays: settings?.downgradeGraceDays ?? DOWNGRADE_GRACE_DAYS.default,
+    teamMemberAccess: settings?.teamMemberAccess ?? 'ASSIGNED_ONLY',
+    agreementTemplatesNeedApproval: settings?.agreementTemplatesNeedApproval ?? true,
+    agreementLandlordNameByManager: settings?.agreementLandlordNameByManager ?? true,
+    agreementAgencyFee: settings?.agreementAgencyFee ?? true,
+    agreementLegalFee: settings?.agreementLegalFee ?? true,
+    agreementCautionFee: settings?.agreementCautionFee ?? true,
+    rentActivationRule: settings?.rentActivationRule ?? 'INDEPENDENT',
+    chargeForAgreements: settings?.chargeForAgreements ?? false,
+    chargeForUploads: settings?.chargeForUploads ?? false,
+    creditPurchaseEnabled: settings?.creditPurchaseEnabled ?? true,
+    witnessEsignEnabled: settings?.witnessEsignEnabled ?? true,
+    witnessLinkDays: settings?.witnessLinkDays ?? WITNESS_LINK_DAYS.default,
+    witnessesMustSign: settings?.witnessesMustSign ?? false,
+    stampDutyPaymentEnabled: settings?.stampDutyPaymentEnabled ?? false,
+    stampDutyServiceFee: settings?.stampDutyServiceFee ?? 0,
+    agreementRenewalEnabled: settings?.agreementRenewalEnabled ?? true,
+    agreementRemindersEnabled: settings?.agreementRemindersEnabled ?? true,
+    renewalReminderDays: settings?.renewalReminderDays ?? [...REMINDER_DAYS.default],
+    agreementUnsignedReminderDays:
+      settings?.agreementUnsignedReminderDays ?? UNSIGNED_REMINDER_DAYS.default,
+    autoRenewalEnabled: settings?.autoRenewalEnabled ?? false,
+    autoRenewalDaysBefore: settings?.autoRenewalDaysBefore ?? AUTO_RENEWAL_DAYS.default,
   };
 }
 

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api/withAuth';
 import { handleApiError } from '@/lib/api/errors';
 import { validateBody } from '@/lib/api/validate';
-import { canManageProperty } from '@/lib/api/propertyAccess';
+import { canManageProperty, PUBLIC_PROPERTY } from '@/lib/api/propertyAccess';
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -15,7 +15,7 @@ function loadApplication(id: string) {
     include: {
       applicant: { select: { id: true, name: true, email: true, phoneNumber: true } },
       reviewedBy: { select: { id: true, name: true } },
-      unit: { include: { property: true } },
+      unit: { include: { property: PUBLIC_PROPERTY } },
     },
   });
 }
@@ -64,8 +64,10 @@ export const PATCH = withAuth(
       const validated = await validateBody(req, patchSchema);
       if (!validated.success) return validated.response;
 
-      const updated = await prisma.application.update({
-        where: { id },
+      // Claimed while still PENDING, so two reviewers deciding at once cannot both win and both
+      // tell the applicant (ISS-150).
+      const claimed = await prisma.application.updateMany({
+        where: { id, status: 'PENDING' },
         data: {
           status: validated.data.status,
           reviewNotes: validated.data.reviewNotes,
@@ -73,6 +75,13 @@ export const PATCH = withAuth(
           reviewedAt: new Date(),
         },
       });
+      if (claimed.count === 0) {
+        return NextResponse.json(
+          { error: 'This application has already been reviewed' },
+          { status: 409 },
+        );
+      }
+      const updated = await prisma.application.findUniqueOrThrow({ where: { id } });
 
       // The applicant was left guessing (ISS-046): tell them the outcome in
       // the app and by email.

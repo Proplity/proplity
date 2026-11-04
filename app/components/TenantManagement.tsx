@@ -9,12 +9,16 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
+  Send,
+  Loader2,
 } from 'lucide-react';
-import { useLeases } from '@/hooks/useLeases';
+import { useRents } from '@/hooks/useRents';
 import { useInvoices } from '@/hooks/useInvoices';
 import { toast } from 'sonner';
-import type { Invoice } from '@/lib/api/types';
+import { api } from '@/lib/apiClient';
+import type { Invoice, InvitationState } from '@/lib/api/types';
 import type { Page } from '@/app/dashboard/navigateToPage';
+import { perFrequency } from '@/lib/paymentFrequency';
 
 interface TenantManagementProps {
   onNavigate: (page: Page) => void;
@@ -29,42 +33,95 @@ const AVATAR_COLORS = [
   'bg-teal-500',
 ];
 
-// No stored "rent status" field exists on Lease -- derived from its RENT
+// No stored "rent status" field exists on Rent -- derived from its RENT
 // invoices the same way TenantPaymentHistory derives payment status
 // (Phase 9.2): the earliest still-unpaid invoice decides due/overdue/paid.
-function rentInfo(leaseId: string, invoices: Invoice[]) {
+function paymentInfo(rentId: string, invoices: Invoice[]) {
   const unpaid = invoices
-    .filter((i) => i.leaseId === leaseId && i.status !== 'PAID' && i.status !== 'CANCELLED')
+    .filter((i) => i.rentId === rentId && i.status !== 'PAID' && i.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   if (unpaid.length === 0) return { status: 'paid' as const, nextDue: null as string | null };
   const overdue = new Date(unpaid[0].dueDate) < new Date();
   return { status: (overdue ? 'overdue' : 'due') as 'overdue' | 'due', nextDue: unpaid[0].dueDate };
 }
 
+// Where a tenant is in joining. Only the states that still need something from the property team
+// are shown on a row; a tenant who has joined needs no badge.
+const INVITATION_BADGE: Record<
+  Exclude<InvitationState, 'JOINED'>,
+  { label: string; cls: string }
+> = {
+  NOT_SENT: { label: 'Not invited yet', cls: 'bg-gray-100 text-gray-700' },
+  INVITED: { label: 'Invited', cls: 'bg-blue-100 text-blue-700' },
+  EXPIRED: { label: 'Invitation expired', cls: 'bg-amber-100 text-amber-800' },
+};
+
 export function TenantManagement({ onNavigate }: TenantManagementProps) {
-  const { data: leases, loading, error } = useLeases();
+  const { data: rents, loading, error, refetch } = useRents();
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const { data: invoices } = useInvoices({ type: 'RENT' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  const rows = leases.map((lease) => ({ lease, rent: rentInfo(lease.id, invoices) }));
+  const rows = rents.map((rent) => ({ rent, payment: paymentInfo(rent.id, invoices) }));
+  // Tenants who still need an email (never sent, or the link ran out), one per person.
+  const needInvitation = new Set(
+    rents
+      .filter((r) => r.invitation === 'NOT_SENT' || r.invitation === 'EXPIRED')
+      .map((r) => r.tenantId),
+  ).size;
+
+  const apiMessage = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? fallback;
+
+  const sendOne = async (rentId: string) => {
+    setSendingId(rentId);
+    try {
+      await api.rents.invite(rentId);
+      toast.success('Invitation sent.');
+      await refetch();
+    } catch (err) {
+      toast.error(apiMessage(err, 'Could not send the invitation.'));
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const sendAll = async () => {
+    setSendingAll(true);
+    try {
+      const { sent, stillWaiting, limitReached, dailyLimit } = (await api.rents.inviteAll()).data
+        .data;
+      toast.success(
+        stillWaiting > 0
+          ? `Sent ${sent}. ${stillWaiting} still waiting${limitReached ? ` (today's limit is ${dailyLimit})` : ''}; try again tomorrow.`
+          : `Sent ${sent}. Everyone has been invited.`,
+      );
+      await refetch();
+    } catch (err) {
+      toast.error(apiMessage(err, 'Could not send the invitations.'));
+    } finally {
+      setSendingAll(false);
+    }
+  };
 
   const statusFilters = [
     { id: 'all', label: 'All Tenants', count: rows.length },
-    { id: 'paid', label: 'Paid', count: rows.filter((r) => r.rent.status === 'paid').length },
-    { id: 'due', label: 'Due Soon', count: rows.filter((r) => r.rent.status === 'due').length },
+    { id: 'paid', label: 'Paid', count: rows.filter((r) => r.payment.status === 'paid').length },
+    { id: 'due', label: 'Due Soon', count: rows.filter((r) => r.payment.status === 'due').length },
     {
       id: 'overdue',
       label: 'Overdue',
-      count: rows.filter((r) => r.rent.status === 'overdue').length,
+      count: rows.filter((r) => r.payment.status === 'overdue').length,
     },
   ];
 
-  const filteredRows = rows.filter(({ lease, rent }) => {
+  const filteredRows = rows.filter(({ rent, payment }) => {
     const matchesSearch =
-      (lease.tenant?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
-      (lease.unit?.property?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || rent.status === selectedStatus;
+      (rent.tenant?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
+      (rent.unit?.property?.name.toLowerCase() ?? '').includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || payment.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -82,6 +139,29 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
           + Add Tenant
         </button>
       </div>
+
+      {needInvitation > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm text-blue-900">
+            {needInvitation} {needInvitation === 1 ? 'tenant has' : 'tenants have'} not been invited
+            yet or {needInvitation === 1 ? 'has' : 'have'} an expired invitation. An invitation lets
+            them set a password, sign in and complete their profile.
+          </p>
+          <button
+            type="button"
+            onClick={sendAll}
+            disabled={sendingAll}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {sendingAll ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Send invitations
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="flex gap-4">
@@ -147,10 +227,10 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredRows.map(({ lease, rent }, index) => (
+              {filteredRows.map(({ rent, payment }, index) => (
                 <tr
-                  key={lease.id}
-                  onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
+                  key={rent.id}
+                  onClick={() => onNavigate({ type: 'tenant-detail', rentId: rent.id })}
                   className="cursor-pointer transition-colors hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -158,77 +238,84 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                       <div
                         className={`h-10 w-10 ${AVATAR_COLORS[index % AVATAR_COLORS.length]} flex items-center justify-center rounded-full font-semibold text-white`}
                       >
-                        {(lease.tenant?.name ?? '?').charAt(0)}
+                        {(rent.tenant?.name ?? '?').charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium">{lease.tenant?.name ?? 'Unknown tenant'}</p>
+                        <p className="font-medium">{rent.tenant?.name ?? 'Unknown tenant'}</p>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                           <Mail className="h-3 w-3" />
-                          {lease.tenant?.email ?? '—'}
+                          {rent.tenant?.email ?? '—'}
                         </div>
+                        {rent.invitation && rent.invitation !== 'JOINED' && (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${INVITATION_BADGE[rent.invitation].cls}`}
+                          >
+                            {INVITATION_BADGE[rent.invitation].label}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm text-gray-600">
                       <MapPin className="h-4 w-4" />
-                      {lease.unit?.property?.name ?? '—'}
+                      {rent.unit?.property?.name ?? '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4 text-gray-400" />
-                      <span className="font-semibold">₦{lease.rentAmount.toLocaleString()}</span>
+                      <span className="font-semibold">₦{rent.rentAmount.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-gray-500">/{lease.paymentFrequency.toLowerCase()}</p>
+                    <p className="text-xs text-gray-500">/{perFrequency(rent.paymentFrequency)}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        rent.status === 'paid'
+                        payment.status === 'paid'
                           ? 'bg-green-100 text-green-700'
-                          : rent.status === 'due'
+                          : payment.status === 'due'
                             ? 'bg-yellow-100 text-yellow-700'
                             : 'bg-red-100 text-red-700'
                       }`}
                     >
-                      {rent.status === 'paid' ? (
+                      {payment.status === 'paid' ? (
                         <CheckCircle className="mr-1 inline h-3 w-3" />
                       ) : (
                         <AlertCircle className="mr-1 inline h-3 w-3" />
                       )}
-                      {rent.status.toUpperCase()}
+                      {payment.status.toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm">
                       <Calendar className="h-4 w-4 text-gray-400" />
-                      {rent.nextDue ? new Date(rent.nextDue).toLocaleDateString() : '—'}
+                      {payment.nextDue ? new Date(payment.nextDue).toLocaleDateString() : '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        lease.riskScore === 'LOW'
+                        rent.riskScore === 'LOW'
                           ? 'bg-green-100 text-green-700'
-                          : lease.riskScore === 'MEDIUM'
+                          : rent.riskScore === 'MEDIUM'
                             ? 'bg-yellow-100 text-yellow-700'
-                            : lease.riskScore === 'HIGH'
+                            : rent.riskScore === 'HIGH'
                               ? 'bg-red-100 text-red-700'
                               : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {lease.riskScore ?? 'UNSCORED'}
+                      {rent.riskScore ?? 'UNSCORED'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <a
                         href={
-                          lease.tenant?.phoneNumber ? `tel:${lease.tenant.phoneNumber}` : undefined
+                          rent.tenant?.phoneNumber ? `tel:${rent.tenant.phoneNumber}` : undefined
                         }
                         onClick={(e) => {
-                          if (!lease.tenant?.phoneNumber) {
+                          if (!rent.tenant?.phoneNumber) {
                             e.preventDefault();
                             toast.error('No phone number on file for this tenant.');
                           }
@@ -239,14 +326,34 @@ export function TenantManagement({ onNavigate }: TenantManagementProps) {
                         <Phone className="h-4 w-4 text-gray-600" />
                       </a>
                       <a
-                        href={lease.tenant?.email ? `mailto:${lease.tenant.email}` : undefined}
+                        href={rent.tenant?.email ? `mailto:${rent.tenant.email}` : undefined}
                         className="rounded p-2 hover:bg-gray-100 sm:p-1"
                         title="Email tenant"
                       >
                         <Mail className="h-4 w-4 text-gray-600" />
                       </a>
+                      {rent.invitation && rent.invitation !== 'JOINED' && (
+                        <button
+                          type="button"
+                          onClick={() => sendOne(rent.id)}
+                          disabled={sendingId === rent.id}
+                          className="rounded p-2 hover:bg-gray-100 disabled:opacity-50 sm:p-1"
+                          title={
+                            rent.invitation === 'INVITED'
+                              ? 'Send the invitation again'
+                              : 'Send invitation'
+                          }
+                          aria-label={`${rent.invitation === 'INVITED' ? 'Resend' : 'Send'} invitation to ${rent.tenant?.name ?? 'tenant'}`}
+                        >
+                          {sendingId === rent.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+                          ) : (
+                            <Send className="h-4 w-4 text-gray-600" />
+                          )}
+                        </button>
+                      )}
                       <button
-                        onClick={() => onNavigate({ type: 'tenant-detail', leaseId: lease.id })}
+                        onClick={() => onNavigate({ type: 'tenant-detail', rentId: rent.id })}
                         className="rounded p-2 hover:bg-gray-100 sm:p-1"
                         title="View details"
                       >

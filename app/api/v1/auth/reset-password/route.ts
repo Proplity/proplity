@@ -5,10 +5,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { validateBody } from '@/lib/api/validate';
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from '@/lib/passwordPolicy';
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(6),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT),
 });
 
 // Deliberately NOT wrapped in validateCSRF, same rule as verify-email

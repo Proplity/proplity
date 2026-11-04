@@ -38,9 +38,9 @@ export function LandlordFeaturePage() {
     },
     {
       icon: FileText,
-      title: 'Lease Document Access',
+      title: 'Rent Document Access',
       description:
-        'Store, access, and manage all lease agreements digitally. Get notified on upcoming renewals and flag anomalies automatically.',
+        'Store, access, and manage all rent agreements digitally. Get notified on upcoming renewals and flag anomalies automatically.',
     },
     {
       icon: Shield,
