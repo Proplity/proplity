@@ -121,17 +121,28 @@ export async function releaseAttempt(attemptId: string | null): Promise<void> {
   await prisma.loginAttempt.delete({ where: { id: attemptId } }).catch(() => {});
 }
 
-// X-Forwarded-For is a chain of "client, proxy1, proxy2, ..." where each
-// hop APPENDS the IP it observed to whatever it received -- so the FIRST
-// entry is whatever the original client sent (arbitrary, attacker-supplied,
-// trivially spoofed) and the LAST entry is whatever the closest trusted
-// proxy actually saw on its own connection. Previously took [0] (the
-// spoofable end), making every per-IP rate limit bypassable by sending a
-// fake X-Forwarded-For. Deployed behind exactly one trusted hop (Vercel's
-// edge network, per .env's pooled-connection comments) -- the last entry
-// is the one that hop appended, and is the one to trust.
+// The caller's address, used as the rate-limit key and stored as `signedIp` on signatures.
+//
+// On Vercel, `x-vercel-forwarded-for` is set by Vercel's edge from the connection it actually
+// accepted, so it is the most reliable source and is read first. Only on Vercel (`VERCEL` is set
+// by its runtime): anywhere else a client could send that header itself, so it is ignored.
+//
+// Otherwise X-Forwarded-For is a chain of "client, proxy1, proxy2, ..." where each hop APPENDS
+// the IP it observed to whatever it received -- so the FIRST entry is whatever the original
+// client sent (arbitrary, attacker-supplied, trivially spoofed) and the LAST entry is whatever the
+// closest trusted proxy actually saw on its own connection. Previously took [0] (the spoofable
+// end), making every per-IP rate limit bypassable by sending a fake X-Forwarded-For. Correct
+// behind exactly one trusted hop. If another proxy or CDN (Cloudflare, say) is put in front of
+// Vercel, Vercel sees that proxy's address as the client, and every user would share a few
+// addresses: this function would then need that proxy's own header (see DEPLOYMENT.md).
 export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
-  const raw = req.headers.get('x-forwarded-for') ?? '127.0.0.1';
-  const hops = raw.split(',').map((h) => h.trim());
-  return hops[hops.length - 1];
+  const last = (raw: string) => {
+    const hops = raw.split(',').map((h) => h.trim());
+    return hops[hops.length - 1];
+  };
+  if (process.env.VERCEL) {
+    const vercel = req.headers.get('x-vercel-forwarded-for');
+    if (vercel && vercel.trim()) return last(vercel);
+  }
+  return last(req.headers.get('x-forwarded-for') ?? '127.0.0.1');
 }

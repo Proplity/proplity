@@ -52,4 +52,39 @@ describe('rateLimit helpers', () => {
     };
     expect(getClientIp(noHeader)).toBe('127.0.0.1');
   });
+
+  describe('on Vercel', () => {
+    const req = (headers: Record<string, string>) => ({
+      headers: { get: (h: string) => headers[h.toLowerCase()] ?? null },
+    });
+
+    it('prefers x-vercel-forwarded-for, which Vercel sets itself, over the forwarded chain', () => {
+      process.env.VERCEL = '1';
+      expect(
+        getClientIp(
+          req({
+            'x-vercel-forwarded-for': '203.0.113.9',
+            'x-forwarded-for': '6.6.6.6, 198.51.100.1',
+          }),
+        ),
+      ).toBe('203.0.113.9');
+    });
+
+    it('falls back to the last forwarded hop when the Vercel header is missing', () => {
+      process.env.VERCEL = '1';
+      expect(getClientIp(req({ 'x-forwarded-for': '6.6.6.6, 198.51.100.1' }))).toBe('198.51.100.1');
+    });
+
+    it('ignores the Vercel header off Vercel, where a client could send it itself', () => {
+      delete process.env.VERCEL;
+      expect(
+        getClientIp(
+          req({
+            'x-vercel-forwarded-for': '6.6.6.6',
+            'x-forwarded-for': '10.0.0.1, 203.0.113.50',
+          }),
+        ),
+      ).toBe('203.0.113.50');
+    });
+  });
 });

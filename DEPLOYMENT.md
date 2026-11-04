@@ -306,10 +306,15 @@ should expect from a live system.
   upload UI shows "not available" and nothing is stored.
 - **Rate limiting is DB-backed** (`LoginAttempt`) and atomic (a Postgres
   advisory lock per identifier), so it is correct across serverless
-  instances — no action needed. `getClientIp()` takes the **last**
-  `x-forwarded-for` hop, which is correct behind exactly one trusted proxy
-  (Vercel's edge). If you ever put another proxy/CDN in front, revisit it, or
-  use `x-vercel-forwarded-for`.
+  instances — no action needed. `getClientIp()` reads Vercel's own `x-vercel-forwarded-for` first (only when
+  `VERCEL` is set, so a client cannot supply it elsewhere) and otherwise the
+  **last** `x-forwarded-for` hop, which is correct behind exactly one trusted
+  proxy. **Before go-live, check that the production domain points straight at
+  Vercel** (DNS not proxied through Cloudflare or another CDN). If a CDN is
+  put in front, Vercel sees the CDN's address as the client: every user then
+  shares a few addresses (shared lockouts) and `signedIp` on signatures is
+  wrong. In that case read the CDN's own header (Cloudflare:
+  `cf-connecting-ip`), trusted only when the CDN is really there.
 - **Formatting is a hard CI gate.** The tree was formatted in one pass, so
   `pnpm format:check` now passes and blocks a PR that regresses it. Run
   `pnpm format` before pushing. Note `prettier-plugin-tailwindcss` reorders
