@@ -246,7 +246,10 @@ gh workflow run migrate-production.yml --ref prod -f confirm="migrate production
 `workflow_dispatch`, requires typing `migrate production` into the confirm
 input (the `-f confirm=...` above, or the Actions tab form). Runs `prisma migrate status` before and after `prisma migrate
 deploy` against the `production` Environment, so a bad migration is visible
-immediately rather than discovered later. Gated to the `prod` branch by the
+immediately rather than discovered later. The pre-flight status is informational
+(`continue-on-error`): `migrate status` exits 1 whenever migrations are pending,
+which is the normal state before a deploy and always true on a new database.
+The post-flight status is the one that must be clean. Gated to the `prod` branch by the
 Environment's own deployment-branch policy — the workflow also checks
 `github.ref` itself as a fast, clear failure if that policy is ever loosened.
 
