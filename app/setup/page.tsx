@@ -5,6 +5,7 @@ import { SetupWizardForm } from './SetupWizardForm';
 export const dynamic = 'force-dynamic';
 
 export default async function SetupPage() {
+  let databaseReady = true;
   try {
     const settings = await prisma.systemSettings.findUnique({
       where: { id: 'global' },
@@ -19,11 +20,12 @@ export default async function SetupPage() {
     if ((err as { digest?: string })?.digest?.startsWith('NEXT_REDIRECT')) {
       throw err;
     }
-    // Fail-open on DB connection issues so deployers can still access the wizard
+    // Fail-open on DB connection issues so deployers can still access the wizard, but tell them
+    databaseReady = false;
     console.error('[SETUP_SERVER_CHECK_ERROR]', err);
   }
 
   const requiresToken = Boolean(process.env.SETUP_TOKEN);
 
-  return <SetupWizardForm requiresToken={requiresToken} />;
+  return <SetupWizardForm requiresToken={requiresToken} databaseReady={databaseReady} />;
 }

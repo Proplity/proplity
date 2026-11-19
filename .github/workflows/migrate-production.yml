@@ -2,9 +2,10 @@ name: Deploy migrations to production
 
 # Deliberately NOT triggered by push or merge -- production must not be
 # touched automatically. Run this by hand from the Actions tab (or
-# `gh workflow run migrate-production.yml --ref prod`) only after the
-# migration has been verified against staging (migrate-staging.yml /
-# migration-check.yml) and you are ready for real users to be affected.
+#   gh workflow run migrate-production.yml --ref prod -f confirm="migrate production"
+# ) only after the migration has been verified against staging
+# (migrate-staging.yml / migration-check.yml) and you are ready for real
+# users to be affected.
 #
 # The real gate is the `production` GitHub Environment's deployment-branch
 # policy, restricted server-side to the `prod` branch (Settings ->
@@ -48,7 +49,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Informational only. `prisma migrate status` exits 1 whenever migrations
+      # are pending -- which is the normal, expected state right before a
+      # deploy (and always the case on a brand-new database) -- so it must not
+      # stop the job. A real problem (bad credentials, unreachable database)
+      # still fails the run at `migrate deploy` below.
       - name: prisma migrate status (pre-flight, dry check)
+        continue-on-error: true
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
