@@ -5,7 +5,8 @@ name: Deploy to production
 # it, not chained automatically: migrations must be confirmed healthy
 # (migrate-production.yml's post-flight `prisma migrate status`) before
 # the new application code that expects the new schema goes live. Run
-# migrate-production.yml first, verify it succeeded, then run this one.
+# migrate-production.yml first, verify it succeeded, then run this one:
+#   gh workflow run deploy-production.yml --ref prod -f confirm="deploy production"
 #
 # vercel.json sets git.deploymentEnabled.prod = false so Vercel's own git
 # integration never races this -- GitHub Actions is the only thing that

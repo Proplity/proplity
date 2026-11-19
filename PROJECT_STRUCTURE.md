@@ -18,7 +18,7 @@ graph TD
     NextApi["🛡️ App Router API routes (/api/v1/*, 147 routes)"]
     LibCore["🔑 lib/auth/*, lib/api/*, lib/workers/*, lib/payments/*"]
     PrismaClient["💎 Prisma Client (lib/db.ts)"]
-    Postgres[("🐘 PostgreSQL — 55 models, 13 schema files, 44 migrations")]
+    Postgres[("🐘 PostgreSQL — 55 models, 13 schema files, 1 baseline migration")]
     Cron["⏱️ vercel.json → /api/v1/cron/all (daily) → 11 workers"]
     Ext["☁️ Paystack · Resend · Cloudinary (each optional; app degrades gracefully)"]
     Tests["🧪 Vitest (614 tests) + Playwright (71 tests)"]
@@ -145,7 +145,7 @@ proplity/
 │
 ├── 📁 prisma/
 │   ├── 📁 schema/                           # 12 modular files (base, billing, auth, property, rent, financial, operations, communication, notification, system, audit, storage) — 43 models
-│   ├── 📁 migrations/                       # 44 migrations, latest: 20261025120000_rent_agreements
+│   ├── 📁 migrations/                       # 1 baseline (20261119120000_baseline; the 45 earlier ones were squashed)
 │   ├── 📄 seed.ts, seed2.ts (enriched, used by E2E), mermaid.mermaid
 │
 ├── 📁 docs/                                 # See "Docs map" below
