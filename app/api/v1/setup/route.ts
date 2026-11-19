@@ -33,13 +33,16 @@ export async function GET() {
     return NextResponse.json({
       setupComplete: !!settings?.setupComplete,
       requiresToken: Boolean(process.env.SETUP_TOKEN),
+      databaseReady: true,
     });
   } catch (err) {
     console.error('[SETUP_STATUS_ERROR]', err);
-    // If table doesn't exist yet or connection blip, report setup incomplete so wizard can load
+    // If table doesn't exist yet or connection blip, report setup incomplete so the wizard can
+    // load, but say the database is not ready so it can warn instead of failing on submit.
     return NextResponse.json({
       setupComplete: false,
       requiresToken: Boolean(process.env.SETUP_TOKEN),
+      databaseReady: false,
     });
   }
 }
@@ -66,7 +69,24 @@ export async function POST(req: NextRequest) {
   // comment for why check-then-record separately raced. Released in the
   // `finally` block below on every exit EXCEPT the two paths that counted
   // toward the limit before this fix (bad setup token, duplicate email).
-  const { allowed, attemptId } = await reserveAttempt(identifier);
+  let reservation;
+  try {
+    reservation = await reserveAttempt(identifier);
+  } catch (err) {
+    // Outside the main try below, so a database that is unreachable or has no tables yet (the
+    // migrations were not run) used to escape as an empty 500 and the wizard showed "Unexpected end
+    // of JSON input". Always answer in JSON, and say what is wrong without the database's own text.
+    console.error('[SETUP_DATABASE_ERROR]', err);
+    return NextResponse.json(
+      {
+        error:
+          'The database is not ready. Check DATABASE_URL and that the migrations have been applied (prisma migrate deploy), then try again.',
+        code: 'DATABASE_UNAVAILABLE',
+      },
+      { status: 503 },
+    );
+  }
+  const { allowed, attemptId } = reservation;
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many setup attempts from this IP. Please try again later.' },

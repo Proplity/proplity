@@ -23,9 +23,11 @@ import {
 
 interface SetupWizardFormProps {
   requiresToken: boolean;
+  /** False when the server could not read the database when the page loaded. */
+  databaseReady?: boolean;
 }
 
-export function SetupWizardForm({ requiresToken }: SetupWizardFormProps) {
+export function SetupWizardForm({ requiresToken, databaseReady = true }: SetupWizardFormProps) {
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -98,10 +100,15 @@ export function SetupWizardForm({ requiresToken }: SetupWizardFormProps) {
         }),
       });
 
-      const data = await res.json();
+      // A reply that is not JSON (a platform error page, an empty 500) must not surface as the
+      // browser's "Unexpected end of JSON input".
+      const data: { error?: string } = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to complete setup');
+        throw new Error(
+          data.error ||
+            `The server could not complete setup (status ${res.status}). Check the server logs and that the database migrations have been applied.`,
+        );
       }
 
       setIsCompleted(true);
@@ -194,6 +201,16 @@ export function SetupWizardForm({ requiresToken }: SetupWizardFormProps) {
             wizard will self-disable immediately upon completion.
           </p>
         </div>
+
+        {!databaseReady && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="leading-relaxed">
+              The server could not read its database. Check DATABASE_URL and that the migrations
+              have been applied (prisma migrate deploy) before creating the administrator.
+            </div>
+          </div>
+        )}
 
         {errorMessage && (
           <div className="animate-in fade-in mb-6 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">

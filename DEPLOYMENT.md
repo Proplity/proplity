@@ -223,6 +223,29 @@ spins up itself. `format:check` is a hard gate on the whole tree, so a single
 unformatted file (including a large generated one — `docs/proplity-guide.html`
 is in `.prettierignore` for that reason) fails the PR.
 
+### Migration baseline (2026-11-19)
+
+The 45 incremental migrations were squashed into one baseline,
+`prisma/migrations/20261119120000_baseline`, because production had never been
+migrated. It is the whole schema plus the one thing the Prisma schema cannot
+express (the partial unique index `AutoPayMandate_one_active_per_rent`); a
+database built from it was diffed against one built from the old 45 and is
+identical. A **fresh** database (production, CI, the test database, a new
+laptop) just runs `prisma migrate deploy`.
+
+A database that **already ran the old migrations** now has history the repo no
+longer has, and `migrate deploy` would try to create tables that exist. Fix
+each one once, before the first deploy that contains the baseline:
+
+- **Staging** (Neon): either reset it (it holds no real data) or keep the data
+  and mark the baseline as applied. In the Neon SQL editor run
+  `DELETE FROM "_prisma_migrations";`, then
+  `DIRECT_URL=<staging direct url> pnpm exec prisma migrate resolve --applied 20261119120000_baseline`.
+  Merging to `main` before this makes `migrate-staging.yml` fail.
+- **Local development**: `pnpm exec prisma migrate reset` (drops and reseeds).
+
+From here on, add migrations the usual way (`pnpm db:migrate`).
+
 ### `migrate-staging.yml` — on push to `main`
 
 Automatic. `prisma migrate deploy` against the `staging` Environment's
@@ -239,14 +262,25 @@ environment secrets, the same reason forks cannot run the migration workflows).
 
 ### `migrate-production.yml` — manual only
 
+```bash
+gh workflow run migrate-production.yml --ref prod -f confirm="migrate production"
+```
+
 `workflow_dispatch`, requires typing `migrate production` into the confirm
-input. Runs `prisma migrate status` before and after `prisma migrate
+input (the `-f confirm=...` above, or the Actions tab form). Runs `prisma migrate status` before and after `prisma migrate
 deploy` against the `production` Environment, so a bad migration is visible
-immediately rather than discovered later. Gated to the `prod` branch by the
+immediately rather than discovered later. The pre-flight status is informational
+(`continue-on-error`): `migrate status` exits 1 whenever migrations are pending,
+which is the normal state before a deploy and always true on a new database.
+The post-flight status is the one that must be clean. Gated to the `prod` branch by the
 Environment's own deployment-branch policy — the workflow also checks
 `github.ref` itself as a fast, clear failure if that policy is ever loosened.
 
 ### `deploy-production.yml` — manual only, run after the above
+
+```bash
+gh workflow run deploy-production.yml --ref prod -f confirm="deploy production"
+```
 
 `workflow_dispatch`, requires typing `deploy production`. `vercel build`
 then `vercel deploy --prebuilt --prod`, so the artifact that ships is
