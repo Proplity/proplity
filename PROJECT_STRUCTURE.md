@@ -118,7 +118,7 @@ proplity/
 │
 ├── 📁 lib/
 │   ├── 📄 apiClient.ts                      # Axios + 401 refresh interceptor (single-flight) + typed api.* client
-│   ├── 📄 db.ts, email.ts (Resend or console), cloudinary.ts, uploadClient.ts, fileRef.ts, uploadPolicy.ts, csv.ts, xlsx.ts, utils.ts
+│   ├── 📄 db.ts, email.ts (Resend or console), emailTemplate.ts (branded HTML for every email), cloudinary.ts, uploadClient.ts, fileRef.ts, uploadPolicy.ts, csv.ts, xlsx.ts, utils.ts
 │   ├── 📁 storage/                          # StorageDriver interface, service.ts (StoredFile rules), providers/ (cloudinary, s3-compatible, local, imagekit, vercel-blob)
 │   ├── 📄 notifications.ts, notificationSound.ts, subscriptions.ts, systemSettings.ts, setup.ts, appUrl.ts, safeRedirect.ts
 │   ├── 📄 tenantProfile.ts                  # isTenantProfileComplete() — the profile-gate rule
