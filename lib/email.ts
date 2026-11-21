@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { renderEmailHtml } from '@/lib/emailTemplate';
 
 // Off by default, same pattern as subscriptionsEnabled()/setupRedirectEnabled()
 // -- a real deployment never sets this. It gates both whether sendEmail()
@@ -99,6 +100,7 @@ export async function sendEmail({
         to,
         subject,
         text: body,
+        html: renderEmailHtml({ subject, body }),
         ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
