@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { AdminDashboard } from '../components/AdminDashboard';
-import { navigateToPage } from '../dashboard/navigateToPage';
+import { AdminDashboard } from '@/app/components/AdminDashboard';
+import { navigateToPage } from '@/app/dashboard/navigateToPage';
 
 export default function Page() {
   const router = useRouter();

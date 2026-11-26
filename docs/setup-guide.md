@@ -66,12 +66,14 @@ setup.
 4. **Confirmation.**
    On success, you'll see a confirmation screen showing the administrator
    email that was just created, and the wizard confirms it has now
-   permanently disabled itself. You'll be redirected to the login page
+   permanently disabled itself. You'll be redirected to the administrator
+   sign-in page (`/admin/login`, on the admin host if `ADMIN_HOST` is set)
    automatically after a few seconds (or you can click **Proceed to
    Login**).
 
 5. **Log in.**
-   Use the email and password you just set to log in. You'll land in the
+   Use the email and password you just set on the administrator sign-in
+   page. The public sign-in does not accept an administrator. You'll land in the
    admin console, from which you can create additional accounts, configure
    properties, and manage the platform.
 

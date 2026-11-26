@@ -3,6 +3,7 @@ import { assertOwnsFileUrls, deleteFileByUrl, FileError } from '@/lib/storage/se
 import { parseFileUrl } from '@/lib/fileRef';
 import { z } from 'zod';
 import { getServerSession } from '@/lib/auth/session';
+import { roleAllowedOnHost } from '@/lib/adminHost';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { validateBody } from '@/lib/api/validate';
 import { prisma } from '@/lib/db';
@@ -69,7 +70,7 @@ function serialize(user: {
   };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
@@ -82,6 +83,11 @@ export async function GET() {
 
   if (!user || user.status !== 'ACTIVE') {
     return NextResponse.json({ error: 'Account inactive or missing' }, { status: 401 });
+  }
+
+  // A session from the other side of the admin-host split is not a session here.
+  if (!roleAllowedOnHost(user.role, req)) {
+    return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
   }
 
   return NextResponse.json({ user: serialize(user) });

@@ -127,8 +127,9 @@ const currentPath = () => (typeof window === 'undefined' ? '' : window.location.
 
 function sendToLogin(startedOn: string) {
   if (typeof window === 'undefined' || window.location.pathname !== startedOn) return;
+  // The admin area has its own sign-in page.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload clears client state
-  window.location.href = '/login';
+  window.location.href = startedOn.startsWith('/admin') ? '/admin/login' : '/login';
 }
 
 declare module 'axios' {

@@ -1,6 +1,6 @@
 'use client';
 
-import { BankTransferReconciliation } from '../../components/BankTransferReconciliation';
+import { BankTransferReconciliation } from '@/app/components/BankTransferReconciliation';
 
 export default function Page() {
   return <BankTransferReconciliation />;

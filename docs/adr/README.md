@@ -23,6 +23,7 @@ Architecture Decision Records capture important architectural choices made in th
 | [0015](0015-auto-pay-and-retention-have-admin-switches-and-retention-periods-are-settings.md) | Auto-pay charging and ID-document retention have admin switches, and the retention periods are settings | Accepted           | 2026-10-20 | roji-tech  |
 | [0016](0016-a-just-rotated-refresh-token-is-accepted-once-more-for-five-seconds.md)           | A just-rotated refresh token is accepted once more for five seconds                                     | Accepted           | 2026-10-21 | the owner  |
 | [0017](0017-the-45-migrations-are-squashed-into-one-baseline.md)                              | The 45 migrations are squashed into one baseline                                                        |
+| [0018](0018-administrators-sign-in-at-their-own-page-and-host.md)                             | Administrators sign in at their own page, and on their own host when one is configured                  |
 
 ---
 
