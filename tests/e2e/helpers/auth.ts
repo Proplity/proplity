@@ -15,7 +15,8 @@ export type SeedRole = keyof typeof SEED_USERS;
 
 export async function loginAs(page: Page, role: SeedRole) {
   const { email, dashboardPath } = SEED_USERS[role];
-  await page.goto('/login');
+  // Administrators sign in on their own page; the public one refuses them.
+  await page.goto(role === 'admin' ? '/admin/login' : '/login');
   await page.getByPlaceholder('Enter your email').fill(email);
   await page.getByPlaceholder('Enter your password').fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Sign In', exact: false }).click();

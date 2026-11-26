@@ -12,6 +12,7 @@ import {
   REFRESH_MAX_ATTEMPTS,
 } from '@/lib/auth/rateLimit';
 import { REFRESH_GRACE_MS } from '@/lib/auth/refreshGrace';
+import { roleAllowedOnHost } from '@/lib/adminHost';
 
 export async function POST(req: NextRequest) {
   if (!validateCSRF(req)) {
@@ -101,6 +102,13 @@ export async function POST(req: NextRequest) {
   if (!currentToken || currentToken.user.status !== 'ACTIVE') {
     await clearAuthCookies();
     return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
+  }
+
+  // With a separate admin host, an admin's session lives there only and everyone else's lives
+  // elsewhere: a refresh cookie that turns up on the wrong side is ended, not renewed.
+  if (!roleAllowedOnHost(currentToken.user.role, req)) {
+    await clearAuthCookies();
+    return NextResponse.json({ error: 'Invalid or revoked session' }, { status: 401 });
   }
 
   await releaseAttempt(attemptId);

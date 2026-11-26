@@ -1083,3 +1083,101 @@ describe('auth: verify-email', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('auth: administrators sign in at their own endpoint, and only there', () => {
+  beforeAll(async () => {
+    await resetDb();
+  });
+
+  const signIn = (path: string, email: string, password = FIXTURE_PASSWORD) =>
+    apiFetch(path, { method: 'POST', body: { email, password } });
+
+  it('refuses an administrator at the general sign-in, exactly like a wrong password', async () => {
+    await createUser(Role.ADMIN, { email: 'boss@test.local' });
+    await createUser(Role.TENANT, { email: 'tenant-wrong@test.local' });
+
+    const asAdmin = await signIn('/api/v1/auth/login', 'boss@test.local');
+    const wrongPassword = await signIn('/api/v1/auth/login', 'tenant-wrong@test.local', 'nope');
+
+    expect(asAdmin.status).toBe(401);
+    expect(asAdmin.body).toEqual(wrongPassword.body);
+    expect(asAdmin.body.error).toBe('Invalid email or password');
+    expect(asAdmin.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
+    expect(asAdmin.setCookies.some((c) => c.startsWith('refresh_token='))).toBe(false);
+  });
+
+  it('signs an administrator in at the admin endpoint and the session works', async () => {
+    await createUser(Role.ADMIN, { email: 'boss2@test.local' });
+    const login = await signIn('/api/v1/auth/admin/login', 'boss2@test.local');
+
+    expect(login.status).toBe(200);
+    expect(login.body.user.role).toBe('admin');
+    expect(login.setCookies.some((c) => c.startsWith('access_token='))).toBe(true);
+
+    const cookie = cookieHeaderFrom(login.setCookies);
+    const me = await apiFetch('/api/v1/auth/me', { cookie });
+    expect(me.status).toBe(200);
+    expect(me.body.user.role).toBe('admin');
+    const admin = await apiFetch('/api/v1/admin/summary', { cookie });
+    expect(admin.status).toBe(200);
+  });
+
+  it.each([Role.TENANT, Role.LANDLORD, Role.MANAGER, Role.VENDOR])(
+    'refuses a %s at the admin endpoint, exactly like a wrong password',
+    async (role) => {
+      const email = `${role.toLowerCase()}-nope@test.local`;
+      await createUser(role, { email });
+      const nobody = await signIn('/api/v1/auth/admin/login', 'nobody-at-all@test.local');
+      const res = await signIn('/api/v1/auth/admin/login', email);
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual(nobody.body);
+      expect(res.setCookies.some((c) => c.startsWith('access_token='))).toBe(false);
+    },
+  );
+
+  it('still lets everyone else sign in at the general endpoint', async () => {
+    await createUser(Role.TENANT, { email: 'tenant-ok@test.local' });
+    const res = await signIn('/api/v1/auth/login', 'tenant-ok@test.local');
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('tenant');
+  });
+
+  it('keeps the other account checks on the admin endpoint', async () => {
+    await createUser(Role.ADMIN, {
+      email: 'suspended-boss@test.local',
+      status: UserStatus.SUSPENDED,
+    });
+    const res = await signIn('/api/v1/auth/admin/login', 'suspended-boss@test.local');
+    expect(res.status).toBe(403);
+  });
+
+  it('blocks a cross-origin POST to the admin endpoint', async () => {
+    const res = await apiFetch('/api/v1/auth/admin/login', {
+      method: 'POST',
+      body: { email: 'x@test.local', password: 'x' },
+      headers: { Origin: 'http://evil.example.com' },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('counts a wrong-kind attempt as a failure, so the right password stops working too', async () => {
+    await createUser(Role.ADMIN, { email: 'hammered@test.local' });
+    for (let i = 0; i < 5; i++) {
+      const r = await signIn('/api/v1/auth/login', 'hammered@test.local');
+      expect(r.status).toBe(401);
+    }
+    const blocked = await signIn('/api/v1/auth/login', 'hammered@test.local');
+    expect(blocked.status).toBe(429);
+  });
+
+  it('gives the admin endpoint a budget of its own', async () => {
+    await createUser(Role.ADMIN, { email: 'separate-budget@test.local' });
+    // exhaust the general endpoint for this address from this IP...
+    for (let i = 0; i < 5; i++) await signIn('/api/v1/auth/login', 'separate-budget@test.local');
+    expect((await signIn('/api/v1/auth/login', 'separate-budget@test.local')).status).toBe(429);
+    // ...the admin endpoint is unaffected
+    const ok = await signIn('/api/v1/auth/admin/login', 'separate-budget@test.local');
+    expect(ok.status).toBe(200);
+  });
+});

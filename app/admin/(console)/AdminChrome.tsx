@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ResponsiveTables } from '@/app/components/ResponsiveTables';
 import { usePathname, useRouter } from 'next/navigation';
-import { Logo } from '../components/Logo';
-import { RoleSwitcher } from '../components/RoleSwitcher';
-import { LogoutConfirmDialog } from '../components/LogoutConfirmDialog';
-import { NotificationBell } from '../components/notifications/NotificationBell';
+import { Logo } from '@/app/components/Logo';
+import { RoleSwitcher } from '@/app/components/RoleSwitcher';
+import { LogoutConfirmDialog } from '@/app/components/LogoutConfirmDialog';
+import { NotificationBell } from '@/app/components/notifications/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -55,7 +55,7 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     setLoggingOut(true);
     await auth.logout();
     toast.info('You have been signed out.');
-    router.push('/login');
+    router.push('/admin/login');
   }
 
   return (

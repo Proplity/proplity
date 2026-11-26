@@ -14,6 +14,7 @@ describe('appUrl utility', () => {
     delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
     delete process.env.VERCEL_URL;
     delete process.env.VERCEL_ENV;
+    delete process.env.ADMIN_HOST;
   });
 
   afterEach(() => {
@@ -143,5 +144,22 @@ describe('appUrl utility', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://proplity.com';
     expect(appUrl('dashboard')).toBe('https://proplity.com/dashboard');
     expect(appUrl('/dashboard')).toBe('https://proplity.com/dashboard');
+  });
+
+  it('points admin links at the admin host when one is configured', () => {
+    setNodeEnv('production');
+    process.env.NEXT_PUBLIC_APP_URL = 'https://proplity.com';
+    process.env.ADMIN_HOST = 'admin.proplity.com';
+    expect(appUrl('/admin/properties')).toBe('https://admin.proplity.com/admin/properties');
+    expect(appUrl('/admin')).toBe('https://admin.proplity.com/admin');
+    // everything else stays on the public host
+    expect(appUrl('/dashboard/properties/1')).toBe('https://proplity.com/dashboard/properties/1');
+    expect(appUrl('/administrators')).toBe('https://proplity.com/administrators');
+  });
+
+  it('leaves admin links alone when no admin host is configured', () => {
+    setNodeEnv('production');
+    process.env.NEXT_PUBLIC_APP_URL = 'https://proplity.com';
+    expect(appUrl('/admin/properties')).toBe('https://proplity.com/admin/properties');
   });
 });

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { reserveAttempt, releaseAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { Role, UserStatus, KycStatus } from '@prisma/client';
+import { adminUrlFor } from '@/lib/adminHost';
 
 const setupSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
@@ -217,6 +218,8 @@ export async function POST(req: NextRequest) {
           name: admin.name,
           email: admin.email,
         },
+        // The administrator signs in on the admin page (on the admin host when one is configured).
+        adminLoginUrl: adminUrlFor(req, '/admin/login'),
       },
       { status: 201 },
     );
