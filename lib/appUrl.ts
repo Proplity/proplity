@@ -25,6 +25,8 @@
  * Both Vercel vars are supplied bare (`my-app.vercel.app`, no scheme), hence
  * the prefixing below.
  */
+import { adminHost, isAdminPage } from '@/lib/adminHost';
+
 type RequestLike = { nextUrl?: { origin?: string } } | null | undefined;
 
 function isLocal(url: string): boolean {
@@ -72,6 +74,15 @@ export function appUrl(path: string, req?: RequestLike): string {
   let cleanPath = path.startsWith('/') ? path : `/${path}`;
   for (const page of PAGE_ROUTES) {
     cleanPath = cleanPath.replace(new RegExp(`^/api/v1(?:/auth)?/${page}`), `/${page}`);
+  }
+  // With an admin host configured (ADMIN_HOST, lib/adminHost.ts) the admin area is served only
+  // there, so a link to it must point there. The request's own scheme and port are kept outside
+  // production so `admin.localhost:3000` works in development.
+  if (isAdminPage(cleanPath.split('?')[0] ?? '') && adminHost()) {
+    const base = new URL(getAppUrl(req));
+    const protocol = base.protocol;
+    const port = base.port ? `:${base.port}` : '';
+    return `${protocol}//${adminHost()}${port}${cleanPath}`;
   }
   return `${getAppUrl(req)}${cleanPath}`;
 }

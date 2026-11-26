@@ -66,6 +66,7 @@ Production (and Preview, pointing at a _different_ database — this is what
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `NEXT_PUBLIC_CLOUDINARY_API_KEY`  | for uploads           | Must match the pair above. Build-time inlined.                                                                                                                                                                                                                                                                                                       |
 | `STORAGE_PROVIDER`                                                     | optional              | Defaults to `cloudinary`, the supported provider (owner decision 2026-10-20, ISS-035). `s3`/`r2`/`minio`/`supabase`, `imagekit` and `vercel-blob` are built but never tried against a real service: smoke-test one on staging before using it. `local` is refused in production.                                                                     |
 | `NEXT_PUBLIC_SUBSCRIPTIONS_ENABLED`                                    | no                    | `"true"` turns on real billing. Build-time inlined.                                                                                                                                                                                                                                                                                                  |
+| `ADMIN_HOST`                                                           | no                    | Gives the admin area its own host, e.g. `admin.proplity.com` (staging: `admin.staging.proplity.com`). Set: admins sign in only there, nobody else can, and `/admin` is not served elsewhere. Unset: one host, admins sign in at `/admin/login`. See §9.                                                                                              |
 | `SETUP_TOKEN`                                                          | no                    | Defense-in-depth for `/setup` (first-run admin wizard). See §8.                                                                                                                                                                                                                                                                                      |
 | `NEXT_PUBLIC_SETUP_REDIRECT_ENABLED`                                   | no                    | `"true"` makes `/login` auto-redirect to `/setup` until the first admin exists. Build-time inlined. See §8.                                                                                                                                                                                                                                          |
 | `NODE_ENV`                                                             | **no**                | Vercel sets it. Do not add it manually.                                                                                                                                                                                                                                                                                                              |
@@ -386,3 +387,42 @@ prisma db seed`. Only a genuinely fresh, unseeded production database needs
 setupComplete: false } })` inside a transaction — only the first concurrent
   `POST` can ever flip the flag; a second one gets `409`. `SETUP_TOKEN` is the
   control for _who_ gets to race at all.
+
+## 9. The admin area on its own host (`ADMIN_HOST`)
+
+Administrators have their own sign-in page, `/admin/login`, in every setup. The public sign-in
+(`/login`) refuses an administrator, and `/admin/login` refuses everyone else; both answer a wrong
+kind of account with the same "Invalid email or password" as a wrong password. The two endpoints are
+`POST /api/v1/auth/login` and `POST /api/v1/auth/admin/login` (one implementation, `lib/auth/loginFlow.ts`).
+
+`ADMIN_HOST` goes one step further and puts the admin area on a host of its own:
+
+| Where the request arrives                       | What happens                                                                                                                                        |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_HOST` (e.g. `admin.proplity.com`)        | Only the admin area is served (anything else, including `/`, goes to `/admin`). Only an administrator can sign in. The general `/login` API is 404. |
+| any other host (`proplity.com`, `*.vercel.app`) | `/admin/...` pages are forwarded to the admin host; the admin APIs are 404; an administrator's session is not honoured (and a refresh ends it).     |
+| nothing set                                     | One host. The admin area is at `/admin`, sign-in at `/admin/login`.                                                                                 |
+
+Session cookies carry no `Domain`, so they are host-only: signing in on `admin.proplity.com` gives a
+cookie that the browser never sends to `proplity.com`, and the other way round. Never add a `Domain`
+attribute to them.
+
+### Setting it up
+
+1. Add the host to the Vercel project (Settings > Domains) and create its DNS record. Do this **first**:
+   with `ADMIN_HOST` set and no such host, no administrator can sign in anywhere.
+2. Set `ADMIN_HOST` for that environment only, as a server env var (no `NEXT_PUBLIC_`, so no rebuild
+   is needed, a redeploy is enough):
+   - **Production:** `ADMIN_HOST=admin.proplity.com`
+   - **Staging:** `ADMIN_HOST=admin.staging.proplity.com`, scoped to the staging branch's Preview
+     environment (`vercel env add ADMIN_HOST preview main`), so ordinary PR previews, which have
+     random URLs, stay on one host.
+3. Leave it **unset** on the free `*.vercel.app` domain.
+4. Sign in at `https://admin.proplity.com/admin/login`.
+
+Things that follow from it: the first-run wizard (`/setup`) still runs on the public host and then
+sends the new administrator to the admin sign-in on the admin host; emails sent to administrators
+link straight to the admin host (`lib/appUrl.ts`); "Forgot your password?" on the admin page opens the
+public site's reset page (the emailed link points there), then sign in on the admin host. If you
+lock yourself out, remove `ADMIN_HOST` and redeploy. To try it locally, set `ADMIN_HOST=admin.localhost`
+and open `http://admin.localhost:3000`.

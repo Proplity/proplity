@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { AdminBreakdownPage, AdminBreakdownType } from '../../../components/AdminBreakdownPage';
+import { AdminBreakdownPage, AdminBreakdownType } from '@/app/components/AdminBreakdownPage';
 
 export default function Page() {
   const { type } = useParams<{ type: string }>();
