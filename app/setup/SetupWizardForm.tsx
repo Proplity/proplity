@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { LogoIcon } from '../components/Logo';
 import {
@@ -28,7 +26,7 @@ interface SetupWizardFormProps {
 }
 
 export function SetupWizardForm({ requiresToken, databaseReady = true }: SetupWizardFormProps) {
-  const router = useRouter();
+  const [adminLoginUrl, setAdminLoginUrl] = useState('/admin/login');
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -102,7 +100,7 @@ export function SetupWizardForm({ requiresToken, databaseReady = true }: SetupWi
 
       // A reply that is not JSON (a platform error page, an empty 500) must not surface as the
       // browser's "Unexpected end of JSON input".
-      const data: { error?: string } = await res.json().catch(() => ({}));
+      const data: { error?: string; adminLoginUrl?: string } = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(
@@ -115,9 +113,11 @@ export function SetupWizardForm({ requiresToken, databaseReady = true }: SetupWi
       setCreatedAdminEmail(email.trim().toLowerCase());
       toast.success('Platform administrator initialized successfully!');
 
-      // Automatic redirect after 3.5s
+      // The administrator signs in on the admin page, which may be on its own host.
+      const target = data.adminLoginUrl || '/admin/login';
+      setAdminLoginUrl(target);
       setTimeout(() => {
-        router.push('/login');
+        window.location.assign(target);
       }, 3500);
     } catch (err) {
       const msg =
@@ -157,13 +157,13 @@ export function SetupWizardForm({ requiresToken, databaseReady = true }: SetupWi
             </p>
           </div>
 
-          <Link
-            href="/login"
+          <a
+            href={adminLoginUrl}
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-500"
           >
             <span>Proceed to Login</span>
             <ArrowRight className="h-4 w-4" />
-          </Link>
+          </a>
         </div>
       </div>
     );

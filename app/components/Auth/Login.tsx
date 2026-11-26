@@ -12,7 +12,6 @@ interface LoginProps {
 }
 
 const DEMO_ACCOUNTS: Record<string, { email: string; password: string }> = {
-  admin: { email: 'admin@proplity.com', password: 'Password123!' },
   manager: { email: 'manager@proplity.com', password: 'Password123!' },
   landlord: { email: 'landlord@proplity.com', password: 'Password123!' },
   tenant: { email: 'tenant@proplity.com', password: 'Password123!' },

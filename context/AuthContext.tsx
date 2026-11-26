@@ -29,11 +29,10 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: {
-    email: string;
-    password: string;
-    rememberMe?: boolean;
-  }) => Promise<{ success: boolean; error?: string; user?: User }>;
+  login: (
+    credentials: { email: string; password: string; rememberMe?: boolean },
+    options?: { admin?: boolean },
+  ) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (data: {
     email: string;
     password: string;
@@ -108,9 +107,13 @@ export function AuthProvider({
     return () => clearTimeout(timer);
   }, []);
 
-  const login = async (credentials: { email: string; password: string }) => {
+  // Admins sign in through their own endpoint, and only through it (lib/auth/loginFlow.ts).
+  const login = async (
+    credentials: { email: string; password: string; rememberMe?: boolean },
+    options?: { admin?: boolean },
+  ) => {
     try {
-      const res = await fetch('/api/v1/auth/login', {
+      const res = await fetch(options?.admin ? '/api/v1/auth/admin/login' : '/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),

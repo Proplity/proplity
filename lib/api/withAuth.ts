@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { validateCSRF } from '@/lib/auth/csrf';
 import { getTeamScope } from '@/lib/team';
+import { roleAllowedOnHost } from '@/lib/adminHost';
 
 /** The signed-in person, plus the company they work in (see lib/team.ts). */
 export type Session = {
@@ -56,6 +57,11 @@ export function withAuth(handler: Handler, opts?: { roles?: Role[] }) {
       return NextResponse.json({ error: 'Account is suspended' }, { status: 403 });
     }
     session.role = account.role;
+    // With a separate admin host an admin's session is honoured there only, and nobody else's
+    // there (lib/adminHost.ts); on a single shared host this is always true.
+    if (!roleAllowedOnHost(account.role, req)) {
+      return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
+    }
     // Company members are looked up on every request, so removing someone takes effect at once.
     if (account.organisationId) {
       const team = await getTeamScope(session.sub);
