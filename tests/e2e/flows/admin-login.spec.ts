@@ -27,7 +27,8 @@ test('the public sign-in refuses an administrator', async ({ page }) => {
 test('the admin sign-in refuses everyone else', async ({ page }) => {
   await page.goto('/admin/login');
   await submit(page, 'tenant@proplity.com');
-  await expect(page.getByRole('alert')).toContainText('Invalid email or password');
+  // Not getByRole('alert'): Next's own route announcer has that role too.
+  await expect(page.getByText('Invalid email or password')).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/login/);
 });
 
@@ -43,6 +44,6 @@ test('a signed-out visitor to the admin area is sent to the admin sign-in page, 
 test('signing out of the admin area returns to the admin sign-in page', async ({ page }) => {
   await loginAs(page, 'admin');
   await page.getByTitle('Sign Out').first().click();
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm sign out' }).click();
   await page.waitForURL('**/admin/login');
 });
