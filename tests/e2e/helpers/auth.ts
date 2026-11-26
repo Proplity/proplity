@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
 // Matches prisma/seed.ts. All seeded demo accounts share this password.
 export const SEED_PASSWORD = 'Password123!';
@@ -20,6 +20,13 @@ export async function loginAs(page: Page, role: SeedRole) {
   await page.getByPlaceholder('Enter your email').fill(email);
   await page.getByPlaceholder('Enter your password').fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Sign In', exact: false }).click();
-  await page.waitForURL(`**${dashboardPath}**`, { timeout: 15_000 });
-  await expect(page).toHaveURL(new RegExp(dashboardPath.replace('/', '\\/')));
+  // Not `**/admin**`: the admin sign-in page, /admin/login, matches that too, and returning while
+  // still on it let the next navigation race the sign-in.
+  await page.waitForURL(
+    (url) =>
+      url.pathname.startsWith(dashboardPath) &&
+      !url.pathname.startsWith('/admin/login') &&
+      url.pathname !== '/login',
+    { timeout: 15_000 },
+  );
 }
