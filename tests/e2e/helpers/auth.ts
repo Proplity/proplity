@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
 // Matches prisma/seed.ts. All seeded demo accounts share this password.
 export const SEED_PASSWORD = 'Password123!';
